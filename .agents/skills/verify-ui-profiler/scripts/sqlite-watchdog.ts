@@ -33,6 +33,13 @@ try {
   await Promise.allSettled(pending);
   const elapsed = performance.now() - began;
   assert.ok(elapsed < 8000);
+  assert.equal(s.health().condition, "available");
+  const inactiveUntil = performance.now() + 12000;
+  while (
+    s.health().condition !== "unavailable" &&
+    performance.now() < inactiveUntil
+  )
+    await Bun.sleep(50);
   assert.equal(s.health().condition, "unavailable");
   assert.ok(s.status().loss.storage_failures >= 3);
   assert.equal(s.status().loss.dropped_batches, 1);

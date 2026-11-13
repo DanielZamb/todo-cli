@@ -80,6 +80,7 @@ export type RecordingDatabaseOptions = {
   appBytes?: number;
   totalBytes?: number;
   boundary?: (point: string) => void;
+  progress?: () => void;
 };
 export class RecordingDatabase {
   readonly db: Database;
@@ -121,6 +122,9 @@ export class RecordingDatabase {
         .get()?.n ?? 0;
   }
 
+  private progress() {
+    this.options.progress?.();
+  }
   private count(name: keyof ReturnType<typeof zero>, n: number) {
     if (n === 0) return;
     this.db
@@ -570,27 +574,30 @@ export class RecordingDatabase {
       );
     return {
       generated_at: new Date().toISOString(),
-      runs: rows.slice(0, 100).map((r) => ({
-        run: this.run(r),
-        events:
-          this.db
-            .query<{ n: number }, [string, number]>(
-              "SELECT count(*) n FROM events WHERE run=? AND received>=?",
-            )
-            .get(r.id, this.now - recordingLimits.retentionMs)?.n ?? 0,
-        bytes:
-          this.db
-            .query<{ n: number }, [string, number]>(
-              "SELECT coalesce(sum(length(content)),0) n FROM events WHERE run=? AND received>=?",
-            )
-            .get(r.id, this.now - recordingLimits.retentionMs)?.n ?? 0,
-        batches:
-          this.db
-            .query<{ n: number }, [string]>(
-              "SELECT count(*) n FROM batches WHERE run=?",
-            )
-            .get(r.id)?.n ?? 0,
-      })),
+      runs: rows.slice(0, 100).map((r) => {
+        this.progress();
+        return {
+          run: this.run(r),
+          events:
+            this.db
+              .query<{ n: number }, [string, number]>(
+                "SELECT count(*) n FROM events WHERE run=? AND received>=?",
+              )
+              .get(r.id, this.now - recordingLimits.retentionMs)?.n ?? 0,
+          bytes:
+            this.db
+              .query<{ n: number }, [string, number]>(
+                "SELECT coalesce(sum(length(content)),0) n FROM events WHERE run=? AND received>=?",
+              )
+              .get(r.id, this.now - recordingLimits.retentionMs)?.n ?? 0,
+          batches:
+            this.db
+              .query<{ n: number }, [string]>(
+                "SELECT count(*) n FROM batches WHERE run=?",
+              )
+              .get(r.id)?.n ?? 0,
+        };
+      }),
       next_cursor: rows.length > 100 ? cursor + 100 : null,
       status: this.status(),
     };
@@ -626,6 +633,7 @@ export class RecordingDatabase {
         events.push(JSON.parse(row.content));
         after = row.ordinal;
       }
+      this.progress();
       if (rows.length < 128) break;
     }
     if (
@@ -640,6 +648,7 @@ export class RecordingDatabase {
         .get(id, this.recoveredThrough),
       new Map([[id, run.admission ?? emptyRecordingAdmission()]]),
     );
+    this.progress();
     const summary = analysis.summary.map((r) =>
       Schema.decodeUnknownSync(RecordingSummaryRow)(r),
     );
@@ -681,6 +690,7 @@ export class RecordingDatabase {
         .all(id, from, this.now - recordingLimits.retentionMs);
       return { run, rows, status: this.status() };
     });
+    this.progress();
     const { run, rows } = captured;
     const events: RecordingBatch["events"][number][] = [];
     let end = 0;
@@ -704,6 +714,7 @@ export class RecordingDatabase {
       run,
       events,
     });
+    this.progress();
     const next = rows.find((r) => r.ordinal > end);
     return {
       generated_at: new Date().toISOString(),

@@ -1,7 +1,8 @@
 # Private Diagnostics recordings
 
-The current delivery corrects SQL1 through SQL6 of the SQLite review. See
-"SQLite review corrections" below for its decisions and red/green receipts.
+The current delivery corrects SQL7 and SQL8 from the second SQLite review. See
+"SQLite progress and format corrections" below. Earlier sections record the
+previous implementations and their receipts.
 
 The SQLite implementation replaces the unshipped file journal with a separate
 SQLite database in a worker thread. The SQLite replacement section at the end
@@ -2011,3 +2012,229 @@ and binaries remain. The actual app cadence with two and three producers remains
 owed at integration, as does quiet-machine confirmation. Terminal PNG rendering
 remains owed to a unit holding the Swift slot. No Swift, native app, signing,
 Keychain, real user data or push was used.
+
+
+## SQLite progress and format corrections
+
+This delivery is on top of 9da2a17ae757d32d820cf1b829bdc384d656c40f and
+supersedes its three-deadline retirement rule and incomplete format guard.
+The second SQLite review is read in full. SQL1 through SQL6 stand as reviewed;
+SQL7 and SQL8 are reproduced before edits and corrected here. No migration is
+needed: this unit has never been installed. No Swift, native app, Keychain,
+signing, push or real user data is used.
+
+### SQL7: call expiry is separate from inactivity
+
+The unchanged compiled 128-Show witness first passes on the lightly loaded
+host. This is a real positive boundary, not a red result. With the explicit
+six-process pressure switch it fails as reported: five bursts return 71–91
+correct replies before retiring a healthy worker, with 37–57 refused calls,
+at end loads 9.75–10.24. The unchanged 224-request HTTP witness under pressure
+returns 74 successes / 150 refusals, then unrelated ingestion returns 500.
+Its load boundaries are 12.81 and 13.47. Both pressure witnesses exit 1.
+The earlier HTTP preparation failure occurred because cached binaries had been
+pruned; it is retained separately and not counted as a product reproduction.
+
+The corrected compiled 128-call witness exits 0. The final repeat has boundary
+loads 15.11 and 15.25, and individual burst endpoints reach 15.68. Every one of
+its five repeats stays available, despite allowed per-call refusals. Its 60–71
+successful replies per burst all carry the literal 4096 starts. The corrected
+pressure HTTP control returns 83 successes / 141 refusals and ingestion 200,
+at loads 10.36–10.73. A further final-source HTTP repeat also exits 0. These
+controls never require all reads to complete within five seconds; they require
+settlement and correct results without a global recording blackout. Task reads
+and the literal subsequent Task creation continue to pass.
+
+The parent now owns the FIFO and dispatches one operation at a time. A call
+keeps its 5000 ms deadline from admission. Its expiry is counted and refused
+with the fixed content-free rpc_deadline reason. Expired queued calls are
+removed before dispatch. An expired dispatched call stays charged in bytes
+and count until its actual reply or retirement, while its caller has settled.
+A late valid reply releases that charge and updates rate/health without
+completing the caller a second time.
+
+Admission retains the 1024-call / 1048576-byte bounds and adds a predicted
+work bound of 5000 ms. Each method retains at most eight actual dispatch-to-
+reply service samples, expiring after 60000 ms. Its estimate is 1.5 times
+the largest sample, with cold floors in milliseconds: Show 25, Compare 50,
+export 10, other methods 1. Pending work is the sum of these estimates.
+Dispatched work consumes at least its estimate or its elapsed time, whichever
+is larger. An overrun therefore cannot be treated as zero remaining work.
+New work that exceeds the prediction budget refuses immediately with
+rpc_capacity; valid ingestion still counts one dropped batch and its N events.
+The model is a recent observed-work estimate, not a real-time guarantee; cold
+bursts and outliers may still expire locally. No queued expiry retires a worker.
+The separate count and byte controls retain their literal limits.
+
+Only inactivity retires a stalled operation. A 10000 ms watchdog is armed for
+an in-flight operation, including initialization. Every valid reply and every
+bounded long-read progress message resets it. Show signals after each
+128-row capture/materialization step and after reduction. Export and run-list
+boundaries also report progress. There is no timer heartbeat on the busy
+worker that could pretend a stopped step had progressed. Signals carry only
+an internal call number and elapsed milliseconds. Error/exit handling still
+retires failed workers; recovery retains the 60000 ms backoff. Closing settles
+within the caller deadline and cancels recovery.
+
+The compiled progress control deliberately slows each read step by 350 ms.
+On the final source, the caller refuses at 5014.356 ms while the worker stays
+available through the long read. Its worst observed step is 541.262 ms and its
+load rises from 13.18 to 16.79. The ten-second inactivity limit is over 18 times
+that deliberately slowed measured worst step. A subsequent read-rate control
+refuses excess admission without retirement. Stopping the third read step
+settles the caller at 5003.032 ms, refuses another ingestion immediately at
+admission, and retires for inactivity at 10023.594 ms. No signals continue from
+the stopped worker. The genuine held-ingestion witness separately settles all
+1101 offers around five seconds, waits for inactivity retirement, and recovers
+on the minute backoff with exactly three retrievable events.
+
+The first prepared progress control failed because it attempted a new full
+read immediately after observing an eleven-second read. The new rate guard
+correctly refused that work. The corrected control explicitly asserts that
+refusal and uses a fresh client to test ordinary read-rate admission. Its
+injected-step, deadline, inactivity and availability assertions are unchanged.
+The old watchdog expectation that retirement coincided with caller deadlines
+is replaced by separate deadline and inactivity assertions. The caller's old
+eight-second settlement guard and every pre-existing product-test timeout
+remain unchanged. Readiness still settles within five seconds; initialization
+can continue until its separate inactivity bound.
+
+### SQL8: complete recognition before mutation
+
+The archived events(x TEXT) witness exits 1 before the change: its hash and
+modes change. It exits 0 afterwards with the same hash and modes. Six new
+native controls also fail first and pass after: an overlapping events table,
+right table names with a renamed content column, wrong application id, wrong
+version, missing index and missing trigger. Each refused file retains its SHA,
+0640 file mode and 0750 directory mode. Positive controls initialize an existing
+empty file and reopen a genuine store, with the expected identifier/version.
+
+recording-format.ts holds one DDL definition and its expected complete SQLite
+catalog. The expected catalog is built once in an isolated in-memory database;
+file recognition itself is read-only. Application id is 0x544f4452 and schema
+version is 1. Catalog matching includes all tables, columns/constraints via
+their exact stored DDL, implicit and explicit indexes and triggers. Integrity
+and foreign-key checks still run. A missing or extra object also refuses.
+
+The opener uses exclusive create to distinguish a new file. A file created by
+this call, or an existing empty file, may initialize. Any other file must pass
+identifier, version and exact-catalog recognition read-only before chmod, WAL
+configuration or DDL. Initialization sets schema and identity transactionally.
+A refused foreign file receives no repair or format conversion. The earlier
+unidentified recording format is intentionally refused, not migrated. The Task
+database remains separate and is never attached to this database.
+
+### Seat cost observations carried forward
+
+The seat's profiling-only copy measured mean block totals per 32-upload wave:
+JSON parsing 1.880 ms, strict validation 11.857 ms, worker dispatch 2.262 ms.
+The latter includes envelope encoding 0.986 ms and structured cloning 1.228 ms.
+These block averages are not an additive decomposition of a Task percentile.
+They show substantial synchronous validation on the Task-serving thread.
+The early-refusal counterfactual reduced Task-write p50, but lost valid-refusal
+accounting and malformed-body precedence. It is not shipped here. Queue/rate
+admission in this change still follows strict ingestion validation.
+
+At the seat's assumed 128-event cadence, two producers at 10 batches/s each
+add median 1.469 ms to Task-write p50 [0.927,2.168]; three add 2.053 ms
+[1.002,2.660]. At one batch/s the write estimates lie within variation.
+These are assumed server-request rates, not measured app cadence or physical
+presentation time. The actual two- and three-app cadence remains integration
+debt. No early-validation optimization is implemented in this correction.
+
+
+### Gates and disk hold
+
+Evidence for this correction is docs/evidence/ui-speed/recordings-sql-progress.
+Raw red/green witnesses are retained separately. Reusable controls are in the
+verification skill; generated evidence and binaries stay ignored. Final HTTP
+control returns 83 successful reads and 141 local refusals, followed by ingestion
+200. Its task/state assertions pass.
+
+The final-source root check is root3. Disk guard runs first, then exactly
+/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check, without environment worker
+caps or timeout overrides. It passes 457 domain, 38 server, 80 CLI and 168
+Electron tests, with the existing one skip. The earlier root control also
+passes before the final active-overrun admission tightening. The intermediate
+root-final run under imposed pressure exits 1 because the unchanged Electron
+guarded-run test "preserves literal argv and exit through direct fake delegates"
+times out at 5000 ms, observed 6180 ms. No Electron source or test is changed;
+the exact final-source rerun after pressure exits 0. Every raw result is kept.
+No pre-existing product-test deadline is changed in this correction.
+
+| Receipt label | Actual command | Exit |
+| --- | --- | --- |
+| producer-final | env TODO_PROFILER_STRESS=1 bun .agents/skills/verify-ui-profiler/scripts/verify.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/producer-final | 0 |
+| diagnostics-final | env TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-progress/diagnostics-final | 0 |
+| api-final | .agents/skills/verify-server-api/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-progress/api-final | 0 |
+| domain | command in domain.log | 0 |
+| contract | bun packages/api/scripts/openapi.ts --check | 0 |
+| types | command in types.log | 0 |
+| helper-types-final | command in helper-types-final.log | 0 |
+| completeness | bun .agents/skills/verify-ui-profiler/scripts/completeness.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/completeness | 0 |
+| identities | bun .agents/skills/verify-ui-profiler/scripts/corrections.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/identities | 0 |
+| admission-fault | bun .agents/skills/verify-ui-profiler/scripts/admission-fault.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/admission-fault | 0 |
+| wire | bun .agents/skills/verify-ui-profiler/scripts/sqlite-wire.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/wire | 0 |
+| identity | bun .agents/skills/verify-ui-profiler/scripts/sqlite-identity.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/identity | 0 |
+| continuous | .scratch/bin/sqlite-continuous $PWD/docs/evidence/ui-speed/recordings-sql-progress/continuous | 0 |
+| crash | .scratch/bin/sqlite-crash $PWD/docs/evidence/ui-speed/recordings-sql-progress/crash | 0 |
+| writers | bun .agents/skills/verify-ui-profiler/scripts/sqlite-writers.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/writers | 0 |
+| startup | bun .agents/skills/verify-ui-profiler/scripts/sqlite-startup.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/startup | 0 |
+| full | .agents/skills/verify-ui-profiler/scripts/sqlite-full.sh $PWD/docs/evidence/ui-speed/recordings-sql-progress/full | 0 |
+| expiry | bun .agents/skills/verify-ui-profiler/scripts/sqlite-expiry.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/expiry | 0 |
+| auth | .agents/skills/verify-auth/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-progress/auth | 0 |
+| recorder-faults | .scratch/bin/verify-diagnostic-faults $PWD/docs/evidence/ui-speed/recordings-sql-progress/recorder-faults | 0 |
+| watchdog-final | .scratch/bin/sqlite-watchdog $PWD/docs/evidence/ui-speed/recordings-sql-progress/watchdog-final | 0 |
+| progress-final | .scratch/bin/sqlite-progress $PWD/docs/evidence/ui-speed/recordings-sql-progress/progress-final | 0 |
+| http-final | bun .scratch/recordings-sqlite2-s1/http-healthy-burst.ts .scratch/bin/todo-server final224 224 | 0 |
+| root | /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 |
+| root-final | /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 1 |
+| root3 | /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 |
+
+The frozen cost command is the unchanged sqlite-cost.ts busy-host variant with
+TODO_RECORDING_COST_REQUESTS=20, ten alternating pairs per scenario, loads at
+every boundary and literal Task read/write assertions. The compiled source
+manifest is source-final.json, hash
+2dad926ef22fb8ce4d1e6f17b22c834e680ac3708652de98fcb4095c317d66a6.
+Its precommit HEAD is the base; the hash identifies the corrected source tree.
+There is no imposed pressure or other verification job during this comparison.
+Routine progress/disk inventory checks still occur on this busy host.
+
+The coordinator ordered a disk hold while that comparison was in flight. Its
+command is allowed to finish. No further compile, suite or large evidence write
+starts afterwards. Closed owned temporaries and superseded binaries are retired
+with hashes retained, and completed work is committed before parking. The
+archived real Task-database/copy boundary control has not been re-executed after
+SQL8 in this delivery and remains explicitly owed after the hold. The native
+foreign-table and format refusal cases, real-store reopen, existing Task API
+and isolation recipes pass. Cost reduction/interpretation and final review can
+continue only after the coordinator releases the hold.
+
+Old and new HTTP contract id are both
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+The contract check and both passing root checks prove that no TypeScript pin,
+OpenAPI, golden or generated Swift change is needed. Task store.ts and
+projection.ts remain byte-identical to 9da2a17a; no formal mapping is renewed.
+Quiet-host confirmation, actual app uploader cadence with two/three producers
+and terminal PNG rendering with the Swift slot remain integration debt.
+
+
+### Parked checkpoint
+
+The in-flight frozen comparison finishes all 100 cells and exits 0. Its raw
+result and command receipt remain in docs/evidence/ui-speed/recordings-sql-progress/cost and cost.command.json. No new
+suite, compile or cost-reduction run starts after the disk hold. Workspace
+prefixes in the command table are normalized to $PWD; exact expanded arguments
+remain in the ignored receipts.
+
+Before the cost run, closed compile-temporary cleanup removed 26 files with
+2305212416 allocated bytes. After the command finished, retirement removed
+14 further closed proof binaries/temporaries with 1256923136 allocated bytes
+(1256887290 logical bytes), zero open-file skips. SHA-256 hashes and file paths
+are retained in park-retired.json. The current compiled CLI, server and seed
+remain; their source manifest matches the final tested source. These are file
+charges, not an attributed APFS free-space delta. The final guard reports
+32.0 GB free, and the whole checkout measures about 1.95 GiB after retirement.
+The original Task-database/copy control and cost interpretation remain owed
+under the coordinator's hold. The branch is committed and parked until the
+coordinator gives the word to continue.

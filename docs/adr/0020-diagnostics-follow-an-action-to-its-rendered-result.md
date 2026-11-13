@@ -269,13 +269,27 @@ opening; authenticated recording requests await their worker instead.
 
 All worker calls, including reads, reserve both count and encoded bytes before
 posting: at most 1024 calls and 1 MiB, including an envelope allowance. Readiness
-and every RPC have a 5000 ms deadline. Three consecutive RPC deadlines terminate
-the worker and refuse its remaining calls. Creation, startup, error and exit
-failures enter an unavailable state and retry after 60000 ms. Closing settles
+and every RPC have a 5000 ms deadline. A caller deadline refuses only that call.
+Only one call is dispatched at a time, and expired queued work is never sent.
+Admission also bounds predicted work to five seconds, using 1.5 times the largest
+of the last eight service times per method, with a 60-second observation window
+and documented cold estimates. An expired in-flight call retains its byte charge
+until the reply or retirement. Replies and each bounded long-read step reset a
+10000 ms inactivity watchdog. A stalled in-flight operation, including worker
+initialization, is retired only after that inactivity period; queued deadlines
+do not retire a progressing worker. Creation, error and exit failures also enter
+an unavailable state. Recovery uses a 60000 ms backoff. Closing settles
 within the same deadline and cancels recovery. Failure labels and counts contain
 no content, route parameters, ids or filesystem paths. The Task server catches
 even a synchronous recording factory failure, serves Tasks immediately and shows
 the condition in the existing owner Diagnostics error list.
+
+Existing nonempty recording databases must identify application 0x544f4452 and
+schema version 1, and match the exact table, column, index and trigger catalog,
+read-only, before mode changes, WAL setup or DDL. Only an exclusively created or
+empty file can be initialized. This unit has not shipped; there is no migration
+for earlier unrecognized recording files. Refused files and directory modes
+remain unchanged.
 
 ## Still proposed
 

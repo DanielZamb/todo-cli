@@ -9,6 +9,12 @@ import {
   statSync,
 } from "node:fs";
 import { join } from "node:path";
+import {
+  recognizeRecordingFormat,
+  recordingApplicationId,
+  recordingDDL,
+  recordingSchemaVersion,
+} from "./recording-format.ts";
 export function openRecordingDatabase(directory: string, totalBytes: number) {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const d = lstatSync(directory);
@@ -16,27 +22,38 @@ export function openRecordingDatabase(directory: string, totalBytes: number) {
     throw new Error("Private directory required");
 
   const path = join(directory, "recordings.db");
-  const fd = openSync(
-    path,
-    constants.O_RDWR | constants.O_CREAT | constants.O_NOFOLLOW,
-    0o600,
-  );
-  closeSync(fd);
+  let created = false;
+  try {
+    const fd = openSync(
+      path,
+      constants.O_RDWR |
+        constants.O_CREAT |
+        constants.O_EXCL |
+        constants.O_NOFOLLOW,
+      0o600,
+    );
+    closeSync(fd);
+    created = true;
+  } catch (error) {
+    if (
+      !(
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "EEXIST"
+      )
+    )
+      throw error;
+  }
+  const initialize = created || lstatSync(path).size === 0;
   if (lstatSync(path).isSymbolicLink() || lstatSync(path).nlink !== 1)
     throw new Error("Private database required");
 
-  if (lstatSync(path).size > 0) {
+  if (!initialize) {
     try {
       const existing = new Database(path, { readonly: true, strict: true });
       try {
-        if (
-          existing
-            .query(
-              "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT IN('runs','batches','events','counters','sqlite_sequence') LIMIT 1",
-            )
-            .get()
-        )
-          throw new Error("Foreign database refused");
+        recognizeRecordingFormat(existing);
 
         if (
           existing
@@ -61,16 +78,13 @@ export function openRecordingDatabase(directory: string, totalBytes: number) {
     db.exec(
       `PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1; PRAGMA wal_autocheckpoint=64; PRAGMA cache_size=-8192; PRAGMA cache_spill=OFF; PRAGMA journal_size_limit=1048576;`,
     );
-    db.exec(`CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,app TEXT NOT NULL,definition TEXT NOT NULL CHECK(json_extract(definition,'$.run_id')=id AND json_extract(definition,'$.app')=app),admission TEXT NOT NULL,updated INTEGER NOT NULL,CHECK(length(CAST(definition AS BLOB))+length(CAST(admission AS BLOB))<=4096));
-   CREATE TABLE IF NOT EXISTS batches(run TEXT NOT NULL,batch TEXT NOT NULL,fingerprint TEXT NOT NULL,received INTEGER NOT NULL,PRIMARY KEY(run,batch),FOREIGN KEY(run) REFERENCES runs(id) ON DELETE CASCADE);
-   CREATE TABLE IF NOT EXISTS events(ordinal INTEGER PRIMARY KEY AUTOINCREMENT,run TEXT NOT NULL,producer TEXT NOT NULL,sequence INTEGER NOT NULL,cursor TEXT NOT NULL UNIQUE,origin TEXT NOT NULL,content TEXT NOT NULL,fingerprint TEXT NOT NULL,received INTEGER NOT NULL,charge INTEGER NOT NULL CHECK(charge>=2*length(CAST(content AS BLOB))+4096),UNIQUE(run,producer,sequence),FOREIGN KEY(run,origin) REFERENCES batches(run,batch) ON DELETE CASCADE,CHECK(json_extract(content,'$.run_id')=run AND json_extract(content,'$.process_role')=producer AND json_extract(content,'$.sequence')=sequence));
-   CREATE UNIQUE INDEX IF NOT EXISTS event_phase ON events(run,producer,json_extract(content,'$.action_id'),json_extract(content,'$.name')) WHERE json_extract(content,'$.name') IN('ui.input.observed','ui.action.started','ui.action.ended','ui.result.committed');
-   CREATE INDEX IF NOT EXISTS event_age ON events(received,ordinal);CREATE INDEX IF NOT EXISTS event_run ON events(run,ordinal);CREATE INDEX IF NOT EXISTS event_run_age ON events(run,received);CREATE INDEX IF NOT EXISTS event_origin ON events(run,origin);
-   CREATE TABLE IF NOT EXISTS counters(name TEXT PRIMARY KEY,value INTEGER NOT NULL);
-   CREATE TRIGGER IF NOT EXISTS run_conflict BEFORE INSERT ON runs WHEN EXISTS(SELECT 1 FROM runs WHERE id=new.id AND definition<>new.definition) BEGIN SELECT RAISE(ABORT,'run_conflict');END;
-   CREATE TRIGGER IF NOT EXISTS run_capacity BEFORE INSERT ON runs WHEN NOT EXISTS(SELECT 1 FROM runs WHERE id=new.id) AND (SELECT count(*) FROM runs)>=5120 BEGIN SELECT RAISE(ABORT,'run_capacity');END;
-   CREATE TRIGGER IF NOT EXISTS batch_conflict BEFORE INSERT ON batches WHEN EXISTS(SELECT 1 FROM batches WHERE run=new.run AND batch=new.batch AND fingerprint<>new.fingerprint) BEGIN SELECT RAISE(ABORT,'batch_conflict');END;
-   CREATE TRIGGER IF NOT EXISTS sequence_conflict BEFORE INSERT ON events WHEN EXISTS(SELECT 1 FROM events WHERE run=new.run AND producer=new.producer AND sequence=new.sequence AND fingerprint<>new.fingerprint) BEGIN SELECT RAISE(ABORT,'sequence_conflict');END;`);
+    if (initialize)
+      db.transaction(() => {
+        db.exec(recordingDDL);
+        db.exec(
+          `PRAGMA application_id=${recordingApplicationId};PRAGMA user_version=${recordingSchemaVersion};`,
+        );
+      })();
     for (const name of [
       "dropped_batches",
       "dropped_events",

@@ -404,7 +404,10 @@ section of [the report](decisions/ui-speed/diag-recordings-report.md).
 
 The recording client bounds all worker RPCs, including reads, to 1024 calls /
 1 MiB of encoded requests with an envelope allowance. Readiness and calls expire
-after five seconds; three consecutive deadlines retire the worker. Recording
+after five seconds without retiring a progressing worker. A single dispatched
+call and a rate-limited parent queue keep expired queued work off the worker.
+Replies and bounded read steps reset a ten-second inactivity watchdog; only
+inactivity retires a stalled operation. Recording
 creation and unavailable workers retry after one minute while Task service stays
 available. Owner Diagnostics includes content-free recording status and failure
 counts in its existing error list. Export captures 129 rows per read step; Show
@@ -413,4 +416,7 @@ concurrent external change makes the read refuse for retry. A pinned external
 reader can delay physical expiry within the disk cap; logical retention still
 hides old facts. Capacity refusals are counted, maintenance backs off and
 recovers automatically. The main file retains its high-water size; no vacuuming
-is scheduled. Existing foreign files are validated before modes are changed.
+is scheduled. Existing nonempty files must match the recording application identifier, schema
+version and complete catalog read-only before modes or bytes change. An
+exclusively created or empty file can be initialized. No old-format migration
+is shipped.

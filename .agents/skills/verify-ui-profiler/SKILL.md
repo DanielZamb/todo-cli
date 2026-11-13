@@ -90,7 +90,7 @@ pnpm --filter @todo/domain test recordings-sql-review.test.ts
 
 Each recovery control takes about 65 seconds. The watchdog holds the actual
 worker, offers 1101 calls, asserts the common byte/count bound and settlement,
-then recovers automatically. The factory control drives Task HTTP and the owner
+then observes inactivity retirement separately from call settlement and recovers automatically. The factory control drives Task HTTP and the owner
 Diagnostics note during a throwing factory and recovers on the minute backoff.
 The reader HTTP control fills the default cap behind an independent read
 transaction, asserts nine further batch refusals / 1152 events and the literal
@@ -139,3 +139,20 @@ owed to a unit holding the Swift slot. Remove only closed owned compile
 temporaries after lsof checks. Never touch real ~/.todo-cli or another unit's
 processes, binaries or data. Keep every red receipt and report changed fixture
 inputs separately from unchanged HTTP/CLI assertions.
+
+## Healthy overload and format recognition
+
+Run the native format controls with `pnpm --filter @todo/domain test recording-format.test.ts`.
+They assert unchanged hashes, 0640 file and 0750 directory modes for overlapping
+tables, wrong columns/id/version/index/trigger; real and empty stores reopen.
+
+Compile `scripts/sqlite-progress.ts` to `.scratch/bin/sqlite-progress`, then run
+that binary with a fresh evidence path. A slow progressing read outlives its
+caller deadline without retirement; a read stopped after its third step retires
+for inactivity. Recently observed slow service refuses excessive admission.
+The original 128-Show and 224-HTTP-Show seat inputs remain archived unchanged.
+For high-load controls, from the checkout root use
+`TODO_RECORDINGS_STRESS=1 bun .agents/skills/verify-ui-profiler/scripts/sqlite-stress.ts
+<evidence> <command> <args...>`. It checks frontmost app and one
+minute of owner inactivity, uses at most six CPU processes for at most 85 seconds,
+and records loads throughout. There is no pressure in the frozen cost recipe.
