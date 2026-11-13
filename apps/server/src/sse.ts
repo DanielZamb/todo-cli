@@ -9,6 +9,7 @@ import { type OperationStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
+import type { StreamReads } from "./raw-store-reads.ts";
 import type { StreamWake } from "./stream-wake.ts";
 
 type Connection = { active: boolean };
@@ -50,7 +51,7 @@ class TerminalPermission {
 Object.freeze(TerminalPermission.prototype);
 Object.freeze(TerminalPermission);
 
-export const changesLayer = (store: OperationStore, wake: StreamWake) =>
+export const changesLayer = (store: StreamReads, wake: StreamWake) =>
   HttpApiBuilder.group(TodoApi, "changes", (handlers) =>
     handlers.handleAll({
       stream: ({ params, headers }) =>

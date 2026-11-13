@@ -333,6 +333,11 @@ wait and before the pass's checked lease, and is carried through the reload,
 ordinary and terminal results. Every pass still opens a fresh checked lease, and
 no lease or authority is held across the wait. The generation check, History
 cursor, authorization, terminal permission and emitted events are those above.
+The raw store reaches only those two readers, typed as `StreamReads` and
+`CacheHygieneReads` so neither can build a writer, and a server test forbids the
+private connection, SQL transaction control and any other raw-store use in the
+server. Every transaction callback is synchronous, which the decorator and the
+loop rely on.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher and no IPC between the two processes. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.
