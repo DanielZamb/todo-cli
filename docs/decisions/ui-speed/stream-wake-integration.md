@@ -328,3 +328,48 @@ wake, as reviews 2 and 3 found on the base.
 No Swift was built or run; the Mac side belongs to candidate 8. Native apps,
 Keychain, signing and launchd were not used. Bounded models, observed timing and
 fixture parity prove no unbounded property.
+
+## Review 4's two test gaps
+
+The seat passed 1196863c (PASS, INSTALL: SAFE) and found two gaps in the tests,
+closed by these commits.
+
+- **R4-2** (cebbc502). `stream-wake-writers.test.ts` runs each of the 31 members
+  classified `write` once, at top level through the decorated store, in its own
+  scratch store, with inputs that really change durable state. Each case requires
+  a literal outcome: the committed op_log kinds, whether other database rows
+  changed, and the Snapshot file change for the six file-only members. It also
+  requires exactly one wake. A further case parses the decorator's policies and
+  requires a case for every write member. Sweep: each write entry set to `read`,
+  one at a time; for `runDue`, `cleanupExpired` and `runDaily`, whose override
+  decides, the override's predicate is forced false. All 31 turn their own case
+  red on the wake assertion.
+- **R4-1** (9f2119c0). `sse.ts` has one `PassState` type with all four fields
+  required. The initial state and both returns spell every field, checked with
+  `satisfies PassState`, and no return spreads the previous state.
+  `stream-wake-pass-rate.test.ts` counts passes on an idle stream on a real
+  server: 3 to 5 a second idle, after one write and after a restore's reload.
+  Controls:
+  - dropping `wakeVersion` from the ordinary return fails the typecheck (TS2741)
+    and the test (29,634 passes in a second);
+  - the seat's spread form typechecks and fails the test (29,832);
+  - dropping it from the reload return fails the typecheck and costs only one
+    extra pass at runtime, which the test allows.
+
+Frames at 9f2119c0 compared with the head the seat passed (same fixture, base and
+CLI):
+- the 37 gated scenarios are byte-identical, 37 of 37;
+- ungated, the same 18 pass with identical frames, and the same 19 fail on
+  identical assertions;
+- the one-stream chain is identical gated (7 frames) and fails identically
+  ungated;
+- both full ungated captures are identical.
+
+Gates at 9f2119c0:
+- verify-sse 0 (71 focused tests, three wire witnesses, 3,696 compiled
+  compositions);
+- server suite 0 (14 files, 153 tests);
+- root check 0 (disk guard 40.7 GB; domain 462, Electron 168 with 1 existing
+  skip, server 153, CLI 73).
+
+The contract id is unchanged.
