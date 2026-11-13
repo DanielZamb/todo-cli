@@ -99,3 +99,15 @@ dry-run, label, and HTTP detach/label. Existing Tasks keep the Attachment error
 and recovery without Task-not-found context. The domain reports the missing
 Attachment from its authorized transaction; adapters do not probe auth again
 to classify it. Missing Tasks retain the selected-Profile lookup context.
+
+## CLI label registration
+
+The normal drive also runs the compiled CLI detach-label boundary proof in its
+own nested scratch HOMEs. detach --label must exit 2 in md and JSON, preserve
+every table and the external file, and retain the Attachment at Version 2.
+Four cold controls, including --dry-run, refuse before database creation.
+Positive controls require attach's Original label, label-attachment's Renamed
+label, omitted-label clearing, and normal detach to keep their existing values
+and Version sequence. detach-label/ retains the actual commands and row/file
+comparisons. The CLI flag golden changes only detach's unsupported label line;
+response schemas stay equal. init/login username remain documented exceptions.

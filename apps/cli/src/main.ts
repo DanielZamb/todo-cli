@@ -20,6 +20,7 @@ import {
 } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
+import type { AuthorizedOwnerRead } from "@todo/domain";
 import {
   type AccessRequest,
   AttachManyItem,
@@ -1279,7 +1280,7 @@ const attachmentCommand = (detach: boolean) =>
     {
       id: Argument.String("task-id"),
       value: Argument.String(detach ? "attachment-id" : "path-or-url"),
-      label: Flag.String("label").pipe(Flag.optional),
+      ...(detach ? {} : { label: Flag.String("label").pipe(Flag.optional) }),
       expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
       ...(detach ? { dryRun: bool("dry-run") } : {}),
     },
@@ -1300,7 +1301,7 @@ const attachmentCommand = (detach: boolean) =>
               expected: input.expected,
               detach,
               dryRun,
-              ...(Option.isSome(input.label)
+              ...(input.label !== undefined && Option.isSome(input.label)
                 ? { label: input.label.value }
                 : {}),
             });
@@ -1382,137 +1383,158 @@ const history = Command.make(
       );
     }),
 ).pipe(withGuide("history"));
-const mutation = (name: Mutation) =>
-  Command.make(
-    name,
-    {
-      ...taskOptions,
-      id: Argument.String("task-id"),
-      expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
-      force: bool("force"),
-      withDependencies: bool("with-dependencies"),
-      dryRun: bool("dry-run"),
-      fingerprint: stringFlag("dependency-fingerprint").pipe(Flag.optional),
+const mutation = (name: Mutation) => {
+  const commonOptions = {
+    id: Argument.String("task-id"),
+    expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
+  };
+  const deletionOptions = {
+    force: bool("force"),
+    withDependencies: bool("with-dependencies"),
+    dryRun: bool("dry-run"),
+    fingerprint: stringFlag("dependency-fingerprint").pipe(Flag.optional),
+  };
+  const handle = (
+    input: { readonly id: string; readonly expected: number },
+    flags: TaskFlags = {},
+    deletion = {
+      force: false,
+      withDependencies: false,
+      dryRun: false,
+      fingerprint: Option.none<string>(),
     },
-    (input) =>
-      Effect.gen(function* () {
-        const cfg = yield* root;
-        const suppliedFingerprint = Option.getOrUndefined(input.fingerprint);
-        if (name === "rm")
-          yield* decodeInput(
-            () =>
-              Schema.decodeUnknownSync(
-                Schema.Struct({
-                  task_id: TaskId,
-                  ...Struct.omit(DeleteTask.fields, ["from_version"]),
-                }),
-              )({
-                task_id: input.id,
-                with_dependencies: input.withDependencies,
-                dry_run: input.dryRun,
-                ...(suppliedFingerprint !== undefined
-                  ? { dependency_fingerprint: suppliedFingerprint }
-                  : {}),
+  ) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const suppliedFingerprint = Option.getOrUndefined(deletion.fingerprint);
+      if (name === "rm")
+        yield* decodeInput(
+          () =>
+            Schema.decodeUnknownSync(
+              Schema.Struct({
+                task_id: TaskId,
+                ...Struct.omit(DeleteTask.fields, ["from_version"]),
               }),
-            "rm requires a nonempty task-id, --expected-version <positive integer> and, when supplied, --dependency-fingerprint <64 lowercase hex characters>. Preview with --dry-run, then retry with the current Version and confirmation.",
-          );
-        yield* withStore(cfg, "mutate", (store) =>
-          Effect.gen(function* () {
-            const request = yield* selectProfile(store, cfg, "mutate");
-            let fingerprint = suppliedFingerprint ?? "";
-            let withDependencies = input.withDependencies;
-            if (
-              name === "rm" &&
-              !input.force &&
-              !input.dryRun &&
-              !withDependencies &&
-              cfg.format === "md" &&
-              process.stdin.isTTY &&
-              process.stdout.isTTY
-            ) {
-              const preview = yield* mutateTask(
-                store,
-                request,
-                name,
-                input.id,
-                input.expected,
-                taskInput(input),
-                false,
-                { dry_run: true },
-              );
-              if (preview.removed_dependencies?.length) {
-                const data = yield* readTasks(store, request);
-                const title = (id: string) =>
-                  data.tasks.find((task) => task.id === id)?.title ?? id;
-                yield* write(
-                  `${preview.removed_dependencies.map((edge) => `${title(edge.dependent_id)} depends on ${title(edge.blocker_id)} (${edge.dependent_id} <- ${edge.blocker_id})`).join("\n")}\n`,
-                );
-                const confirmed = yield* Prompt.run(
-                  Prompt.Confirm({
-                    message: "Delete Task and remove these Dependencies?",
-                    initial: false,
-                    placeholder: { defaultDeny: "[y/N]" },
-                  }),
-                ).pipe(Effect.catch(() => Effect.succeed(false)));
-                if (!confirmed)
-                  return yield* status(cfg.format, "cancelled", "Cancelled\n");
-                withDependencies = true;
-              }
-              fingerprint = preview.dependency_fingerprint ?? "";
-            }
-            const result = yield* mutateTask(
+            )({
+              task_id: input.id,
+              with_dependencies: deletion.withDependencies,
+              dry_run: deletion.dryRun,
+              ...(suppliedFingerprint !== undefined
+                ? { dependency_fingerprint: suppliedFingerprint }
+                : {}),
+            }),
+          "rm requires a nonempty task-id, --expected-version <positive integer> and, when supplied, --dependency-fingerprint <64 lowercase hex characters>. Preview with --dry-run, then retry with the current Version and confirmation.",
+        );
+      yield* withStore(cfg, "mutate", (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg, "mutate");
+          let fingerprint = suppliedFingerprint ?? "";
+          let withDependencies = deletion.withDependencies;
+          if (
+            name === "rm" &&
+            !deletion.force &&
+            !deletion.dryRun &&
+            !withDependencies &&
+            cfg.format === "md" &&
+            process.stdin.isTTY &&
+            process.stdout.isTTY
+          ) {
+            const preview = yield* mutateTask(
               store,
               request,
               name,
               input.id,
               input.expected,
-              taskInput(input),
-              input.force,
-              {
-                with_dependencies: withDependencies,
-                dry_run: input.dryRun,
-                ...(fingerprint ? { dependency_fingerprint: fingerprint } : {}),
-              },
+              flags,
+              false,
+              { dry_run: true },
             );
-            if (name === "rm") {
-              if (input.force) {
-                if (input.dryRun)
-                  return yield* response(
-                    cfg.format,
-                    StatusResponse,
-                    {
-                      generated_at: iso(nowInstant()),
-                      status: "would_purge",
-                      dry_run: true,
-                    },
-                    "Dry run: would Purge Task\n",
-                  );
-                return yield* status(cfg.format, "deleted", "deleted\n");
-              }
-              const report = {
-                generated_at: nowInstant(),
-                task: result.task,
-                removed_dependencies: result.removed_dependencies ?? [],
-                affected_versions: result.affected_versions ?? [],
-                dependency_fingerprint: result.dependency_fingerprint ?? "",
-                ...(result.confirm_from_version !== undefined
-                  ? { confirm_from_version: result.confirm_from_version }
-                  : {}),
-                dry_run: result.dry_run ?? false,
-              };
-              return yield* write(
-                cfg.format === "json"
-                  ? JSON.stringify({ ...report, status: "deleted" }) + "\n"
-                  : `${input.dryRun ? "Dry run\n" : "deleted\n"}${report.removed_dependencies.map((edge) => `${edge.dependent_id} depended on ${edge.blocker_id}\n`).join("")}`,
+            if (preview.removed_dependencies?.length) {
+              const data = yield* readTasks(store, request);
+              const title = (id: string) =>
+                data.tasks.find((task) => task.id === id)?.title ?? id;
+              yield* write(
+                `${preview.removed_dependencies.map((edge) => `${title(edge.dependent_id)} depends on ${title(edge.blocker_id)} (${edge.dependent_id} <- ${edge.blocker_id})`).join("\n")}\n`,
               );
+              const confirmed = yield* Prompt.run(
+                Prompt.Confirm({
+                  message: "Delete Task and remove these Dependencies?",
+                  initial: false,
+                  placeholder: { defaultDeny: "[y/N]" },
+                }),
+              ).pipe(Effect.catch(() => Effect.succeed(false)));
+              if (!confirmed)
+                return yield* status(cfg.format, "cancelled", "Cancelled\n");
+              withDependencies = true;
             }
-            const data = yield* readTasks(store, request);
-            const task = data.views.find((t) => t.id === input.id);
-            if (task) yield* write(renderTask(task, cfg.format, nowInstant()));
-          }),
-        );
-      }),
-  ).pipe(withGuide(name));
+            fingerprint = preview.dependency_fingerprint ?? "";
+          }
+          const result = yield* mutateTask(
+            store,
+            request,
+            name,
+            input.id,
+            input.expected,
+            flags,
+            deletion.force,
+            {
+              with_dependencies: withDependencies,
+              dry_run: deletion.dryRun,
+              ...(fingerprint ? { dependency_fingerprint: fingerprint } : {}),
+            },
+          );
+          if (name === "rm") {
+            if (deletion.force) {
+              if (deletion.dryRun)
+                return yield* response(
+                  cfg.format,
+                  StatusResponse,
+                  {
+                    generated_at: iso(nowInstant()),
+                    status: "would_purge",
+                    dry_run: true,
+                  },
+                  "Dry run: would Purge Task\n",
+                );
+              return yield* status(cfg.format, "deleted", "deleted\n");
+            }
+            const report = {
+              generated_at: nowInstant(),
+              task: result.task,
+              removed_dependencies: result.removed_dependencies ?? [],
+              affected_versions: result.affected_versions ?? [],
+              dependency_fingerprint: result.dependency_fingerprint ?? "",
+              ...(result.confirm_from_version !== undefined
+                ? { confirm_from_version: result.confirm_from_version }
+                : {}),
+              dry_run: result.dry_run ?? false,
+            };
+            return yield* write(
+              cfg.format === "json"
+                ? JSON.stringify({ ...report, status: "deleted" }) + "\n"
+                : `${deletion.dryRun ? "Dry run\n" : "deleted\n"}${report.removed_dependencies.map((edge) => `${edge.dependent_id} depended on ${edge.blocker_id}\n`).join("")}`,
+            );
+          }
+          const data = yield* readTasks(store, request);
+          const task = data.views.find((t) => t.id === input.id);
+          if (task) yield* write(renderTask(task, cfg.format, nowInstant()));
+        }),
+      );
+    });
+  if (name === "edit")
+    return Command.make(name, { ...taskOptions, ...commonOptions }, (input) =>
+      handle(input, taskInput(input)),
+    ).pipe(withGuide(name));
+  if (name === "rm")
+    return Command.make(
+      name,
+      { ...commonOptions, ...deletionOptions },
+      (input) => handle(input, {}, input),
+    ).pipe(withGuide(name));
+  return Command.make(name, commonOptions, (input) => handle(input)).pipe(
+    withGuide(name),
+  );
+};
 let graphMermaidOutput = false;
 registerCommandSchema("depend", EdgeReport);
 registerCommandSchema("undepend", EdgeReport);
@@ -2197,17 +2219,25 @@ const snapshotCommand = Command.make("snapshot").pipe(
         ),
     ).pipe(withGuide("snapshot create")),
     Command.make("list", {}, () =>
-      snapshotUse(SnapshotListResponse, (store, generated_at) =>
-        store.snapshots
-          .list()
-          .pipe(Effect.map((result) => ({ generated_at, ...result }))),
+      snapshotReadUse(
+        SnapshotListResponse,
+        Schema.Struct({}),
+        {},
+        (store, read, generated_at) =>
+          store.snapshots
+            .listRead(read)
+            .pipe(Effect.map((result) => ({ generated_at, ...result }))),
       ),
     ).pipe(withGuide("snapshot list")),
     Command.make("show", { id: Argument.String("snapshot-id") }, ({ id }) =>
-      snapshotUse(SnapshotResponse, (store, generated_at) =>
-        store.snapshots
-          .show(id)
-          .pipe(Effect.map((snapshot) => ({ generated_at, snapshot }))),
+      snapshotReadUse(
+        SnapshotResponse,
+        Schema.Struct({ snapshot: Schema.String }),
+        { snapshot: id },
+        (store, read, generated_at) =>
+          store.snapshots
+            .showRead(read)
+            .pipe(Effect.map((snapshot) => ({ generated_at, snapshot }))),
       ),
     ).pipe(withGuide("snapshot show")),
     Command.make(
@@ -2230,6 +2260,40 @@ const snapshotCommand = Command.make("snapshot").pipe(
   ]),
   withGuide("snapshot"),
 );
+function snapshotReadUse<
+  S extends Schema.ConstraintEncoder<unknown>,
+  F extends Schema.ConstraintDecoder<unknown>,
+>(
+  schema: S,
+  fieldsSchema: F,
+  fields: F["Type"],
+  use: (
+    store: OperationStore,
+    read: AuthorizedOwnerRead<Readonly<F["Type"]>>,
+    generatedAt: string,
+  ) => Effect.Effect<S["Type"], StoreError>,
+) {
+  return Effect.gen(function* () {
+    const cfg = yield* root;
+    yield* withStore(cfg, "authenticate", (store) =>
+      Effect.gen(function* () {
+        const credential = yield* io(() => loadCredential(cfg));
+        const result = yield* store.auth.withOwnerRead(
+          { credential },
+          fieldsSchema,
+          fields,
+          (read) => use(store, read, iso(nowInstant())),
+        );
+        yield* response(
+          cfg.format,
+          schema,
+          result,
+          `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
+        );
+      }),
+    );
+  });
+}
 function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
   schema: S,
   use: (

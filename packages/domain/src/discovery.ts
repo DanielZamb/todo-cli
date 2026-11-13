@@ -1,5 +1,5 @@
 import { Effect, Schema } from "effect";
-import { ProfileSummary, profileTaskCounts } from "./client-reads.ts";
+import { ProfileSummary } from "./client-reads.ts";
 import { Profile } from "./entities.ts";
 import { TaskId } from "./ids.ts";
 import type { OperationStore } from "./store/store.ts";
@@ -39,14 +39,13 @@ export class Discovery {
   readonly directory = (credential: string) =>
     this.store.auth.readSnapshot((auth) =>
       Effect.gen(function* () {
-        const profiles = yield* auth.profiles({ credential });
+        const profiles = yield* auth.profileSummaries({ credential });
         const directory = yield* Effect.forEach(
           [...profiles].sort(byName),
           (profile) =>
-            auth.read({ credential, profile: profile.id }).pipe(
+            auth.metadata({ credential, profile: profile.id }).pipe(
               Effect.map((data) => ({
                 ...profile,
-                ...profileTaskCounts(data.tasks),
                 projects: data.projects
                   .map(({ id, name }) => ({ id, name }))
                   .sort(byName),
@@ -60,13 +59,19 @@ export class Discovery {
 
   readonly lookup = (credential: string, input: typeof LookupQuery.Type) =>
     this.store.auth.readSnapshot((auth) =>
-      Effect.gen(function* () {
-        const { prefix } = input;
-        const profiles = yield* auth.profiles({ credential });
+      Effect.gen({ self: this }, function* () {
+        const { read } = yield* auth.profilesRead(
+          { credential },
+          LookupQuery,
+          input,
+        );
+        const authority = yield* this.store.auth.checkRead(read, "profiles");
+        const { prefix } = authority.fields;
+        const profiles = authority.profiles;
         const groups = yield* Effect.forEach(
           [...profiles].sort(byName),
           (profile) =>
-            auth.read({ credential, profile: profile.id }).pipe(
+            auth.catalog({ credential, profile: profile.id }).pipe(
               Effect.map((data) =>
                 filterTaskRecords(
                   data.tasks.filter((task) => task.deleted_at === null),

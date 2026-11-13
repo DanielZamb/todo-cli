@@ -142,6 +142,31 @@ headers using the existing Profile/seq index before JSON extraction. No historic
 Task payloads are decoded per tick. No launchd or installed server is needed for
 this cache proof; use only recorded scratch processes.
 
+## Checked read scopes and restore interactions
+
+`apps/server/scripts/read-scope-stream-control.ts` compares the immutable e69230f9
+base with the current checked-scope server and CLI on a scratch fixture produced
+by `apps/server/scripts/read-presence-fixture.ts`. Reuse source-hash compiled
+artifacts; the SSE servers use build-read-control.ts with
+READ_CONTROL_DETERMINISTIC_IDS=1 and the CLIs use build-read-cli.ts. Run:
+
+```sh
+bun apps/server/scripts/read-scope-stream-control.ts <base-server> <current-server> <base-cli> <current-cli> <scratch-fixture.json> <evidence-directory>
+```
+
+The 37 scenarios include the original fourteen, an explicit unscoped read-write
+Token deletion, 21 restored-Profile/credential combinations and direct removal of
+a live scoped Token by restore without prior deletion. Every credential passing
+its validity/read-scope check retains every base frame. Missing credential rows
+and other failed credential checks end authority; an unobserved check is a
+different state and fails the control. Ended authority does not imply that a
+frame is omitted: standalone revoke/expire cases retain full wire equality.
+Literal final credential states and
+reload/refusal frames supplement whole-frame comparison. The verification-only
+build modes READ_TERMINAL_MUTANT=session-only and READ_STREAM_MUTANT=drop-reload
+must each fail the relevant literal comparison. READ_STREAM_SCENARIOS selects
+named cases; READ_STREAM_CAPTURE_ONLY=1 captures the unchanged base first.
+
 ## Authorized discovery
 
 [verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory
@@ -149,6 +174,18 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+Expiry scenarios retain only their selected credential row with a scratch-only
+DELETE guard, installed after any restore and before advancing the injected
+Clock. This keeps expiry assertions independent of scheduler row cleanup. The
+direct restore-removal scenario still removes the row and asserts missing,
+which remains distinct from not-observed. No production query is replaced.
+
+For the integration with Snapshot/Purge, run
+`bun .agents/skills/verify-sse/scripts/restore-purge-integration.mjs <base-server> <current-server> <base-cli> <current-cli> <fixture.json> <evidence>`.
+It adds a pre-Purge Snapshot to the existing restore scenario, Purges through
+the compiled CLI, restores over HTTP, and requires redacted saved History, no
+resurrected Task and identical reload/following-operation frames on both builds.
 
 ## Mac client idle and quiet recovery
 

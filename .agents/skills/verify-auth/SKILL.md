@@ -9,6 +9,25 @@ Generated with `create-verification-skill`.
 C04 exposes a domain library. CLI and HTTP adapters belong to later units.
 Read the [feature map](features/README.md) before selecting coverage.
 
+## Read lease exit window
+
+`pnpm --filter @todo/domain test read-lifetime.test.ts` covers retained query
+authorities in a new native transaction before the prior transaction runner
+returns. Commit, rollback, thrown callback, attachment cleanup and grouped
+Discovery nesting must all refuse the old value with StoreError and no Task.
+Inner scopes remain usable until the outer callback ends. Failed admission
+still runs final cleanup, and a new request on the same tick has a fresh lease.
+The root lease closes in the checked callback's finally, before native COMMIT
+or any post-commit work; the final fallback also handles failed admission.
+
+With exclusive use of this checkout, run
+`bun .agents/skills/verify-auth/scripts/check-read-lease-window.mjs <evidence>`.
+It temporarily restores the late-close defect in auth.ts: all five exit-window
+cases must fail their literal StoreError/no-row expectation. A separate mutation
+removes failed-admission cleanup and must fail its literal clear-count assertion.
+The helper restores exact source bytes in finally and reruns all scope controls.
+No compiler, test, or builder may read this checkout during those mutations.
+
 ## Launch
 
 Resolve the checkout with `git rev-parse --show-toplevel`. From that checkout:
@@ -127,3 +146,20 @@ serialized seed clone, preserving per-minute rejection policy.
 [verify-discovery](../verify-discovery/SKILL.md) additionally compiles and drives
 real CLI/HTTP action-attribution parity. No public read/profiles call is nested
 inside resolution, and no caller learns foreign metadata.
+
+## Bound read requests
+
+`pnpm --filter @todo/domain test read-authorization.test.ts` drives mutation of
+caller-owned Profile, Task id and filter fields during the real credential-use
+callback and graph read. It also proves owned frozen fields, nominal query-port
+types and a Profile inserted between discovery and count reads. Counts must use
+the checked Profile set. The HTTP and overlapping-request controls are documented
+in [verify-server-api](../verify-server-api/SKILL.md).
+
+`pnpm --filter @todo/domain test authority-runtime.test.ts` attempts clone,
+spread, assignment, prototype and JSON copies, subclasses, a Proxy and mutation
+at every query port. Each must fail before returning rows. Genuine authorities
+also carry their originating database identity. Creation is private to the
+credential-check module; ports inspect private fields, kind and database before
+using any Profile or parsed field. Optional `TODO_AUTHORITY_EVIDENCE` writes the
+complete attempt matrix to an ignored local JSON path.

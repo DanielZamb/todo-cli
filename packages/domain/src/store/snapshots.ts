@@ -1,4 +1,4 @@
-import { Database } from "bun:sqlite";
+import { Database, SQLiteError } from "bun:sqlite";
 import { createHash, randomUUID } from "node:crypto";
 import {
   chmodSync,
@@ -18,6 +18,11 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { Effect, Schema } from "effect";
+import { eraseTaskAttachments } from "../attachment-store.ts";
+import {
+  type AuthorizedOwnerRead,
+  checkedRead,
+} from "../auth/authorized-read.ts";
 import { DatabaseRestored, OpLogEntry } from "../events.ts";
 import { TaskId } from "../ids.ts";
 import {
@@ -78,6 +83,12 @@ const purges = (db: Database) =>
         ? row.event.task_ids
         : [],
   );
+const redactCopy = (db: Database, ids: readonly TaskId[]) => {
+  let changed = false;
+  for (const id of ids)
+    if (redactTaskHistory(db, history(db), id)) changed = true;
+  return changed;
+};
 const durable = (path: string, value: unknown) => {
   const temporary = `${path}.${randomUUID()}.tmp`;
   try {
@@ -116,6 +127,7 @@ export class Snapshots {
     path: string,
     private readonly transaction: <A>(run: () => A) => A,
     private readonly afterRestore: () => void,
+    private readonly attachmentRoot: string,
   ) {
     this.directory = join(dirname(path), "snapshots");
     this.persistent = path !== ":memory:";
@@ -266,6 +278,13 @@ export class Snapshots {
   }
   readonly create = (reason: string) =>
     attempt(() => this.transaction(() => this.createSync(reason)));
+  readonly listRead = (read: AuthorizedOwnerRead) =>
+    checkedRead(read, "owner", this.db).pipe(Effect.flatMap(() => this.list()));
+  readonly showRead = (read: AuthorizedOwnerRead<{ snapshot: string }>) =>
+    checkedRead(read, "owner", this.db).pipe(
+      Effect.flatMap((value) => this.show(value.fields.snapshot)),
+    );
+
   readonly list = () => attempt(() => this.transaction(() => this.listSync()));
   readonly show = (id: string) =>
     attempt(() => this.transaction(() => this.manifest(id)));
@@ -313,12 +332,19 @@ export class Snapshots {
       const copy = new Database(manifest.path, { strict: true });
       try {
         copy.function("domain_write_allowed", () => 1);
-        copy
+        const changed = copy
           .transaction(() => {
             migrate(copy);
-            for (const id of ids) redactTaskHistory(copy, history(copy), id);
+            return redactCopy(copy, ids);
           })
           .immediate();
+        if (
+          !changed &&
+          version(copy) === manifest.schema_version &&
+          statSync(manifest.path).size === manifest.size &&
+          JSON.stringify(counts(copy)) === JSON.stringify(manifest.task_counts)
+        )
+          continue;
         compact(copy);
         durable(this.file(manifest.id, "json"), {
           ...manifest,
@@ -342,7 +368,7 @@ export class Snapshots {
       let attached = false;
       let target: Database | undefined;
       try {
-        return this.transaction((): SnapshotRestoreReport => {
+        const report = this.transaction((): SnapshotRestoreReport => {
           if (!options.dryRun) this.prepare();
           const manifest = this.manifest(id);
           if (hash(manifest.path) !== manifest.sha256)
@@ -350,11 +376,12 @@ export class Snapshots {
               "invalid_snapshot",
               "Snapshot checksum mismatch; choose another Snapshot",
             );
-          const original = new Database(manifest.path, {
-            readonly: true,
-            strict: true,
-          });
+          let original: Database | undefined;
           try {
+            original = new Database(manifest.path, {
+              readonly: true,
+              strict: true,
+            });
             if (
               original
                 .query<{ integrity_check: string }, []>(
@@ -376,8 +403,19 @@ export class Snapshots {
                 "newer_schema",
                 "Snapshot uses a newer schema; upgrade Todo before restoring",
               );
+          } catch (cause) {
+            if (
+              cause instanceof SQLiteError &&
+              (cause.code === "SQLITE_NOTADB" ||
+                cause.code === "SQLITE_CORRUPT")
+            )
+              throw new SnapshotError(
+                "invalid_snapshot",
+                "Snapshot is not a valid SQLite database; choose another Snapshot",
+              );
+            throw cause;
           } finally {
-            original.close();
+            original?.close();
           }
 
           this.temporary.add(stage);
@@ -391,7 +429,23 @@ export class Snapshots {
           const ids = this.purgedIdsSync();
           copy
             .transaction(() => {
-              for (const id of ids) redactTaskHistory(copy, history(copy), id);
+              redactCopy(copy, ids);
+              const purged = new Set<string>(ids);
+              const cleanup = [this.db, copy].flatMap((db) =>
+                db
+                  .query<{ profile_id: string; task_id: string }, []>(
+                    "SELECT profile_id,task_id FROM attachment_cleanup",
+                  )
+                  .all(),
+              );
+              copy.exec("DELETE FROM attachment_cleanup");
+              for (const row of cleanup)
+                if (purged.has(row.task_id))
+                  copy
+                    .query(
+                      "INSERT OR IGNORE INTO attachment_cleanup(profile_id,task_id) VALUES (?,?)",
+                    )
+                    .run(row.profile_id, row.task_id);
             })
             .immediate();
           // Credentials and the owner passphrase are not point-in-time data.
@@ -542,6 +596,9 @@ export class Snapshots {
             generation,
           };
         });
+        if (this.persistent && !report.dry_run && !this.db.inTransaction)
+          this.finishPurgeCleanup();
+        return report;
       } finally {
         target?.close();
         if (attached) this.db.exec("DETACH DATABASE restore_source");
@@ -550,6 +607,30 @@ export class Snapshots {
         this.temporary.delete(stage);
       }
     });
+
+  private finishPurgeCleanup() {
+    for (const row of this.db
+      .query<{ profile_id: string; task_id: string }, []>(
+        "SELECT profile_id,task_id FROM attachment_cleanup",
+      )
+      .all()) {
+      try {
+        this.transaction(() => {
+          if (!this.purgedIdsSync().some((id) => id === row.task_id)) return;
+          eraseTaskAttachments(
+            this.attachmentRoot,
+            row.profile_id,
+            row.task_id,
+          );
+          this.db
+            .query(
+              "DELETE FROM attachment_cleanup WHERE profile_id=? AND task_id=?",
+            )
+            .run(row.profile_id, row.task_id);
+        });
+      } catch {}
+    }
+  }
 
   readonly prune = (options: { readonly dryRun?: boolean } = {}) =>
     attempt(() =>
