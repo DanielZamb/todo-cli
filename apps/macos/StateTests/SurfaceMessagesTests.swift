@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import TodoState
 
@@ -115,17 +116,42 @@ import Testing
         #expect(MergedFailureWording.reason(codes: ["dependency_cycle", "occ_conflict"], differing: "fallback") == "fallback")
         #expect(MergedFailureWording.reason(codes: [nil, nil], differing: "fallback") == "fallback")
     }
-    /// Every code a link can be refused with: the merged closing sentence is that code's plural
-    /// sentence or the fallback, never the single-Task sentence the picker shows for one refusal.
-    @Test(arguments: ["dependency_cycle", "too_many_dependencies", "blocked", "blocks_done_task", "dependency_profile_mismatch", "occ_conflict", "not_found", "validation", "invalid_args", "forbidden", "unauthorized", "unavailable", "connection"])
-    func aMergedReasonIsNeverTheSingleTaskSentence(_ code: String) {
-        let singular: [String] = ["This Dependency would create a loop.", "A Task can't depend on itself.", "A Task can have at most 13 direct Dependencies.", "A done Task can only depend on done or cancelled Tasks.",
-                                  "This Task blocks done Tasks and can't be reopened.", "A Task and its Dependency must be in the same Profile.", "This Task changed. Reload its Dependencies before trying again.", "Task not found.",
-                                  "Check this Dependency and try again.", "Your Session ended. Sign in again.", "Couldn't update Dependencies. Try again."]
-        let reason = MergedFailureWording.reason(codes: [code, code], differing: "fallback")
-        #expect(reason == "fallback" || reason == MergedFailureWording.pluralReasons[code], "\(code): \(reason)")
-        #expect(!singular.contains { reason.contains($0) }, "\(code): no single-Task sentence: \(reason)")
-        #expect(!reason.hasPrefix("This ") && !reason.hasPrefix("A "), "\(code): no singular subject: \(reason)")
+    /// The seat's final closing sentences (candidate 8 review, 2026-11-12), for every code a link
+    /// can be refused with: the seat's sentence, or the "see why" fallback for codes two links rarely
+    /// share. The seat's wording supersedes the earlier "no singular subject" heuristic.
+    @Test(arguments: [
+        ("dependency_cycle", "Each would create a loop. Choose other Tasks."),
+        ("too_many_dependencies", "A Task can have at most 13 direct Dependencies. Choose fewer."),
+        ("blocked", "Done Tasks can only depend on done or cancelled Tasks."),
+        ("dependency_profile_mismatch", "A Task and its Dependencies must be in the same Profile."),
+        ("occ_conflict", "These Tasks changed. Reload and try again."),
+        ("not_found", "These Tasks were deleted or moved."),
+        ("forbidden", "This credential can't change Dependencies."),
+        ("connection", "The server couldn't be reached. Try again."),
+        ("unavailable", "The server couldn't be reached. Try again."),
+        ("blocks_done_task", "fallback"), ("validation", "fallback"), ("invalid_args", "fallback"), ("unauthorized", "fallback"),
+    ])
+    func aMergedReasonIsTheSeatsSentenceForItsCode(_ code: String, _ expected: String) {
+        #expect(MergedFailureWording.reason(codes: [code, code], differing: "fallback") == expected, "\(code)")
+        let single = ["This Dependency would create a loop.", "This Task changed. Reload its Dependencies before trying again.", "Task not found.", "Your Session ended. Sign in again."]
+        #expect(!single.contains { expected.contains($0) }, "\(code): not the single-Task sentence")
+    }
+
+    /// The limit the messages state is the contract's: every `too_many_dependencies` limit in the
+    /// OpenAPI contract is an enum of exactly `DependencyContract.directDependencies`.
+    @Test func theStatedDependencyLimitIsTheContracts() throws {
+        let contract = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("API/Sources/TodoAPI/openapi.json")
+        let root = try JSONSerialization.jsonObject(with: Data(contentsOf: contract))
+        var limits: [[Int]] = []
+        func walk(_ node: Any) {
+            if let object = node as? [String: Any] {
+                if let properties = object["properties"] as? [String: Any], let limit = properties["limit"] as? [String: Any],
+                   let values = limit["enum"] as? [NSNumber], properties["dependent_id"] != nil { limits.append(values.map(\.intValue)) }
+                object.values.forEach(walk)
+            } else if let array = node as? [Any] { array.forEach(walk) }
+        }
+        walk(root)
+        #expect(!limits.isEmpty && limits.allSatisfy { $0 == [DependencyContract.directDependencies] }, "\(limits)")
     }
 }
 

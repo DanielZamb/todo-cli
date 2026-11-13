@@ -167,23 +167,30 @@ struct SurfaceMessages<Kind: Hashable, Value> {
 /// Any surface's ticket, as the read-back owner and the hand-off ask it (S1-17, D1).
 protocol SurfaceTicket { var isNewest: Bool { get }; var target: AnyHashable? { get } }
 
-/// D2 wording (proposed; through the Opus Mac UI seat): several same-kind failures on different
-/// Tasks read as one message naming them, up to three, then "and N more".
+/// The contract's limits that messages state. `directDependencies` is `too_many_dependencies`'s
+/// `details.limit` (an enum of one value in the OpenAPI contract); a state test reads the contract
+/// and fails if they differ.
+enum DependencyContract {
+    static let directDependencies = 13
+}
+
+/// D2 wording, final words by the Opus Mac UI seat (candidate 8 review, 2026-11-12): several
+/// same-kind failures on different Tasks read as one message naming them, up to three, then
+/// "and N more".
 enum MergedFailureWording {
     static let namedLimit = 3
-    /// Plural sentences for the refusal codes two links can realistically share (D2 ruling,
-    /// 2026-11-12: a merged message never carries a singular reason). A code without one uses the
-    /// caller's "try each" fallback. Final words are the Opus Mac UI seat's.
+    /// The closing sentence for a refusal code two links can realistically share. A code without
+    /// one uses the caller's "see why" fallback.
     static let pluralReasons: [String: String] = [
         "dependency_cycle": "Each would create a loop. Choose other Tasks.",
-        "too_many_dependencies": "Each would give a Task more than 13 direct Dependencies. Choose fewer.",
+        "too_many_dependencies": "A Task can have at most \(DependencyContract.directDependencies) direct Dependencies. Choose fewer.",
         "blocked": "Done Tasks can only depend on done or cancelled Tasks.",
-        "dependency_profile_mismatch": "Each Task and its Dependency must be in the same Profile.",
-        "occ_conflict": "These Tasks changed. Reload their Dependencies before trying again.",
-        "not_found": "These Tasks are no longer available.",
-        "forbidden": "Your credential can't update Dependencies.",
-        "connection": "The server could not be reached. Try again when it is available.",
-        "unavailable": "The server could not be reached. Try again when it is available.",
+        "dependency_profile_mismatch": "A Task and its Dependencies must be in the same Profile.",
+        "occ_conflict": "These Tasks changed. Reload and try again.",
+        "not_found": "These Tasks were deleted or moved.",
+        "forbidden": "This credential can't change Dependencies.",
+        "connection": "The server couldn't be reached. Try again.",
+        "unavailable": "The server couldn't be reached. Try again.",
     ]
     /// The closing sentence: when every part was refused with the same code (compared by code, not
     /// by sentence) and that code has a plural sentence, that sentence; otherwise `differing`.
