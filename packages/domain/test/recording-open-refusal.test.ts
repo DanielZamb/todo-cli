@@ -660,3 +660,33 @@ it("R6-1 opens a recovering store with a usable temporary directory and leaves i
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("R6-1 carries a machinery failure to the owner's health as retrying, with what failed", async () => {
+  const root = scratch();
+  try {
+    const dir = recoveringStore(root);
+    const before = snapshot(dir);
+    const previous = process.env.TMPDIR;
+    process.env.TMPDIR = `${join(root, "missing")}/`;
+    const s = await DiagnosticRecordings.open(dir);
+    if (previous === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = previous;
+    try {
+      expect(s.health()).toEqual({
+        condition: "unavailable",
+        failures: 1,
+        refusal: recordingRefusalGuidance(
+          dir,
+          "check_unavailable",
+          [],
+          "temporary image create: ENOENT",
+        ),
+      });
+    } finally {
+      await s.close();
+    }
+    expect(snapshot(dir)).toEqual(before);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

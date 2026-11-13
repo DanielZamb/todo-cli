@@ -232,7 +232,7 @@ function inspect(fd: number, path: string, image: () => number) {
   } catch (error) {
     if (!missing(error)) {
       if (aboutTheFile(error)) refuse("not_private");
-      unavailable("WAL open", error);
+      unavailable("wal open", error);
     }
   }
   try {
