@@ -1,5 +1,5 @@
 {
-  "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "productCommit": "34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c",
   "scope": "Reviewed immutable merged strict reads and Snapshot/Purge source 5f46e7b3; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
@@ -13,7 +13,7 @@
     },
     {
       "path": "task-filters.ts",
-      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
+      "sha256": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27"
     },
     {
       "path": "commands.ts",
@@ -21,7 +21,7 @@
     },
     {
       "path": "store/store.ts",
-      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e"
+      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
     },
     {
       "path": "store/snapshots.ts",
@@ -33,7 +33,7 @@
     }
   ],
   "review": "All 69 protected cache/matcher/runner/epoch/preparation bodies or statements remain byte-identical. Snapshots.restore adds reviewed post-transaction erasure while its generation and afterRestore epoch clear remain unchanged. Seven source controls, three observer controls and the full nine-stage gate pass on merged source; see docs/decisions/ui-speed/server-integration.md. No model change.",
-  "reviewedCandidate": true,
+  "reviewedCandidate": false,
   "hygieneFiles": [
     {
       "path": "apps/server/src/task-search-cache-hygiene.ts",
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e"
+      "sha256": "51ccadd27de0d254867f0228f97de618981f1b6e9c252646a735bb4321e2b541"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -53,11 +53,11 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e"
+      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "d935d13ffe26e9dee95c16db08a41c8cd8545c2dc1aec9a6300b98b7fe530de8"
+      "sha256": "c2a6dcfab444fe28931e7963fe07db2f038f9ca408df4bb14ea952cdc5929608"
     }
   ],
   "integrationReview": {
@@ -82,7 +82,7 @@
       "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
     }
   },
-  "previousProductCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "previousProductCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
   "clientIntegrationReview": {
     "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
     "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
@@ -120,5 +120,31 @@
     "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "diagnosticsMergeReview": {
+    "product": "34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c",
+    "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "changedDeclarations": {
+      "task-filters.ts": [
+        "filterTaskRecordsEffect: outer diagnosticSpan around the unchanged suspended driver"
+      ],
+      "store/store.ts": [
+        "attempt: diagnosticSync('domain') wrapper",
+        "transaction: writer_lock_wait span before BEGIN",
+        "record, appendSync: database and projection spans around unchanged statements",
+        "historySync: history_decode span around the unchanged decode",
+        "graph: graph span around integ/server's read"
+      ],
+      "apps/server/src/server.ts": [
+        "diagnosticsMiddleware, encodedRead, serverLayer: Diagnostics request spans, recording routes and owner refusal entry"
+      ],
+      "apps/cli/src/main.ts": [
+        "withStore: command diagnostic root",
+        "diagnostics and recording subcommands"
+      ]
+    },
+    "unchanged": "task-search-cache.ts, task-search.ts, commands.ts, store/snapshots.ts and store/search-cache-events.ts are byte-identical; no matcher, runner, admission, epoch, preparation, observer or erasure body changed.",
+    "preRenewal": "check.mjs: seven controls failed their witnesses and restored, stopped only on task-filters.ts drift; check-hygiene.mjs: three observer controls failed, clean and restored passed, stopped only on server.ts drift.",
+    "evidence": "docs/decisions/ui-speed/diag-recordings-report.md"
   }
 }
