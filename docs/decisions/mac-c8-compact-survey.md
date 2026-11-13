@@ -12,8 +12,8 @@ and long content scrolling inside its body.
   For each sheet, one representative capture from f1c3def5's complete set was
   read by eye.
 - **The candidate 8 set.** A new review set, `TODO_SNAPSHOT_C8_ONLY` in
-  `apps/macos/scripts/verify-design.py`, recaptures what candidate 8 changes: 12
-  states, 24 images. Each capture writes a bounds receipt:
+  `apps/macos/scripts/verify-design.py`, recaptures what candidate 8 changes: 14
+  states, 28 images. Each capture writes a bounds receipt:
   - the window;
   - where its content starts (global frames include the 32 pt title bar);
   - every Compact frame;
@@ -55,6 +55,7 @@ and long content scrolling inside its body.
 | `c8-picker-merged` (Compact) | D2: same-kind failures on two rows, one reason | controls inside |
 | `c8-banner-merged-same-reason`, `c8-banner-merged-different-reasons` | D2 in the banner | Dismiss 28 × 28, inside |
 | `c8-this-client-stall`, `c8-compact-this-client-stall` | S1-21 review: a stall's "In …" line and what the sampler cost | — |
+| `c8-series-custom`, `c8-compact-series-custom` | Seat finding 4: a custom rule keeps its raw rule | controls inside |
 
 Ruling 4 (accessibility: combine only the Label; announce once per sequence)
 has no visual state; its state tests cover it.

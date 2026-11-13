@@ -129,6 +129,9 @@ struct Snapshots {
                     #expect(inside, "\(name): every action and footer is inside the \(Int(width)) by \(Int(height)) window: \(controls)")
                     let data: [String: Any] = ["window": ["width": Double(width), "height": Double(height)], "contentTop": Double(top), "controlsInside": inside, "controls": Array(controls.keys).sorted(), "frames": frames]
                     try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-\(mode)-bounds.json"))
+                    if name.hasSuffix("series-custom") {
+                        #expect(compactMeasurements.frames["series-raw-rule"] != nil, "\(name): a custom rule keeps its raw rule")
+                    }
                     if let dismiss = compactMeasurements.frames["message-dismiss"] {
                         #expect(dismiss.width >= 28 && dismiss.height >= 28, "\(name): the Dismiss target is at least 28 by 28 (ruling 3)")
                     }
@@ -412,6 +415,13 @@ struct Snapshots {
                 try await render("c8-this-client-stall", ScrollView { ClientDiagnosticsView(model: stalled, compact: false, initiallyExpanded: ["Recent activity"]).padding(20) }, width: 1160, height: 900)
                 try await render("c8-compact-this-client-stall", ScrollView { ClientDiagnosticsView(model: stalled, compact: true, initiallyExpanded: ["Recent activity"]).padding(16) }, width: 393, height: 900)
                 stallRecorder.clear()
+                // Series with a custom rule (the seat's finding 4): the raw rule stays, as its only
+                // description; a preset shows none (asserted on dag-*-series-initial).
+                let customSeries = fixture(); customSeries.signedIn = true
+                customSeries.series = SeriesDefinition(id: "custom", profile_id: "work", recurrence: Recurrence(dtstart: TaskTime(kind: "date", date: "2026-11-10"), rrule: "FREQ=DAILY;INTERVAL=3", exdate: []), deleted_at: nil)
+                customSeries.beginEditing(customSeries.tasks[0]); customSeries.recurrenceDraft = nil
+                try await render("c8-compact-series-custom", SeriesView(model: customSeries, compact: true), width: 393, height: 426)
+                try await render("c8-series-custom", SeriesView(model: customSeries, compact: false), width: 580, height: 600)
                 continue
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" {
@@ -1148,7 +1158,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 24 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 28 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
