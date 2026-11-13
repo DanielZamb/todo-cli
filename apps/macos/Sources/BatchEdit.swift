@@ -183,7 +183,7 @@ struct BatchEditView: View {
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id)
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit").reportErrorBounds("viewport")
+        }.frame(height: compact ? 112 + model.compactExtraHeight : 224).accessibilityLabel("Tasks to edit").reportErrorBounds("viewport")
         Divider()
         if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .batchEdit) }
         HStack(spacing: 8) {
@@ -194,7 +194,7 @@ struct BatchEditView: View {
           if hasConflicts(draft) { applyButton(draft).buttonStyle(.bordered) }
           else { applyButton(draft).buttonStyle(.borderedProminent) }
         }.controlSize(.large)
-      }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: compact ? 390 : 502, maxHeight: compact ? 402 : 600).background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .batch)).accessibilityIdentifier("batch-edit")
+      }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: compact ? 390 + model.compactExtraHeight : 502, maxHeight: compact ? 402 + model.compactExtraHeight : 600).background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .batch)).accessibilityIdentifier("batch-edit")
     }
   }
   private func hasConflicts(_ draft: BatchEditDraft) -> Bool { draft.report?.items.contains { $0.error?.code == "occ_conflict" } ?? false }

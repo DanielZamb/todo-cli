@@ -160,7 +160,7 @@ struct ImportView: View {
                             }
                         }.padding(.trailing, 8)
                     }.scrollIndicators(.visible)
-                        .frame(minHeight: compact ? 224 : 240, maxHeight: compact ? 224 : .infinity).clipped()
+                        .frame(minHeight: compact ? 224 + model.compactExtraHeight : 240, maxHeight: compact ? 224 + model.compactExtraHeight : .infinity).clipped()
                         .importFrame(.viewport).reportErrorBounds("viewport").background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview)).accessibilityIdentifier("import-preview-table")
                 }
             } else {
@@ -209,7 +209,7 @@ struct ImportView: View {
                 }.controlSize(compact ? .small : .regular)
             }.fixedSize(horizontal: false, vertical: true).importFrame(.footer)
         }.padding(compact ? 12 : 24)
-            .frame(width: compact ? 393 : 720, height: compact ? 426 : 620)
+            .frame(width: compact ? 393 : 720, height: compact ? 426 + model.compactExtraHeight : 620)
             .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview))
             .coordinateSpace(name: "import-layout")
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.json, .plainText, .data]) { result in

@@ -74,3 +74,73 @@ head:
 - The raw rule shows only for a custom rule.
 
 The batch list now has 8 pt of space and a divider under the Action control.
+
+## The taller Compact (owner decision O34, 2026-11-12)
+
+The owner chose "Taller Compact". The result:
+
+- **Width.** Compact stays 393 pt wide. The window's maximum width equals its
+  minimum, so dragging the corner changes only the height. The width comes from
+  the content (`RootView` sets 393 pt in Compact, and the scene uses
+  `.windowResizability(.contentSize)`).
+- **Height.** At least 426 pt, with no maximum beyond the screen. The height the
+  person drags to is remembered across launches and across switching to the full
+  window and back. A stored height outside 426 pt and the screen's height is
+  clamped (`CompactWindowHeight`).
+- **Sheets.** Every Compact sheet takes the window's height. Its scroll region
+  grows by the window's extra height above 426 pt:
+  - the picker, the Dependency batch, the delete dialog, the graph, Find by id,
+    Series and Import;
+  - Import's preview list and Batch edit's list;
+  - Quick Add's chip rows (one more row per 42 pt).
+
+  At 426 pt the extra is zero, so every 393 × 426 capture is unchanged. The
+  full design suite passes with all 872 captures.
+- **Not changed.** Settings is its own window. The filter panel (360 × 390)
+  fits at any height. The Attachment batch has one size in both modes.
+- **The full window.** Switching back waits for a layout pass that lifts
+  Compact's width limit before it restores the saved frame. A frame set before
+  then would be clamped to 393 pt.
+
+**Which field becomes visible at which window height.** The table comes from
+the bounds of the editor captures at 426, 640 and 1000 pt, which agree. A field
+counts as visible when its whole row is above the footer.
+
+| Field | Fully visible from (pt) |
+| --- | --- |
+| Due | 338 |
+| Scheduled | 378 |
+| Priority | 418 |
+| Project | 458 |
+| Tags | 498 |
+| Recurrence | 538 |
+| Energy | 578 |
+| Estimate | 618 |
+
+So 426 pt shows Due, Scheduled and Priority, and 640 pt shows everything
+through Estimate, as the seat estimated.
+
+**Captures at 393 × 640.** Each has a bounds receipt and asserts that every
+action, footer and Dismiss lies inside the window:
+
+- the editor, plus the editor at 1000 pt for the table above;
+- Quick Add, short and with 13 Dependencies;
+- the picker, plain and with many rows;
+- the Dependency batch with a long list;
+- the delete dialog;
+- Series;
+- Import;
+- the graph, as a list and as a diagram.
+
+**For the hands-on pass, in addition to the seat's seven:**
+
+- **Drag the corner taller.** Does the width stay 393 pt? Is the cursor only a
+  vertical resize?
+- **Height memory.** Quit and relaunch: does Compact come back at the dragged
+  height? Switch to the full window and back: same height?
+- **Zoom and full screen.** What do the green zoom button and full screen do in
+  Compact at a 393 pt width?
+- **Sheets at a taller height.** Open a sheet (the picker, Import, Series): does
+  it take the window's height without leaving the window?
+- **Screen limit.** On a short screen, is a remembered height taller than the
+  screen clamped?

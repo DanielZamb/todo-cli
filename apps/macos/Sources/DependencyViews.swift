@@ -149,7 +149,7 @@ struct DependencyPickerView: View {
                     Spacer(minLength: 0)
                     Button("Close") { model.closeDependencyPicker() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("dependency-picker-close")
                 }.compactBounds("dependency-actions")
-            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 + model.compactExtraHeight : 600)
                 .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .dependencyPicker))
                 .accessibilityIdentifier("dependency-picker")
                 .task { searchFocused = true }
@@ -200,7 +200,7 @@ struct DependencyDeleteView: View {
                     else { VStack(spacing: 8) { cancel.frame(maxWidth: .infinity); confirm(deletion).frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
                 }.compactBounds("dependency-actions")
             }.padding(16).frame(width: compact ? 393 : 560)
-                .frame(height: deletion.edges.isEmpty && !deletion.loading && deletion.failure == nil ? nil : compact ? 426 : 600)
+                .frame(height: deletion.edges.isEmpty && !deletion.loading && deletion.failure == nil ? nil : compact ? 426 + model.compactExtraHeight : 600)
                 .accessibilityIdentifier("dependency-delete-dialog").compactBounds("dependency-delete-sheet")
         }
     }

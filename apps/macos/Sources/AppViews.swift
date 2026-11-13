@@ -19,8 +19,9 @@ struct RootView: View {
         }
         .frame(
             minWidth: compactMode ? TaskWindowSizing.compactSize.width : 900,
+            maxWidth: compactMode ? TaskWindowSizing.compactSize.width : .infinity,
             minHeight: compactMode ? TaskWindowSizing.compactSize.height : 640)
-        .background(TaskWindowSizing(compact: compactMode))
+        .background(TaskWindowSizing(compact: compactMode) { model.compactWindowHeight = $0 })
         .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .main, mode: compactMode ? .compact : .full))
         .toolbar {
             ToolbarItem {
@@ -40,24 +41,73 @@ struct RootView: View {
     }
 }
 
-struct TaskWindowSizing: NSViewRepresentable {
-    static let compactSize = NSSize(width: 393, height: 426)
-    let compact: Bool
+/// The Compact window's height (owner decision O34): 393 pt wide always, at least 426 pt tall,
+/// dragged taller by the person and remembered across launches and across switching to the full
+/// window and back. A stored value outside the range is clamped.
+struct CompactWindowHeight {
+    static let key = "compactWindowHeight"
+    static let minimum = TaskWindowSizing.compactSize.height
+    let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    static func clamp(_ height: CGFloat, maximum: CGFloat) -> CGFloat {
+        guard height.isFinite else { return minimum }
+        return min(max(height, minimum), max(minimum, maximum))
+    }
+    /// The height to open Compact at: the remembered one, clamped to what fits.
+    func restored(maximum: CGFloat) -> CGFloat {
+        Self.clamp((defaults.object(forKey: Self.key) as? NSNumber).map { CGFloat($0.doubleValue) } ?? Self.minimum, maximum: maximum)
+    }
+    func save(_ height: CGFloat, maximum: CGFloat) { defaults.set(Double(Self.clamp(height, maximum: maximum)), forKey: Self.key) }
+}
 
-    func makeNSView(context: Context) -> WindowView { WindowView() }
+struct TaskWindowSizing: NSViewRepresentable {
+    nonisolated static let compactSize = NSSize(width: 393, height: 426)
+    let compact: Bool
+    /// Where the Compact height is remembered (the app's defaults; a test passes its own).
+    var defaults: UserDefaults = .standard
+    /// The Compact content height whenever it changes (sheets size themselves from it).
+    var compactHeight: (CGFloat) -> Void = { _ in }
+
+    func makeNSView(context: Context) -> WindowView { WindowView(heights: CompactWindowHeight(defaults: defaults)) }
     func updateNSView(_ view: WindowView, context: Context) {
         view.compact = compact
+        view.compactHeight = compactHeight
         view.scheduleResize()
     }
 
     final class WindowView: NSView {
         var compact = false
+        var compactHeight: (CGFloat) -> Void = { _ in }
         private var appliedMode: Bool?
         private var expandedFrame: NSRect?
+        private var resizeObserver: NSObjectProtocol?
+        private let heights: CompactWindowHeight
+        init(heights: CompactWindowHeight) { self.heights = heights; super.init(frame: .zero) }
+        required init?(coder: NSCoder) { fatalError("not used") }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
+            if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) }
+            resizeObserver = window.map { window in
+                NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.windowResized() }
+                }
+            }
             scheduleResize()
+        }
+        isolated deinit { if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) } }
+
+        /// The tallest Compact content that fits the screen the window is on.
+        private var maximumHeight: CGFloat {
+            guard let window, let screen = window.screen ?? NSScreen.main else { return .greatestFiniteMagnitude }
+            return window.contentRect(forFrameRect: screen.visibleFrame).height
+        }
+        /// Remembers the height the person dragged Compact to.
+        private func windowResized() {
+            guard appliedMode == true, compact, let window else { return }
+            let height = window.contentRect(forFrameRect: window.frame).height
+            heights.save(height, maximum: maximumHeight)
+            compactHeight(CompactWindowHeight.clamp(height, maximum: maximumHeight))
         }
 
         func scheduleResize() {
@@ -71,13 +121,27 @@ struct TaskWindowSizing: NSViewRepresentable {
             window.contentMinSize = compact ? TaskWindowSizing.compactSize : NSSize(width: 900, height: 640)
             if compact {
                 if previousMode != nil { expandedFrame = window.frame }
-                setContentSize(TaskWindowSizing.compactSize, on: window)
+                let height = heights.restored(maximum: maximumHeight)
+                setContentSize(NSSize(width: TaskWindowSizing.compactSize.width, height: height), on: window)
+                compactHeight(height)
             } else if previousMode != nil {
-                if let expandedFrame {
-                    window.setFrame(expandedFrame, display: true)
-                } else {
-                    setContentSize(NSSize(width: 1100, height: 760), on: window)
-                }
+                restoreExpanded(window, attempts: 100)
+            }
+        }
+        /// The full window comes back once the content no longer limits the width to Compact's. A
+        /// layout pass applies the full content's limits now; a frame set while Compact's 393 pt limit
+        /// still stands would be clamped to it.
+        private func restoreExpanded(_ window: NSWindow, attempts: Int) {
+            guard appliedMode == false else { return }
+            window.contentView?.layoutSubtreeIfNeeded()
+            if window.contentMaxSize.width <= TaskWindowSizing.compactSize.width, attempts > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { [weak self, weak window] in if let window { self?.restoreExpanded(window, attempts: attempts - 1) } }
+                return
+            }
+            if let expandedFrame {
+                window.setFrame(expandedFrame, display: true)
+            } else {
+                setContentSize(NSSize(width: 1100, height: 760), on: window)
             }
         }
 
@@ -924,7 +988,7 @@ struct QuickAddView: View {
             .preferredColorScheme(model.configuration.resolvedColorScheme(storedAppearance: appearance))
     }
     var content: some View {
-        QuickAddContentAnchor(compact: compact, identity: model.newTitle + String(model.dependencies.initial.count) + (model.quickAddError ?? "")) { maximumRows in
+        QuickAddContentAnchor(compact: compact, limit: model.compactWindowHeight, identity: model.newTitle + String(model.dependencies.initial.count) + (model.quickAddError ?? "")) { maximumRows in
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("New task").font(.headline)
@@ -1134,19 +1198,25 @@ struct QuickAddRegionRows: PreferenceKey {
 
 struct QuickAddContentAnchor<Content: View>: View {
     let compact: Bool
+    /// The Compact window's height (O34); 426 at its minimum.
+    var limit: CGFloat = TaskWindowSizing.compactSize.height
     let identity: String
     @ViewBuilder let content: (Int) -> Content
     @State private var addedHeight: CGFloat = 0
     @State private var maximumRows = 2
+    /// Two chip rows at 426 pt, and one more for each 42 pt the window is taller.
+    private var startRows: Int { compact ? 2 + Int(max(0, limit - TaskWindowSizing.compactSize.height) / 42) : 2 }
     var body: some View {
         content(maximumRows)
             .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddContentHeight.self, value: geometry.size.height) })
             .offset(y: -addedHeight / 2)
             .onPreferenceChange(QuickAddAddedMetadataHeight.self) { addedHeight = $0 ?? 0 }
             .onPreferenceChange(QuickAddContentHeight.self) { height in
-                if compact && height + addedHeight > 426 { maximumRows = 1 }
+                if compact && height + addedHeight > limit && maximumRows > 1 { maximumRows -= 1 }
             }
-            .onChange(of: identity) { _, _ in maximumRows = 2 }
+            .onAppear { maximumRows = startRows }
+            .onChange(of: identity) { _, _ in maximumRows = startRows }
+            .onChange(of: limit) { _, _ in maximumRows = startRows }
     }
 }
 struct QuickAddAddedMetadataHeight: PreferenceKey {

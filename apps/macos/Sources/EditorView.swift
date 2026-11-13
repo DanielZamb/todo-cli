@@ -295,7 +295,8 @@ struct EditorView: View {
     }
 
     private func fieldLabel(_ title: String) -> some View {
-        Text(title).frame(width: 74, alignment: .leading)
+        // Its frame says where each field row sits (the taller Compact's field heights, O34).
+        Text(title).frame(width: 74, alignment: .leading).compactBounds("field-" + title.lowercased(), when: compact)
     }
 
     private func conflictView(draft: TaskDraft, conflict: TaskConflict) -> some View {

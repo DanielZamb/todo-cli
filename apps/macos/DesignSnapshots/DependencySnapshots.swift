@@ -21,7 +21,9 @@ import TodoAPI
     static func task(_ id: String, title: String, status: String = "open", blockers: [String] = [], ready: Bool = false, blocked: Bool = false, energy: Int? = 2) -> TaskSnapshot {
         TaskSnapshot(id: id, profile_id: "work", row_version: 3, depends_on: blockers, ready: ready, blocked: blocked, title: title, description: nil, priority: "P2", source: "manual", status: status, project_id: "project", tags: ["review"], due_at: nil, scheduled_at: nil, energy: energy, estimate_min: 30, occurrence: nil, legacy_series_detached: nil, deleted_at: nil)
     }
-    static func render(directory: URL, compactOnly: Bool = false) async throws -> [String] {
+    /// `compactHeight`, `only` and `prefix` render chosen cases in a taller Compact window (O34);
+    /// the defaults are the suite's own 393 by 426 captures, unchanged.
+    static func render(directory: URL, compactOnly: Bool = false, compactHeight: CGFloat = 426, only: Set<String>? = nil, prefix: String = "dag") async throws -> [String] {
         NSApplication.shared.setActivationPolicy(.prohibited)
         var files: [String] = []
         var geometry: [String: [String: [Double]]] = [:]
@@ -31,11 +33,13 @@ import TodoAPI
             for scheme in [ColorScheme.light, .dark] {
                 let appearance = try #require(NSAppearance(named: scheme == .light ? .aqua : .darkAqua))
                 NSApplication.shared.appearance = appearance
-                for name in checkpointStates + (compactOnly ? [] : DependencyFixtureCases.names) {
+                let cases = only.map { chosen in (checkpointStates + DependencyFixtureCases.names).filter(chosen.contains) } ?? checkpointStates + (compactOnly ? [] : DependencyFixtureCases.names)
+                for name in cases {
                     let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-dependency-snapshot"))
                     model.signedIn = true
                     model.connection = .live
                     model.selectedView = "all"
+                    if compact { model.compactWindowHeight = compactHeight }
                     model.projects = [.init(id: "project", name: "Launch", open_task_count: 4, inbox_task_count: 4)]
                     model.tags = [.init(id: "review", name: "review", open_task_count: 4, inbox_task_count: 4)]
                     let resolved = task("resolved", title: "Scope agreed", status: "done")
@@ -66,7 +70,7 @@ import TodoAPI
                     if name == "order" { model.taskFilters.order = "topo" }
                     try DependencyFixtureCases.configure(name, model: model, root: root, blocker: open, cancelled: cancelled)
                     let width: CGFloat = compact ? 393 : 1024
-                    let height: CGFloat = compact ? 426 : 720
+                    let height: CGFloat = compact ? compactHeight : 720
                     let capture = DependencyFrameRecorder()
                     let view = Group {
                         if name == "series-initial" { SeriesView(model: model, compact: compact) }
@@ -111,7 +115,7 @@ import TodoAPI
                             try await Task.sleep(for: .milliseconds(60))
                         }
                     }
-                    let file = "dag-\(compact ? "compact" : "full")-\(name)-\(scheme == .light ? "light" : "dark").png"
+                    let file = "\(prefix)-\(compact ? "compact" : "full")-\(name)-\(scheme == .light ? "light" : "dark").png"
                     if name.hasPrefix("picker") || name.hasPrefix("delete") || name.hasPrefix("batch") && name != "batch-cancelled" {
                         let actions = try #require(capture.frames["dependency-actions"])
                         #expect(actions.minY >= 0 && actions.maxY <= height && actions.minX >= 0 && actions.maxX <= width, "\(file) fixed actions \(actions)")
@@ -192,7 +196,7 @@ import TodoAPI
                         else { quickAddActions[key] = actions }
                         #expect(abs(actions.minY - metadata.maxY - 16) < 0.5, "Main metadata-to-actions spacing stays16")
                         #expect(actions.minX >= 0 && actions.maxX <= width && actions.minY >= 0 && actions.maxY <= height)
-                        if compact {
+                        if compact && compactHeight == 426 {
                             let add = try #require(capture.frames["quick-add-add"])
                             #expect(add == CGRect(x: 299.5, y: 295.5, width: 77.5, height: 36), "Main4c/cabf same-text five-chip fixture Add frame in viewport coordinates")
                         }
@@ -235,8 +239,8 @@ import TodoAPI
                 }
             }
         }
-        try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("dag-layout.json"))
-        try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("dag-capture-manifest.json"))
+        try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(prefix)-layout.json"))
+        try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(prefix)-capture-manifest.json"))
         return files
     }
 }

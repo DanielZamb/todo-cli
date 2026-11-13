@@ -216,7 +216,7 @@ struct DependencyBatchView: View {
                         Button("Preview") { Task { await model.previewDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.loading || batch.selected.isEmpty)
                     }
                 }.compactBounds("dependency-actions")
-            }.padding(16).frame(width: compact ? 393 : 600, height: compact ? 426 : 640).accessibilityIdentifier("dependency-batch-preview")
+            }.padding(16).frame(width: compact ? 393 : 600, height: compact ? 426 + model.compactExtraHeight : 640).accessibilityIdentifier("dependency-batch-preview")
         }
     }
 }

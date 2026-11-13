@@ -83,6 +83,12 @@ final class TodoModel {
     var transferResult: TaskTransferResult?
     var showingSeries = false
     var series: SeriesDefinition?
+    /// The Compact window's content height (O34): 426 pt at its minimum, taller when the person
+    /// drags it. Compact sheets size to it, so they grow with the window and never exceed it.
+    var compactWindowHeight: CGFloat = TaskWindowSizing.compactSize.height
+    /// How far the Compact window is taller than its minimum; zero at 393 by 426, so every Compact
+    /// size at the minimum is unchanged.
+    var compactExtraHeight: CGFloat { max(0, compactWindowHeight - TaskWindowSizing.compactSize.height) }
     var recurrenceDraft: Recurrence?
     var seriesLoading = false
     private var seriesGeneration = 0

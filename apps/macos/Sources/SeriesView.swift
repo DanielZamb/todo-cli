@@ -73,7 +73,7 @@ struct SeriesView: View {
                     if let start { Task { await model.saveSeries(Recurrence(dtstart: start, rrule: draft.rule, exdate: model.recurrenceDraft?.exdate ?? original?.recurrence.exdate ?? [])) } }
                 }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).compactBounds("series-primary").disabled(!model.canWrite || custom || !draft.valid || start == nil)
             }.compactBounds("series-actions")
-        }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 : 600)
+        }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 + model.compactExtraHeight : 600)
             .interactiveDismissDisabled(model.busy)
             .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }
     }

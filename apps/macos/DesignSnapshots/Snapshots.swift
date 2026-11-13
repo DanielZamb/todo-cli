@@ -129,6 +129,17 @@ struct Snapshots {
                     #expect(inside, "\(name): every action and footer is inside the \(Int(width)) by \(Int(height)) window: \(controls)")
                     let data: [String: Any] = ["window": ["width": Double(width), "height": Double(height)], "contentTop": Double(top), "controlsInside": inside, "controls": Array(controls.keys).sorted(), "frames": frames]
                     try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-\(mode)-bounds.json"))
+                    if name.hasPrefix("c8-compact-editor") {
+                        // Each field row's bottom (its label's centre plus half a 28 pt control), whether it is
+                        // fully visible above the footer, and the window height at which it becomes so.
+                        let body = try #require(compactMeasurements.frames["editor-scroll"])
+                        var fields: [String: Any] = [:]
+                        for (key, label) in compactMeasurements.frames where key.hasPrefix("field-") {
+                            let bottom = label.midY + 14
+                            fields[String(key.dropFirst(6))] = ["visible": bottom <= body.maxY + 0.5, "visibleFromHeight": Int((height - (body.maxY - bottom)).rounded(.up))]
+                        }
+                        try JSONSerialization.data(withJSONObject: ["window_height": height, "body_bottom": body.maxY, "fields": fields], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-field-heights-\(mode).json"))
+                    }
                     if name.hasSuffix("series-custom") {
                         #expect(compactMeasurements.frames["series-raw-rule"] != nil, "\(name): a custom rule keeps its raw rule")
                     }
@@ -418,9 +429,24 @@ struct Snapshots {
                 // Series with a custom rule (the seat's finding 4): the raw rule stays, as its only
                 // description; a preset shows none (asserted on dag-*-series-initial).
                 let customSeries = fixture(); customSeries.signedIn = true
-                customSeries.series = SeriesDefinition(id: "custom", profile_id: "work", recurrence: Recurrence(dtstart: TaskTime(kind: "date", date: "2026-11-10"), rrule: "FREQ=DAILY;INTERVAL=3", exdate: []), deleted_at: nil)
                 customSeries.beginEditing(customSeries.tasks[0]); customSeries.recurrenceDraft = nil
+                // After beginEditing, which clears the Series it loads.
+                customSeries.series = SeriesDefinition(id: "custom", profile_id: "work", recurrence: Recurrence(dtstart: TaskTime(kind: "date", date: "2026-11-10"), rrule: "FREQ=DAILY;INTERVAL=3", exdate: []), deleted_at: nil)
                 try await render("c8-compact-series-custom", SeriesView(model: customSeries, compact: true), width: 393, height: 426)
+                // The taller Compact (O34): the editor at 640 pt and at 1000 pt (its field heights) and
+                // Import at 640 pt; the Dependency sheets and the graph follow after this loop.
+                editing.compactWindowHeight = 640
+                try await render("c8-compact-editor-640", TaskListView(model: editing, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 640)
+                editing.compactWindowHeight = 1000
+                try await render("c8-compact-editor-1000", TaskListView(model: editing, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 1000)
+                editing.compactWindowHeight = 426
+                let tallImport = fixture(); tallImport.signedIn = true; tallImport.showingImport = true; tallImport.compactWindowHeight = 640
+                    let items = (0..<12).map { index in ["external_id": "repository:scroll:\(index)", "title": "Review the repository inventory \(index + 1)"] }
+                    tallImport.loadImport(data: try JSONSerialization.data(withJSONObject: items), name: "repository-scroll.json")
+                    let rows: [[String: Any]] = items.map { ["external_id": $0["external_id"]!, "outcome": "created", "task_id": NSNull(), "from_version": NSNull(), "changed_fields": ["title", "external_id", "project_name", "tag_names"]] }
+                    let data = try JSONSerialization.data(withJSONObject: ["generated_at": "2026-10-29T00:00:00Z", "dry_run": true, "items": rows, "totals": ["created": 12, "updated": 0, "unchanged": 0, "rejected": 0]])
+                    tallImport.importReport = try JSONDecoder().decode(ImportSummary.self, from: data)
+                try await render("c8-compact-import-640", ImportView(model: tallImport, compact: true), width: 393, height: 640)
                 try await render("c8-series-custom", SeriesView(model: customSeries, compact: false), width: 580, height: 600)
                 continue
             }
@@ -1149,6 +1175,13 @@ struct Snapshots {
             try await render("snapshots-loading", snapshotSettings.page(.snapshots), width: 600, height: 460)
             try await render("compact-snapshots-loading", snapshotSettings.page(.snapshots), width: 393, height: 426)
         }
+        if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" {
+            // The taller Compact (O34) at 393 by 640: Quick Add (short, and with many Dependencies), the
+            // picker, the batch list, the delete dialog, Series and the graph, with their bounds checks.
+            files += try await DependencySnapshots.render(directory: directory, compactOnly: true, compactHeight: 640,
+                only: ["initial", "initial-many-invalid", "picker-depends", "picker-many", "batch-select-long", "delete-long-end", "series-initial"], prefix: "c8-640-dag")
+            files += try await DependencyGraphSnapshots.render(directory: directory, compactHeight: 640, only: ["list-first", "diagram"], prefix: "c8-640-graph")
+        }
         try JSONSerialization.data(
             withJSONObject: [
                 "renderer": "offscreen NSHostingView cacheDisplay", "appLaunched": false, "keychainAccess": false, "files": files,
@@ -1158,7 +1191,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 28 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 52 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
