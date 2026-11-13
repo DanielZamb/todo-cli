@@ -50,6 +50,7 @@ it.effect(
       yield* store.tasks();
       yield* store.scheduled.runDue();
       yield* store.auth.cleanupExpired();
+      expect(wake.version).toBe(2);
       yield* store.snapshots.runDaily();
       const version = wake.version;
       yield* store.snapshots.runDaily();

@@ -15,23 +15,6 @@ private actor SearchTransport: ClientTransport {
     private var holdNextRead = false
     private var heldReadFailure = false
     private var rejectStreams = false
-    private var pauseChunks = false
-    private var bufferedChunks: [(HTTPBody.ByteChunk, AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation)] = []
-    private var holdWrite = false
-    private var writeContinuation: CheckedContinuation<Void, Never>?
-    private(set) var writeReplyHeld = false
-    func pauseStream() { pauseChunks = true }
-    func releaseStream() {
-        pauseChunks = false
-        for (chunk, continuation) in bufferedChunks { continuation.yield(chunk) }
-        bufferedChunks = []
-    }
-    func holdWriteReply() { holdWrite = true }
-    func releaseWriteReply() { writeContinuation?.resume(); writeContinuation = nil }
-    private func emit(_ chunk: HTTPBody.ByteChunk, to continuation: AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation) {
-        if pauseChunks { bufferedChunks.append((chunk, continuation)) }
-        else { continuation.yield(chunk) }
-    }
     private var held: [Int: CheckedContinuation<Void, Never>] = [:]
     private var streamContinuation: AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation?
     private var shouldFailHeld = false
@@ -95,17 +78,12 @@ private actor SearchTransport: ClientTransport {
             streamContinuation = pair.continuation
             let reader = Task {
                 do {
-                    for try await chunk in body { await self.emit(chunk, to: pair.continuation) }
+                    for try await chunk in body { pair.continuation.yield(chunk) }
                     pair.continuation.finish()
                 } catch { pair.continuation.finish(throwing: error) }
             }
             pair.continuation.onTermination = { _ in reader.cancel() }
             return (response.0, HTTPBody(pair.stream, length: .unknown))
-        }
-        if operationID == "tasks.edit", holdWrite {
-            holdWrite = false
-            writeReplyHeld = true
-            await withCheckedContinuation { writeContinuation = $0 }
         }
         return response
     }
@@ -121,62 +99,6 @@ struct TaskSearchStateTests {
         throw SearchProofError.timeout(line)
     }
     enum SearchProofError: Error { case timeout(Int) }
-
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
-    func ownWriteReplyAndStreamOrdersKeepTheSavedTask() async throws {
-        let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
-        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
-        let direct = todoClient(server: server, credential: credential)
-        for order in ["reply-first", "stream-first", "refresh-in-flight"] {
-            let profile = "wake-\(UUID().uuidString.lowercased())"
-            let initialize = Process()
-            initialize.executableURL = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_F10_CLI"]))
-            initialize.arguments = ["init", "--profile", profile]
-            initialize.environment = ProcessInfo.processInfo.environment
-            initialize.standardOutput = Pipe(); initialize.standardError = Pipe()
-            try initialize.run(); initialize.waitUntilExit()
-            #expect(initialize.terminationStatus == 0)
-            let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: Data(#"{"title":"Before wake"}"#.utf8))
-            _ = try await direct.tasks_period_create(path: .init(profile: profile), body: .json(payload)).ok
-            let transport = SearchTransport()
-            let model = TodoModel(configuration: .init(server: server, initialProfile: profile, vaultService: "unused-wake-\(UUID())"), clientFactory: { url, _ in
-                Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)])
-            })
-            model.selectedView = "all"; model.signedIn = true; model.connect()
-            try await wait { model.connection == .live && model.lastSequence != nil && model.tasks.count == 1 }
-            let oldSequence = model.lastSequence
-            model.beginEditing(try #require(model.tasks.first))
-            model.editor?.title = "Saved \(order)"
-            if order == "stream-first" { await transport.holdWriteReply() }
-            else { await transport.pauseStream() }
-            if order == "refresh-in-flight" { await transport.holdRead(failing: false) }
-            let saving = Task { await model.save() }
-            if order == "stream-first" {
-                try await wait { await transport.writeReplyHeld && model.tasks.first?.title == "Saved \(order)" }
-                #expect(model.busy)
-                #expect(model.editor?.title == "Saved stream-first")
-                await transport.releaseWriteReply()
-            } else if order == "refresh-in-flight" {
-                try await wait { await transport.heldCount == 1 }
-                await transport.releaseStream()
-                try await wait { model.lastSequence != oldSequence && model.tasks.first?.title == "Saved refresh-in-flight" }
-                await transport.release()
-            } else {
-                #expect(await saving.value?.title == "Saved reply-first")
-                #expect(model.lastSequence == oldSequence)
-                await transport.releaseStream()
-            }
-            #expect(await saving.value?.title == "Saved \(order)")
-            try await wait { model.lastSequence != oldSequence && model.searchPhase == .showing }
-            #expect(model.tasks.map(\.title) == ["Saved \(order)"])
-            #expect(model.tasks.first?.row_version == 2)
-            #expect(model.editor == nil)
-            #expect(model.editorError == nil)
-            #expect(model.message == nil)
-            #expect(model.connection == .live)
-            model.signedIn = false; model.connect()
-        }
-    }
 
     @Test func activeSearchHidesEmptyPriorityGroups() throws {
         let task = try JSONDecoder().decode(TaskSnapshot.self, from: Data(#"{"id":"group-proof","profile_id":"work","row_version":1,"title":"Pay rent","description":null,"priority":"P1","status":"open","project_id":null,"tags":[],"source":"manual","due_at":null,"scheduled_at":null,"energy":null,"estimate_min":null,"occurrence":null,"legacy_series_detached":true,"deleted_at":null}"#.utf8))

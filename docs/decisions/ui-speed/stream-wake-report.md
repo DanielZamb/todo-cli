@@ -39,29 +39,33 @@ not produce an in-process signal.
 
 ## Latency
 
-Five paired runs alternate order, with 40 HTTP edits per arm per pair and varying
-0–250 ms arrival delays. Percentiles use nearest rank. A compiled meter records
-the shared epoch clock immediately after an outer Bun transaction returns. The
-real SSE reader matches the operation id to that commit. Receipt excludes app refresh.
+The worker's original cross-process epoch-clock latency table is withdrawn.
+The following values are the independent seat's shared-host-clock rerun on
+`fd76a438`: five alternating pairs, 40 HTTP edits per arm per pair, with
+0–250 ms arrival delays and nearest-rank percentiles. The meter records macOS
+`clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)` immediately after an outer Bun
+transaction returns. The real SSE reader matches the operation id to its commit.
+Receipt excludes app refresh. These are reviewed-head observations, not a new
+performance claim for the observer corrections.
 
 | Commit to received event, ms | Timer | Wake |
 | --- | ---: | ---: |
 | Samples | 200 | 200 |
-| Median | 112.151 | 0.828 |
-| p90 | 213.777 | 2.051 |
-| p99 | 241.877 | 7.438 |
-| Maximum | 247.086 | 11.306 |
-| Per-pair median range | 101.091–119.279 | 0.172–1.792 |
-| Event received before parsed write reply | 0/200 | 67/200 |
+| Median | 111.872 | 1.178 |
+| p90 | 219.170 | 1.668 |
+| p99 | 245.338 | 8.676 |
+| Maximum | 245.812 | 9.865 |
+| Per-pair median range | 106.780–118.424 | 1.069–1.225 |
+| Event received before parsed write reply | 1/200 | 74/200 |
 
 The synthetic database has one populated and seven empty Profiles, 178 Tasks,
 50 open, 126 done, two cancelled, 39 Tags, five Projects and 108 link Attachments.
-Most descriptions have 1,275 characters; the maximum has 5,250. This ordinary-edit
+Most descriptions have 1,326 characters; the maximum has 5,460. This ordinary-edit
 fixture does not reproduce the owner's Dependency graph. No owner data or private
 copy was used.
 
-The shared ten-core host had one-minute loads of 6.67–15.73 in timer arms and
-6.99–13.78 in wake arms. Removing the timer explains the latency change; the
+The seat's shared ten-core host had one-minute loads of 7.82–9.85 in timer arms
+and 7.80–10.39 in wake arms. Removing the timer explains the latency change; the
 frozen-clock test independently proves that difference. An excluded sample run
 shows the server main thread busy in JavaScript, with some SQLite work and runtime
 threads mostly waiting. Bundled JavaScript frames are unsymbolicated. Remaining
@@ -69,14 +73,22 @@ delivery includes History decoding, authorization, runtime dispatch and loopback
 Both arms have the same accounting queries and stdout records. These observations
 do not establish app apply latency or a production p99.
 
-Discarded instrument runs used Bun's per-process hrtime origin, yielding invalid
-cross-process intervals. Final runs use `performance.timeOrigin + performance.now()`
-on both sides. Another discarded instrument build failed Bun's non-configurable
-transaction-property invariant; the final meter wraps aliases on a separate function.
-Failed calibration runs remain separate and are excluded from these tables.
+Both Bun process-relative hrtime and `performance.timeOrigin + performance.now()`
+are invalid for this cross-process measurement. The seat's epoch-clock run found
+109 negative samples, minimum -0.820 ms. Its shared monotonic rerun replaces the
+worker latency numbers above. The reusable meter now uses one macOS host clock in
+both processes, brackets meter timestamps at the parent and rejects negative
+commit-to-event intervals. Thirty independent child-process timestamp brackets
+pass. The SDK declares CLOCK_MONOTONIC_RAW as 4 and the native result as uint64.
+An earlier instrument build also failed Bun's non-configurable transaction-property
+invariant; the final meter wraps aliases on a separate function. Invalid calibration
+runs remain separate and are excluded from the corrected latency table.
 
 ## Idle and burst costs
 
+The following idle and burst costs are the original worker's passive-consumer
+observations. Their within-process elapsed times, counts and process CPU remain
+valid; they are separate from the seat's corrected latency rerun above.
 Each idle observation lasts about two seconds, repeated in every pair. Counts
 are identical across all five observations per arm. CPU is whole-server user plus
 system time, including scheduler and cache hygiene. Values are medians and ranges.
@@ -138,15 +150,32 @@ launching the app or touching Keychain. Both assert the saved title at Version 2
 | Stream first | Changed but correct: list updates while Save remains busy | Changed but correct: list updates before the reply closes the editor |
 | Event during write refresh | Correct and unchanged: newer refresh wins | Correct and unchanged: newer refresh wins |
 
-The new Mac order case passed twice, in 1.785 s and 4.957 s. The full Mac helper
-failed twice, each with one issue in the existing
-productionSearchOrderingRecoveryAndReload case. It times out at
-`apps/macos/StateTests/TaskSearchStateTests.swift:591`, waiting for a deliberately
-disconnected stream to reconnect and recover an errored search. The final run has
-160 tests in 32 suites and one issue, exit 1. Load was shared with builds, checks
-and measurements. This is a reproducible headless reconnect finding, not a proven
-product regression from this unit. It was not suppressed or fixed. Package.resolved
-comparisons exited 0. A separate base/control run remains owed.
+The original new order case passed in isolation while the full helper failed.
+The seat's causal matrix establishes a verification regression: head test sources
+fail against both timer and wake servers, while base test sources pass against
+both. The reconnect case alone passes five times per server. This is not an
+accepted base failure and is not caused by the wake.
+
+The first correction restored SearchTransport to its exact base bytes and moved
+the order proof into a separate transport that cancelled and awaited its forwarding
+Task. The full helper still failed at the unchanged reconnect wait. That red run
+rules out the general search transport edit as the remaining cause.
+
+The transport default is URLSession.shared. In the pinned dependency, the request
+cancellation handler ends when headers return; consumer termination cancels the
+native data task only upon a subsequent data callback. The new proof opens three
+idle SSE requests in the full suite, which can retain shared per-host connection
+slots after the forwarding Task ends and block a later reconnect. In the final
+run, every order records one still-running native `/profiles/wake-…/events` request
+after its forwarding Task ended. All three sessions have zero requests after
+invalidation, and the unchanged reconnect test passes in the full helper.
+
+The order fixture now owns an ephemeral URLSession per case. Cleanup finishes its
+body, releases held replies and reads, cancels and awaits its forwarding Task,
+invalidates only that owned session, and verifies zero remaining native requests.
+It records native request states before invalidation. The base SearchTransport,
+connection limits, reconnect predicate and deadlines are unchanged. The full
+helper result is recorded below.
 
 ## Verification and delivery
 
@@ -157,19 +186,20 @@ after advancing to 250 ms. Other cases prove 300-signal collapsing, five-waiter
 broadcast, cancellation/reopening counts, reentrant broadcast safety and no wake
 inside an enclosing transaction.
 
-| Check | Exit and result |
+| Revision check | Exit and result |
 | --- | --- |
-| Extended verify-sse | 0, compiled HTTP/CLI drive and 11 tests |
-| verify-server-api | 0 |
-| verify-profiles | 0, stale verifier schema expectation corrected from 6 to literal 7 |
-| verify-scheduler | 0, all non-lifecycle assertions; launchd explicitly skipped |
-| Full unsigned verify-electron host | 0, THIN_PASS_NATIVE_BLOCKED |
-| Electron order drive | 0, all three orders |
-| Electron suite | 0, 168 passed and one skipped |
-| Server suite | 0, 39 passed |
-| Mac state helper through swift-slot | 1, own-write orders pass; reconnect case above fails |
-| Locked root check | 0, after disk guard; 387 domain, 69 CLI, 39 server, 168 Electron tests passed; one Electron test skipped |
+| Extended verify-sse | 0, compiled HTTP/CLI drive, 19 tests, and compiled nested rollback/sequence-reuse proof |
+| Server suite | 0, 47 passed |
+| Full Mac state helper through swift-slot | 0, 160 tests in 33 suites, diagnostics/contract follow-ups and durable HTTP assertions |
+| Locked root check after disk guard | 0, 387 domain, 69 CLI, 47 server and 168 Electron tests passed; one Electron test skipped |
+| Shared host clock | 0, 30 cross-process brackets |
 | Documentation links | 0, zero broken local links |
+
+The original delivery also passed verify-server-api, verify-profiles,
+verify-scheduler without launchd, the unsigned Electron host and its three-order
+drive, and 168 Electron tests with one skipped. Those are prior-commit results,
+not new runs for this correction. The full Mac failure is the F2 verification
+regression described above.
 
 The scheduler's TODO_VERIFY_SCHEDULER_NO_LAUNCHD mode retains restart, competition,
 reminders, cleanup, SSE, contract and replay assertions. It records realLaunchctl
@@ -186,7 +216,64 @@ Local evidence is under `.scratch/evidence/`: `measure-outer/result.json`,
 Only reusable verification inputs are tracked. No domain source file was added.
 
 Manual completion and comment review found no added code comments or suppressions.
+The correction leaves domain production, API/contract and both client production
+sources unchanged. The existing SSE authorization exemption is also unchanged;
+its integration correction remains required before installation.
 The no-comments skill's delegated reviewer was not launched because the worker's
 explicit no-children instruction takes precedence. The independent correctness
-seat is the coordinator's next step. No live Mac UI verdict is claimed. The generic
-Mac reconnect failure and missing ReadBackOwner are outside this implementation.
+seat is the coordinator's next step. No live Mac UI verdict is claimed. The missing ReadBackOwner belongs to the
+concurrent Mac work; F2's test lifetime regression is fixed within this unit.
+
+## Correctness review corrections
+
+F1: observer defects are contained for generic Effect finalizers, conditional
+finalizers and synchronous Snapshot methods. Task creation remains successful and
+records exactly one TaskCreated even if signal throws. Original typed failures,
+defects and interruption causes compare exactly with the undecorated Effect.
+The timer still wakes after 250 ms when the observer fails.
+
+F3: all conditional operations now use the same afterWrite helper, consult the
+active-write marker and provide it during their work. Each nested runDue,
+cleanupExpired and runDaily rollback case observes revision zero inside the
+transaction and one harmless signal after it ends. Idle work remains silent.
+The compiled loopback regression uses production SSE and the decorator, with only
+an internal stdin trigger, a store reference and the background scheduler held.
+The reviewed decorator emits provisional `[5, ReminderFired]`, rolls back, and
+skips the durable TaskCreated reusing seq 5. The corrected stream emits exactly
+`[5, TaskCreated, Durable successor]` and `[6, TaskCreated, Next cursor witness]`.
+Both the literal tuples and the complete operation entries must equal durable
+History. No test-only product route, header or flag was added.
+
+B1 remains outside this unit. The existing ProfileDeleted exception sends final
+TaskDeleted/ProfileDeleted to a revoked scoped Token on both base and head,
+contrary to ADR-0010. No new code preserves or tests for that exemption. Integration
+with the strict read scopes must resolve it before installation.
+
+Strict-read integration obligations, not implemented here: capture the revision
+before the authorized pass and carry it through active, absent, terminal and
+Snapshot-generation states. Obtain a fresh checked read lease on every pass and
+hold none over the wait. Preserve generation/cursor/connection-bound, one-use
+owner terminal permission, ordered IDs, resume handling and Diagnostics lifetime.
+Classify the new public read members and repeat stream/auth tests on the merge.
+
+O2 remains later work. Both apps perform a full refresh for every operation. The
+actual Electron renderer starts nine reads in this view, supersedes 299 of 300
+serial refreshes and 49 of 50 batch refreshes on both servers, and can show the final
+batch state seconds late. The earlier passive-consumer burst table measures server
+work without those refreshes; it is not app-visible latency. Preserve immediate
+first wake and remembered revisions during later client/read optimization.
+
+Revision evidence: `.scratch/revision/evidence/observers-red-typed.log` has seven
+failing fault/nesting controls on fd76a438. `observers-green.log` and the server
+suite contain their passing results. `wire-red/result.json` and
+`wire-green/result.json` retain the provisional/reused-sequence reproduction.
+`mac-red-provenance.json` matches the original full failing helper's test source
+SHA-256 to fd76a438. `mac-green/` retains the failed intermediate transport-only
+correction. `mac-session/` passes the full helper, including the unchanged reconnect
+case in 9.982 s, the three-order case in 2.403 s and native-request cleanup logs.
+Its before/after Package.resolved checks are zero, and its source hashes match
+the delivered tests. `root-check-session.log` is the final locked check, exit zero.
+`wire-complete-green/` also asserts full operation-entry equality and literal ids
+`["5", "6"]` after rollback and reuse. A redundant queued red run was cancelled before acquiring
+the Swift slot; the existing red receipt is reused. New verification outputs
+remain local. All corrections are committed after fd76a438 without amending it.

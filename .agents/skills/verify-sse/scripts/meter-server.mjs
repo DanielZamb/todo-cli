@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { now } from "./host-clock.mjs";
 
 let historyReads = 0;
 let passes = 0;
@@ -34,7 +35,7 @@ Database.prototype.transaction = function (...args) {
     const outer = !db.inTransaction;
     const before = outer ? db.query("SELECT total_changes() AS n").get().n : 0;
     const result = fn(...args);
-    const committed = performance.timeOrigin + performance.now();
+    const committed = now();
     if (outer && db.query("SELECT total_changes() AS n").get().n !== before) {
       const table = db.query("SELECT 1 FROM sqlite_master WHERE name='op_log'").get();
       const seq = table ? db.query("SELECT max(seq) AS seq FROM op_log").get().seq : 0;
@@ -48,5 +49,5 @@ Database.prototype.transaction = function (...args) {
   return wrapped;
 };
 process.stdin.setEncoding("utf8");
-process.stdin.on("data", () => process.stdout.write(`METER ${JSON.stringify({ cpu: process.cpuUsage(), historyReads, passes })}\n`));
+process.stdin.on("data", () => process.stdout.write(`METER ${JSON.stringify({ cpu: process.cpuUsage(), historyReads, passes, sampledAt: now() })}\n`));
 await import("../../../../apps/server/src/main.ts");

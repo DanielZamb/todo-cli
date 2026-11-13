@@ -167,7 +167,7 @@ at once, including a commit after History was read. Several signals between pass
 collapse into one pass. The 250 ms timer still finds CLI commits and expired
 credentials. Its losing waiter is cancelled on timeout, wake or stream closure.
 
-The helper now also runs `test/sse.test.ts`, `test/stream-wake.test.ts` and `test/stream-wake-store.test.ts` with its
+The helper now also runs `test/sse.test.ts`, `test/stream-wake.test.ts`, `test/stream-wake-store.test.ts` and `test/stream-wake-observers.test.ts` with its
 compiled CLI. These freeze the Effect clock to prove server delivery without a
 timer advance and compiled CLI delivery only after 250 ms, remembered signals,
 burst collapsing, five-waiter broadcast and cancellation/reopening counts. Without
@@ -181,13 +181,28 @@ completion and counts the unchanged History query. It adds no production route.
 The driver provisions synthetic scratch data, alternates five pairs with 40 writes
 per arm and pair, varies interarrival times, checks exact operation ids, records
 one/two/five-stream idle CPU and passes, and drives 300 HTTP edits with Task reads.
-Timestamps use `performance.timeOrigin + performance.now()` in both processes.
-Bun's `process.hrtime` has a different origin in each process and cannot compare
-commit and receipt directly. Keep raw samples and load observations local.
+Timestamps use `host-clock.mjs`, calling macOS
+`clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)` in both processes. The driver brackets
+meter samples and rejects negative commit-to-receipt intervals. Neither Bun hrtime
+nor its performance epoch is safe for comparisons across processes. Keep raw samples and load observations local.
 
 The client order proofs use the unsigned Electron host with
 `TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_STREAM_WAKE=1` and verify-electron's helper,
-and `TaskSearchStateTests.ownWriteReplyAndStreamOrdersKeepTheSavedTask` through
+and `StreamWriteOrderTests.ownWriteReplyAndStreamOrdersKeepTheSavedTask` through
 `scripts/swift-slot.sh` and the Mac state helper. They hold actual reply, stream and
 read responses while driving production refresh behavior against a compiled scratch
 server. No signed app or Keychain is involved.
+
+The observer regressions inject a throwing signal and preserve committed results,
+original failure causes and the fallback timer. They also compose all three
+conditional operations inside a failed enclosing write. The helper's compiled
+`scripts/verify-nested-wire.mjs` drive holds the scheduler and adds an internal stdin
+trigger without changing the production stream. It requires literal seq 5 and 6
+TaskCreated events, full equality with durable History, and no provisional reminder
+after the outer transaction rolls back. Its optional second argument is a store
+source file for an explicit red control; default verification uses current source.
+The dedicated Mac order transport owns an ephemeral URLSession per order. It
+closes and awaits its forwarding Task, invalidates its session and requires zero
+remaining native requests. Cancelling the Swift body reader alone can leave an
+idle native SSE request in URLSession.shared and exhaust later fixtures' per-host
+connections. The original SearchTransport and its reconnect assertion stay unchanged.

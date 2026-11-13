@@ -35,7 +35,8 @@ cd "$root"
   "$scratch/seed" "$scratch"
   printf 'TODO_DB=%s/scratch.db TODO_PORT=0 %s/server\n' "$scratch" "$scratch"
   python3 .agents/skills/verify-sse/scripts/drive.py "$scratch" "$evidence"
-  TODO_CLI_BINARY="$scratch/todo" bun --bun "$root/apps/server/node_modules/vitest/vitest.mjs" run --root "$root/apps/server" test/sse.test.ts test/stream-wake.test.ts test/stream-wake-store.test.ts
+  TODO_CLI_BINARY="$scratch/todo" bun --bun "$root/apps/server/node_modules/vitest/vitest.mjs" run --root "$root/apps/server" test/sse.test.ts test/stream-wake.test.ts test/stream-wake-store.test.ts test/stream-wake-observers.test.ts
+  bun "$root/.agents/skills/verify-sse/scripts/verify-nested-wire.mjs" "$evidence/nested-wire"
   sqlite3 "$scratch/scratch.db" .dump > "$evidence/database.sql"
 } > "$evidence/commands.log" 2>&1
 rm -rf "$scratch"

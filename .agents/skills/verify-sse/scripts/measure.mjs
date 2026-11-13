@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { now } from "./host-clock.mjs";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir, loadavg, cpus } from "node:os";
 import { join, resolve } from "node:path";
@@ -8,7 +9,6 @@ import { Effect } from "effect";
 const [before, after, destination] = process.argv.slice(2).map((path) => resolve(path));
 mkdirSync(destination, { recursive: true });
 const rows = [];
-const now = () => performance.timeOrigin + performance.now();
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const quantiles = (values) => {
   const sorted = values.toSorted((a, b) => a - b);
@@ -71,9 +71,10 @@ for (let pair = 0; pair < 5; pair++) {
         return response.json();
       };
       const sample = async () => {
-        const length = stats.length; child.stdin.write("stats\n");
+        const length = stats.length; const started = now(); child.stdin.write("stats\n");
         for (let i = 0; stats.length === length && i < 1000; i++) await delay(1);
         if (!stats[length]) throw new Error("Missing meter sample");
+        if (!(started <= stats[length].sampledAt && stats[length].sampledAt <= now())) throw new Error("Meter sample is not on the shared host clock");
         return stats[length];
       };
       const db = new Database(path, { readonly: true });
@@ -104,7 +105,9 @@ for (let pair = 0; pair < 5; pair++) {
       const waitEvent = async (seq) => {
         for (let i = 0; !events.has(seq) && i < 10000; i++) await delay(1);
         if (!events.has(seq) || !commits.has(seq)) throw new Error(`Missing commit/event ${seq}`);
-        return events.get(seq) - commits.get(seq);
+        const elapsed = events.get(seq) - commits.get(seq);
+        if (elapsed < 0) throw new Error(`Negative commit-to-event interval for ${seq}`);
+        return elapsed;
       };
       const idle = [];
       for (const count of [1, 2, 5]) {
@@ -139,7 +142,7 @@ for (let pair = 0; pair < 5; pair++) {
       const burst = { edits: 300, elapsedMs: now() - t, historyReads: end.historyReads - start.historyReads, passes: end.passes - start.passes, cpuMs: (end.cpu.user + end.cpu.system - start.cpu.user - start.cpu.system) / 1000, taskRead: quantiles(readLatency) };
       rows.push({ pair, arm, load, loadAfter: loadavg(), latency: quantiles(latency), samples: latency, replyLatency: quantiles(replyLatency), eventFirst, idle, burst, errors: 0, tasks: db.query("SELECT count(*) AS n FROM tasks").get().n });
       db.close();
-      writeFileSync(join(destination, "result.json"), JSON.stringify({ cores: cpus().length, rows }, null, 2));
+      writeFileSync(join(destination, "result.json"), JSON.stringify({ clock: "clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)", cores: cpus().length, rows }, null, 2));
       writeFileSync(join(destination, `${pair}-${arm}.log`), output);
       process.stdout.write(`${pair} ${arm} ${JSON.stringify(rows.at(-1).latency)}\n`);
       for (const controller of controllers) controller.abort();

@@ -9,16 +9,30 @@ const activeWrite = Context.Reference<StreamWake | undefined>(
   },
 );
 
+const notify = (wake: StreamWake, changed: () => boolean = () => true) => {
+  try {
+    if (changed()) wake.signal();
+  } catch {}
+};
+
 const afterWrite = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
   wake: StreamWake,
+  changed: (value: A) => boolean = () => true,
 ) =>
   Effect.flatMap(activeWrite, (active) =>
     active === wake
       ? effect
       : effect.pipe(
           Effect.provideService(activeWrite, wake),
-          Effect.ensuring(Effect.sync(wake.signal)),
+          Effect.onExit((exit) =>
+            Effect.sync(() =>
+              notify(
+                wake,
+                () => exit._tag === "Failure" || changed(exit.value),
+              ),
+            ),
+          ),
         ),
   );
 
@@ -39,24 +53,13 @@ const observe = <T extends object>(
       return (...args: unknown[]) => {
         const result: unknown = Reflect.apply(value, target, args);
         if (Effect.isEffect(result)) return afterWrite(result, wake);
-        wake.signal();
+        notify(wake);
         return result;
       };
     },
   });
 
 export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
-  const after = <A, E, R>(
-    effect: Effect.Effect<A, E, R>,
-    changed: (value: A) => boolean,
-  ) =>
-    effect.pipe(
-      Effect.onExit((exit) =>
-        Effect.sync(() => {
-          if (exit._tag === "Failure" || changed(exit.value)) wake.signal();
-        }),
-      ),
-    );
   const scheduled = observe(
     store.scheduled,
     {
@@ -67,8 +70,9 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
     wake,
     {
       runDue: () =>
-        after(
+        afterWrite(
           store.scheduled.runDue(),
+          wake,
           ({ woken, reminders }) => woken > 0 || reminders > 0,
         ),
     },
@@ -101,7 +105,7 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
     wake,
     {
       cleanupExpired: () =>
-        after(store.auth.cleanupExpired(), (count) => count > 0),
+        afterWrite(store.auth.cleanupExpired(), wake, (count) => count > 0),
     },
   );
   const snapshots = observe(
@@ -126,7 +130,11 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
     wake,
     {
       runDaily: () =>
-        after(store.snapshots.runDaily(), (snapshot) => snapshot !== null),
+        afterWrite(
+          store.snapshots.runDaily(),
+          wake,
+          (snapshot) => snapshot !== null,
+        ),
     },
   );
   const observed = observe(
