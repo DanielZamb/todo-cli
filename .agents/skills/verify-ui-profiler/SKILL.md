@@ -255,3 +255,16 @@ zero refusals. `bun .agents/skills/verify-ui-profiler/scripts/sqlite-refusal-und
 <checkout> 60000 <commits-per-second>` holds the same load on a foreign store
 and on a damaged store: every open must be refused with its reason or answered
 `store_busy`, and none may open.
+
+## Recovery opens are bounded in memory
+
+A store with committed WAL frames is checked on a private temporary copy:
+the descriptor reader streams the committed pages (main with the frames
+overlaid, journal bytes set to rollback) one page at a time into a 0600 file
+in a fresh `mkdtemp` directory. The copy is opened `immutable=1` and
+read-only, and the directory is removed afterwards. Peak memory no longer
+grows with the store: it is the baseline process, one page buffer and
+SQLite's default page cache. The temporary file is at most the main file's
+size, which is capped by the recordings ceiling (`totalBytes`, 256 MiB by
+default); a larger main file is refused as `oversized` before any copy.
+Review 5's `image-cost.ts` measures it under `/usr/bin/time -l`.

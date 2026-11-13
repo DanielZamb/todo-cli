@@ -7,11 +7,15 @@ import {
   fstatSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   openSync,
   readSync,
+  rmSync,
   statSync,
   unlinkSync,
+  writeSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
@@ -180,7 +184,7 @@ function clearEmptySidecars(path: string, sides: readonly string[]) {
     }
   }
 }
-function inspect(fd: number, path: string) {
+function inspect(fd: number, path: string, image: () => number) {
   let wal: number | undefined;
   try {
     wal = openSync(path + "-wal", constants.O_RDONLY | constants.O_NOFOLLOW);
@@ -213,7 +217,9 @@ function inspect(fd: number, path: string) {
             read: (target, position) =>
               readSync(wal, target, 0, target.length, position),
           },
-      true,
+      (offset, page) => {
+        writeSync(image(), page, 0, page.length, offset);
+      },
     );
     if (verdict.kind !== "owned") return refuse(verdict.kind);
     return verdict;
@@ -221,12 +227,10 @@ function inspect(fd: number, path: string) {
     if (wal !== undefined) closeSync(wal);
   }
 }
-function preflight(path: string, image: Buffer | undefined) {
+function preflight(path: string) {
   const uri = pathToFileURL(path);
   uri.searchParams.set("immutable", "1");
-  const existing = image
-    ? Database.deserialize(image, true)
-    : new Database(uri.href, { readonly: true, strict: true });
+  const existing = new Database(uri.href, { readonly: true, strict: true });
   try {
     try {
       recognizeRecordingFormat(existing);
@@ -266,12 +270,30 @@ function consistentInspection(fd: number, path: string) {
   for (;;) {
     const before = fileStamp(fd, path);
     let refusal: RecordingOpenRefusal | undefined;
+    let scratch: string | undefined;
+    let imageFd: number | undefined;
+    const image = () => {
+      if (imageFd === undefined) {
+        scratch = mkdtempSync(join(tmpdir(), "todo-recording-check-"));
+        imageFd = openSync(
+          join(scratch, "image.db"),
+          constants.O_RDWR | constants.O_CREAT | constants.O_EXCL,
+          0o600,
+        );
+      }
+      return imageFd;
+    };
     try {
-      const inspected = inspect(fd, path);
-      preflight(path, inspected.image);
+      const inspected = inspect(fd, path, image);
+      if (imageFd !== undefined) closeSync(imageFd);
+      imageFd = undefined;
+      preflight(inspected.imaged && scratch ? join(scratch, "image.db") : path);
     } catch (error) {
       if (!(error instanceof RecordingOpenRefusal)) throw error;
       refusal = error;
+    } finally {
+      if (imageFd !== undefined) closeSync(imageFd);
+      if (scratch) rmSync(scratch, { recursive: true, force: true });
     }
     if (!refusal) return;
     const stable = before === fileStamp(fd, path);
