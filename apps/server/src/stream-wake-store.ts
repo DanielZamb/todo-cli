@@ -37,7 +37,7 @@ const observe = <T extends object>(
         try {
           result = Reflect.apply(value, target, args);
         } catch (cause) {
-          finished(() => false);
+          finished(() => writes);
           throw cause;
         }
         if (Effect.isEffect(result))
