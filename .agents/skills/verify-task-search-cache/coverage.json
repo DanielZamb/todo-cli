@@ -1,5 +1,5 @@
 {
-  "productCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "productCommit": "0733af4afcaac34774333ab019b29f05c7ebea9e",
   "scope": "Reviewed immutable merged strict reads and Snapshot/Purge source 5f46e7b3; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8"
+      "sha256": "1436fbe2f8c184c194b3db9d7b351f2006dff7457dc32c38a65b154e8c550922"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -82,7 +82,7 @@
       "result": "Three intended observer controls1, restored0, strictTypecheck0; real compiled CLI defect1/runtime_error and typed refusal2 proved before renewal"
     }
   },
-  "previousProductCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
+  "previousProductCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
   "clientIntegrationReview": {
     "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
     "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
@@ -154,6 +154,23 @@
     "certifies": "The folded-word memo, its admission model and controls, and the cache hygiene observer on the merged product. No covered or hygiene file changed: the durable refusal changes only auth.ts and the new rejection-history.ts, neither mapped here.",
     "previous": {
       "productCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
+    }
+  },
+  "cliRoutingIntegration": {
+    "product": "0733af4afcaac34774333ab019b29f05c7ebea9e",
+    "status": "candidate for independent seat acceptance",
+    "review": "docs/decisions/ui-speed/cli-through-server-c9-merge.md",
+    "scope": "Immutable product of feat/cli-through-server after merging integ/c9-server 675aab82 (stream wake and durable refusal) in de9292be. Candidate for seat acceptance. Every pinned row is recomputed from the product's bytes; only the listed rows change. No model, invariant or bound changes.",
+    "certifies": "The folded-word memo, its admission model and controls, and the cache hygiene observer on this product. Only server.ts changes among mapped files: endpoint acquisition before the store, verifyStore immediately after it, then the one StreamWake and its decorator; hygiene still receives the raw store and is forked before the scheduler. main.ts equals its pin.",
+    "changes": [
+      {
+        "path": "apps/server/src/server.ts",
+        "before": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8",
+        "after": "1436fbe2f8c184c194b3db9d7b351f2006dff7457dc32c38a65b154e8c550922"
+      }
+    ],
+    "previous": {
+      "productCommit": "0bd8476df7d7147ea355b418346b57d33f403aee"
     }
   }
 }

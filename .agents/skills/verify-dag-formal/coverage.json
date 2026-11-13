@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "confirmedCommit": "0733af4afcaac34774333ab019b29f05c7ebea9e",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -244,6 +244,18 @@
     "certifies": "Finite DAG safety and production/public conformance on the merged product, with the wake's server.ts and the durable refusal's auth.ts. Authentication.startSeries, append, requireCredential and mutate bodies are textually identical to the stream-wake product; perform's catch and record now decide repeats from History, outside the finite model, as for 13ff84d6. This is the full default run the 13ff84d6 renewal did not have.",
     "previous": {
       "confirmedCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
+    }
+  },
+  "cliRoutingIntegration": {
+    "product": "0733af4afcaac34774333ab019b29f05c7ebea9e",
+    "status": "candidate for independent seat acceptance",
+    "review": "docs/decisions/ui-speed/cli-through-server-c9-merge.md",
+    "scope": "Immutable product of feat/cli-through-server after merging integ/c9-server 675aab82 (stream wake and durable refusal) in de9292be. Candidate for seat acceptance. Every pinned row is recomputed from the product's bytes; only the listed rows change. No model, invariant or bound changes.",
+    "contract": "259e9afb029a09213f5f1e2e3ed994bf5a85364af60a90b37f630f415e2aedad",
+    "certifies": "Finite DAG safety and production/public conformance on this product. The eight public rows change only outside their mapped items: the CLI routing flags, withStore, add, config and Snapshot helpers in main.ts; routing text in help.ts and the schema root $comment in schema.ts; the Local HttpApi group in packages/api/src/index.ts and openapi.json (three /local paths added, every existing path including the graph response byte-identical); serverLayer wiring in server.ts (endpoint, verifyStore, one StreamWake, localRoutes on the decorated store); and the contract identity, renewed here to the product's own value. Tasks, DependRequest, BatchEdgeRequest, TaskFilters, rejectUnknownQuery, the depend/undepend/batchDepend/importTasks handlers, dependencyCommand, batchDepend, the deletion confirmation, the false filter guard, the malformed Version boundary, registerCommandSchema and the rm confirmation wording are textually unchanged.",
+    "changes": [],
+    "previous": {
+      "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee"
     }
   }
 }

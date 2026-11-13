@@ -3,6 +3,19 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## CLI routing integration renewal
+
+Candidate: immutable product 0733af4afcaac34774333ab019b29f05c7ebea9e is `feat/cli-through-server` after it
+merged integ/c9-server 675aab82 (de9292be). Eight public rows change, all from
+the CLI routing slice: main.ts, help.ts, schema.ts, packages/api/src/index.ts,
+openapi.json, server.ts and the two contract identity files. The mapped items
+in them are textually unchanged; openapi.json adds three /local paths and keeps
+every existing path, the graph response included, byte-identical. The pin's
+contract moves to the product's own 259e9afb…. All 53 public control anchors
+match exactly once on the product before renewal. The review and the full
+command's actual exit are in docs/decisions/ui-speed/cli-through-server-c9-merge.md.
+No model, invariant or bound changed.
+
 ## c9 server integration renewal
 
 Immutable merged product 0bd8476df7d7147ea355b418346b57d33f403aee combines the

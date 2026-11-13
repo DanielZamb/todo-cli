@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "confirmedCommit": "0733af4afcaac34774333ab019b29f05c7ebea9e",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -180,7 +180,7 @@
         "BatchEdgeRequest",
         "TaskFilters"
       ],
-      "sha256": "a5de96b535555f4368147d4e1fc5ff917cb5157cc02a0ce52ba808e857019152"
+      "sha256": "c7f5024d222c288ec25f1f18e9113f39d6e2864d02f38549a809e47ecd45da28"
     },
     {
       "path": "apps/server/src/server.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8"
+      "sha256": "1436fbe2f8c184c194b3db9d7b351f2006dff7457dc32c38a65b154e8c550922"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -199,14 +199,14 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "d935d13ffe26e9dee95c16db08a41c8cd8545c2dc1aec9a6300b98b7fe530de8"
+      "sha256": "6bb56265a6170f6f849d2a743e31b8d356cd74fee2e3f089ed586671e5ce63d7"
     },
     {
       "path": "apps/cli/src/schema.ts",
       "functions": [
         "registerCommandSchema"
       ],
-      "sha256": "0bf917c6b657de434765b1b991a8fb7519265bb3c58f555c47c9235a8804d768"
+      "sha256": "0e26ae0f6f10a02074f27789e6a7d399f659a32e1fbe4273392b97c3a807fe2c"
     },
     {
       "path": "apps/cli/src/input.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "3d27257d2977cf8128175650fe7b548c1a1a204326cbf7b55e4d9cbb3873cd13"
+      "sha256": "178fb1cdcd23c86d77850dd351994a75581a1e13d33ef34d8f5561ea72705c67"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,14 +304,14 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "6dd6b5d5c06013e9f7f8cf7fb8e3f7bbba0be412a24d3daa63545375409eb928",
+      "sha256": "24e80b32208ed538ad83792519cba143d6084bd044c18ea713b66ea670b22aa4",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "2961b2686c8df0331495d260d6496970c28ae4bef47591b3c224054be3c21431",
+      "sha256": "e49fbb4320decedc625032006e94f1987bd97a6e4e73402e750ed228f248948e",
       "functions": [
         "contract identity"
       ]
@@ -433,7 +433,7 @@
       "functions": [
         "rm confirmation Version wording"
       ],
-      "sha256": "83d9389036ed1ace8699fad3f27fe9439583228c2a692019c303fe6995bc1d0e"
+      "sha256": "143282f3e13d6216af0a9f763353c6f6490ceed90231bb4035bc662b02903981"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
@@ -569,6 +569,59 @@
     "certifies": "Finite DAG safety and production/public conformance on the merged product, with the wake's server.ts and the durable refusal's auth.ts. Authentication.startSeries, append, requireCredential and mutate bodies are textually identical to the stream-wake product; perform's catch and record now decide repeats from History, outside the finite model, as for 13ff84d6. This is the full default run the 13ff84d6 renewal did not have.",
     "previous": {
       "confirmedCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
+    }
+  },
+  "cliRoutingIntegration": {
+    "product": "0733af4afcaac34774333ab019b29f05c7ebea9e",
+    "status": "candidate for independent seat acceptance",
+    "review": "docs/decisions/ui-speed/cli-through-server-c9-merge.md",
+    "scope": "Immutable product of feat/cli-through-server after merging integ/c9-server 675aab82 (stream wake and durable refusal) in de9292be. Candidate for seat acceptance. Every pinned row is recomputed from the product's bytes; only the listed rows change. No model, invariant or bound changes.",
+    "contract": "259e9afb029a09213f5f1e2e3ed994bf5a85364af60a90b37f630f415e2aedad",
+    "certifies": "Finite DAG safety and production/public conformance on this product. The eight public rows change only outside their mapped items: the CLI routing flags, withStore, add, config and Snapshot helpers in main.ts; routing text in help.ts and the schema root $comment in schema.ts; the Local HttpApi group in packages/api/src/index.ts and openapi.json (three /local paths added, every existing path including the graph response byte-identical); serverLayer wiring in server.ts (endpoint, verifyStore, one StreamWake, localRoutes on the decorated store); and the contract identity, renewed here to the product's own value. Tasks, DependRequest, BatchEdgeRequest, TaskFilters, rejectUnknownQuery, the depend/undepend/batchDepend/importTasks handlers, dependencyCommand, batchDepend, the deletion confirmation, the false filter guard, the malformed Version boundary, registerCommandSchema and the rm confirmation wording are textually unchanged.",
+    "changes": [
+      {
+        "path": "packages/api/src/index.ts",
+        "before": "a5de96b535555f4368147d4e1fc5ff917cb5157cc02a0ce52ba808e857019152",
+        "after": "c7f5024d222c288ec25f1f18e9113f39d6e2864d02f38549a809e47ecd45da28"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "before": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8",
+        "after": "1436fbe2f8c184c194b3db9d7b351f2006dff7457dc32c38a65b154e8c550922"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "d935d13ffe26e9dee95c16db08a41c8cd8545c2dc1aec9a6300b98b7fe530de8",
+        "after": "6bb56265a6170f6f849d2a743e31b8d356cd74fee2e3f089ed586671e5ce63d7"
+      },
+      {
+        "path": "apps/cli/src/schema.ts",
+        "before": "0bf917c6b657de434765b1b991a8fb7519265bb3c58f555c47c9235a8804d768",
+        "after": "0e26ae0f6f10a02074f27789e6a7d399f659a32e1fbe4273392b97c3a807fe2c"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "before": "3d27257d2977cf8128175650fe7b548c1a1a204326cbf7b55e4d9cbb3873cd13",
+        "after": "178fb1cdcd23c86d77850dd351994a75581a1e13d33ef34d8f5561ea72705c67"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "before": "6dd6b5d5c06013e9f7f8cf7fb8e3f7bbba0be412a24d3daa63545375409eb928",
+        "after": "24e80b32208ed538ad83792519cba143d6084bd044c18ea713b66ea670b22aa4"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "before": "2961b2686c8df0331495d260d6496970c28ae4bef47591b3c224054be3c21431",
+        "after": "e49fbb4320decedc625032006e94f1987bd97a6e4e73402e750ed228f248948e"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "before": "83d9389036ed1ace8699fad3f27fe9439583228c2a692019c303fe6995bc1d0e",
+        "after": "143282f3e13d6216af0a9f763353c6f6490ceed90231bb4035bc662b02903981"
+      }
+    ],
+    "previous": {
+      "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee"
     }
   }
 }
