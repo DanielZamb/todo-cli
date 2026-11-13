@@ -40,6 +40,25 @@ ambient adapter of its driver. It retains response/count assertions, alternates
 before/after per pair and requires zero unneeded operation decodes after the fix.
 It omits newer Diagnostics stage assertions unavailable in the unchanged contract.
 
+The strict-scope controls also capture every never-created Profile read before
+classification changes. `read-presence-control.ts` compares those fixtures and
+requires exactly credential lookup plus classification and zero operation decodes.
+Its blanket-404 and present-query mutants must fail their literal assertions.
+`read-scope-stream-control.ts` compares compiled CLI/server frames, including the
+approved owner-only terminal exception and a separate CLI creating an absent
+Profile between polls.
+
+`scripts/read-caller-audit.mjs` emits the production read-port selector inventory
+for review; runtime leases enforce retention. `read-mapping-review.mjs <SHA>`
+compares the reviewed cache/matcher/runner/integration bodies against the earlier
+authority product and writes each before/after hash. It never renews a pin.
+`build-read-lock-observer.mjs before|after <binary>` instruments physical SQLite
+transactions only in proof binaries. `paired-read-locks.mjs <before> <after>
+<fixture-manifest> <evidence>` measures five alternating pairs per route, marking
+deferred reader scopes separately from writer holds. Its Snapshot comparisons
+normalize separate scratch ids/paths; strict reply parity uses read-control.ts
+with shared file identities. Absolute timing values are evidence, not test gates.
+
 Created with `create-verification-skill`.
 Read the [feature map](features/README.md) before choosing coverage.
 

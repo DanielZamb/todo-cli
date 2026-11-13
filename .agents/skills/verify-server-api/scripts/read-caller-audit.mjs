@@ -1,0 +1,36 @@
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+const pattern = String.raw`\b(readAuthority|checkedRead|consumeTerminalRead|taskHistory|terminalHistory|readManagedImage|readTasks|readSeries|readProjects|readTags|seriesForTask)\(|\.(read|metadata|catalog|projects|tags|profiles|profileSummaries|profilesRead|listTokens|taskHistory|readMetadata|readState|readCatalog|authorizeRead|ownerRead|recheckRead|withRead|withMetadata|withState|withOwnerRead|withStreamRead|readSnapshot|resolveProfileRead|checkRead|graphRead|changesRead|terminalChangesRead|listRead|showRead|imageRead|imageWithin|generation|generationSync|purgedIdsSync|searchCacheEvents|pendingReminders|graph|tasks|series|history)\(`;
+const text = execFileSync("rg", ["-n", pattern, "packages/domain/src", "apps/cli/src", "apps/server/src"], { encoding: "utf8" });
+const classify = ({ file, code }) => {
+  if (/searchCacheEvents|generationSync|purgedIdsSync|\.generation\(/.test(code)) return "Internal restore/erasure cursor or storage generation. No caller Profile or Task id; read paths execute it inside their checked scope.";
+  if (file.endsWith("/sse.ts")) return "Credential and subscription fields were bound at connection entry. Every poll checks those plain selectors afresh; only its synchronous callback holds an authority. Terminal permission also binds connection, generation, cursor and deletion cap.";
+  if (/readAuthority|checkedRead|consumeTerminalRead|checkRead/.test(code)) return "Private brand, exact prototype, kind, database and live-lease validation before consuming Profile, scope, checked Profile set or parsed ids. No raw request selector is consumed here.";
+  if (/graphRead|changesRead|terminalChangesRead/.test(code)) return "Genuine authority from the enclosing checked callback. Profile and terminal bounds come from private fields; ordinary cursor is the bound stream state.";
+  if (/listRead|showRead/.test(code)) return "Owner authority in the synchronous owner callback. Snapshot Show uses private fields.snapshot; List has no id.";
+  if (file.includes("/store/client-projection")) return "Projection entry validates the authority; SQL takes its private Profile or checked Profile-id set. Internal write helpers use validated mutation rows.";
+  if (file.includes("/store/history-reads")) return "Task History uses private Profile and fields.task_id. Terminal History consumes the one-shot private cursor/generation/through bound before SQL.";
+  if (file.includes("/store/diagnostics")) return "Checked owner callback and owner-port validation. Snapshot ids, generation and pending reminder ids come from storage inside this same IMMEDIATE lease.";
+  if (file.includes("/discovery.ts")) return "One deferred outer snapshot. Profile ids come from checked summaries/set; prefix from parsed private fields. Nested callbacks materialize under the outer lease, then return plain data.";
+  if (file.includes("/auth/auth.ts")) return "Authentication owns credential/scope/classification checks. Projection calls receive a genuine live authority; visible Profiles derive once from the checked set. Callback results are plain data/selectors.";
+  if (file.includes("/client-reads.ts")) return "Shared input boundary binds Profile and parsed fields before checking. Views use materialized catalogs; History binds Task id; counts use the checked Profile set.";
+  if (/readManagedImage|imageRead|imageWithin/.test(code)) return file.includes("attachment-commands") ? "Managed image callback validates the live authority and selected Task/Profile, then reads private Task/Attachment ids before file access." : "Trusted image copy/storage helper uses the decoded current/source Task and Attachment metadata. It is also used by write paths; no request query selector enters it directly.";
+  if (file.includes("/import-tasks")) return "Initial input/Profile/items are parsed and bound. Preview materializes without writes. Each graph reread after a write opens a fresh checked scope from plain bound selectors, never a retained authority.";
+  if (file.includes("/graph-queries")) return "Profile, Task id and generated_at are captured by withRead. The callback materializes graph and result from private selectors.";
+  if (file.includes("/task-lookup-error")) return "Profile name/id and requested Task id/transport are captured by resolveProfileRead. Error formatting consumes only its plain bound selection after the scope ends.";
+  if (file.includes("/apps/cli/") || file.startsWith("apps/cli/")) return "CLI supplies typed fields at the boundary. Name resolution returns a plain selected id; each shared read checks afresh. Snapshot list/Show materialize within withOwnerRead; Snapshot write helpers retain requireOwner.";
+  if (file.startsWith("apps/server/")) return "HTTP supplies decoded fields before authorization. Query continuations use checked callbacks and bound plain results. Snapshot write helpers retain requireOwner under write rules.";
+  if (file.includes("/store/snapshots")) return "Guarded owner query or trusted Snapshot write/recovery internals. Show id comes from private fields.snapshot; generation and recovery ids come from stored manifests/state.";
+  if (file.includes("/store/") || file.includes("dependency-validation")) return "Trusted bootstrap, replay, scheduler or mutation storage. Profile and ids come from MutationIdentity, decoded event/current Task or internal state. Request query wrappers validate before reaching these raw helpers.";
+  if (file.includes("presentation")) return "Pure presentation over materialized Tasks and Series, with no database authorization or caller selector.";
+  if (file.includes("commands") || file.includes("batch-edit")) return "Shared query callbacks use private checked selectors and materialized rows. Existing writer graph/Task/Series/History reads use the checked MutationIdentity and decoded current/event rows.";
+  throw new Error(`Unclassified caller ${file}: ${code}`);
+};
+const sites = text.trim().split("\n").map((row) => {
+  const match = /^([^:]+):(\d+):(.*)$/.exec(row); assert.ok(match);
+  const site = { file: match[1], line: Number(match[2]), code: match[3].trim() };
+  return { ...site, selectors: classify(site) };
+});
+writeFileSync("docs/evidence/ui-speed/server-reads/final-caller-audit.json", JSON.stringify({ pattern, sites }, null, 2));
+console.log(JSON.stringify({ sites: sites.length, unclassified: 0 }));

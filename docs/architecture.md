@@ -225,11 +225,15 @@ its supplied text without looking up Tags or Projects. Their credential lookup
 and classification are the only statements. CLI name resolution selects the
 active id after name reuse; a deleted HTTP id remains unavailable.
 
-This strict-scope checkpoint is incomplete. Diagnostics now materializes inside
-the approved checked owner callback under the existing IMMEDIATE transaction.
-Its paired writer-lock hold measurements exceed the coordinator's limits, so
-qualification is stopped pending review of a separate read boundary. The current
-transaction mode has not changed and this checkpoint is not qualified to install.
+Diagnostics materializes generation, Snapshot manifests, pending reminders and
+metrics inside a checked owner callback under the existing IMMEDIATE transaction.
+This holds the writer lock longer while total read time remains unchanged.
+Paired owner-shaped measurements give continuous hold medians of 3.59 ms before
+and 25.34 ms after; the retained-Snapshot fixture gives 3.67 ms and 31.39 ms.
+The coordinator accepted this cost for this unit. A separate writer waits until
+the read returns, then commits. A deferred owner read scope and cheaper metrics
+queries remain proposals for a later unit. Snapshot write helpers continue to
+use requireOwner under the write path's rules.
 
 Task History selects relevant event rows in SQL before decoding OpLogEntry.
 SSE catch-up selects only committed rows for its Profile and cursor. Full History
@@ -281,7 +285,15 @@ existing failure and close sequence. Revoked or expired credentials receive no
 terminal batch. A deletion-revoked scoped Token closes as revoked; a still-valid
 unscoped Token closes on Profile deletion without that batch. The base's terminal
 batch for these credentials is intentionally removed under the owner's ruling.
-Exact frame qualification remains pending in this checkpoint.
+The compiled frame comparison covers ordering, gaps, reconnect, restore,
+revocation, expiry and deletion. An owner Session keeps the same final
+TaskCreated, two TaskDeleted and ProfileDeleted frames, then the same not_found
+failure and close. For an unscoped Token those four operation frames disappear;
+its not_found failure and close are unchanged. A deletion-revoked scoped Token,
+an already revoked Session or Token, and an expired Session or Token receive
+only ready followed by their unchanged Unauthorized revoked or expired failure
+and close. The base also sent the terminal operation batch to these credentials.
+The exact raw frames and sequence ids are recorded in the server-reads report.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher and no IPC between the two processes. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.

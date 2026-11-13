@@ -1,5 +1,5 @@
 {
-  "productCommit": "ade8f941f3d15c61cffdb58d45114b4ababbcc5e",
+  "productCommit": "27ea0c5e4ba1d1fd143b8b668790904ce07e2a2d",
   "scope": "Reviewed runtime read-authority guards; immutable product ade8f941; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
@@ -17,11 +17,11 @@
     },
     {
       "path": "commands.ts",
-      "sha256": "13b86d95a9bfec3515eafc3b19d8f9ce7d2bc6b2cf3bd924aafbbba8e7c654ee"
+      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
     },
     {
       "path": "store/store.ts",
-      "sha256": "f8d41a8b92fa499dd003ff38e2d206f8f1a0e9e5be6ac478a8ddc77103c9d765"
+      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186"
     },
     {
       "path": "store/snapshots.ts",
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "4ce06502e8153da0e0962d7563bebfb9dded784e7cbf653845290400379abb93"
+      "sha256": "4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -53,11 +53,11 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "f8d41a8b92fa499dd003ff38e2d206f8f1a0e9e5be6ac478a8ddc77103c9d765"
+      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "80b566dcc15c7dab00008363da720ede4b01078534b03115510d688ce28fb64b"
+      "sha256": "d02c596f930c970e15ea67aad6c43c0ca041bb2dc598fff9e9873c99a9814378"
     }
   ],
   "integrationReview": {
