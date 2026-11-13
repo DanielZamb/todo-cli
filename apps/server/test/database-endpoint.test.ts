@@ -17,7 +17,7 @@ import { databaseEndpoint } from "../src/database-endpoint.ts";
 it.live(
   "unavailable descriptor evidence disables publication, proof and authorization",
   () =>
-    Effect.gen(function* () {
+    Effect.sync(() => {
       const directory = mkdtempSync(
         join(tmpdir(), "todo-endpoint-unavailable-"),
       );
