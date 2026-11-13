@@ -14,3 +14,7 @@ The server test `reloads both Profile streams across restore without broadcastin
 global AuthChanged` subscribes to two Profiles before restore and commits writes
 before the next stream poll. Both streams reload at the DatabaseRestored boundary
 and receive their later operations. Global AuthChanged stays excluded.
+
+- In-process commits: the helper also runs frozen-clock server and compiled CLI
+  cases plus the broadcast revision and waiter lifecycle tests. See the
+  [in-process wake recipe](../SKILL.md#in-process-commit-wake).

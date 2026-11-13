@@ -229,7 +229,16 @@ id. Each later `operation` event is a committed `OpLogEntry`, with `seq` as the
 SSE id. Only that Profile's committed operations appear, so gaps in ids are
 normal: rejected attempts and other Profiles are skipped.
 
-The route rereads `op_log` every 250 ms and checks the credential on each pass.
+The route waits at most 250 ms before rereading `op_log` and checking the
+credential on each pass. A server-owned `StreamWake` also wakes every open stream
+after an in-process write. `stream-wake-store.ts` decorates the server's store,
+Authentication, Snapshots and ScheduledWork at their public boundaries. Exhaustive
+policies require a read/write choice when a public member is added. Empty scheduler
+work does not signal; SSE and cache hygiene use the raw store. The domain transaction
+and projection code are unchanged. A stream remembers the wake revision from before
+its pass, so commits during a pass force the next wait to return immediately.
+Bursts collapse into one pending pass per stream, and cancellation removes waiters.
+The generation check, History cursor, authorization and emitted events are unchanged.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher and no IPC between the two processes. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.

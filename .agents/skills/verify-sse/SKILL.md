@@ -149,3 +149,45 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+## In-process commit wake
+
+The server decorates its store in `stream-wake-store.ts`. The exhaustive policies
+cover the store, Authentication, Snapshots and ScheduledWork. A new public member
+requires a policy choice at typecheck. Write-capable Effects signal after completion,
+including failure or cancellation after a partial commit. An Effect context marks
+the outer write so nested store calls cannot wake streams inside its transaction. Read-only calls do not
+signal. Empty scheduler passes, credential cleanup and daily Snapshot checks do not
+signal. SSE and cache hygiene retain the raw store to prevent self-waking polls.
+The domain transaction and projection implementations remain unchanged.
+
+`stream-wake.ts` broadcasts a revision to open waits. Each stream retains the
+revision from before its database pass. A newer revision makes its next wait return
+at once, including a commit after History was read. Several signals between passes
+collapse into one pass. The 250 ms timer still finds CLI commits and expired
+credentials. Its losing waiter is cancelled on timeout, wake or stream closure.
+
+The helper now also runs `test/sse.test.ts`, `test/stream-wake.test.ts` and `test/stream-wake-store.test.ts` with its
+compiled CLI. These freeze the Effect clock to prove server delivery without a
+timer advance and compiled CLI delivery only after 250 ms, remembered signals,
+burst collapsing, five-waiter broadcast and cancellation/reopening counts. Without
+TODO_CLI_BINARY the compiled-CLI case returns early; the helper always supplies it.
+The original real-HTTP assertions remain in force.
+
+For paired measurements, compile `scripts/meter-server.mjs` against both source
+states, then run `bun scripts/measure.mjs <before> <after> <fresh-evidence>` from
+this skill directory, using absolute binary paths. The meter wraps Bun transaction
+completion and counts the unchanged History query. It adds no production route.
+The driver provisions synthetic scratch data, alternates five pairs with 40 writes
+per arm and pair, varies interarrival times, checks exact operation ids, records
+one/two/five-stream idle CPU and passes, and drives 300 HTTP edits with Task reads.
+Timestamps use `performance.timeOrigin + performance.now()` in both processes.
+Bun's `process.hrtime` has a different origin in each process and cannot compare
+commit and receipt directly. Keep raw samples and load observations local.
+
+The client order proofs use the unsigned Electron host with
+`TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_STREAM_WAKE=1` and verify-electron's helper,
+and `TaskSearchStateTests.ownWriteReplyAndStreamOrdersKeepTheSavedTask` through
+`scripts/swift-slot.sh` and the Mac state helper. They hold actual reply, stream and
+read responses while driving production refresh behavior against a compiled scratch
+server. No signed app or Keychain is involved.

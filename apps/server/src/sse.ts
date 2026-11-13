@@ -8,8 +8,9 @@ import type { OperationStore } from "@todo/domain/store";
 import { Effect, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
+import type { StreamWake } from "./stream-wake.ts";
 
-export const changesLayer = (store: OperationStore) =>
+export const changesLayer = (store: OperationStore, wake: StreamWake) =>
   HttpApiBuilder.group(TodoApi, "changes", (handlers) =>
     handlers.handleAll({
       stream: ({ params, headers }) =>
@@ -39,10 +40,12 @@ export const changesLayer = (store: OperationStore) =>
             {
               cursor: reset ? initial.restore_seq : after,
               generation: initial.generation,
+              wakeVersion: wake.version,
             },
             (state) =>
               Effect.gen(function* () {
-                yield* Effect.sleep("250 millis");
+                yield* wake.wait(state.wakeVersion);
+                const wakeVersion = wake.version;
                 const current = yield* translate(store.snapshots.generation());
                 const events: Array<typeof ChangeEvent.Type> = [];
                 if (current.generation !== state.generation) {
@@ -58,6 +61,7 @@ export const changesLayer = (store: OperationStore) =>
                     {
                       cursor: current.restore_seq,
                       generation: current.generation,
+                      wakeVersion,
                     },
                   ] as const;
                 }
@@ -83,7 +87,7 @@ export const changesLayer = (store: OperationStore) =>
                   )
                 )
                   yield* authorize;
-                return [events, { ...state, cursor }] as const;
+                return [events, { ...state, cursor, wakeVersion }] as const;
               }),
           ).pipe(Stream.flattenIterable);
           const greeting: Array<typeof ChangeEvent.Type> = [
