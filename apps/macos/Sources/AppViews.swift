@@ -1015,7 +1015,7 @@ struct QuickAddView: View {
                 Text("Try: Pay rent tomorrow p1 #bills @\"Client Project\"")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            QuickAddMetadataRegion(maximumRows: maximumRows, dependencies: InitialDependencySelection(tasks: Binding(get: { model.dependencies.initial }, set: { model.dependencies.initial = $0 }), enabled: model.canWrite, add: { Task { await model.openInitialDependencyPicker() } })) {
+            QuickAddMetadataRegion(maximumRows: maximumRows, parsedFirst: compact, dependencies: InitialDependencySelection(tasks: Binding(get: { model.dependencies.initial }, set: { model.dependencies.initial = $0 }), enabled: model.canWrite, add: { Task { await model.openInitialDependencyPicker() } })) {
                 if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {
                 VStack(alignment: .leading, spacing: 8) {
                     if compact {
@@ -1163,25 +1163,43 @@ struct MessageBanner: View {
 
 struct QuickAddMetadataRegion<Content: View>: View {
     let maximumRows: Int
+    /// Compact puts the parsed Priority, Project, Tags and dates ahead of the Dependency chips, so
+    /// they are the rows shown first (Mac UI review 2, item 2).
+    var parsedFirst = false
     let dependencies: InitialDependencySelection
     let content: Content
     @State private var parsedHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
     @State private var chipFrames: [CGRect] = []
-    init(maximumRows: Int, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
+    init(maximumRows: Int, parsedFirst: Bool = false, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
         self.maximumRows = maximumRows
+        self.parsedFirst = parsedFirst
         self.dependencies = dependencies
         self.content = content()
     }
+    private var parsed: some View {
+        content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
+    }
     var body: some View {
+        if parsedFirst {
+            // Compact: the region takes the height Quick Add has left (the parent's layout decides
+            // it, so nothing feeds back) and shows the whole rows that fit in it; the actions stay
+            // at the bottom, like the other Compact sheets (Mac UI review 2, item 2).
+            GeometryReader { geometry in
+                scroll.frame(height: fitted(geometry.size.height)).frame(maxWidth: .infinity, alignment: .topLeading)
+            }.frame(minHeight: rows.first.map { $0.bottom } ?? 24, maxHeight: .infinity)
+        } else {
+            scroll.frame(height: visibleHeight)
+        }
+    }
+    private var scroll: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                dependencies
-                content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
+                if parsedFirst { parsed; dependencies.environment(\.quickAddHeaderIsRow, true) } else { dependencies; parsed }
             }.frame(maxWidth: .infinity, alignment: .leading)
                 .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionContentHeight.self, value: geometry.size.height) })
                 .coordinateSpace(name: QuickAddRegionRow.space)
-        }.frame(height: visibleHeight).scrollIndicators(.visible).compactBounds("quick-add-metadata")
+        }.scrollIndicators(.visible).compactBounds("quick-add-metadata")
             .onPreferenceChange(QuickAddRegionContentHeight.self) { contentHeight = $0 }
             .onPreferenceChange(QuickAddRegionRows.self) { chipFrames = $0 }
             .preference(key: QuickAddAddedMetadataHeight.self, value: Optional(visibleHeight - max(24, parsedHeight)))
@@ -1191,12 +1209,22 @@ struct QuickAddMetadataRegion<Content: View>: View {
     /// chips and parsed-metadata chips alike, each row at its measured position and height, so the
     /// region never ends partway into a row; more content scrolls, with visible scroll bars. The
     /// Dependency chips are rows like any other: a long Dependency list scrolls too.
-    private var visibleHeight: CGFloat {
-        let content = max(contentHeight, 24)
+    private var rows: [(top: CGFloat, bottom: CGFloat)] {
         var rows: [(top: CGFloat, bottom: CGFloat)] = []
         for frame in chipFrames.sorted(by: { $0.minY < $1.minY }) {
             if let last = rows.last, abs(frame.minY - last.top) < 2 { rows[rows.count - 1].bottom = max(last.bottom, frame.maxY) } else { rows.append((frame.minY, frame.maxY)) }
         }
+        return rows
+    }
+    /// Compact: all of the content when it fits `offered`, else the whole rows that fit (at least one).
+    private func fitted(_ offered: CGFloat) -> CGFloat {
+        let content = max(contentHeight, 24)
+        guard content > offered + 0.5, let first = rows.first else { return content }
+        return min(content, rows.last(where: { $0.bottom <= offered + 0.5 })?.bottom ?? first.bottom)
+    }
+    private var visibleHeight: CGFloat {
+        let content = max(contentHeight, 24)
+        let rows = rows
         guard rows.count > maximumRows, maximumRows > 0 else { return content }
         return min(content, rows[maximumRows - 1].bottom)
     }
@@ -1222,19 +1250,29 @@ struct QuickAddContentAnchor<Content: View>: View {
     @ViewBuilder let content: (Int) -> Content
     @State private var addedHeight: CGFloat = 0
     @State private var maximumRows = 2
-    /// Two chip rows at 426 pt, and one more for each 42 pt the window is taller.
-    private var startRows: Int { compact ? 2 + Int(max(0, limit - TaskWindowSizing.compactSize.height) / 42) : 2 }
     var body: some View {
-        content(maximumRows)
-            .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddContentHeight.self, value: geometry.size.height) })
-            .offset(y: -addedHeight / 2)
-            .onPreferenceChange(QuickAddAddedMetadataHeight.self) { addedHeight = $0 ?? 0 }
-            .onPreferenceChange(QuickAddContentHeight.self) { height in
-                if compact && height + addedHeight > limit && maximumRows > 1 { maximumRows -= 1 }
-            }
-            .onAppear { maximumRows = startRows }
-            .onChange(of: identity) { _, _ in maximumRows = startRows }
-            .onChange(of: limit) { _, _ in maximumRows = startRows }
+        if compact {
+            // Compact is top-aligned under the Find field: no offset (it drew the header over the
+            // field at 640 pt). Quick Add takes the height the Compact screen gives it; its chip
+            // region takes what is left of that (Mac UI review 2, item 2).
+            content(maximumRows)
+                .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+        } else {
+            content(maximumRows)
+                .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddContentHeight.self, value: geometry.size.height) })
+                .offset(y: -addedHeight / 2)
+                .onPreferenceChange(QuickAddAddedMetadataHeight.self) { addedHeight = $0 ?? 0 }
+                .onAppear { maximumRows = 2 }
+                .onChange(of: identity) { _, _ in maximumRows = 2 }
+        }
+    }
+}
+private struct QuickAddHeaderIsRowKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    /// Compact Quick Add counts the "Depends on" line as a row of its chip region.
+    var quickAddHeaderIsRow: Bool {
+        get { self[QuickAddHeaderIsRowKey.self] }
+        set { self[QuickAddHeaderIsRowKey.self] = newValue }
     }
 }
 struct QuickAddAddedMetadataHeight: PreferenceKey {

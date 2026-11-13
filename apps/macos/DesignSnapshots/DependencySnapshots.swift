@@ -153,10 +153,18 @@ import TodoAPI
                         let viewport = try #require(capture.frames["quick-add-metadata"])
                         let chips = capture.frames.filter { $0.key.hasPrefix("dependency-initial-") }.map(\.value)
                         let rows = Array(Set(chips.map(\.minY))).sorted()
-                        let shown = chips.filter { rows.prefix(2).contains($0.minY) }
-                        #expect(!shown.isEmpty)
-                        let expected = name == "initial-many-invalid" ? chips.filter { $0.minY == rows.first } : shown
-                        #expect(expected.allSatisfy { viewport.insetBy(dx: -0.5, dy: -0.5).contains($0) }, "\(file) first two whole chip rows are visible")
+                        let parsed = capture.frames.filter { $0.key.hasPrefix("chip-") && !$0.key.hasPrefix("chip-control") }.map(\.value)
+                        if compact && !parsed.isEmpty {
+                            // Compact Quick Add (Mac UI review 2, item 2): the parsed chips come first and
+                            // are all visible; the Dependency chips follow in the rows that fit.
+                            #expect(parsed.allSatisfy { viewport.insetBy(dx: -0.5, dy: -0.5).contains($0) }, "\(file) every parsed chip is visible without scrolling")
+                            #expect(chips.allSatisfy { $0.minY >= parsed.map(\.maxY).max()! - 0.5 }, "\(file) the Dependency chips follow the parsed chips")
+                        } else {
+                            let shown = chips.filter { rows.prefix(2).contains($0.minY) }
+                            #expect(!shown.isEmpty)
+                            let expected = name == "initial-many-invalid" ? chips.filter { $0.minY == rows.first } : shown
+                            #expect(expected.allSatisfy { viewport.insetBy(dx: -0.5, dy: -0.5).contains($0) }, "\(file) first two whole chip rows are visible")
+                        }
                     }
                     if name == "picker-long-cycle" {
                         let loop = try #require(capture.frames["dependency-loop"])
@@ -194,11 +202,19 @@ import TodoAPI
                         let key = "\(compact)-\(scheme)"
                         if let before = quickAddActions[key] { #expect(actions == before, "Chosen Dependencies cannot move the actions") }
                         else { quickAddActions[key] = actions }
-                        #expect(abs(actions.minY - metadata.maxY - 16) < 0.5, "Main metadata-to-actions spacing stays16")
+                        if compact {
+                            // Compact keeps its actions at the bottom of the room it is given; the chip
+                            // region ends at least 16 pt above them (Mac UI review 2, item 2).
+                            #expect(actions.minY - metadata.maxY >= 15.5, "\(file) at least 16 pt between metadata and actions")
+                        } else {
+                            #expect(abs(actions.minY - metadata.maxY - 16) < 0.5, "Main metadata-to-actions spacing stays16")
+                        }
                         #expect(actions.minX >= 0 && actions.maxX <= width && actions.minY >= 0 && actions.maxY <= height)
                         if compact && compactHeight == 426 {
                             let add = try #require(capture.frames["quick-add-add"])
-                            #expect(add == CGRect(x: 299.5, y: 295.5, width: 77.5, height: 36), "Main4c/cabf same-text five-chip fixture Add frame in viewport coordinates")
+                            // Mac UI review 2, item 2: Compact Quick Add keeps its actions at the bottom of
+                            // its room, 16 pt above the window's edge (295.5 before candidate 9).
+                            #expect(add == CGRect(x: 299.5, y: 374, width: 77.5, height: 36), "Main4c/cabf same-text five-chip fixture Add frame in viewport coordinates")
                         }
                         if name == "initial-many" {
                             let chips = capture.frames.filter { $0.key.hasPrefix("dependency-initial-") }.map(\.value)

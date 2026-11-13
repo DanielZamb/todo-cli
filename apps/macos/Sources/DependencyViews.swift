@@ -4,12 +4,16 @@ struct InitialDependencySelection: View {
     @Binding var tasks: [TaskSnapshot]
     let enabled: Bool
     let add: () -> Void
+    @Environment(\.quickAddHeaderIsRow) private var headerIsRow
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Depends on")
                 Button("Add…", action: add).disabled(!enabled).accessibilityIdentifier("dependency-add")
             }.font(.caption).controlSize(.small).frame(minHeight: 24)
+                // In Compact Quick Add the line is a row of its own, so a cut after the parsed chips
+                // still shows that Dependencies follow (Mac UI review 2, item 2).
+                .background { if headerIsRow { QuickAddRegionRow() } }
             if !tasks.isEmpty {
                 QuickAddFlow {
                     ForEach(tasks) { task in

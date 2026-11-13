@@ -41,7 +41,7 @@ struct Snapshots {
         if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT1"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT2"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SC1_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
         /// Candidate 9's images, both appearances (verify-design.py's C9_IMAGES).
-        let c9Images = 4
+        let c9Images = 8
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         #expect(NSColor(named: "primary", bundle: TodoColors.bundle) != nil)
@@ -141,6 +141,27 @@ struct Snapshots {
                             fields[String(key.dropFirst(6))] = ["visible": bottom <= body.maxY + 0.5, "visibleFromHeight": Int((height - (body.maxY - bottom)).rounded(.up))]
                         }
                         try JSONSerialization.data(withJSONObject: ["window_height": height, "body_bottom": body.maxY, "fields": fields], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-field-heights-\(mode).json"))
+                    }
+                    if name.hasPrefix("c9-compact-screen-quick-add-many-") {
+                        // Mac UI review 2, item 2: in the real Compact screen Quick Add sits below the Find
+                        // field, its parsed Priority, Project and Tags are visible without scrolling, and its
+                        // actions are inside the window. The receipt keeps the chips' global frames.
+                        let sheet = try #require(compactMeasurements.frames["quick-add-sheet"])
+                        let search = try #require(compactMeasurements.frames["search"])
+                        let region = try #require(compactMeasurements.frames["quick-add-metadata"])
+                        let actions = try #require(compactMeasurements.frames["quick-add-actions"])
+                        #expect(sheet.minY >= search.maxY - 0.5, "\(name): Quick Add starts below the Find field: sheet \(sheet.minY), field \(search.maxY)")
+                        #expect(actions.maxY <= top + height + 0.5, "\(name): the actions are inside the window")
+                        var parsedChips: [String: [Double]] = [:]
+                        for (field, local) in chipFrames.frames {
+                            let chip = local.offsetBy(dx: sheet.minX, dy: sheet.minY)
+                            parsedChips[field] = [Double(chip.minX), Double(chip.minY), Double(chip.width), Double(chip.height)]
+                            if ["priority", "project"].contains(field) || field.hasPrefix("tag") {
+                                #expect(region.insetBy(dx: -0.5, dy: -0.5).contains(chip), "\(name): \(field) is visible without scrolling: \(chip) in \(region)")
+                            }
+                        }
+                        #expect(parsedChips.keys.contains("priority") && parsedChips.keys.contains("project"), "\(name): parsed chips were drawn: \(parsedChips.keys.sorted())")
+                        try JSONSerialization.data(withJSONObject: ["window_height": Double(height), "parsed_chips": parsedChips, "region": [region.minX, region.minY, region.width, region.height].map(Double.init), "search_bottom": Double(search.maxY), "sheet_top": Double(sheet.minY), "actions_bottom": Double(actions.maxY), "empty_below_actions": Double(top + height - actions.maxY)], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-\(mode)-quick-add.json"))
                     }
                     if name.hasSuffix("banner-reopen-refused") {
                         // Mac UI review 2, item 3: the notice with its button, and no exit-code line.
@@ -398,6 +419,16 @@ struct Snapshots {
                 refused.publishMessage([reopenNotice.message, reopenNotice.detail].compactMap { $0 }.joined(separator: "\n"), kind: .transition)
                 try await render("c9-banner-reopen-refused", WorkspaceSnapshot(model: refused), width: 1100, height: 720)
                 try await render("c9-compact-banner-reopen-refused", TaskListView(model: refused, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                // Mac UI review 2, item 2: Quick Add in the real Compact screen (search field above it)
+                // with 13 Dependencies and parsed chips, at the minimum and at 640 pt.
+                for height in [426, 640] as [CGFloat] {
+                    let adding = fixture(); adding.signedIn = true; adding.quickAdd = true; adding.compactWindowHeight = height
+                    adding.newTitle = #"Ship tomorrow p1 #focus #planning @Client"#
+                    adding.parsedInput = adding.newTitle
+                    adding.parsedTask = .init(title: "Ship", due_at: .init(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
+                    adding.dependencies.initial = (0..<13).map { DependencySnapshots.task("initial-\($0)", title: "Launch review \($0)") }
+                    try await render("c9-compact-screen-quick-add-many-\(Int(height))", TaskListView(model: adding, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: height)
+                }
                 if c9Only { continue }
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" {
