@@ -93,10 +93,17 @@ unchanged; two mappings stale.
   ContractIdentity.swift). The mapped items are textually unchanged; openapi.json
   adds three /local paths and every existing path is byte-identical. 53/53 public
   anchors match once on the product. Pins, coverage and the public contract
-  (259e9afb…) renewed as a candidate. **The full default run is owed**: it was
-  not started because free space was 41 GiB and the run compiles many binaries.
-  Its inputs are staged (hash-pinned jar, preserved e7170510 baseline CLI, a
-  loopback `ps` proxy for the sandbox).
+  (259e9afb…) renewed as a candidate. The full default run on 0733af4a, on
+  the coordinator's go at 71 GiB free, exited 0 (`rc=0`, 16:11 to 16:19 on
+  2026-11-13): 38 model configurations (26 pass, 12 intended violations at
+  exit 12); production conformance pass with 36 of 36 controls failing broken
+  and passing restored; public conformance pass on product 0733af4a with 53 of
+  53 controls failing broken and passing restored, and baseline pass.
+  Evidence: docs/evidence/dag-formal/check-fFvVZA, conformance-iF5Tml and
+  public-lzzgSw. Isolation: the reference profile after the five node
+  controls; `ps` through an owned read-only loopback proxy, stopped
+  afterwards. Inputs: the hash-pinned jar (936a2620…) and the preserved
+  e7170510 baseline CLI (dd1918fc…, matching its provenance).
 
 ## How the audits missed eight DAG public rows
 

@@ -13,7 +13,9 @@ in them are textually unchanged; openapi.json adds three /local paths and keeps
 every existing path, the graph response included, byte-identical. The pin's
 contract moves to the product's own 259e9afb…. All 53 public control anchors
 match exactly once on the product before renewal. The review and the full
-command's actual exit are in docs/decisions/ui-speed/cli-through-server-c9-merge.md.
+command's actual exit are in docs/decisions/ui-speed/cli-through-server-c9-merge.md:
+the full default on 0733af4a exited 0, with 36 production and 53 public
+controls failing broken and passing restored (check-fFvVZA).
 No model, invariant or bound changed.
 
 ## c9 server integration renewal
