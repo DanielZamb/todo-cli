@@ -59,9 +59,17 @@ for (const mode of revision ? ["barrier"] : ["barrier", "reset"]) {
                 mode === "barrier" &&
                 path.endsWith("/apps/server/src/server.ts")
               ) {
-                const marker =
-                  "      const store = yield* Effect.acquireRelease(\n        openStore({ path: options.path }),\n        (store) => Effect.orDie(store.close()),\n      );";
-                assert.equal(source.split(marker).length, 2);
+                // The store is `store` before the stream-wake merge (the
+                // 8d85f5e2 baseline) and `rawStore` after it.
+                const markers = ["store", "rawStore"].map(
+                  (name) =>
+                    `      const ${name} = yield* Effect.acquireRelease(\n        openStore({ path: options.path }),\n        (store) => Effect.orDie(store.close()),\n      );`,
+                );
+                const found = markers.filter(
+                  (candidate) => source.split(candidate).length === 2,
+                );
+                assert.equal(found.length, 1);
+                const marker = found[0] ?? "";
                 source =
                   `\nasync function routingBarrier(phase: string) { const fs = await import('node:fs'); const dir = process.env.ROUTING_BARRIER; if (!dir) return; fs.writeFileSync(dir+'/'+phase+'.ready','ready'); const end=performance.now()+30000; while(!fs.existsSync(dir+'/'+phase+'.go')) { if(performance.now()>end)throw Error('Startup barrier expired'); await new Promise(r=>setTimeout(r,5)); }}\n` +
                   source.replace(
