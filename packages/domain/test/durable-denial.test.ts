@@ -8,6 +8,7 @@ import { type OperationStore, openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import {
+  largeRowsBetweenSamples,
   maxWalkedEventBytes,
   repeatedAuthRejection,
 } from "../src/auth/rejection-history.ts";
@@ -192,12 +193,12 @@ it("keeps every possible refusal far below the walked-event bound", () => {
   expect(maxWalkedEventBytes).toBe(4096);
 });
 
-const largeEvent = (occurred_at: string) =>
+const largeEvent = (occurred_at: string, characters = 100_000) =>
   JSON.stringify({
     kind: "TaskCreated",
     entity_version: 1,
     occurred_at,
-    task: { title: "Imported", description: "x".repeat(100_000) },
+    task: { title: "Imported", description: "x".repeat(characters) },
   });
 
 // A large row stamped before the horizon and committed after the refusal used
@@ -297,6 +298,182 @@ it.effect("walks past large events without reading their content", () =>
       } finally {
         check.close();
       }
+    }),
+  ),
+);
+
+// Commits n large (5,000-character) rows stamped at `at` after whatever is
+// already in the work Profile, outside any store.
+const addLarge = (path: string, n: number, at: string) => {
+  const db = new Database(path);
+  try {
+    db.function("domain_write_allowed", () => 1);
+    const insert = db.query(
+      "INSERT INTO op_log(actor,profile,entity_version,event,outcome,reason) VALUES ('import','work',1,?,'committed',NULL)",
+    );
+    const event = largeEvent(at, 5_000);
+    expect(Buffer.byteLength(event)).toBeGreaterThan(maxWalkedEventBytes);
+    db.transaction(() => {
+      for (let index = 0; index < n; index++) insert.run(event);
+    }).immediate();
+  } finally {
+    db.close();
+  }
+};
+
+// The exact limit: of a run of large rows stamped before the horizon and
+// committed after the first refusal, only the (K+1)-th is read, and it ends
+// the walk. K = 256 large rows hide nothing; the 257th hides the refusal.
+for (const [n, expected] of [
+  [largeRowsBetweenSamples, 1],
+  [largeRowsBetweenSamples + 1, 2],
+] as const)
+  it.effect(
+    `samples the large row after ${largeRowsBetweenSamples}: ${n} rows give ${expected}`,
+    () =>
+      withDatabase((path) =>
+        onStore(path, (store) =>
+          Effect.gen(function* () {
+            yield* TestClock.setTime(time);
+            yield* refuseStore(store);
+            addLarge(path, n, "2026-11-13T00:18:59.999Z");
+            yield* refuseStore(store);
+            expect(count(path)).toBe(expected);
+          }),
+        ),
+      ),
+  );
+
+// The review seat's shape: a Profile whose History before the window is all
+// large rows (a day old). The walk past the horizon ends within K+1 of them
+// instead of reaching the start of History; the refusal recorded first, in
+// this minute, lies below them all and is not reached.
+it.effect("ends the walk within K+1 large rows past the horizon", () =>
+  withDatabase((path) =>
+    onStore(path, (store) =>
+      Effect.gen(function* () {
+        yield* TestClock.setTime(time);
+        yield* refuseStore(store);
+        addLarge(path, 1_000, "2026-11-12T00:20:00.000Z");
+        yield* refuseStore(store);
+        expect(count(path)).toBe(2);
+      }),
+    ),
+  ),
+);
+
+// Overflow pages of the op_log rows, by seq, from dbstat: leaves in path order
+// hold rows in ascending seq; an overflow page's path is its leaf's path, the
+// cell index and the overflow index.
+const overflowBySeq = (db: Database) => {
+  const seqs = db
+    .query<{ seq: number }, []>("SELECT seq FROM op_log ORDER BY seq")
+    .all()
+    .map((row) => row.seq);
+  const pages = db
+    .query<
+      { path: string; pageno: number; pagetype: string; ncell: number },
+      []
+    >(
+      "SELECT path,pageno,pagetype,ncell FROM dbstat WHERE name='op_log' ORDER BY path",
+    )
+    .all();
+  const first = new Map<string, number>();
+  let ordinal = 0;
+  for (const page of pages)
+    if (page.pagetype === "leaf") {
+      first.set(page.path, ordinal);
+      ordinal += page.ncell;
+    }
+  const bySeq = new Map<number, number[]>();
+  for (const page of pages) {
+    const match = /^(.*\/)([0-9a-f]{3})\+[0-9a-f]{6}$/.exec(page.path);
+    if (page.pagetype !== "overflow" || !match) continue;
+    const seq =
+      seqs[
+        (first.get(match[1] ?? "") ?? 0) + Number.parseInt(match[2] ?? "", 16)
+      ];
+    if (seq === undefined) throw new Error(`unmapped ${page.path}`);
+    bySeq.set(seq, [...(bySeq.get(seq) ?? []), page.pageno]);
+  }
+  return bySeq;
+};
+
+// Only sampled large rows are ever loaded: 600 large rows inside the window
+// above the refusal; the walk meets them newest first and samples the 257th
+// and 514th. With every other large row's overflow pages zeroed the walk still
+// finds the refusal; zeroing a sampled row too makes it fail as corrupt.
+it.effect("loads only the sampled large rows", () =>
+  withDatabase((path) =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(time);
+      yield* onStore(path, refuseStore);
+      addLarge(path, 600, "2026-11-13T00:19:59.999Z");
+      const db = new Database(path);
+      let actor: string;
+      let pageSize: number;
+      let large: number[];
+      let bySeq: Map<number, number[]>;
+      try {
+        db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+        actor =
+          db
+            .query<{ actor: string }, []>(
+              "SELECT actor FROM op_log WHERE outcome='rejected' AND profile='work'",
+            )
+            .get()?.actor ?? "";
+        pageSize =
+          db.query<{ page_size: number }, []>("PRAGMA page_size").get()
+            ?.page_size ?? 0;
+        large = db
+          .query<{ seq: number }, []>(
+            "SELECT seq FROM op_log WHERE actor='import' ORDER BY seq DESC",
+          )
+          .all()
+          .map((row) => row.seq);
+        bySeq = overflowBySeq(db);
+      } finally {
+        db.close();
+      }
+      expect(large).toHaveLength(600);
+      const sampled = [large[256], large[513]].filter(
+        (seq): seq is number => seq !== undefined,
+      );
+      expect(sampled).toHaveLength(2);
+      const zero = (seqs: number[]) => {
+        const file = openSync(path, "r+");
+        try {
+          for (const seq of seqs)
+            for (const page of bySeq.get(seq) ?? [])
+              writeSync(
+                file,
+                Buffer.alloc(pageSize),
+                0,
+                pageSize,
+                (page - 1) * pageSize,
+              );
+        } finally {
+          closeSync(file);
+        }
+      };
+      const walk = () => {
+        const check = new Database(path, { readonly: true });
+        try {
+          return repeatedAuthRejection(check, {
+            actor,
+            profile,
+            action: "authenticate",
+            detail: "invalid_credential",
+            time,
+          });
+        } finally {
+          check.close();
+        }
+      };
+      zero(large.filter((seq) => !sampled.includes(seq)));
+      expect(walk()).toBe(true);
+      zero(sampled.slice(0, 1));
+      expect(walk).toThrow(/malformed/);
     }),
   ),
 );

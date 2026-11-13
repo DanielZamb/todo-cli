@@ -54,7 +54,17 @@ const recordingClock = (actor: unknown, kind: unknown): boolean =>
 // it as evidence can only let the walk go further, never end early.
 export const maxWalkedEventBytes = 4096;
 
+// Every Task event carries whole Tasks, so in a Profile of long descriptions
+// most rows can be large. So that such rows cannot carry the walk far past the
+// horizon, every (K+1)-th large row the walk meets is read for its kind and
+// stamp and counted as ordinary evidence: past the horizon, a run of large
+// recording-clock rows ends the walk within K+1 of them. The count spans small
+// rows too: a small row that cannot end the walk (a rejected Task attempt
+// between large edits, for example) must not reset it.
+export const largeRowsBetweenSamples = 256;
+
 type Row = {
+  seq: number;
   bytes: number;
   actor: string | null;
   outcome: string | null;
@@ -71,7 +81,7 @@ type Row = {
 // event, and reaching them would walk a large event's overflow chain.
 const gated = (expression: string, name: string) =>
   `CASE WHEN octet_length(event)<=${maxWalkedEventBytes} THEN ${expression} END AS ${name}`;
-const walkSql = `SELECT octet_length(event) AS bytes,${[
+const walkSql = `SELECT seq,octet_length(event) AS bytes,${[
   gated("actor", "actor"),
   gated("outcome", "outcome"),
   gated("reason", "reason"),
@@ -80,6 +90,9 @@ const walkSql = `SELECT octet_length(event) AS bytes,${[
   gated("json_extract(event,'$.detail')", "detail"),
   gated("json_extract(event,'$.occurred_at')", "occurred_at"),
 ].join(",")} FROM op_log WHERE profile IS ? ORDER BY seq DESC`;
+// Reads one sampled large row's provenance, loading that row only.
+const sampleSql =
+  "SELECT actor,json_extract(event,'$.kind') AS kind,json_extract(event,'$.occurred_at') AS occurred_at FROM op_log WHERE seq=?";
 
 export const repeatedAuthRejection = (
   db: Database,
@@ -95,8 +108,31 @@ export const repeatedAuthRejection = (
   // minute, even one stamped after this attempt: another process may have read
   // its clock later and committed first. A stamp after the attempt is never
   // before the horizon, so it cannot end the walk.
+  let skipped = 0;
   for (const row of rows) {
-    if (row.bytes > maxWalkedEventBytes) continue;
+    if (row.bytes > maxWalkedEventBytes) {
+      if (skipped < largeRowsBetweenSamples) {
+        skipped++;
+        continue;
+      }
+      skipped = 0;
+      // Evidence only: a large row is never a refusal.
+      const sampled = db
+        .query<
+          { actor: string; kind: unknown; occurred_at: unknown },
+          [number]
+        >(sampleSql)
+        .get(row.seq);
+      if (typeof sampled?.occurred_at !== "string") continue;
+      const time = Date.parse(sampled.occurred_at);
+      if (
+        Number.isFinite(time) &&
+        recordingClock(sampled.actor, sampled.kind) &&
+        time < horizon
+      )
+        return false;
+      continue;
+    }
     if (typeof row.occurred_at !== "string") continue;
     const time = Date.parse(row.occurred_at);
     if (!Number.isFinite(time)) continue;

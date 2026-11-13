@@ -462,15 +462,27 @@ const program = Effect.acquireUseRelease(
                 "desc200-after",
                 "big-before",
                 "big-after",
+                "bigold-5000",
+                "bigold-20000",
               ].includes(scenario),
           );
-          const shape = scenario.startsWith("big")
-            ? { tasks: 1000, description: 100_000 }
-            : scenario.startsWith("desc200")
-              ? { tasks: 5000, description: 200 }
-              : { tasks: 5000, description: 0 };
+          // bigold-N (review seat F6): N Tasks with 5,000-character
+          // descriptions stamped a day before the attempt and nothing else,
+          // so every row before the horizon is over the walked-event bound.
+          const shape = scenario.startsWith("bigold-")
+            ? {
+                tasks: Number(scenario.slice("bigold-".length)),
+                description: 5_000,
+              }
+            : scenario.startsWith("big")
+              ? { tasks: 1000, description: 100_000 }
+              : scenario.startsWith("desc200")
+                ? { tasks: 5000, description: 200 }
+                : { tasks: 5000, description: 0 };
           const bulk = (target: ProfileId | null) => {
-            const at = "2026-11-13T00:19:59.999Z";
+            const at = scenario.startsWith("bigold-")
+              ? "2026-11-12T00:20:00.000Z"
+              : "2026-11-13T00:19:59.999Z";
             if (scenario.startsWith("prior"))
               return noise(db, at, 5000, target);
             const insert = db.query(
@@ -531,7 +543,7 @@ const program = Effect.acquireUseRelease(
             // bulk after it, so no run rewrites the bulk.
             const stage = process.env.TODO_BENCH_STAGE;
             const after = scenario.endsWith("-after");
-            if (stage !== "run") {
+            if (stage !== "run" && !scenario.startsWith("bigold-")) {
               noise(
                 db,
                 scenario === "whole-window"
@@ -540,7 +552,13 @@ const program = Effect.acquireUseRelease(
                 200000,
                 target,
               );
-              if (scenario.endsWith("-before")) bulk(target);
+            }
+            if (stage !== "run") {
+              if (
+                scenario.endsWith("-before") ||
+                scenario.startsWith("bigold-")
+              )
+                bulk(target);
               if (stage === "seed" && after) {
                 yield* attempt();
                 bulk(target);
