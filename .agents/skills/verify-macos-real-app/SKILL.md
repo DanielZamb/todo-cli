@@ -6,11 +6,13 @@ description: Qualify the separate Todo Verification Mac app's scratch guards and
 # Verify the separate Mac app
 
 Created with create-verification-skill. Read [the feature map](features/README.md).
-Status: draft safety correction. The latest frozen de9ee853 run stopped at the
-shared 30 GiB disk floor, exited 1 and completed cleanup. Its root-boundary and
-metadata components passed; the full matrix, fresh app, production comparison
-and final root check remain owed. No visible preflight or app build occurred.
-Compiled caches and the base Swift build were hashed and retired after the stop.
+Status: draft safety correction. Frozen f2965900 passed the full guard/class/
+predicate/trap/removal checks and the fresh verification-app audit and manifest
+check. Its production comparison stopped at a baseline evidence-location bug
+and two Attachment-path fixture failures. The driver now uses canonical worktree
+scratch, recipe-local evidence and complete recipe-exit comparison. Literal
+controls and ten Node removals pass; a new frozen full run remains owed.
+No full or visible recipe is qualified for this correction.
 
 The earlier ab989410 visible recipe read both
 seeded Tasks, but the independent review disproved its isolation. It does not
@@ -176,7 +178,12 @@ state/offscreen suites run outside it, using the original scratch-HOME recipes
 through swift-slot.sh. production-proofs alternates base 8b9be429 and the frozen
 candidate, first without a suite sandbox and then with a deny-only profile for
 the real Todo/Keychain directories and Keychain Mach services. Every test must
-have the same identity and outcome. Record load and shared failures; a failure
+have the same identity and outcome. Whole-recipe exits are compared too.
+A recipe failure without a corresponding recorded test failure is unqualified;
+matching partial Swift results cannot hide a failed artifact validator.
+Production scratch is private under the canonical worktree .scratch directory.
+Recipe output is physical under that recipe's checkout so relative artifact
+validation works; the primary evidence folder links to it. Record load and shared failures; a failure
 only on the candidate is a finding. Keep the deny-only profile only if it
 changes no base outcome; otherwise stop and report the test and denial evidence.
 Do not widen it or fall back silently. No broker or app/server permission is added.

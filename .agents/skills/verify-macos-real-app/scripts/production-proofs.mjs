@@ -5,15 +5,16 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { command, environment, executable, run } from './process-policy.mjs';
-import { compareOutcomes } from './production-outcomes.mjs';
+import { compareProductionOutcomes } from './production-outcomes.mjs';
 import { protectedDenials } from './production-denials.mjs';
+import { productionScratchRoot, recipeEvidence } from './production-paths.mjs';
 process.umask(0o077);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const scripts = path.join(root, '.agents/skills/verify-macos-real-app/scripts');
 const baselineHead = '8b9be429751165d4ecef11f3f23d1844384e54b4';
 const [evidence, nativeEvidence] = process.argv.slice(2);
 assert(path.isAbsolute(evidence) && !fs.existsSync(evidence)); fs.mkdirSync(evidence, { recursive: true, mode: 0o700 });
-const proof = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-production-'));
+const proof = productionScratchRoot(root);
 fs.mkdirSync(proof + '/home'); fs.mkdirSync(proof + '/tmp');
 const env = environment(proof + '/home', proof + '/tmp'), commands = [];
 const digest = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
@@ -145,9 +146,10 @@ try {
   for (const [script, stage] of [['verify-design.py', 'offscreen'], ['verify-write-state.py', 'state']]) {
    if (process.argv.includes('--probe-base') && stage === 'offscreen') continue;
    const driver = arm + '/' + stage + '-driver'; fs.mkdirSync(driver);
+   const output = recipeEvidence(repository, arm, stage, path.basename(proof));
    const configuration = proof + '/configuration.json';
    fs.writeFileSync(configuration, JSON.stringify({ root: repository, proof, evidence: driver, library, tools, environment: values, hold: evidence + '/swift-hold', parentHold: path.dirname(evidence) + '/swift-hold', audit: arm + '/audit', ownerHome: owner, denyProfile: guarded ? denyProfile : null, graphCopier: scripts + '/bundle-graph.mjs' }));
-   const actual = execute([tools.python3, '-I', '-S', scripts + '/production-recipe.py', repository + '/apps/macos/scripts/' + script, arm + '/' + stage, configuration], name + '-' + stage, values, repository);
+   const actual = execute([tools.python3, '-I', '-S', scripts + '/production-recipe.py', repository + '/apps/macos/scripts/' + script, output, configuration], name + '-' + stage, values, repository);
    assert([0, 1].includes(actual.status), 'Production recipe aborted or timed out');
    const expanded = JSON.parse(fs.readFileSync(driver + '/expanded-commands.json'));
    let tests = 0;
@@ -156,7 +158,7 @@ try {
     for (const test of row.outcomes) entry.outcomes.push({ id: stage + '/' + tests + '/' + test.id, outcome: test.outcome });
     tests++;
    }
-   assert(tests > 0); entry.recipes.push({ stage, exit: actual.status, hostLoadAfter: os.loadavg() });
+   assert(tests > 0); entry.recipes.push({ stage, exit: actual.status, evidence: output, hostLoadAfter: os.loadavg() });
   }
   const auditFiles = fs.readdirSync(arm + '/audit'); assert(auditFiles.length > 0);
   entry.descriptorAudit = auditFiles.map(file => {
@@ -176,8 +178,8 @@ try {
  }
  if (process.argv.includes('--probe-base')) { result.status = 'DIAGNOSTIC_ONLY'; result.arms = arms; }
  else {
-  const plain = compareOutcomes(arms[0].outcomes, arms[1].outcomes), guarded = compareOutcomes(arms[2].outcomes, arms[3].outcomes);
-  const guardOnBase = compareOutcomes(arms[0].outcomes, arms[2].outcomes);
+  const plain = compareProductionOutcomes(arms[0], arms[1]), guarded = compareProductionOutcomes(arms[2], arms[3]);
+  const guardOnBase = compareProductionOutcomes(arms[0], arms[2]);
   result = { ...result, arms, comparison: { plain, guarded, guardOnBase }, denyOnlyRetained: guardOnBase.sameOutcomes };
   assert(guardOnBase.sameOutcomes, 'Deny-only policy changed base outcomes; stop without widening or fallback');
   assert(plain.sameOutcomes, 'Base/candidate production outcomes differ');

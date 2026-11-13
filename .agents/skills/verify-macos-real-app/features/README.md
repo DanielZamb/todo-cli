@@ -6,6 +6,6 @@
 | Real production Task screen | [Task readback](tasks.md) |
 | Credential and lifecycle exclusion | [Isolation](isolation.md) |
 | Stop on input | [Interruption](interruption.md) |
-| Production preservation | Alternating base/candidate state and offscreen recipes, exact per-test comparison, optional deny-only guard checked against the unguarded base |
+| Production preservation | Alternating base/candidate state and offscreen recipes, exact per-test and whole-recipe comparison, canonical scratch and recipe-local artifacts, deny-only guard checked against the unguarded base |
 
 V02 input and timing coverage is held until V01 review.

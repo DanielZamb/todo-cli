@@ -8,12 +8,15 @@ const directory = fs.realpathSync(fs.mkdtempSync('/tmp/todo-mac-verify-node-reds
 fs.mkdirSync(directory + '/home'); fs.mkdirSync(directory + '/tmp');
 const env = environment(directory + '/home', directory + '/tmp'), rows = [];
 try {
-  for (const [module, test, before, after] of [
+  for (const [module, test, before, after, expectedFailure] of [
     ['receipt-stages.mjs', 'receipt-stages.test.mjs', 'successful && needed.length > 0 && needed.every(stage => result[stage])', 'true'],
     ['receipt-stages.mjs', 'receipt-stages.test.mjs', 'completeRecipe: successful && ', 'completeRecipe: '],
     ['process-policy.mjs', 'process-policy.test.mjs', 'const result = { HOME:', 'const result = { ...process.env, HOME:'],
     ['mach-o-imports.mjs', 'mach-o-imports.test.mjs', "return names.map(name => name.startsWith('_') ? name.slice(1) : name);", 'return [];'],
     ['production-outcomes.mjs', 'production-outcomes.test.mjs', 'sameOutcomes: !onlyBase.length && !onlyCandidate.length && !changed.length', 'sameOutcomes: true'],
+    ['production-outcomes.mjs', 'production-outcomes.test.mjs', 'run.recipes.map(({ stage, exit })', '[].map(({ stage, exit })', 'Whole-recipe failures must not disappear'],
+    ['production-paths.mjs', 'production-paths.test.mjs', "path.join(repository, 'docs'", "path.join(arm, 'docs'", 'Recipe evidence must resolve inside its source repository'],
+    ['production-paths.mjs', 'production-paths.test.mjs', "fs.mkdtempSync(path.join(scratch, 'v01-production-'))", "fs.mkdtempSync('/tmp/todo-mac-production-')", 'Scratch root must stay inside the workspace'],
     ['production-denials.mjs', 'production-denials.test.mjs', 'return result;', 'return [];'],
   ]) {
     if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');
@@ -25,6 +28,7 @@ try {
     const changed = directory + '/' + test;
     fs.writeFileSync(changed, fs.readFileSync(testPath, 'utf8').replace("'./" + module + "'", JSON.stringify(pathToFileURL(mutant).href)));
     const red = run(['node', changed], { env, encoding: 'utf8' }); assert.equal(red.status, 1, red.stderr);
+    if (expectedFailure) assert(red.stderr.includes(expectedFailure), red.stderr);
     rows.push({ module, originalTestExit: original.status, matchingMutationTestExit: red.status, mutation: { before, after } });
   }
   const pythonModule = path.resolve('.agents/skills/verify-macos-real-app/scripts/production-results.py');

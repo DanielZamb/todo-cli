@@ -10,3 +10,17 @@ assert.deepEqual(compareOutcomes(base, [{ id: 'Model/search', outcome: 'failed' 
 assert.throws(() => compareOutcomes([], base), /actual test/);
 assert.throws(() => compareOutcomes(base, [base[0], base[0]]), /Duplicate/);
 console.log('PASS: exact identities and outcomes, including shared failures, omissions and candidate-only failures');
+
+const { compareProductionOutcomes } = await import('./production-outcomes.mjs');
+const passing = [{ id: 'offscreen/0/renderScreens', outcome: 'passed' }, { id: 'state/0/modelReload', outcome: 'passed' }];
+const recipes = [{ stage: 'offscreen', exit: 0 }, { stage: 'state', exit: 0 }];
+assert.equal(compareProductionOutcomes({ outcomes: passing, recipes }, { outcomes: passing, recipes }).sameOutcomes, true);
+const incomplete = { outcomes: passing, recipes: [{ stage: 'offscreen', exit: 1 }, recipes[1]] };
+assert.throws(() => compareProductionOutcomes(incomplete, { outcomes: passing, recipes }), /Recipe exit is inconsistent/, 'Whole-recipe failures must not disappear from preservation');
+assert.throws(() => compareProductionOutcomes(incomplete, incomplete), /Recipe exit is inconsistent/);
+assert.throws(() => compareProductionOutcomes({ outcomes: passing, recipes: [recipes[0]] }, { outcomes: passing, recipes }), /Both production recipes/);
+const failedTests = [{ ...passing[0], outcome: 'failed' }, passing[1]];
+const shared = { outcomes: failedTests, recipes: incomplete.recipes };
+assert.deepEqual(compareProductionOutcomes(shared, shared).sharedFailures, ['offscreen/0/renderScreens', 'recipe/offscreen']);
+assert.equal(compareProductionOutcomes(shared, { outcomes: passing, recipes }).sameOutcomes, false);
+console.log('PASS: complete recipe exits, classified shared test failures and missing validation refusal');

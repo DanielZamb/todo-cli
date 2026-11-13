@@ -18,3 +18,18 @@ export function compareOutcomes(base, candidate) {
  const sharedFailures = [...before].filter(([id, outcome]) => outcome === 'failed' && after.get(id) === 'failed').map(([id]) => id).sort();
  return { sameList: !onlyBase.length && !onlyCandidate.length, sameOutcomes: !onlyBase.length && !onlyCandidate.length && !changed.length, onlyBase, onlyCandidate, changed, sharedFailures, tests: before.size };
 }
+
+export function compareProductionOutcomes(base, candidate) {
+ function observations(run) {
+  assert(Array.isArray(run.recipes) && run.recipes.length > 0, 'A preservation run needs whole-recipe outcomes');
+  assert.deepEqual(run.recipes.map(row => row.stage).sort(), ['offscreen', 'state'], 'Both production recipes must run');
+  return [...run.outcomes, ...run.recipes.map(({ stage, exit }) => {
+   assert(['offscreen', 'state'].includes(stage) && [0, 1].includes(exit));
+   const tests = run.outcomes.filter(row => row.id.startsWith(stage + '/'));
+   assert(tests.length > 0, 'A recipe needs actual test results: ' + stage);
+   assert.equal(exit, tests.some(row => row.outcome === 'failed') ? 1 : 0, 'Recipe exit is inconsistent with recorded test outcomes: ' + stage);
+   return { id: 'recipe/' + stage, outcome: exit === 0 ? 'passed' : 'failed' };
+  })];
+ }
+ return compareOutcomes(observations(base), observations(candidate));
+}

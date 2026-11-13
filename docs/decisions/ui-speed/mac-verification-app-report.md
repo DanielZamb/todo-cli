@@ -1,5 +1,53 @@
 # Mac verification app V01 safety correction
 
+Frozen f296590021a3530fe51f38b7923388c7aecafc59 passed the 102-case guard
+matrix, all 15 class controls, all 63 predicate controls including 18, all
+1,637 credential traps and all 1,637 removals, the networking-only denial controls,
+one fresh app build, ad hoc identity, the corrected import audit and the built
+app's headless manifest check. Source continuity retains the reviewed 26 added
+production symbols and six unchanged Security imports. The artifact audit found
+zero app Security imports and 1,638 accounted boundary-library imports.
+
+The full helper still exited 1 with cleanup complete and completeRecipe=false.
+Production preservation is not qualified. The base offscreen Swift commands
+returned 0, including the 872-render set, but the original recipe then raised
+ValueError at evidence.relative_to(root): the driver had put its evidence outside
+the base checkout. No whole-recipe preservation pass was issued. The base state
+command ran 26 XCTest and 238 Swift Testing cases and failed two Attachment
+tests. The recorded failures include /tmp versus /private/tmp spellings of the
+same scratch files, plus the subsequent URI-adoption rejection. These are
+fixture-location observations; their corrected original-suite rerun is owed.
+
+A focused control using the unchanged frozen comparator also failed at the
+literal expected-false assertion: identical Swift test outcomes were accepted
+when the base recipe exited 1 after its artifact validator and the candidate
+recipe exited 0. The operator held further Swift jobs, let the already-started
+candidate build finish, and stopped before accepting any comparison. The raw
+production error reflects the resulting missing candidate test stage; the
+operator-comparison-stop receipt names the actual reason. No visible preflight
+or launch, production-target launch, root check or V02 work occurred.
+
+The new driver allocates production scratch under the canonical worktree
+.scratch directory, avoiding the system temporary-directory alias. Each original
+recipe gets physical evidence inside its own checkout; the primary receipts
+link to that output. No Foundation getter, original test or application behavior
+is replaced. The run comparator requires both recipes, includes their exits
+alongside literal per-test identities, and refuses an exit inconsistent with
+recorded test failures. Common classified test failures remain visible with
+load for the base/head comparison, as ruled. App and server profiles are unchanged.
+
+Literal filesystem and outcome controls pass at 0. The frozen-comparator control
+returns 1 and the corrected control returns 0 using the same complete two-recipe
+input. Removing recipe observations, moving evidence outside its source checkout
+or moving production scratch back to system temp each fails its matching test
+at 1. All ten Node controls pass with the corresponding mutants failing. These
+are development receipts until a new clean frozen full qualification passes.
+
+Receipts: frozen-f2965900/, production-recipe-exit-v2.json,
+production-recipe-exit-red-v2.log, production-recipe-exit-green-v2.log and
+production-path-outcome-node-reds-f2965900.json. Historical receipts retain their
+actual heads. The skill stays draft; the visible recipe and V02 remain held.
+
 The resumed frozen da7a6b58f93f78092c9a7fffbe389a7928ad3ce5 recipe failed
 at the outer 20-minute Swift queue budget, before the guard compiler started.
 The queued command was observed behind the Mac seat's offscreen recipe. Its
