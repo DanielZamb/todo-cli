@@ -118,12 +118,46 @@ struct Snapshots {
                     }
                 }
                 try await Task.sleep(for: .milliseconds(100))
+                if name.hasPrefix("c8-") {
+                    // Candidate 8 bounds receipt: the window, where its content starts (global frames
+                    // include the title bar), every Compact frame, and whether every action, footer
+                    // and Dismiss frame lies inside the content (nothing cut off at this size).
+                    let top = window.frame.height - window.contentRect(forFrameRect: window.frame).height
+                    let frames = compactMeasurements.frames.mapValues { ["x": Double($0.minX), "y": Double($0.minY), "width": Double($0.width), "height": Double($0.height)] }
+                    let controls = compactMeasurements.frames.filter { key, _ in ["actions", "footer", "dismiss"].contains { key.contains($0) } }
+                    let inside = controls.values.allSatisfy { $0.minX >= -0.5 && $0.maxX <= width + 0.5 && $0.minY >= top - 0.5 && $0.maxY <= top + height + 0.5 }
+                    #expect(inside, "\(name): every action and footer is inside the \(Int(width)) by \(Int(height)) window: \(controls)")
+                    let data: [String: Any] = ["window": ["width": Double(width), "height": Double(height)], "contentTop": Double(top), "controlsInside": inside, "controls": Array(controls.keys).sorted(), "frames": frames]
+                    try JSONSerialization.data(withJSONObject: data, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-\(mode)-bounds.json"))
+                    if name.hasPrefix("c8-compact-editor") {
+                        // Each field row's bottom (its label's centre plus half a 28 pt control), whether it is
+                        // fully visible above the footer, and the window height at which it becomes so.
+                        let body = try #require(compactMeasurements.frames["editor-scroll"])
+                        var fields: [String: Any] = [:]
+                        for (key, label) in compactMeasurements.frames where key.hasPrefix("field-") {
+                            let bottom = label.midY + 14
+                            fields[String(key.dropFirst(6))] = ["visible": bottom <= body.maxY + 0.5, "visibleFromHeight": Int((height - (body.maxY - bottom)).rounded(.up))]
+                        }
+                        try JSONSerialization.data(withJSONObject: ["window_height": height, "body_bottom": body.maxY, "fields": fields], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-field-heights-\(mode).json"))
+                    }
+                    if name.hasSuffix("series-custom") {
+                        #expect(compactMeasurements.frames["series-raw-rule"] != nil, "\(name): a custom rule keeps its raw rule")
+                    }
+                    if let dismiss = compactMeasurements.frames["message-dismiss"] {
+                        #expect(dismiss.width >= 28 && dismiss.height >= 28, "\(name): the Dismiss target is at least 28 by 28 (ruling 3)")
+                    }
+                }
                 if name.hasPrefix("search-") {
                     let frames = compactMeasurements.frames
                     compactLayouts[name + "-" + mode] = frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
                     if name.hasPrefix("search-compact-") {
-                        let search = try #require(frames["search"])
-                        #expect(search.minX >= 0 && search.maxX <= width && search.minY >= 0 && search.maxY <= height)
+                        // Candidate 8 ruling 5: the Find field belongs to the list and is hidden while the editor is shown.
+                        if name.hasSuffix("detail") || name.hasSuffix("copied") || name.hasSuffix("copy-failed") {
+                            #expect(frames["search"] == nil, "\(name): no Find field over the Compact editor")
+                        } else {
+                            let search = try #require(frames["search"])
+                            #expect(search.minX >= 0 && search.maxX <= width && search.minY >= 0 && search.maxY <= height)
+                        }
                     }
                     if name.hasSuffix("initial-error") {
                         _ = try #require(frames["task-load-error"])
@@ -143,6 +177,35 @@ struct Snapshots {
                         let title = try #require(frames["task-title"])
                         let id = try #require(frames["task-id"])
                         #expect(id.minY >= title.maxY)
+                    }
+                }
+                if name == "compact-editor" {
+                    // Candidate 8 ruling 5: the footer sits below the scrolling body, so nothing in the
+                    // body is drawn under it; the body scrolls with visible scroll bars.
+                    let frames = compactMeasurements.frames
+                    let body = try #require(frames["editor-scroll"]), footer = try #require(frames["editor-footer"])
+                    #expect(footer.minY >= body.maxY - 0.5, "the footer starts at or below the body: \(footer) \(body)")
+                    // Global frames include the title bar: measure from where the content starts.
+                    let top = window.frame.height - window.contentRect(forFrameRect: window.frame).height
+                    #expect(footer.maxY <= top + height + 0.5 && body.minY >= top - 0.5, "both inside the window's content: top \(top), \(footer) \(body)")
+                    #expect(frames["search"] == nil, "no Find field over the editor")
+                    let fields = frames.filter { ["task-title", "task-id", "edit-description"].contains($0.key) }
+                    let receipt: [String: Any] = ["window_height": height, "contentTop": Double(top), "body": [body.minY, body.maxY], "footer": [footer.minY, footer.maxY],
+                        "fields": fields.mapValues { ["minY": $0.minY, "maxY": $0.maxY, "fully_visible": $0.maxY <= body.maxY + 0.5] }]
+                    try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-editor-bounds-\(mode).json"))
+                }
+                if name.hasPrefix("compact-quick-add") {
+                    // Candidate 8 ruling 5: the chip region ends on a row boundary; no chip is cut.
+                    let frames = compactMeasurements.frames
+                    if let region = frames["quick-add-metadata"] {
+                        let chips = frames.filter { $0.key.hasPrefix("chip-") }
+                        for (key, chip) in chips {
+                            let inside = chip.minY >= region.minY - 0.5 && chip.maxY <= region.maxY + 0.5
+                            let below = chip.minY >= region.maxY - 0.5
+                            #expect(inside || below, "\(name) \(key) is cut by the region edge: chip \(chip) region \(region)")
+                        }
+                        let receipt: [String: Any] = ["region": [region.minY, region.maxY], "chips": chips.mapValues { [$0.minY, $0.maxY] }]
+                        try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-chip-rows-\(mode).json"))
                     }
                 }
                 if name == "full-priority-ready" {
@@ -308,6 +371,133 @@ struct Snapshots {
                     #expect(actionOrder == true)
                 }
 
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" {
+                // Candidate 8 review states for the Opus Mac UI seat: rulings 1, 2, 3 and 5, and D1/D2.
+                func banner(_ text: String, _ kind: TodoModel.MessageKind) -> TodoModel {
+                    let state = fixture(); state.signedIn = true; state.publishMessage(text, kind: kind); return state
+                }
+                let picker = fixture(); picker.signedIn = true
+                picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
+                picker.dependencies.picker?.failure = DependencyNotice(message: "This Task blocks done Tasks.", followUp: picker.tasks[1].id,
+                    followUpFailure: "Couldn't prepare the follow-up Task. The server rejected this request (HTTP 404). Try again.")
+                try await render("c8-picker-follow-up-failed", DependencyPickerView(model: picker, compact: true), width: 393, height: 426)
+                try await render("c8-banner-hand-off-depends", WorkspaceSnapshot(model: banner("Couldn't make “Review the interaction design” depend on “Prepare the release notes”. This Dependency would create a loop. Choose another Task.", .dependencyLink)), width: 1100, height: 720)
+                try await render("c8-banner-hand-off-blocks", WorkspaceSnapshot(model: banner("Couldn't stop “Prepare the release notes” depending on “Review the interaction design”. The Task changed. Reload its Dependencies before trying again.", .dependencyLink)), width: 1100, height: 720)
+                let conflict = banner("The Task changed. Close and reopen it before trying that action again.", .transition)
+                try await render("c8-banner-dismiss", WorkspaceSnapshot(model: conflict), width: 1100, height: 720)
+                try await render("c8-compact-banner-dismiss", TaskListView(model: conflict, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                let editing = fixture(); editing.signedIn = true; editing.editor = TaskDraft(editing.tasks[0])
+                try await render("c8-compact-editor", TaskListView(model: editing, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                let adding = fixture(); adding.signedIn = true; adding.quickAdd = true
+                adding.newTitle = "Review the launch notes tomorrow 9am p1 #review +Launch"
+                try await render("c8-compact-quick-add-short", QuickAddView(model: adding, floating: true, compact: true, referenceDate: referenceDate).content, width: 393, height: 426)
+                // D2: two refused links on different rows merge, saying a shared reason once.
+                let merging = fixture(); merging.signedIn = true
+                merging.dependencies.picker = .init(profile: "work", root: merging.tasks[0], direction: .blocks)
+                for (index, task) in merging.tasks.dropFirst().prefix(2).enumerated() {
+                    var notice = DependencyNotice(message: "This Dependency would create a loop. Choose another Task.", failure: ServerFailure(message: "loop", code: "dependency_cycle"))
+                    notice.attemptTitle = task.title
+                    merging.dependencies.picker?.messages.publish(notice, kind: .link, target: "row-\(index)", subject: task.title, reasonCode: "dependency_cycle", reasonText: notice.message)
+                }
+                try await render("c8-picker-merged", DependencyPickerView(model: merging, compact: true), width: 393, height: 426)
+                for (name, codes) in [("c8-banner-merged-same-reason", ["dependency_cycle", "dependency_cycle"]), ("c8-banner-merged-different-reasons", ["dependency_cycle", "occ_conflict"])] {
+                    let handed = fixture(); handed.signedIn = true
+                    var tickets = SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>()
+                    for (index, task) in handed.tasks.dropFirst().prefix(2).enumerated() {
+                        let ticket = tickets.begin(.link, target: "row-\(index)")
+                        let reason = codes[index] == "dependency_cycle" ? "This Dependency would create a loop. Choose another Task." : "The Task changed. Reload its Dependencies before trying again."
+                        handed.handOff("Couldn't make “\(task.title)” depend on “\(handed.tasks[0].title)”. " + reason, kind: .dependencyLink, from: ticket, subject: task.title, reasonCode: codes[index], reasonText: reason,
+                                       attempt: LinkAttempt(verb: "add", dependentID: task.id, dependent: task.title, blockerID: handed.tasks[0].id, blocker: handed.tasks[0].title))
+                    }
+                    try await render(name, WorkspaceSnapshot(model: handed), width: 1100, height: 720)
+                }
+                // This client: a stall with its attribution and what the sampler cost (S1-21 review;
+                // the seat's hands-on check 7 asks whether the "In …" line reads and wraps in two lines).
+                let stallClock = C7ReviewClock(); stallClock.now = 5000
+                let stallRecorder = ClientDiagnosticsRecorder(journalDirectory: directory.appendingPathComponent("c8-stall-recorder-\(mode)"), clock: { stallClock.now })
+                stallRecorder.authorizeOwnerSession(true)
+                var stall = ClientDiagnosticEvent(name: .stall, run: stallRecorder.run, now: 5000)
+                stall.durationMS = 412; stall.applicationActive = true
+                stall.stallAttribution = ClientStallAttribution(samples: 7, inLabel: "closure #1 in TodoModel.refreshAfterWrite(_:clearing:since:owner:) in TodoState.TodoModel.applyCatalogSnapshot(_:generation:)", agreeing: 6, frames: [], disabled: nil, suspendedMicroseconds: [38, 41, 35, 52, 40, 37, 44])
+                stallRecorder.record(stall)
+                let stalled = fixture(); stalled.signedIn = true
+                stalled.clientDiagnosticsUI.summary = await stallRecorder.snapshot()
+                try await render("c8-this-client-stall", ScrollView { ClientDiagnosticsView(model: stalled, compact: false, initiallyExpanded: ["Recent activity"]).padding(20) }, width: 1160, height: 900)
+                try await render("c8-compact-this-client-stall", ScrollView { ClientDiagnosticsView(model: stalled, compact: true, initiallyExpanded: ["Recent activity"]).padding(16) }, width: 393, height: 900)
+                stallRecorder.clear()
+                // Series with a custom rule (the seat's finding 4): the raw rule stays, as its only
+                // description; a preset shows none (asserted on dag-*-series-initial).
+                let customSeries = fixture(); customSeries.signedIn = true
+                customSeries.beginEditing(customSeries.tasks[0]); customSeries.recurrenceDraft = nil
+                // After beginEditing, which clears the Series it loads.
+                customSeries.series = SeriesDefinition(id: "custom", profile_id: "work", recurrence: Recurrence(dtstart: TaskTime(kind: "date", date: "2026-11-10"), rrule: "FREQ=DAILY;INTERVAL=3", exdate: []), deleted_at: nil)
+                try await render("c8-compact-series-custom", SeriesView(model: customSeries, compact: true), width: 393, height: 426)
+                // The taller Compact (O34): the editor at 640 pt and at 1000 pt (its field heights) and
+                // Import at 640 pt; the Dependency sheets and the graph follow after this loop.
+                editing.compactWindowHeight = 640
+                try await render("c8-compact-editor-640", TaskListView(model: editing, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 640)
+                editing.compactWindowHeight = 1000
+                try await render("c8-compact-editor-1000", TaskListView(model: editing, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 1000)
+                editing.compactWindowHeight = 426
+                let tallImport = fixture(); tallImport.signedIn = true; tallImport.showingImport = true; tallImport.compactWindowHeight = 640
+                    let items = (0..<12).map { index in ["external_id": "repository:scroll:\(index)", "title": "Review the repository inventory \(index + 1)"] }
+                    tallImport.loadImport(data: try JSONSerialization.data(withJSONObject: items), name: "repository-scroll.json")
+                    let rows: [[String: Any]] = items.map { ["external_id": $0["external_id"]!, "outcome": "created", "task_id": NSNull(), "from_version": NSNull(), "changed_fields": ["title", "external_id", "project_name", "tag_names"]] }
+                    let data = try JSONSerialization.data(withJSONObject: ["generated_at": "2026-10-29T00:00:00Z", "dry_run": true, "items": rows, "totals": ["created": 12, "updated": 0, "unchanged": 0, "rejected": 0]])
+                    tallImport.importReport = try JSONDecoder().decode(ImportSummary.self, from: data)
+                try await render("c8-compact-import-640", ImportView(model: tallImport, compact: true), width: 393, height: 640)
+                try await render("c8-series-custom", SeriesView(model: customSeries, compact: false), width: 580, height: 600)
+                continue
+            }
+            if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" {
+                // Candidate 7 review states for the Opus Mac UI seat: the banner's two controls,
+                // the named hand-offs, the sign-out caption, the follow-up failure in its picker,
+                // the quick-add capsule and the hold rows of This client.
+                func banner(_ text: String, _ kind: TodoModel.MessageKind) -> TodoModel {
+                    let state = fixture(); state.signedIn = true; state.publishMessage(text, kind: kind); return state
+                }
+                let conflict = banner("The Task changed. Close and reopen it before trying that action again.", .transition)
+                try await render("c7-banner-dismiss", WorkspaceSnapshot(model: conflict), width: 1100, height: 720)
+                try await render("c7-compact-banner-dismiss", TaskListView(model: conflict, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                try await render("c7-banner-reconnect", WorkspaceSnapshot(model: banner("Task saved. The live view is reconnecting.", .connection)), width: 1100, height: 720)
+                try await render("c7-banner-quick-add-failed", WorkspaceSnapshot(model: banner("Couldn't add “Ship the release”. The server rejected this request (HTTP 503).", .quickAdd)), width: 1100, height: 720)
+                try await render("c7-banner-dependency-failed", WorkspaceSnapshot(model: banner("Couldn't make “Review the interaction design” depend on “Prepare the release notes”. This Dependency would create a loop.", .dependencyLink)), width: 1100, height: 720)
+                let signOutSettings = SettingsView(
+                    model: banner("Couldn't sign out. The server rejected this request (HTTP 503).", .signOut), selectedTab: .general, notifications: NotificationSettingsState(authorization: "Allowed"),
+                    serverStatus: ManagedServerStatus(label: "fixture.todo.server", path: "/fixture/LaunchAgents/todo.plist", installed: true, loaded: true,
+                                                      configuration: ManagedServerConfiguration(executable: "/fixture/Todo/Server/todo-server", database: "/fixture/todo.db", port: 4310)))
+                try await render("c7-settings-sign-out-failed", signOutSettings, width: 640, height: 560)
+                let importing = fixture(); importing.signedIn = true; importing.showingImport = true
+                importing.importMessages.publish("Couldn't prepare the follow-up Task. The server rejected this request (HTTP 404). Try again.", kind: .followUp)
+                try await render("c7-import-follow-up-failed", ImportView(model: importing, compact: false), width: 760, height: 620)
+                let picker = fixture(); picker.signedIn = true
+                picker.dependencies.picker = .init(profile: "work", root: picker.tasks[0], direction: .dependsOn)
+                picker.dependencies.picker?.failure = DependencyNotice(message: "This Task blocks done Tasks.", followUp: picker.tasks[1].id,
+                    followUpFailure: "Couldn't prepare the follow-up Task. The server rejected this request (HTTP 404). Try again.")
+                try await render("c7-picker-follow-up-failed", DependencyPickerView(model: picker), width: 560, height: 620)
+                let added = fixture(); added.signedIn = true; added.deletionNotice = "Task added"
+                try await render("c7-capsule-task-added", WorkspaceSnapshot(model: added), width: 1100, height: 720)
+                // This client: a row click with its release taken from the selection, and a
+                // pointer action whose release was not recorded.
+                let clock = C7ReviewClock()
+                let recorder = ClientDiagnosticsRecorder(journalDirectory: directory.appendingPathComponent("c7-recorder-\(mode)"), clock: { clock.now })
+                recorder.authorizeOwnerSession(true)
+                let click = recorder.beginAction(.taskSelection, inputMS: 1000, mode: .full, inputKind: .pointer)
+                clock.now = 1054; recorder.inputReleased(click, atMS: 1053.9, source: .nativeSelection)
+                var released = ClientDiagnosticEvent(name: .inputReleased, run: recorder.run, now: 1054)
+                released.actionID = click; released.traceID = click; released.inputKind = .pointer; released.inputMS = 1053.9; released.durationMS = 53.9; released.releaseSource = .nativeSelection
+                recorder.record(released)
+                clock.now = 1086; recorder.handlerStarted(click); clock.now = 1128; recorder.resultPublished(click); clock.now = 1321; recorder.layoutCommitted(click)
+                clock.now = 2000
+                let settings = recorder.beginAction(.openSettings, inputMS: 2000, mode: .full, inputKind: .pointer)
+                clock.now = 2030; recorder.handlerStarted(settings); clock.now = 2040; recorder.resultPublished(settings); clock.now = 2190; recorder.layoutCommitted(settings)
+                let diagnostics = fixture(); diagnostics.signedIn = true
+                diagnostics.clientDiagnosticsUI.summary = await recorder.snapshot()
+                try await render("c7-this-client-holds", ScrollView { ClientDiagnosticsView(model: diagnostics, compact: false, initiallyExpanded: ["Interaction phases", "Recent activity"]).padding(20) }, width: 1160, height: 1400)
+                try await render("c7-compact-this-client-holds", ScrollView { ClientDiagnosticsView(model: diagnostics, compact: true, initiallyExpanded: ["Interaction phases"]).padding(16) }, width: 393, height: 1400)
+                recorder.clear()
+                continue
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" {
                 for compact in [true, false] {
@@ -883,7 +1073,7 @@ struct Snapshots {
                 }
                 let fullFrames = ImportFrameCapture()
                 let compactFrames = ImportFrameCapture()
-                if state == "error" { model.importError = "Cannot read this file. Choose a JSON array or NDJSON file." }
+                if state == "error" { model.importMessages.publish("Cannot read this file. Choose a JSON array or NDJSON file.", kind: .file) }
                 try await render("import-\(state)", ZStack {
                     WorkspaceSnapshot(model: model)
                     Color.black.opacity(0.12)
@@ -985,6 +1175,13 @@ struct Snapshots {
             try await render("snapshots-loading", snapshotSettings.page(.snapshots), width: 600, height: 460)
             try await render("compact-snapshots-loading", snapshotSettings.page(.snapshots), width: 393, height: 426)
         }
+        if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" {
+            // The taller Compact (O34) at 393 by 640: Quick Add (short, and with many Dependencies), the
+            // picker, the batch list, the delete dialog, Series and the graph, with their bounds checks.
+            files += try await DependencySnapshots.render(directory: directory, compactOnly: true, compactHeight: 640,
+                only: ["initial", "initial-many-invalid", "picker-depends", "picker-many", "batch-select-long", "delete-long-end", "series-initial"], prefix: "c8-640-dag")
+            files += try await DependencyGraphSnapshots.render(directory: directory, compactHeight: 640, only: ["list-first", "diagram"], prefix: "c8-640-graph")
+        }
         try JSONSerialization.data(
             withJSONObject: [
                 "renderer": "offscreen NSHostingView cacheDisplay", "appLaunched": false, "keychainAccess": false, "files": files,
@@ -994,7 +1191,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 52 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
@@ -1130,6 +1327,8 @@ private final class DiagnosticsLayoutReceipt {
 /// Renders a view for the design suite at a fixed 2x scale in generic (calibrated) RGB and tags it
 /// sRGB, independent of the capturing host's display scale and colour profile, so two runs of the
 /// same source give byte-identical PNGs. verify-design.py records this in result.json.
+final class C7ReviewClock: @unchecked Sendable { private let lock = NSLock(); private var value = 1000.0; var now: Double { get { lock.withLock { value } } set { lock.withLock { value = newValue } } } }
+
 @MainActor func snapshotBitmap(_ view: NSView) throws -> NSBitmapImageRep {
     let size = view.bounds.size
     let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int((size.width * 2).rounded()), pixelsHigh: Int((size.height * 2).rounded()),

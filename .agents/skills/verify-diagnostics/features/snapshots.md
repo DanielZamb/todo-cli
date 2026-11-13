@@ -29,3 +29,8 @@ Snapshot restore changes storage.restore_generation. Diagnostics clears its
 throughput history and connected-client cursors on the next read. Recent
 operations are freshly projected from the restored log. storage.last_snapshot
 contains metadata from store.snapshots.list(), without paths or checksums.
+
+Diagnostics materializes inside a checked owner lease and validates that
+authority before its first statement. The read-scope controls and their current
+lock-hold stop are documented in [controls](../controls/README.md). Transaction
+modes have not changed. Final qualification remains pending.

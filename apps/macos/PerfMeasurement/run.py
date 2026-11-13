@@ -21,6 +21,8 @@ import threading
 import time
 from fixture import OWNER, owner_items, finish_owner_fixture
 from owner_activity import wait_for_owner_idle
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+import state_package  # the vault swap and the Keychain guard every runner uses
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = Path(__file__).with_name('Measurement.swift')
@@ -268,18 +270,8 @@ for ref, sha in refs.items():
             start = value.index(struct_marker); body = value.index('    var body: some View {\n', start) + len('    var body: some View {\n')
             value = value[:body] + '        let _ = ' + call + '\n' + value[body:]
         view.write_text(value)
-    (package / 'Sources/SessionVault.swift').write_text('''
-import Foundation
-struct SessionVault {
-    let service: String
-    let account: String
-    func load() throws -> String? { fatalError("Keychain is forbidden in MAC-PERF") }
-    func save(_ credential: String) throws { fatalError("Keychain is forbidden in MAC-PERF") }
-    func delete() throws { fatalError("Keychain is forbidden in MAC-PERF") }
-}
-func configureVerificationKeychain() { fatalError("Keychain is forbidden in MAC-PERF") }
-struct VaultError: LocalizedError { var errorDescription: String? { "Forbidden Keychain access" } }
-''')
+    # The in-memory vault from the one place every runner gets it (apps/macos/scripts/state_package.py).
+    state_package.swap_vault(package / 'Sources')
     (package / 'Package.swift').write_text('''// swift-tools-version: 6.2
 import PackageDescription
 let package = Package(name: "MacPerf", platforms: [.macOS(.v26)], dependencies: [.package(path: "API")], targets: [
@@ -310,6 +302,8 @@ let package = Package(name: "MacPerf", platforms: [.macOS(.v26)], dependencies: 
     assert pins == {str(p.relative_to(package)): hashlib.sha256(p.read_bytes()).hexdigest() for p in package.rglob('Package.resolved') if '.build' not in p.parts}, 'pins changed'
     artifacts = [p for p in [package / '.build/release/MacPerfPackageTests.xctest/Contents/MacOS/MacPerfPackageTests', package / '.build/release/MacPerfPackageTests'] if p.is_file()]
     assert artifacts, 'compiled unhosted measurement binary missing'
+    # Nothing runs until the guard has read the built products; it stops the run if a Keychain call is linked.
+    state_package.checked(package / '.build/release', evidence / ('keychain-guard-' + label + '.json'))
     (evidence / ('artifact-' + label + '.json')).write_text(json.dumps({str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in artifacts}, indent=2))
 if args.prepare_only:
     raise SystemExit(0)

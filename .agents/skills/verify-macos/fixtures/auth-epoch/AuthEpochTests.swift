@@ -100,7 +100,7 @@ private actor AuthEpochTransport: ClientTransport {
         #expect(model.signedIn == false)
         #expect(capture.value == "")
         #expect(model.message == "Your Session ended. Sign in again.")
-        let receipt: [String: Any] = ["replacementSignedIn": replacementSurvived, "credentialStillB": credentialStillB, "obsoleteNoticeDiscarded": obsoleteNoticeDiscarded, "current401SignedOut": !model.signedIn, "currentCredentialCleared": capture.value.isEmpty, "currentNotice": model.message ?? "", "keychainAccess": false]
+        let receipt: [String: Any] = ["replacementSignedIn": replacementSurvived, "credentialStillB": credentialStillB, "obsoleteNoticeDiscarded": obsoleteNoticeDiscarded, "current401SignedOut": !model.signedIn, "currentCredentialCleared": capture.value.isEmpty, "currentNotice": model.message ?? ""]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_AUTH_EPOCH_RECEIPT"])))
     }
 }

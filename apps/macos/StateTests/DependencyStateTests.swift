@@ -247,7 +247,10 @@ import TodoAPI
         #expect(model.dependencies.picker?.failure?.message == "A done Task can only depend on done or cancelled Tasks.")
         #expect(model.dependencies.picker?.linked.map(\.id) == [resolved.id])
         await model.transition(resolvedNow, action: "reopen")
-        let reopening = try #require(model.serverErrors[.editor])
+        // No editor shows this Task, so its refusal is the main window's message only: the editor's
+        // error is set only for an editor showing the Task (MAC-C1-S1-17, ruled).
+        #expect(model.serverErrors[.editor] == nil)
+        let reopening = try #require(model.serverErrors[.message])
         let reopeningNotice = DependencyNotice.project(reopening, context: .reopen)
         #expect(reopeningNotice.message == "This Task blocks done Tasks and can't be reopened.")
         #expect(reopeningNotice.tasks.map(\.id) == [doneGoal.id])

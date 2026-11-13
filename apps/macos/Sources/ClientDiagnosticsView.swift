@@ -15,7 +15,11 @@ struct ClientDiagnosticsView: View {
     let compact: Bool
     @State private var document: ClientDiagnosticsDocument?
     @State private var exporting = false
-    @State private var exportError: String?
+    private enum ExportKind: Hashable { case export }
+    /// The export caption under the one message rule: each export takes a ticket; a newer export
+    /// supersedes an older one; a success ends an earlier failure; signing out ends it.
+    @State private var exportMessages = SurfaceMessages<ExportKind, String>()
+    @State private var exportTicket: SurfaceMessages<ExportKind, String>.Ticket?
     @State private var expanded: Set<String>
     init(model: TodoModel, compact: Bool, initiallyExpanded: Set<String> = []) {
         self.model = model; self.compact = compact; _expanded = State(initialValue: initiallyExpanded)
@@ -48,12 +52,17 @@ struct ClientDiagnosticsView: View {
                     Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 8) {
                         GridRow { Text("Interaction").gridColumnAlignment(.leading); Text("p50 (ms)"); Text("p90 (ms)"); Text("p99 (ms)"); Text("Max (ms)"); Text("Count"); Text("Incomplete") }.foregroundStyle(.secondary)
                         ForEach(rows) { row in
-                            GridRow { category(row); Text(milliseconds(row.p50MS)); Text(milliseconds(row.p90MS)); Text(milliseconds(row.p99MS)); Text(milliseconds(row.maxMS)); Text("\(row.count)"); Text("\(row.incompleteCount)") }
-                                .accessibilityElement(children: .ignore).accessibilityLabel(ClientDiagnosticDisplay.accessibility(row))
+                            // A GridRow is not one accessibility container: a modifier on it lands on every
+                            // cell, so the row was read seven times. The first cell carries the row's label.
+                            GridRow {
+                                category(row).accessibilityElement(children: .ignore).accessibilityLabel(ClientDiagnosticDisplay.accessibility(row))
+                                Group { Text(milliseconds(row.p50MS)); Text(milliseconds(row.p90MS)); Text(milliseconds(row.p99MS)); Text(milliseconds(row.maxMS)); Text("\(row.count)"); Text("\(row.incompleteCount)") }
+                                    .accessibilityHidden(true)
+                            }
                         }
                     }.monospacedDigit()
                 }
-                Text("Target: median 20 ms, p99 300 ms. Percentiles cover the last 512 verified completions per row. Timings end after layout. Screen presentation is not measured.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).diagnosticsBounds("client-target")
+                Text(ClientDiagnosticDisplay.timingNote).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).diagnosticsBounds("client-target")
                 Text("Incomplete, superseded and unverified totals cover this recording session. Incomplete wait is the longest pending or ended wait.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 total("Refreshes", snapshot.refreshes)
                 total("Requests", snapshot.requests)
@@ -85,7 +94,7 @@ struct ClientDiagnosticsView: View {
                         if let category = event.action, let phases = event.actionPhases {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(ClientDiagnosticDisplay.action(category)).fontWeight(.medium)
-                                if let hold = phases.holdMS { pair("Hold before release (ms)", milliseconds(hold)) }
+                                if let hold = ClientDiagnosticDisplay.hold(event) { pair(hold.label, hold.value) }
                                 pair("Input queue (ms)", milliseconds(phases.inputQueueMS))
                                 pair("Handler, including waits (ms)", milliseconds(phases.handlerWallMS))
                                 pair("Requests, overlapping (ms)", milliseconds(phases.requestUnionMS))
@@ -114,8 +123,11 @@ struct ClientDiagnosticsView: View {
                     ForEach(snapshot.recent.reversed()) { event in
                         HStack {
                             VStack(alignment: .leading) {
-                                Text(ClientDiagnosticDisplay.event(event.name))
+                                Text(ClientDiagnosticDisplay.event(event.name) + (event.releaseSource == .nativeSelection ? ", from selection" : ""))
                                 if let trigger = event.trigger, let label = ClientDiagnosticDisplay.environmentTrigger(trigger) { Text(label).foregroundStyle(.secondary) }
+                                // What the main thread was doing (stall attribution): our deepest frame or the system entry.
+                                if let label = event.stallAttribution?.inLabel { Text("In " + label).font(.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled) }
+                                if let cost = ClientDiagnosticDisplay.samplerCost(event.stallAttribution) { Text(cost).font(.caption).foregroundStyle(.secondary).monospacedDigit() }
                                 if let capability = event.nativeSelectionNotifications {
                                     if capability.changing == .unavailable { Text("Row highlight started: unavailable").foregroundStyle(.secondary) }
                                     if capability.committed == .unavailable { Text("Row highlight settled: unavailable").foregroundStyle(.secondary) }
@@ -128,24 +140,28 @@ struct ClientDiagnosticsView: View {
                 }
                 HStack {
                     Button("Export client metadata…") {
+                        let ticket = exportMessages.begin(.export)
+                        exportTicket = ticket
                         Task {
                             do {
-                                guard let data = try await model.clientDiagnostics.exportMetadata(), model.clientDiagnostics.isOwnerSession else { return }
+                                guard let data = try await model.clientDiagnostics.exportMetadata(), model.clientDiagnostics.isOwnerSession, exportMessages.isNewest(ticket) else { return }
                                 document = .init(data: data); exporting = true
-                            } catch { exportError = "Client metadata could not be exported." }
+                            } catch { exportMessages.fail("Client metadata could not be exported.", ticket) }
                         }
                     }.disabled(!model.clientDiagnostics.isOwnerSession).accessibilityIdentifier("client-diagnostics-export")
                     Spacer(minLength: 0)
                 }
-                if let exportError { Text(exportError).foregroundStyle(.red) }
+                if let exportError = exportMessages.value { Text(exportError).foregroundStyle(.red) }
                 Text("Metadata only. Saved on this Mac. Two rotating files, at most \(ClientDiagnosticsRecorder.journalFileLimit / 1_048_576) MiB each. Cleared on sign out.").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }.font(.caption).padding(4).frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityIdentifier("client-diagnostics")
         .fileExporter(isPresented: $exporting, document: document, contentType: .json, defaultFilename: "Todo-client-diagnostics") { result in
-            if case .failure = result { exportError = "Client metadata could not be exported." }
+            if let ticket = exportTicket {
+                if case .failure = result { exportMessages.fail("Client metadata could not be exported.", ticket) } else { exportMessages.succeed(ticket) }
+            }
             document = nil
         }
-        .onChange(of: model.signedIn) { _, signedIn in if !signedIn { exporting = false; document = nil; exportError = nil } }
+        .onChange(of: model.signedIn) { _, signedIn in if !signedIn { exporting = false; document = nil; exportMessages = .init(); exportTicket = nil } }
     }
     private func category(_ row: ClientDiagnosticActionSummary) -> some View {
         VStack(alignment: .leading, spacing: 2) {

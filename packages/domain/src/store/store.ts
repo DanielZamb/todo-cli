@@ -11,7 +11,12 @@ import { Effect, Option, Schema } from "effect";
 import { eraseTaskAttachments } from "../attachment-store.ts";
 import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
-import { DependencyError, RejectionDetails } from "../dependencies.ts";
+import {
+  type AuthorizedRead,
+  type AuthorizedTerminalRead,
+  checkedRead,
+} from "../auth/authorized-read.ts";
+import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   Profile,
   Project,
@@ -42,6 +47,7 @@ import {
 } from "../recurrence.ts";
 import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
+import { ClientProjection } from "./client-projection.ts";
 import { incidentRemoval, putEdge, readEdges } from "./dependencies.ts";
 import {
   DependencyRefusal,
@@ -49,6 +55,7 @@ import {
 } from "./dependency-validation.ts";
 import { Diagnostics } from "./diagnostics.ts";
 import { StoreError } from "./error.ts";
+import { committedHistory, terminalHistory } from "./history-reads.ts";
 import { redactTaskHistory } from "./purge.ts";
 import { ScheduledWork } from "./scheduled-work.ts";
 import { searchCacheEvents } from "./search-cache-events.ts";
@@ -187,6 +194,7 @@ export class OperationStore {
         path,
         (run) => this.transaction(run),
         () => this.searchWords.clearAll(),
+        this.attachmentRoot,
       );
       this.transaction(() => {
         const version =
@@ -237,7 +245,8 @@ export class OperationStore {
       this.diagnostics = new Diagnostics(
         this.db,
         path,
-        (input) => this.auth.requireOwner(input),
+        (input, use) =>
+          this.auth.withOwnerRead(input, Schema.Struct({}), {}, use),
         this.snapshots,
         this.scheduled,
         this.attachmentRoot,
@@ -319,6 +328,7 @@ export class OperationStore {
     });
 
   private cleanupAttachmentsSync() {
+    if (this.isPreview) return;
     for (const row of this.db
       .query<{ profile_id: string; task_id: string }, []>(
         "SELECT profile_id,task_id FROM attachment_cleanup",
@@ -550,10 +560,24 @@ export class OperationStore {
   readonly graph = (profile: ProfileId) =>
     attempt(() =>
       this.db.transaction(() => ({
-        tasks: readTasks(this.db).filter((task) => task.profile_id === profile),
-        edges: readEdges(this.db).filter((edge) => edge.profile_id === profile),
+        tasks: new ClientProjection(this.db).tasksForMutation(profile),
+        edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
+          this.db
+            .query(
+              "SELECT * FROM task_dependencies WHERE profile_id=? ORDER BY profile_id,dependent_id,blocker_id",
+            )
+            .all(profile),
+        ),
       }))(),
     );
+
+  readonly graphRead = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap((value) => this.graph(value.profile)),
+    );
+
+  readonly terminalChangesRead = (read: AuthorizedTerminalRead) =>
+    attempt(() => terminalHistory(this.db, read));
 
   private historySync(after: number): OpLogEntry[] {
     return this.db
@@ -591,6 +615,14 @@ export class OperationStore {
     });
 
   readonly history = (after = 0) => attempt(() => this.historySync(after));
+
+  readonly committedHistory = (profile: ProfileId, after: number) =>
+    attempt(() => committedHistory(this.db, profile, after));
+
+  readonly changesRead = (read: AuthorizedRead, after: number) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap((value) => this.committedHistory(value.profile, after)),
+    );
 
   readonly searchCacheEvents = (cursor?: {
     readonly seq: number;

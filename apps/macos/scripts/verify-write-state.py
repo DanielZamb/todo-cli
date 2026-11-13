@@ -31,6 +31,8 @@ source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swif
 }, indent=2) + '\n')
 sys.path.insert(0, str(root / '.agents/skills/verify-macos-lifecycle/scripts'))
 from owned_process import OwnedCommands
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package  # the state package with the in-memory vault, and the Keychain guard
 
 unsafe = evidence / 'command-unsafe'
 owned = OwnedCommands(unsafe)
@@ -167,11 +169,16 @@ with scratch_directory() as temporary:
         build_path = Path(os.environ.get('TODO_SWIFT_BUILD_PATH', str(root / 'apps/macos/DerivedData/StateProof'))).resolve()
         if not build_path.is_relative_to(root / 'apps/macos'):
             raise RuntimeError('TODO_SWIFT_BUILD_PATH must stay under apps/macos')
-        run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--disable-automatic-resolution'] + (['--filter', 'snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer|generatedSnapshotRestoreCodingKeepsLiteralReportAndDryRun|snapshotHumanReasonsAndTaskPluralization|snapshotReloadResetsAndScopesReminderReceipts|snapshotHistoryIncludesEveryEventKindWithoutAnyOfRecursion'] if snapshots_only else []), 'state-tests.log', test_env)
+        # No test run links or calls the Keychain: build the mirrored package (in-memory vault),
+        # check its products, then run them (coordinator ruling, 2026-11-13).
+        package = state_package.prepare()
+        run(['swift', 'build', '--build-tests', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution'], 'state-build.log')
+        keychain = state_package.checked(build_path, evidence / 'keychain-guard.json')
+        run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution'] + (['--filter', 'snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer|generatedSnapshotRestoreCodingKeepsLiteralReportAndDryRun|snapshotHumanReasonsAndTaskPluralization|snapshotReloadResetsAndScopesReminderReceipts|snapshotHistoryIncludesEveryEventKindWithoutAnyOfRecursion'] if snapshots_only else []), 'state-tests.log', test_env)
         if not snapshots_only:
             diagnostics_env = dict(env, TODO_DB=str(scratch / 'scratch.db'), TODO_F10_CLI=str(scratch / 'todo'), TODO_DIAGNOSTICS_SERVER=url, TODO_DIAGNOSTICS_SNAPSHOT=str(evidence / 'diagnostics-live.json'))
-            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'DiagnosticsStateTests'], 'diagnostics-state-tests.log', diagnostics_env)
-            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'GeneratedContractTests/testDiagnosticsReadPreservesNullableMetadata|GeneratedContractTests/testGeneratedStreamSendsResumeHeader'], 'diagnostics-contract-tests.log')
+            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'DiagnosticsStateTests'], 'diagnostics-state-tests.log', diagnostics_env)
+            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'GeneratedContractTests/testDiagnosticsReadPreservesNullableMetadata|GeneratedContractTests/testGeneratedStreamSendsResumeHeader'], 'diagnostics-contract-tests.log')
         database_path = Path(shared['database']) if shared else scratch / 'scratch.db'
         if snapshots_only:
             receipt = json.loads((evidence / 'snapshots-http.json').read_text())
@@ -236,5 +243,5 @@ with scratch_directory() as temporary:
             (evidence / 'cleanup.json').write_text(json.dumps(dict(serverStopped=server.poll() is not None, scratchRemoved=True)) + '\n')
 assert not scratch.exists()
 assert (evidence / 'http-receipt.json').is_file()
-(evidence / 'result.json').write_text(json.dumps(dict(status='PASS', nativeAppLaunched=False, keychainAccessed=False, scratchRemoved=True)) + '\n')
+(evidence / 'result.json').write_text(json.dumps(dict(status='PASS', nativeAppLaunched=False, keychainLinked=keychain['keychainLinked'], keychainAccessed=keychain['keychainLinked'], keychainGuard='keychain-guard.json', scratchRemoved=True)) + '\n')
 print('PASS; headless Swift state and compiled scratch HTTP; evidence survived cleanup')

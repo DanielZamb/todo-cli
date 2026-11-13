@@ -33,11 +33,16 @@ struct DependencyGraphState {
     var request = 0
     var report: DependencyGraphReport?
     var loading = false
-    var operationFailure: DependencyNotice?
+    enum MessageKind: Hashable { case read }
+    /// The graph window's read notice under the one message rule (SurfaceMessages); a newer read
+    /// supersedes an older one (with `request` for the data). The search notice is the Task search
+    /// generation's, as in the picker.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    var operationFailure: DependencyNotice? { messages.value }
     var searchFailure: DependencyNotice?
     var failure: DependencyNotice? {
         get { operationFailure ?? searchFailure }
-        set { operationFailure = newValue }
+        set { if let newValue { messages.publish(newValue, kind: .read) } else { messages.end() } }
     }
     var renderedNodeCount: Int?
     var renderError: String?
@@ -75,7 +80,9 @@ struct DependencyGraphState {
         }
         return result.intersection(knownIDs)
     }
-    mutating func publish(_ report: DependencyGraphReport) {
+    /// Publishes a read's report. With the read's ticket it clears only a read notice from before
+    /// that read began, and only while it is the newest read; without one (fixtures) it ends it.
+    mutating func publish(_ report: DependencyGraphReport, ticket: SurfaceMessages<MessageKind, DependencyNotice>.Ticket? = nil) {
         self.report = report
         let surviving = knownIDs
         selected = selected.flatMap { surviving.contains($0) ? $0 : nil } ?? (surviving.contains(root) ? root : nil)
@@ -83,7 +90,7 @@ struct DependencyGraphState {
         expanded.formIntersection(surviving)
         deleted = !surviving.contains(root)
         loading = false
-        failure = nil
+        if let ticket { messages.succeed(ticket) } else { messages.end() }
     }
 }
 
@@ -99,20 +106,22 @@ extension TodoModel {
         let request = dependencies.graphRequest
         dependencies.graph?.request = request
         dependencies.graph?.loading = true
+        guard let readTicket = dependencies.graph?.messages.begin(.read) else { return }
         do {
             let wire = try await client.tasks_period_graph(path: .init(profile: graph.profile, task: graph.root)).ok.body.json
             let report = try decode(DependencyGraphReport.self, wire)
             guard signedIn && profile == graph.profile && isCurrentCredential(epoch), dependencies.graph?.request == request, dependencies.graph?.root == graph.root else { return }
             guard report.profile_id == graph.profile, report.task_id == graph.root else { throw DependencyGraphReply.ProtocolError.incompatible }
-            dependencies.graph?.publish(report)
+            dependencies.graph?.publish(report, ticket: readTicket)
             if !graph.search.isEmpty { await searchDependencyGraph() }
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: epoch)
             guard signedIn && profile == graph.profile && isCurrentCredential(epoch), dependencies.graph?.request == request, dependencies.graph?.root == graph.root else { return }
             let notice = dependencyNotice(error, context: .link)
-            dependencies.graph?.failure = notice
+            dependencies.graph?.messages.fail(notice, readTicket)
             dependencies.graph?.loading = false
             if notice.failure?.code == "not_found" { dependencies.graph?.report = nil; dependencies.graph?.deleted = true }
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
     func closeDependencyGraph() { dependencies.graph = nil; dependencies.graphRequest += 1; dependencies.graphSearchRequest += 1 }
@@ -131,13 +140,11 @@ extension TodoModel {
             dependencies.deletion?.acceptedFromVersion = nil
         }
         if let picker = dependencies.picker, !picker.requiresReload, picker.pending.isEmpty {
-            let notice = picker.operationFailure
+            // A background read refreshes the picker's data and clears no message (nothing is saved
+            // and restored: whatever is showing stays, and anything newer stays too).
             let warnings = picker.warnings
-            await reloadDependencyPicker()
-            if dependencies.picker?.id == picker.id {
-                dependencies.picker?.failure = notice
-                dependencies.picker?.warnings = warnings
-            }
+            await refreshDependencyPicker()
+            if dependencies.picker?.id == picker.id { dependencies.picker?.warnings = warnings }
         }
         guard isCurrentCredential(epoch), dependencies.generation == run else { return }
         await readDependencyGraph()
@@ -158,9 +165,10 @@ extension TodoModel {
             dependencies.graph?.matches = Set(rows.map(\.id))
             dependencies.graph?.searchFailure = nil
         } catch {
+            // A 401 for the current credential ends the Session even if this action is no longer wanted (S1-20).
+            handleAuthorization(error, credentialEpoch: epoch)
             guard isCurrentCredential(epoch), profile == graph.profile, dependencies.graphSearchRequest == request, dependencies.graph?.root == graph.root, dependencies.graph?.search == graph.search else { return }
             dependencies.graph?.searchFailure = dependencyNotice(error, context: .search)
-            handleAuthorization(error, credentialEpoch: epoch)
         }
     }
 }

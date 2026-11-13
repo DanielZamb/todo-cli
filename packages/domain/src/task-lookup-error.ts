@@ -31,22 +31,35 @@ export const taskLookupError = Effect.fn(function* (
   transport: "cli" | "http",
   options: TaskLookupErrorOptions,
 ) {
-  const profile = yield* store.auth
-    .resolveProfile({ ...request, action: options.action })
+  const resolved = yield* store.auth
+    .resolveProfileRead(
+      { ...request, action: options.action },
+      Schema.Struct({
+        task_id: Schema.String,
+        transport: Schema.Literals(["cli", "http"]),
+        credentialProfile: Schema.String,
+      }),
+      {
+        task_id,
+        transport,
+        credentialProfile: options.credentialProfile ?? request.profile,
+      },
+    )
     .pipe(
       Effect.catchTag("ProfileResolutionError", () =>
         Effect.succeed(undefined),
       ),
     );
+  const authority = resolved === undefined ? undefined : resolved.selection;
   return authorizedTaskLookupError(
-    profile,
-    task_id,
-    transport,
-    options.credentialProfile ?? request.profile,
+    resolved?.profile,
+    authority?.fields.task_id ?? "",
+    authority?.fields.transport ?? "http",
+    authority?.fields.credentialProfile ?? "",
   );
 });
 
-function authorizedTaskLookupError(
+export function authorizedTaskLookupError(
   profile: Pick<Profile, "id" | "name"> | undefined,
   task_id: string,
   transport: "cli" | "http",

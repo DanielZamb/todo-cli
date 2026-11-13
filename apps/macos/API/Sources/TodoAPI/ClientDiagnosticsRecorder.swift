@@ -143,13 +143,13 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         events.append(event)
         if event.name == .layoutCommitted { recentInteractions.append(event); if recentInteractions.count > 16 { recentInteractions.removeFirst() } }
         if event.name == .requestFinished { recentRequests.append(event); if recentRequests.count > 16 { recentRequests.removeFirst() } }
-        if event.name != .resourcesSampled && event.name != .pollsAggregated { recentActivity.append(event); if recentActivity.count > 32 { recentActivity.removeFirst() } }
+        if event.name != .resourcesSampled && event.name != .pollsAggregated && event.name != .observed { recentActivity.append(event); if recentActivity.count > 32 { recentActivity.removeFirst() } }
         guard journal else { return }
         if event.name == .resourcesSampled && !shouldJournalResource(event) { return }
         if enqueueLocked(event, critical: critical), event.name == .resourcesSampled { lastResourceJournalAt = event.monotonicMS; lastJournalResources = event.resources; lastJournalActivity = event.applicationActive }
     }
     private static func routine(_ event: ClientDiagnosticEvent) -> Bool {
-        if event.name == .resourcesSampled || event.name == .pollsAggregated { return true }
+        if event.name == .resourcesSampled || event.name == .pollsAggregated || event.name == .observed { return true }
         guard event.name == .requestStarted || event.name == .requestHeaders || event.name == .requestFinished || event.name == .decodeFinished else { return false }
         return event.actionID == nil && event.reason == nil && (event.status ?? 200) < 400 && (event.durationMS ?? 0) <= 300 && !(event.name == .requestFinished && event.status == nil)
     }

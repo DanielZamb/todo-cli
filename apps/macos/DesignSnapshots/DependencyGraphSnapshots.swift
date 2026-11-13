@@ -52,7 +52,8 @@ import WebKit
         let combined = try #require(context.makeImage())
         return try #require(NSBitmapImageRep(cgImage: combined).representation(using: .png, properties: [:]))
     }
-    static func render(directory: URL, matrix: Bool = false) async throws -> [String] {
+    /// `compactHeight`, `only` and `prefix` render chosen Compact cases in a taller window (O34).
+    static func render(directory: URL, matrix: Bool = false, compactHeight: CGFloat = 426, only: Set<String>? = nil, prefix: String = "dag-graph") async throws -> [String] {
         NSApplication.shared.setActivationPolicy(.prohibited)
         var files: [String] = []
         var receipts: [[String: Any]] = []
@@ -60,12 +61,13 @@ import WebKit
             let appearance = try #require(NSAppearance(named: scheme == .light ? .aqua : .darkAqua))
             NSApplication.shared.appearance = appearance
             let cases = [("list-first", true, false, false), ("diagram", true, true, false), ("full-diagram", false, true, false), ("pele-failure", true, true, true)] + (matrix ? [("full-pele-failure", false, true, true)] + [true, false].flatMap { compact in DependencyGraphFixtures.names.map { ("\(compact ? "compact" : "full")-\($0)", compact, !compact, false) } } : [])
-            for (name, compact, diagram, failing) in cases {
+            for (name, compact, diagram, failing) in cases where only?.contains(name) ?? true {
                 let scenario = DependencyGraphFixtures.names.first { name == "compact-\($0)" || name == "full-\($0)" }
                 let model = scenario.map(DependencyGraphFixtures.model) ?? fixture(failing: failing)
                 let frames = DependencyGraphFrames()
                 let width: CGFloat = compact ? 393 : 1024
-                let height: CGFloat = compact ? 426 : 720
+                let height: CGFloat = compact ? compactHeight : 720
+                if compact { model.compactWindowHeight = compactHeight }
                 let view = Group {
                     if model.dependencies.graph == nil { TaskListView(model: model, compactMode: compact).taskContent }
                     else { DependencyGraphView(model: model, compact: compact, initialDiagram: diagram, initialDetails: scenario == "details", initialShown: scenario == "details") }
@@ -100,7 +102,7 @@ import WebKit
                     #expect(edgeStroke == expectedStroke)
                     #expect(edgeStroke != nil)
                 }
-                let file = "dag-graph-\(name)-\(scheme == .light ? "light" : "dark").png"
+                let file = "\(prefix)-\(name)-\(scheme == .light ? "light" : "dark").png"
                 #expect(Set(frames.rows.map(\.taskIdentifier)).count == frames.rows.count, "\(file) unique simultaneous Task controls")
                 #expect(Set(frames.rows.map(\.menuIdentifier)).count == frames.rows.count, "\(file) unique simultaneous action menus")
                 if !compact && scenario != "details" && model.dependencies.graph?.renderError == nil {
@@ -137,7 +139,7 @@ import WebKit
                 window.close()
             }
         }
-        try JSONSerialization.data(withJSONObject: receipts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("dag-graph-capture-manifest.json"))
+        try JSONSerialization.data(withJSONObject: receipts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(prefix)-capture-manifest.json"))
         return files
     }
 }

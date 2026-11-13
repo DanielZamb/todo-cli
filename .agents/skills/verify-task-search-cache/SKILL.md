@@ -180,3 +180,16 @@ composition after the seven cache and three observer source controls fail their
 literal assertions and restored copies pass. CLI defect classification is
 separately driven through the compiled artifact. Historical cache timing results
 remain on their original inputs and are not remeasured or relabelled here.
+
+The SERVER-READS authorization revision retains epoch capture before auth in
+both list helpers. Their preparation token is now named `search`; the immutable
+uncached oracle bypass recognizes exactly those same two callbacks. Caller
+Profile/filter ownership changes around the token do not change the matcher,
+runner, admission model, accounting or erasure/observer bodies. Fresh generated
+and observer controls plus strict restoration precede the reviewed source-map
+renewal; the complete command must then pass for the named product.
+
+The full immutable 219749f2 command exited 0; its receipt is
+`docs/evidence/perf-cache/verify-Xh1k3D/result.json`. This includes the finite
+admission model and real-code controls, compiled lifecycle, erasure and CLI
+defect/refusal drives. It makes no new native or unbounded-safety claim.

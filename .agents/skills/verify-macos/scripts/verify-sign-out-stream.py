@@ -27,6 +27,8 @@ import threading
 import time
 
 root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip())
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package  # the vault swap and the Keychain guard every runner uses
 evidence = Path(sys.argv[1])
 source = subprocess.check_output(['git', 'rev-parse', sys.argv[2] if len(sys.argv) > 2 else 'HEAD'], cwd=root, text=True).strip()
 if not evidence.is_absolute() or evidence.exists():
@@ -51,6 +53,11 @@ def cancelled(signum, frame):
 
 signal.signal(signal.SIGTERM, cancelled)
 signal.signal(signal.SIGINT, cancelled)
+
+def keychain_linked():
+    """From the guard's receipt (None if the guard never ran), never a constant."""
+    receipt = evidence / 'keychain-guard.json'
+    return json.loads(receipt.read_text())['keychainLinked'] if receipt.exists() else None
 
 def run(argv, log, environment=env, stdin=None):
     with (evidence / log).open('w') as output:
@@ -78,8 +85,8 @@ try:
         data = subprocess.check_output(['git', 'show', f'{source}:{file}'], cwd=root)
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
-    shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift']:
+    state_package.swap_vault(sources)
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -92,7 +99,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
 ''')
     api_hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in (root / 'apps/macos/API/Sources/TodoAPI').rglob('*.swift')}
     cache = json.loads((root / '.scratch/bin/build.json').read_text())
-    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'tests': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(tests.glob('*.swift'))}, 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychain': False}, indent=2) + '\n')
+    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'tests': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(tests.glob('*.swift'))}, 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychainGuard': 'keychain-guard.json'}, indent=2) + '\n')
     if run([cache['seed'], str(scratch), 'diagnostics'], 'seed.log'):
         raise RuntimeError('Provisioner failed')
     with (evidence / 'server.log').open('w') as output:
@@ -119,9 +126,21 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         raise RuntimeError('CLI init doomed failed')
     if run([cache['cli'], 'add', 'Doomed Profile Task', '--profile', 'doomed', '--credential-profile', 'work', '--format', 'json'], 'seed-doomed.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI add to doomed failed')
+    # A destination Profile for the Move and Copy read-back controls (S1-17).
+    if run([cache['cli'], 'init', '--profile', 'transfer', '--credential-profile', 'work', '--format', 'json'], 'init-transfer.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init transfer failed')
+    # The seat's held-write probe (SeatCommittedWriteTests) writes in a `personal` Profile.
+    if run([cache['cli'], 'init', '--profile', 'personal', '--credential-profile', 'work', '--format', 'json'], 'init-personal.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init personal failed')
+    # An empty Profile for the deleted-Profile read-back control (S1-19).
+    if run([cache['cli'], 'init', '--profile', 'deletable', '--credential-profile', 'work', '--format', 'json'], 'init-deletable.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init deletable failed')
 
     lock = threading.Lock()
     fault = {'mode': None, 'held': False, 'release': threading.Event()}
+    # The seat's held-write control (SEAT_PROXY, POST /__control/<op>): an armed write, matched by
+    # path and credential, is forwarded so the server commits it; its reply is held until release.
+    held_write = {'path': None, 'credential': None, 'matched': 0, 'held': 0, 'release': threading.Event()}
     requests = []
     streams = []
 
@@ -134,7 +153,24 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         protocol_version = 'HTTP/1.1'
         disable_nagle_algorithm = True
         def log_message(self, *args): pass
-        def do_POST(self): self.forward()
+        def do_POST(self):
+            if self.path.startswith('/__control/'): return self.held_write_control()
+            self.forward()
+        def held_write_control(self):
+            length = int(self.headers.get('Content-Length') or 0)
+            payload = json.loads(self.rfile.read(length) or b'{}') if length else {}
+            op = self.path[len('/__control/'):]
+            with lock:
+                if op == 'arm':
+                    held_write.update(path=payload['path'], credential=payload['credential'], matched=0, held=0, release=threading.Event())
+                elif op == 'release':
+                    held_write['release'].set()
+                elif op == 'reset':
+                    held_write['release'].set()
+                    held_write.update(path=None, credential=None, matched=0, held=0, release=threading.Event())
+                elif op != 'status':
+                    return self.reply({'error': 'unknown'}, 404)
+                return self.reply({'committedHeld': held_write['held'], 'matchedWrites': held_write['matched']})
         def do_PATCH(self): self.forward()
         def do_PUT(self): self.forward()
         def do_DELETE(self): self.forward()
@@ -195,8 +231,23 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
                     return self.reply({'error': {'code': 'unavailable', 'message': 'Scratch sign-out fault'}}, 503)
                 self.close_connection = True
                 return
+            armed = False
+            with lock:
+                if held_write['path'] and self.command in ('POST', 'PATCH', 'PUT', 'DELETE') and self.path.split('?')[0] == held_write['path'] \
+                        and headers.get('Authorization', headers.get('authorization')) == 'Bearer ' + held_write['credential']:
+                    held_write['matched'] += 1; armed = held_write['matched'] == 1
+                    release = held_write['release']
             connection, response = upstream_request(self.command, self.path, body, headers)
             record['status'] = response.status
+            if armed:
+                data = response.read(); connection.close()
+                with lock: held_write['held'] = 1
+                release.wait(120)
+                self.send_response(response.status)
+                for key in ('Content-Type', 'Cache-Control'):
+                    if response.getheader(key): self.send_header(key, response.getheader(key))
+                self.send_header('Content-Length', str(len(data))); self.end_headers(); self.wfile.write(data)
+                return
             if mode == 'revoke-drop':
                 response.read(); connection.close()
                 with lock: fault['held'] = True
@@ -251,25 +302,97 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
-    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence))
-    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests'], 'tests.log', test_env)
-    # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
-    # the model can still reconnect, and an exception there would hide the other suites.
-    seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
-    restore_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
-    # Coordinator ruling (second seat), 2026-11-11: after the probe's second, uncancelled restore
-    # the intended state is not busy and signed in. Line 52 (!signedIn) is the one expected
-    # difference; retryAllowed (53) and retried (54) carry MAC-C1-S1-08 and must pass.
-    issues = re.findall(r'recorded an issue at (SeatRestoreCancellationBoundaryTests\.swift:\d+)', (evidence / 'seat-restore-tests.log').read_text())
-    seat_restore = dict(exit=restore_exit, issues=issues, expected_difference='SeatRestoreCancellationBoundaryTests.swift:52 after a successful second restore (ruling 2026-11-11)')
-    if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
-    seat_restore['accepted'] = restore_exit == 0
-    (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
-    interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
-    seat_others = {}
-    for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests']:
-        seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
-    exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
+    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url, STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
+    # SIGN_OUT_STREAM_ONLY=<swift test filter> runs only those suites against the same server and
+    # proxy: a short, targeted run while the shared Swift slot is scarce. Its status is TARGETED-*,
+    # never PASS; the full proof is the run without it.
+    only = os.environ.get('SIGN_OUT_STREAM_ONLY')
+    if only:
+        exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
+    else:
+        exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests|SeatCommittedWriteTests'], 'tests.log', test_env)
+        # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
+        # the model can still reconnect, and an exception there would hide the other suites.
+        seat_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
+        restore_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
+        # Coordinator ruling (second seat), 2026-11-11: after the probe's second, uncancelled restore
+        # the intended state is not busy and signed in. Line 52 (!signedIn) is the one expected
+        # difference; retryAllowed (53) and retried (54) carry MAC-C1-S1-08 and must pass.
+        issues = re.findall(r'recorded an issue at (SeatRestoreCancellationBoundaryTests\.swift:\d+)', (evidence / 'seat-restore-tests.log').read_text())
+        seat_restore = dict(exit=restore_exit, issues=issues, expected_difference='SeatRestoreCancellationBoundaryTests.swift:52 after a successful second restore (ruling 2026-11-11)')
+        if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
+        seat_restore['accepted'] = restore_exit == 0
+        (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
+        interleaving_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
+        seat_others = {}
+        for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests', 'SeatCandidate7cSupersessionTests', 'SeatGenerationLifetimeTests', 'SeatCommittedWriteTests']:
+            seat_others[suite] = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
+        # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
+        # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
+        # differences under my ruling 3: the follow-up failure now lives in the surface that offered it
+        # (the picker's notice, the Import report's error), so `model.message` is nil there by design."
+        # A probe run is accepted only if that line is its sole issue; the probes stay byte-identical.
+        # Counterpart controls: MessageKindTests.olderPickerSuccessLeavesTheNewerPickerAndItsError and
+        # whatEndsAFollowUpFailureShownInItsSurface.
+        ruled = {'SeatSurfaceLifetimeTests': 'SeatSurfaceLifetimeTests.swift:85', 'SeatMessageScopeObservationTests': 'SeatMessageScopeObservationTests.swift:42'}
+        seat_ruling3 = {}
+        for suite, line in ruled.items():
+            found = re.findall(r'recorded an issue at (' + suite + r'\.swift:\d+)', (evidence / f'{suite}.log').read_text())
+            sole = seat_others[suite] != 0 and found == [line]
+            seat_ruling3[suite] = dict(exit=seat_others[suite], issues=found, expected_difference=line + ' (ruling 3, 2026-11-12: the follow-up failure lives in the surface that offered it)', accepted=sole or seat_others[suite] == 0)
+            if sole: seat_others[suite] = 0
+        (evidence / 'seat-ruling3.json').write_text(json.dumps(seat_ruling3, indent=2) + '\n')
+        # Coordinator ruling on MAC-C1-S1-18, 2026-11-12: "A failure that arrives later is a newer
+        # message, and a newer message replaces an older one in the single banner, exactly as two
+        # failed Completes in a row would; suppressing A instead would leave the person believing a
+        # Dependency was added when it was not. So the behaviour stands." Under D2 (accepted for
+        # candidate 8, 2026-11-12) the later same-kind failure merges into the banner instead of
+        # replacing it. The probe's line 77 for olderFails → true is accepted only from its receipt:
+        # the old instance published its own failure (the banner after names the older dependent and
+        # the sequence moved by one), never by clearing. olderFails → false (an older success) must pass.
+        #
+        # Coordinator ruling on candidate 7c line 52 under D1, 2026-11-12: "A ticked, B ticked on
+        # another row; A's write commits and its catalog read-back fails with 503 while B is refused.
+        # A's own 'Dependencies updated. The live view is reconnecting.' presents in the main window,
+        # and B's notice in the picker is unchanged. That is the corrected rule doing its job ... The
+        # runner accepts line 52 only with the receipt you describe (A's own message, B's notice
+        # unchanged, the same picker open) and only if your same-row case presents nothing."
+        log = (evidence / 'SeatCandidate7cSupersessionTests.log').read_text()
+        found = re.findall(r'recorded an issue with 1 argument (olderFails → (?:true|false)) at (SeatCandidate7cSupersessionTests\.swift:\d+)', log)
+        others = [line for line in re.findall(r'recorded an issue at (SeatCandidate7cSupersessionTests\.swift:\d+)', log)]
+        receipt = json.loads((evidence / 'reopened-instance-handoff-true.json').read_text()) if (evidence / 'reopened-instance-handoff-true.json').exists() else {}
+        published = receipt.get('after') not in (None, receipt.get('before')) and 'Older dependent' in (receipt.get('after') or '') and receipt.get('sequence_after') == (receipt.get('sequence_before') or 0) + 1
+        readback = json.loads((evidence / 'superseded-during-link-readback.json').read_text()) if (evidence / 'superseded-during-link-readback.json').exists() else {}
+        own_readback = readback.get('message') == 'Dependencies updated. The live view is reconnecting.' and readback.get('newer_notice') is not None and readback.get('notice_after') == readback.get('newer_notice') and readback.get('same_picker_open') is True
+        main_log = (evidence / 'tests.log').read_text() if (evidence / 'tests.log').exists() else ''
+        same_row = re.search(r'✔ Test aLinkReadBackFailureFollowsItsRowsSupersession\(_:\) with 2 test cases passed', main_log) is not None and 'aLinkReadBackFailureFollowsItsRowsSupersession(_:) recorded an issue' not in main_log
+        sole = (seat_others['SeatCandidate7cSupersessionTests'] != 0 and found == [('olderFails → true', 'SeatCandidate7cSupersessionTests.swift:77')] and published
+                and others in ([], ['SeatCandidate7cSupersessionTests.swift:52']) and (not others or (own_readback and same_row)))
+        seat_s118 = dict(exit=seat_others['SeatCandidate7cSupersessionTests'], issues=found + others, receipt=receipt, older_published_its_own_failure=published,
+                         readback_receipt=readback, line52_own_readback=own_readback, line52_same_row_presents_nothing=same_row,
+                         expected_difference=['SeatCandidate7cSupersessionTests.swift:77 with olderFails → true (S1-18 ruling, 2026-11-12, merged into the banner under D2: the older failure is published, never cleared)',
+                                              'SeatCandidate7cSupersessionTests.swift:52 (D1, ruled 2026-11-12: the older row is live and reports its own failed read-back; the newer row\'s notice is unchanged)'],
+                         accepted=sole or seat_others['SeatCandidate7cSupersessionTests'] == 0)
+        if sole: seat_others['SeatCandidate7cSupersessionTests'] = 0
+        (evidence / 'seat-ruling-s118.json').write_text(json.dumps(seat_s118, indent=2) + '\n')
+        # Coordinator ruling D1, 2026-11-12: "supersession is per target, not per kind. An action is
+        # superseded only by a newer action of the same kind ON THE SAME TARGET in the same instance
+        # ... Two actions on different targets are both live and both report their own outcome ...
+        # the seat's S1-16 probe (distinct dependents, older failure must present nothing) then fails
+        # by design and becomes a ruled line with this text." Accepted only if line 56 is the probe's
+        # sole issue for each argument AND its receipts show the older link's own named failure.
+        log = (evidence / 'SeatCandidate7bBoundaryTests.log').read_text()
+        found = re.findall(r'recorded an issue with 1 argument (newerFails → (?:true|false)) at (SeatCandidate7bBoundaryTests\.swift:\d+)', log)
+        others = re.findall(r'recorded an issue at (SeatCandidate7bBoundaryTests\.swift:\d+)', log)
+        receipts = {flag: json.loads((evidence / f'superseded-link-handoff-{flag}.json').read_text()) for flag in ('false', 'true') if (evidence / f'superseded-link-handoff-{flag}.json').exists()}
+        own = len(receipts) == 2 and all('Older dependent' in (r.get('message') or '') for r in receipts.values())
+        expected = sorted([('newerFails → false', 'SeatCandidate7bBoundaryTests.swift:56'), ('newerFails → true', 'SeatCandidate7bBoundaryTests.swift:56')])
+        sole = seat_others['SeatCandidate7bBoundaryTests'] != 0 and sorted(found) == expected and not others and own
+        seat_d1 = dict(exit=seat_others['SeatCandidate7bBoundaryTests'], issues=found + others, receipts=receipts, older_reports_its_own_failure=own,
+                       expected_difference='SeatCandidate7bBoundaryTests.swift:56 for both arguments (D1 ruling, 2026-11-12: supersession is per target; a link on another row is live and reports its own failure)', accepted=sole or seat_others['SeatCandidate7bBoundaryTests'] == 0)
+        if sole: seat_others['SeatCandidate7bBoundaryTests'] = 0
+        (evidence / 'seat-ruling-d1.json').write_text(json.dumps(seat_d1, indent=2) + '\n')
+        exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
 
     with lock:
         (evidence / 'proxy-requests.json').write_text(json.dumps(requests, indent=1) + '\n')
@@ -283,5 +406,5 @@ finally:
     if safe:
         shutil.rmtree(scratch)
     (evidence / 'cleanup.json').write_text(json.dumps({'serverStopped': server is None or server.poll() is not None, 'scratchRemoved': not scratch.exists()}) + '\n')
-    (evidence / 'result.json').write_text(json.dumps({'source': source, 'exit': exit_code, 'status': 'PASS' if exit_code == 0 else 'FAIL', 'nativeAppLaunched': False, 'keychainAccess': False}) + '\n')
+    (evidence / 'result.json').write_text(json.dumps({'source': source, 'exit': exit_code, 'status': ('TARGETED-' if os.environ.get('SIGN_OUT_STREAM_ONLY') else '') + ('PASS' if exit_code == 0 else 'FAIL'), 'filter': os.environ.get('SIGN_OUT_STREAM_ONLY'), 'nativeAppLaunched': False, 'keychainAccess': keychain_linked(), 'keychainGuard': 'keychain-guard.json'}) + '\n')
 raise SystemExit(exit_code)

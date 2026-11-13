@@ -11,6 +11,9 @@ import subprocess
 import sys
 
 root = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package  # the state package with the in-memory vault, and the Keychain guard
+package = state_package.prepare()
 evidence = Path(sys.argv[1]).resolve()
 evidence.mkdir(parents=True, exist_ok=False)
 source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift', 'scripts/*.py', 'scripts/*.mjs', 'scripts/*.ts', 'scripts/*.rb'] for path in (root / 'apps/macos').glob(pattern))
@@ -58,12 +61,15 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
-run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
-run(['swift', 'test', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
-binary = run(['swift', 'build', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--disable-automatic-resolution', '--show-bin-path'], 'show-bin-path.log', capture_stdout=True).strip()
+run(['swift', 'build', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
+keychain = state_package.checked(build_path, evidence / 'keychain-guard.json')  # stops if a Keychain call is linked
+run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')
+binary = run(['swift', 'build', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution', '--show-bin-path'], 'show-bin-path.log', capture_stdout=True).strip()
 run([
     'xcrun', 'swiftc', '-typecheck', '-parse-as-library', '-swift-version', '6',
     '-target', f'{platform.machine()}-apple-macosx26.0', '-I', str(Path(binary) / 'Modules'),
+    # TodoAPI imports the stall sampler's C module (candidate 8); SwiftPM keeps its module map apart.
+    '-Xcc', f"-fmodule-map-file={Path(binary) / 'ClientStallSampling.build' / 'module.modulemap'}",
     *[str(path) for path in sorted((root / 'apps/macos/Sources').glob('*.swift'))]
 ], 'app-typecheck.log')
 resources = Path(binary) / 'TodoStateProofPackageTests.xctest' / 'Contents' / 'Resources'
@@ -84,7 +90,7 @@ if graph_refresh:
     graph_home = tempfile.mkdtemp(prefix='todo-s01-verify-graph-refresh-home-')
     environment.update(HOME=graph_home, CFFIXED_USER_HOME=graph_home)
 try:
-    render_exit = run(['swift', 'test', '--no-parallel', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--filter', 'DependencyGraphRefreshTests' if graph_refresh else 'DependencyViewportResizeTests' if viewport_resize else 'Snapshots'], 'render.log', environment, allow_failure=True)
+    render_exit = run(['swift', 'test', '--no-parallel', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--filter', 'DependencyGraphRefreshTests' if graph_refresh else 'DependencyViewportResizeTests' if viewport_resize else 'Snapshots'], 'render.log', environment, allow_failure=True)
 finally:
     if graph_refresh:
         shutil.rmtree(graph_home)
@@ -97,14 +103,14 @@ if graph_refresh:
         proof = json.loads((evidence / 'wk-refresh-proof.json').read_text())
         assert len(proof['cases']) == 2
         assert json.loads((evidence / 'wk-refresh-cleanup.json').read_text()) == {'serverStopped': True, 'scratchRemoved': True}
-    (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'scope': 'WK_SSE_REFRESH_ONLY', 'appLaunched': False, 'signed': False, 'keychainAccess': False}, indent=2) + '\n')
+    (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'scope': 'WK_SSE_REFRESH_ONLY', 'appLaunched': False, 'signed': False, 'keychainAccess': keychain['keychainLinked'], 'keychainGuard': 'keychain-guard.json'}, indent=2) + '\n')
     print(f'WK SSE refresh only; actual exit {render_exit}; {evidence}')
     raise SystemExit(render_exit)
 if viewport_resize:
     if render_exit == 0:
         proof = json.loads((evidence / 'wk-resize-proof.json').read_text())
         assert len(proof['phases']) == 6
-    (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'scope': 'WK_VIEWPORT_RESIZE_ONLY', 'appLaunched': False, 'signed': False, 'keychainAccess': False}, indent=2) + '\n')
+    (evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'scope': 'WK_VIEWPORT_RESIZE_ONLY', 'appLaunched': False, 'signed': False, 'keychainAccess': keychain['keychainLinked'], 'keychainGuard': 'keychain-guard.json'}, indent=2) + '\n')
     print(f'WK viewport resize only; actual exit {render_exit}; {evidence}')
     raise SystemExit(render_exit)
 for dag_manifest_path in evidence.glob('dag*-capture-manifest.json'):
@@ -124,7 +130,7 @@ if any(evidence.glob('dag*-capture-manifest.json')):
         validation.append(state_command)
     run(validation, 'capture-inputs.log')
 manifest = json.loads((evidence / 'manifest.json').read_text())
-assert len(manifest['files']) == (8 if os.environ.get('TODO_SNAPSHOT_SC1_ONLY') == '1' else 32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 394 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 872)
+assert len(manifest['files']) == (52 if os.environ.get('TODO_SNAPSHOT_C8_ONLY') == '1' else 22 if os.environ.get('TODO_SNAPSHOT_C7_ONLY') == '1' else 8 if os.environ.get('TODO_SNAPSHOT_SC1_ONLY') == '1' else 32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 394 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 872)
 assert all((evidence / name).is_file() for name in manifest['files'])
 settle_rows = [json.loads(line) for line in (evidence / 'settle.jsonl').read_text().splitlines()] if (evidence / 'settle.jsonl').is_file() else []
 settle_histogram = {}
@@ -141,6 +147,6 @@ settle = {
 }
 if settle['over_limit']:
     render_exit = render_exit or 4
-(evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'pngs': len(manifest['files']), 'render': {'scale': 2, 'drawing_colour_space': 'calibratedRGB (generic)', 'png_colour_space': 'sRGB', 'independent_of_host_display': True, 'settle': 'pending constraints, layout and CATransaction applied; two consecutive identical captures 100 ms apart'}, 'settle': settle, 'appLaunched': False, 'signed': False, 'keychainAccess': False, 'nativeGlassVerified': False}, indent=2) + '\n')
+(evidence / 'result.json').write_text(json.dumps({'status': 'PASS' if render_exit == 0 else 'FAIL', 'exit': render_exit, 'pngs': len(manifest['files']), 'render': {'scale': 2, 'drawing_colour_space': 'calibratedRGB (generic)', 'png_colour_space': 'sRGB', 'independent_of_host_display': True, 'settle': 'pending constraints, layout and CATransaction applied; two consecutive identical captures 100 ms apart'}, 'settle': settle, 'appLaunched': False, 'signed': False, 'keychainAccess': keychain['keychainLinked'], 'keychainGuard': 'keychain-guard.json', 'nativeGlassVerified': False}, indent=2) + '\n')
 print(f"{'PASS' if render_exit == 0 else 'FAIL'}: {len(manifest['files'])} offscreen PNGs; actual render exit {render_exit}; {evidence}")
 raise SystemExit(render_exit)

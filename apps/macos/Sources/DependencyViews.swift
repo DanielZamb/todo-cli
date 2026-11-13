@@ -18,6 +18,7 @@ struct InitialDependencySelection: View {
                         }.font(.caption).buttonStyle(.bordered).controlSize(.small).help(task.title)
                             .frame(height: 20).disabled(!enabled).accessibilityLabel("Remove Dependency \(task.title)")
                             .accessibilityIdentifier("dependency-initial-\(task.id)").compactBounds("dependency-initial-\(task.id)")
+                            .background(QuickAddRegionRow())
                     }
                 }
             }
@@ -58,6 +59,10 @@ struct DependencyNoticeContent: View {
             }
             if let id = notice.followUp {
                 Button("Create follow-up") { Task { await model.createDependencyFollowUp(id) } }.accessibilityIdentifier("dependency-follow-up")
+                if let failed = notice.followUpFailure {
+                    Text(failed).font(.caption).foregroundStyle(TodoColors.color("destructive"))
+                        .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("dependency-follow-up-error")
+                }
             } else if let failure = notice.failure, failure.isTaskLookup {
                 Button("Find Task by id") { Task { await model.findTaskAfterLookupError(failure) } }
             }
@@ -144,7 +149,7 @@ struct DependencyPickerView: View {
                     Spacer(minLength: 0)
                     Button("Close") { model.closeDependencyPicker() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("dependency-picker-close")
                 }.compactBounds("dependency-actions")
-            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+            }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 + model.compactExtraHeight : 600)
                 .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .dependencyPicker))
                 .accessibilityIdentifier("dependency-picker")
                 .task { searchFocused = true }
@@ -195,7 +200,7 @@ struct DependencyDeleteView: View {
                     else { VStack(spacing: 8) { cancel.frame(maxWidth: .infinity); confirm(deletion).frame(maxWidth: .infinity) }.buttonStyle(.bordered) }
                 }.compactBounds("dependency-actions")
             }.padding(16).frame(width: compact ? 393 : 560)
-                .frame(height: deletion.edges.isEmpty && !deletion.loading && deletion.failure == nil ? nil : compact ? 426 : 600)
+                .frame(height: deletion.edges.isEmpty && !deletion.loading && deletion.failure == nil ? nil : compact ? 426 + model.compactExtraHeight : 600)
                 .accessibilityIdentifier("dependency-delete-dialog").compactBounds("dependency-delete-sheet")
         }
     }
@@ -234,14 +239,31 @@ extension TodoModel {
         // The follow-up is offered by a Dependency picker or an Import report. Its result belongs to
         // that instance: once it has closed, the read raises no message, closes nothing and opens nothing.
         let surface: MessageSurface? = dependencies.picker.map { .dependencyPicker($0.id) } ?? (showingImport ? .importSheet(importInstance) : nil)
+        // MAC-C1-S1-15: the message rule holds inside the surface too. A newer follow-up in the same
+        // surface supersedes this one: then this one presents nothing (no clearing, no Quick Add).
+        enum Owner { case picker(UUID, SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket), report(SurfaceMessages<ImportMessageKind, String>.Ticket), main(SurfaceMessages<MessageKind, String>.Ticket) }
+        let owner: Owner
+        switch surface {
+        // A follow-up commits nothing; its result is a navigation (Quick Add). So any newer
+        // follow-up in this picker supersedes it, whatever its row (coordinator ruling,
+        // 2026-11-12). Its failure still belongs to its row, so a link on that row ends it.
+        case .dependencyPicker(let picker): owner = .picker(picker, dependencies.picker!.messages.begin(.followUp))
+        case .importSheet: owner = .report(importMessages.begin(.followUp))
+        default: owner = .main(beginMessage(.dependencyFollowUp))
+        }
         let epoch = discovery.credentialEpoch
         let selectedProfile = profile
-        let mark = messageMark
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: selectedProfile, task: id)).ok.body.json)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
-            clearMessage([.dependencyFollowUp], since: mark)
+            let present: Bool
+            switch owner {
+            case .picker(let picker, let ticket): present = dependencies.picker?.id == picker && dependencies.picker?.messages.succeed(ticket) == true
+            case .report(let ticket): present = importMessages.succeed(ticket)
+            case .main(let ticket): present = succeedMessage(ticket)
+            }
+            guard present else { return }
             closeDependencyPicker()
             if !dependencies.initial.contains(where: { $0.id == task.id }) { dependencies.initial.append(task) }
             quickAdd = true
@@ -249,7 +271,21 @@ extension TodoModel {
             authorize(error, epoch: epoch, profile: selectedProfile)
             guard isCurrentCredential(epoch), profile == selectedProfile else { return }
             guard surface.map(isShowing) ?? true else { return }
-            publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface)
+            // Shown where the person is looking: inside the sheet that offered the follow-up.
+            // Say what failed and that it can be tried again; the picker keeps the notice that
+            // offered the follow-up, with its button, and shows the failure with it (ruling 1).
+            let failed = "Couldn't prepare the follow-up Task. " + describe(error) + " Try again."
+            switch owner {
+            case .picker(let picker, let ticket):
+                guard dependencies.picker?.id == picker else { break }
+                var notice = DependencyNotice(message: failed)
+                if var offered = dependencies.picker?.operationFailure, offered.followUp != nil { offered.followUpFailure = failed; notice = offered }
+                dependencies.picker?.messages.fail(notice, ticket, row: id)
+            case .report(let ticket):
+                let failureText = "Couldn't prepare the follow-up Task. " + describe(error, at: .importTasks) + " Try again."
+                importMessages.fail(failureText, ticket)
+            case .main(let ticket): if isNewestMessage(ticket) { publishMessage(describe(error), kind: .dependencyFollowUp, surface: surface) }
+            }
         }
     }
 }

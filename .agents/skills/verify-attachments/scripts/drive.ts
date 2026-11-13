@@ -4,6 +4,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { proveDetachLabelFlag } from "../../../../apps/cli/scripts/detach-label-proof.ts";
 
 const root = resolve(import.meta.dirname, "../../../..");
 const evidence = resolve(process.argv[2] ?? "");
@@ -54,6 +55,7 @@ try {
     writeFileSync(join(evidence, `compile-${binary}.json`), JSON.stringify(result, null, 2));
     assert.equal(result.exit, 0, result.stderr);
   }
+  proveDetachLabelFlag(join(scratch, "todo"), join(scratch, "todo-detach-label"), join(evidence, "detach-label"));
   cli(["init", "--password-stdin"], "scratch F11 passphrase\n");
   cli(["login", "--password-stdin"], "scratch F11 passphrase\n");
   assert.equal(run(join(scratch, "todo"), ["--profile", "personal", "init"]).exit, 0);

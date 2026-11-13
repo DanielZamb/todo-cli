@@ -10,6 +10,8 @@ import {
   SnapshotManifest,
   SnapshotRestoreReport,
 } from "../src/snapshots.ts";
+import { provePreviewCli } from "./preview-preservation-proof.ts";
+import { proveSnapshotPurgeCli } from "./snapshot-purge-cli-proof.ts";
 
 const [scratch, evidence] = Schema.decodeUnknownSync(
   Schema.Tuple([Schema.String, Schema.String]),
@@ -100,6 +102,31 @@ writeFileSync(
   }),
 );
 run(["--format", "json", "snapshot", "restore", newer.id], undefined, 2);
+const malformed = parseSnapshot(
+  json("snapshot", "create", "--reason", "malformed SQLite refusal"),
+).snapshot;
+const malformedBytes = Buffer.from("not a SQLite file");
+writeFileSync(malformed.path, malformedBytes);
+writeFileSync(
+  join(scratch, "snapshots", `${malformed.id}.json`),
+  JSON.stringify({
+    ...malformed,
+    size: malformedBytes.length,
+    sha256: createHash("sha256").update(malformedBytes).digest("hex"),
+  }),
+);
+const malformedResult = run(
+  ["--format", "json", "snapshot", "restore", malformed.id],
+  undefined,
+  2,
+);
+assert.equal(
+  Schema.decodeUnknownSync(Schema.Struct({ code: Schema.String }))(
+    malformedResult,
+  ).code,
+  "invalid_snapshot",
+);
+assert.deepEqual(listTasks(json("list")), []);
 for (const command of ["create", "list", "show", "restore", "prune"])
   json("schema", `snapshot ${command}`);
 const before = Schema.decodeUnknownSync(Schema.Struct(SnapshotList.fields))(
@@ -119,10 +146,26 @@ writeFileSync(
       purged_tasks_after_restore: 0,
       corrupt_exit: 2,
       newer_schema_exit: 2,
+      malformed_sqlite_exit: 2,
       schemas: 5,
       snapshot_count: after.snapshots.length,
     },
     null,
     2,
   ),
+);
+
+proveSnapshotPurgeCli(
+  join(scratch, "purge-cases"),
+  evidence,
+  join(scratch, "todo"),
+);
+
+const previewEvidence = join(evidence, "previews");
+mkdirSync(previewEvidence, { recursive: true });
+await provePreviewCli(
+  join(scratch, "preview-cases"),
+  previewEvidence,
+  join(scratch, "todo"),
+  "matrix",
 );

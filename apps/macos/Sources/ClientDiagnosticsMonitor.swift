@@ -25,6 +25,8 @@ final class ClientHeartbeatProbe: @unchecked Sendable {
     }
     func resourcesDue(_ now: Double) -> Bool { lock.withLock { guard now - lastResources >= 1000 else { return false }; lastResources = now; return true } }
     func currentGap(_ now: Double, cpu: ClientCpuReading) -> ClientStallObservation? { lock.withLock { active ? observation(now, cpu: cpu) : nil } }
+    /// The ping still waiting for the main thread, and how long it has waited (active only).
+    func pendingPing(_ now: Double) -> (traceID: UUID, ageMS: Double)? { lock.withLock { active ? pending.map { ($0.traceID, now - $0.at) } : nil } }
     private func observation(_ now: Double, cpu: ClientCpuReading) -> ClientStallObservation? {
         pending.map { .init(traceID: $0.traceID, durationMS: now - $0.at, cpu: cpu.since($0.cpu)) }
     }
@@ -52,7 +54,17 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var timer: (any DispatchSourceTimer)?
     @ObservationIgnored private var activityObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var tableObservers: [NSObjectProtocol] = []
+    @ObservationIgnored private var observedObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var probe = ClientHeartbeatProbe()
+    /// Samples the main thread during a stall; used only on `watchdogQueue` after start.
+    @ObservationIgnored private var sampler: ClientStallSampler?
+    /// The one serial queue for the watchdog and the sampler, for the monitor's whole life
+    /// (MAC-C1-S1-21): never one per start, so no sampler state is reachable from two queues.
+    /// User-interactive, so the thread that holds the main thread suspended during a sample is
+    /// not starved by the work it waits behind (the seat's stress saw one 3,040 µs window).
+    @ObservationIgnored let watchdogQueue = DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .userInteractive)
+    /// The live watchdog generation, read and written only on `watchdogQueue`.
+    @ObservationIgnored private let watchdogGate = WatchdogGate()
     private struct Pending {
         let category: ClientDiagnosticAction
         let scope: Int
@@ -61,10 +73,14 @@ struct ClientDiagnosticInputReceipt {
         var ready = false
         var waiting: (() -> Bool)?
         var validate: (() -> Bool)?
+        /// When the result was published; a layout counts only on a surface present by then.
+        var publishedAt: Double?
     }
     private final class Region {
         weak var view: ClientDiagnosticNativeView?
-        init(_ view: ClientDiagnosticNativeView) { self.view = view }
+        /// When this marker first registered.
+        let attachedAt: Double
+        init(_ view: ClientDiagnosticNativeView, at time: Double) { self.view = view; attachedAt = time }
     }
     @ObservationIgnored private var regions: [ObjectIdentifier: Region] = [:]
     @ObservationIgnored private var pending: [UUID: Pending] = [:]
@@ -95,20 +111,25 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var pointer: PointerPress?
     @ObservationIgnored private var nativeSelection: NativeSelectionTrace?
 
-    init(recorder: ClientDiagnosticsRecorder, applicationActive: @escaping @MainActor @Sendable () -> Bool = { NSApplication.shared.isActive && !NSApplication.shared.isHidden }, notifications: NotificationCenter = .default, watchdogTick: (@Sendable () -> Void)? = nil) {
-        self.recorder = recorder; self.applicationActive = applicationActive; self.notifications = notifications; self.watchdogTick = watchdogTick
+    init(recorder: ClientDiagnosticsRecorder, applicationActive: @escaping @MainActor @Sendable () -> Bool = { NSApplication.shared.isActive && !NSApplication.shared.isHidden }, notifications: NotificationCenter = .default, watchdogTick: (@Sendable () -> Void)? = nil, stallSampler: ClientStallSampler? = nil) {
+        self.recorder = recorder; self.applicationActive = applicationActive; self.notifications = notifications; self.watchdogTick = watchdogTick; sampler = stallSampler
     }
     isolated deinit {
         timer?.cancel()
+        let gate = watchdogGate
+        watchdogQueue.async { gate.generation = -1 }
         for token in activityObservers { notifications.removeObserver(token) }
         for token in tableObservers { notifications.removeObserver(token) }
+        for token in observedObservers { notifications.removeObserver(token) }
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
     }
     func start() {
         guard recorder.isOwnerSession, observer == nil else { return }
         generation += 1
-        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .keyDown]) { [weak self] event in
+        // Passive: the monitor returns every event unchanged; scroll events are only counted.
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseUp, .leftMouseDragged, .keyDown, .scrollWheel]) { [weak self] event in
+            if event.type == .scrollWheel { ClientObservedActivity.shared.scrollEvents.add(1, ordering: .relaxed); return event }
             MainActor.assumeIsolated { self?.input(event) }
             return event
         }
@@ -116,21 +137,54 @@ struct ClientDiagnosticInputReceipt {
             MainActor.assumeIsolated { self?.commitOpportunity() }
         }
         if let observer { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
-        let source = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .utility))
-        let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken, tick = watchdogTick, activity = applicationActive, cpu = ClientCpuSampler()
+        let watchdog = watchdogQueue, gate = watchdogGate
+        let source = DispatchSource.makeTimerSource(queue: watchdog)
+        if sampler == nil { sampler = ClientStallSampler() }
+        let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken, tick = watchdogTick, activity = applicationActive, cpu = ClientCpuSampler(), sampler = sampler
+        // This generation is live from here, on the queue; `stop` ends it there before returning.
+        watchdog.sync { gate.generation = run }
         source.setEventHandler { @Sendable [weak self] in
+            // A handler of a stopped generation does nothing (it can still be delivered after cancel).
+            guard gate.generation == run else { return }
             tick?()
             let now = ProcessInfo.processInfo.systemUptime * 1000
+            // While the main thread's ping is overdue, sample its stack (approved design: after
+            // 100 ms, every 50 ms, at most 20). The suspended window is C; nothing here allocates
+            // inside it, and symbolication waits until the stall has ended.
+            if let ping = probe.pendingPing(now) { sampler?.tick(stall: ping.traceID, pendingMS: ping.ageMS, nowMS: now) }
             if probe.request(now, cpu: cpu.read()) {
                 DispatchQueue.main.async {
-                    if let gap = probe.delivered(ProcessInfo.processInfo.systemUptime * 1000, active: activity(), cpu: cpu.read()), gap.durationMS > 100 {
-                        recorder.record(gap.event(run: recorder.run, hostLoad1m: ClientCpuSampler.hostLoad1m()), ifScope: scope)
+                    let active = activity()
+                    let delivered = probe.delivered(ProcessInfo.processInfo.systemUptime * 1000, active: active, cpu: cpu.read())
+                    let gap = delivered.flatMap { $0.durationMS > 100 ? $0 : nil }
+                    let event = gap.map { gap in
+                        var event = gap.event(run: recorder.run, hostLoad1m: ClientCpuSampler.hostLoad1m())
+                        event.applicationActive = active
+                        return event
+                    }
+                    let traceID = delivered?.traceID
+                    // Off the main thread: symbolicate the samples and record the stall.
+                    watchdog.async {
+                        // The sampler is touched only by its live generation; a stall that ended
+                        // after a stop is recorded (scope permitting) without an attribution.
+                        let live = gate.generation == run
+                        let attribution = live ? traceID.flatMap { sampler?.finish(stall: $0, nowMS: ProcessInfo.processInfo.systemUptime * 1000) } : nil
+                        guard var event else { return }
+                        event.stallAttribution = attribution
+                        recorder.record(event, ifScope: scope)
                     }
                 }
             }
             guard probe.resourcesDue(now) else { return }
             if let gap = probe.currentGap(now, cpu: cpu.read()), gap.durationMS > 100 {
-                recorder.record(gap.event(run: recorder.run, hostLoad1m: ClientCpuSampler.hostLoad1m()), ifScope: scope)
+                var event = gap.event(run: recorder.run, hostLoad1m: ClientCpuSampler.hostLoad1m())
+                event.applicationActive = probe.isActive()
+                recorder.record(event, ifScope: scope)
+            }
+            if let observed = ClientObservedActivity.shared.drain(nowMS: now) {
+                var record = ClientDiagnosticEvent(name: .observed, run: recorder.run, now: now)
+                record.observed = observed; record.applicationActive = probe.isActive()
+                recorder.record(record, ifScope: scope)
             }
             var event = ClientDiagnosticEvent(name: .resourcesSampled, run: recorder.run)
             event.applicationActive = probe.isActive()
@@ -146,6 +200,9 @@ struct ClientDiagnosticInputReceipt {
         activityObservers = [NSApplication.didBecomeActiveNotification, NSApplication.didResignActiveNotification, NSApplication.didHideNotification, NSApplication.didUnhideNotification].map { name in
             notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in MainActor.assumeIsolated { self?.updateActivity() } }
         }
+        // Window and split-view resizes, counted on the posting thread (passive; no observers on views).
+        observedObservers = [notifications.addObserver(forName: NSWindow.didResizeNotification, object: nil, queue: nil) { _ in ClientObservedActivity.shared.windowResizes.add(1, ordering: .relaxed) },
+                             notifications.addObserver(forName: NSSplitView.didResizeSubviewsNotification, object: nil, queue: nil) { _ in ClientObservedActivity.shared.splitResizes.add(1, ordering: .relaxed) }]
         tableObservers = [NSTableView.selectionIsChangingNotification, NSTableView.selectionDidChangeNotification,
                           NSOutlineView.selectionIsChangingNotification, NSOutlineView.selectionDidChangeNotification].map { name in
             notifications.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
@@ -161,10 +218,16 @@ struct ClientDiagnosticInputReceipt {
         probe.setActivity(active)
         timer?.schedule(deadline: .now(), repeating: .milliseconds(active ? 16 : 1000), leeway: .milliseconds(active ? 2 : 100))
     }
+    /// Complete when it returns (MAC-C1-S1-21): the watchdog generation ends on its own queue after
+    /// any handler already running there, so no handler of the stopped generation touches the
+    /// sampler afterwards and a later `start` cannot overlap it. Not timing: a drain on one queue.
     func stop() {
         generation += 1; timer?.cancel(); timer = nil; probe = ClientHeartbeatProbe()
+        let ended = generation, gate = watchdogGate, sampler = sampler
+        watchdogQueue.sync { gate.generation = ended; sampler?.abandon() }
         for token in activityObservers { notifications.removeObserver(token) }; activityObservers.removeAll()
         for token in tableObservers { notifications.removeObserver(token) }; tableObservers.removeAll()
+        for token in observedObservers { notifications.removeObserver(token) }; observedObservers.removeAll()
         if let eventMonitor { NSEvent.removeMonitor(eventMonitor) }; eventMonitor = nil
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }; observer = nil
         pending.removeAll(); selection = nil; nativeSelection = nil; pointer = nil; lastInput = nil; lastInputScope = nil; summary = .init(); mode = .unknown
@@ -172,7 +235,8 @@ struct ClientDiagnosticInputReceipt {
     }
     func register(_ view: ClientDiagnosticNativeView) {
         guard recorder.isEnabled else { return }
-        regions[ObjectIdentifier(view)] = Region(view)
+        let key = ObjectIdentifier(view)
+        if regions[key]?.view !== view { regions[key] = Region(view, at: ProcessInfo.processInfo.systemUptime * 1000) }
         if let value = view.mode { mode = value }
     }
     func attached(_ view: ClientDiagnosticNativeView) {
@@ -311,6 +375,7 @@ struct ClientDiagnosticInputReceipt {
     func publish(_ id: UUID?, validate: (() -> Bool)? = nil) {
         guard let id, pending[id] != nil else { return }
         pending[id]?.ready = true; pending[id]?.validate = validate
+        if pending[id]?.publishedAt == nil { pending[id]?.publishedAt = ProcessInfo.processInfo.systemUptime * 1000 }
         recorder.resultPublished(id)
     }
     func awaitResult(_ id: UUID?, predicate: @escaping () -> Bool) { if let id { pending[id]?.waiting = predicate } }
@@ -348,20 +413,26 @@ struct ClientDiagnosticInputReceipt {
         }
         publishReadyActions()
     }
-    private func hasSurface(_ surface: ClientDiagnosticSurface, identity: String?) -> Bool {
+    private func hasSurface(_ surface: ClientDiagnosticSurface, identity: String?, presentBy deadline: Double? = nil) -> Bool {
         regions.values.contains {
+            if let deadline, $0.attachedAt > deadline { return false }
             guard let view = $0.view, view.surface == surface, identity == nil || view.identity == identity, view.window?.isVisible == true, !view.isHiddenOrHasHiddenAncestor, view.bounds.width > 0, view.bounds.height > 0 else { return false }
             var ancestor: NSView? = view
             while let current = ancestor { if current.needsLayout { return false }; ancestor = current.superview }
             return true
         }
     }
-    private func commitOpportunity() {
+    /// A layout completes an action only on a surface that was present when the action's result
+    /// was published, or that appeared within this bound after it (a sheet or window the result
+    /// opens). Otherwise the action stays unfinished: a later, unrelated layout of the same kind of
+    /// surface (the next inspector half an hour after a Save closed the last) is not its result.
+    var resultWindowMS: Double = 2000
+    func commitOpportunity() {
         guard recorder.isOwnerSession else { return }
         publishReadyActions()
         for (id, item) in pending where item.ready && item.validate?() != false {
             guard item.scope == recorder.scopeToken else { continue }
-            guard hasSurface(item.surface, identity: item.identity) else { continue }
+            guard hasSurface(item.surface, identity: item.identity, presentBy: item.publishedAt.map { $0 + resultWindowMS }) else { continue }
             if item.surface == .inspector {
                 var event = ClientDiagnosticEvent(name: .inspectorCommitted, run: recorder.run); event.actionID = id
                 if nativeSelection?.action == id { event.nativeSelectionNotifications = nativeSelection?.capabilities }
@@ -407,4 +478,9 @@ private struct ClientDiagnosticNativeMarker: NSViewRepresentable {
         monitor.register(view)
     }
     static func dismantleNSView(_ view: ClientDiagnosticNativeView, coordinator: ()) { view.monitor?.unregister(view) }
+}
+
+/// The watchdog's live generation, confined to the monitor's `watchdogQueue` (MAC-C1-S1-21).
+final class WatchdogGate: @unchecked Sendable {
+    var generation = 0
 }

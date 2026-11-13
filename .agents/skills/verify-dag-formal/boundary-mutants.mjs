@@ -56,8 +56,8 @@ export default [
   {
     name: "empty-present-fingerprint",
     file: "apps/cli/src/main.ts",
-    from: "Option.getOrUndefined(input.fingerprint);",
-    to: "Option.getOrUndefined(input.fingerprint) || undefined;",
+    from: "Option.getOrUndefined(deletion.fingerprint);",
+    to: "Option.getOrUndefined(deletion.fingerprint) || undefined;",
     mode: "boundaries",
     property: "public-boundary-delete",
     binaries: "cli",

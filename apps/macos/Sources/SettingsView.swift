@@ -80,6 +80,11 @@ struct SettingsView: View {
                 Section {
                     LabeledContent("Session", value: model.signedIn ? "Signed in" : "Signed out")
                     Button("Sign out") { Task { await model.signOut() } }.disabled(!model.signedIn || model.busy)
+                    // A failed sign-out is reported where it was asked for, as well as in the main window.
+                    if model.messageKind == .signOut, let failure = model.message {
+                        Text(failure).font(.caption).foregroundStyle(TodoColors.color("destructive"))
+                            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("sign-out-error")
+                    }
                 }
             case .server:
                 LabeledContent("Server", value: model.configuration.server.absoluteString).textSelection(.enabled)
@@ -107,6 +112,7 @@ struct SettingsView: View {
                         }.accessibilityIdentifier("check-notifications")
                     }
                     TimelineView(.periodic(from: .now, by: 60)) { context in
+                        let _ = ClientObservedActivity.timelineTick()
                         Text(state.lastTest?.description(now: context.date) ?? "Not tested yet")
                             .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("notification-receipt")
                     }

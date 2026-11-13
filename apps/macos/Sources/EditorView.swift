@@ -52,6 +52,7 @@ struct EditorView: View {
                                                 Text(entry.label).fontWeight(.semibold)
                                                 Spacer()
                                                 TimelineView(.periodic(from: .now, by: 60)) { context in
+                                                    let _ = ClientObservedActivity.timelineTick()
                                                     Text(entry.relativeTime(now: context.date)).foregroundStyle(Color.secondary)
                                                 }.help(entry.localTime())
                                             }
@@ -86,6 +87,10 @@ struct EditorView: View {
                         }
                     }.frame(maxWidth: .infinity).padding(20)
                 }
+                // Compact (candidate 8 ruling 5): the body shows its scroll bars, so a field at the
+                // bottom edge reads as more content, not a cut.
+                .scrollIndicators(compact ? .visible : .automatic)
+                .compactBounds("editor-scroll", when: compact)
                 Divider()
                 HStack {
                     if model.busy {
@@ -107,7 +112,7 @@ struct EditorView: View {
                                         } ?? true))
                             )
                     } else {
-                        Button("Save changes") { model.clientDiagnosticsUI.perform(.save, surface: .inspector) { await model.save() } }
+                        Button("Save changes") { model.clientDiagnosticsUI.perform(.save, surface: .main) { await model.save() } }
                             .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                             .disabled(
                                 !model.canWrite || draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -115,7 +120,8 @@ struct EditorView: View {
                             )
                             .accessibilityIdentifier("save-task")
                     }
-                }.controlSize(.large).padding(16)
+                }.controlSize(compact ? .regular : .large).padding(.horizontal, 16).padding(.vertical, compact ? 10 : 16)
+                    .compactBounds("editor-footer", when: compact)
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(.background)
@@ -125,7 +131,7 @@ struct EditorView: View {
             }
             .task(id: model.canWrite ? model.editor?.base : nil) {
                 if model.editor?.base.occurrence != nil && !model.showingSeries && !model.seriesLoading {
-                    await model.openSeries(presenting: false)
+                    await model.loadSeries()
                 }
             }
             .sheet(isPresented: $model.showingSeries) { SeriesView(model: model, compact: compact) }
@@ -149,7 +155,7 @@ struct EditorView: View {
                 Text("Description").foregroundStyle(.secondary)
                 TextEditor(text: textBinding(\.description, category: .editDescription))
                     .scrollContentBackground(.hidden).padding(6).background(.background, in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator)).frame(height: 100).font(.body).accessibilityLabel(
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator)).frame(height: compact ? 60 : 100).font(.body).compactBounds("edit-description", when: compact).accessibilityLabel(
                         "Description"
                     ).accessibilityIdentifier("edit-description")
                 Text("Markdown").font(.caption).foregroundStyle(.tertiary).padding(.leading, 11)
@@ -289,7 +295,8 @@ struct EditorView: View {
     }
 
     private func fieldLabel(_ title: String) -> some View {
-        Text(title).frame(width: 74, alignment: .leading)
+        // Its frame says where each field row sits (the taller Compact's field heights, O34).
+        Text(title).frame(width: 74, alignment: .leading).compactBounds("field-" + title.lowercased(), when: compact)
     }
 
     private func conflictView(draft: TaskDraft, conflict: TaskConflict) -> some View {

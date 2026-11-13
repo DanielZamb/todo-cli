@@ -19,6 +19,9 @@ struct TodoApp: App {
                 .task { await model.restore() }
         }
         .defaultSize(width: 1100, height: 760)
+        // The window's limits come from the content: Compact is 393 pt wide (its maximum width
+        // equals its minimum) and at least 426 pt tall with no maximum height (O34).
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(after: .newItem) {
                 Button("New task") { model.quickAdd = true }

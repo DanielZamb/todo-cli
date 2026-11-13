@@ -78,7 +78,7 @@ let cacheBypass = null;
 if (uncached) {
   const path = join(directory, "packages/domain/src/commands.ts");
   const original = readFileSync(path, "utf8");
-  const pattern = /prepare: \(text\) => (?:this\.)?store\.searchWords\.words\(read, text\)/g;
+  const pattern = /prepare: \(text\) => (?:this\.)?store\.searchWords\.words\((?:read|search), text\)/g;
   const prior = join(directory, "cache-bypass.json");
   if (existsSync(prior)) {
     cacheBypass = JSON.parse(readFileSync(prior, "utf8"));

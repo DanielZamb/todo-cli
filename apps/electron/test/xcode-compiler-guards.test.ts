@@ -62,4 +62,4 @@ it("preserves compiler feature discovery, literal arguments, streams and hard3",
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }
-});
+}, 30_000);

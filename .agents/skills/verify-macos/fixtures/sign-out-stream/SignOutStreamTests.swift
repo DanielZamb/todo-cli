@@ -95,6 +95,10 @@ private struct Control {
                 let primed = try await control.call("write/1/prime-\(item.name)")
                 let title = try #require((primed["titles"] as? [String])?.first)
                 try await wait(30) { model.lastSequence != nil && model.tasks.contains { $0.title == title } }
+                // The first stream may still be replaying earlier History (more of it when other
+                // suites ran first); consume to the head so no forwarded frame is counted twice.
+                let history = (try await control.call("ops/work/0")["ids"] as? [String]) ?? []
+                if let head = history.last { try await wait(120) { model.lastSequence == head } }
             } else {
                 // Without a stored cursor the first stream replays the Profile's whole History. Let the
                 // model consume it to the server's head first: the proxy counts forwarded frames, and

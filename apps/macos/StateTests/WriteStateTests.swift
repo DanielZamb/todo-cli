@@ -203,7 +203,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     #expect(seriesTask.id != base.id)
     #expect(seriesTask.title == "W06 Series")
     #expect(seriesTask.row_version == 1)
-    await model.openSeries(presenting: false)
+    await model.loadSeries()
     #expect(model.series?.recurrence.summary == "Every day")
     #expect(model.showingSeries == false)
     await model.openSeries()
@@ -1175,4 +1175,47 @@ func deleteNeverAcceptsPreviewOrForeignRepliesAsConfirmedSuccess(reply: String) 
     #expect(model.editor?.id == "task-1")
     #expect(model.editor?.base.row_version == 1)
     #expect(model.deletionNotice == nil)
+}
+
+@Test @MainActor func aQuickAddViewOnlyActsOnTheCompletionOfItsOwnOpening() {
+    // The menu-bar quick-add has no model instance; its view's gate stands in for one.
+    let gate = QuickAddCompletionGate()
+    let first = gate.opening
+    #expect(gate.owns(first), "the opening that started a create may act on its completion")
+    gate.renew()                     // the window closed
+    #expect(!gate.owns(first), "a closed opening's completion does nothing")
+    let second = gate.opening
+    gate.renew()                     // and opened again
+    #expect(!gate.owns(first) && !gate.owns(second) && gate.owns(gate.opening), "only the current opening acts")
+}
+
+@Test @MainActor func onlyConnectionMessagesOfferReconnectAndEveryOtherKindCanBeDismissed() {
+    typealias Kind = TodoModel.MessageKind
+    #expect(Kind.connection.bannerControl == .reconnect, "a reconnect clears connection messages")
+    for kind: Kind in [.general, .restore, .signIn, .sessionEnded, .signOut, .transition, .delete, .dependencyFollowUp, .discoveryShow, .dependencyLink, .quickAdd] {
+        #expect(kind.bannerControl == .dismiss, "\(kind): a reconnect does not clear it, so the banner offers Dismiss")
+    }
+}
+
+@Test @MainActor func dismissingEndsTheShowingMessageAndNeverANewerOne() {
+    let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-dismiss"), catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+    model.publishMessage("The Task changed. Close and reopen it before trying that action again.", kind: .transition)
+    let shown = model.messageSequence
+    model.publishMessage("Couldn't sign out. The server rejected this request (HTTP 503).", kind: .signOut)
+    model.dismissMessage(shown)
+    #expect(model.message == "Couldn't sign out. The server rejected this request (HTTP 503).", "a dismiss aimed at an older message leaves the newer one")
+    model.dismissMessage(model.messageSequence)
+    #expect(model.message == nil && model.messageKind == nil, "dismissing the showing message ends it")
+}
+
+@Test @MainActor func aMessageIsAnnouncedOncePerSequenceNotPerAppearance() {
+    // Candidate 8 ruling 4: the banner reappearing (Compact editor back to the list, a window reopen)
+    // must not announce the same message again.
+    let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-announce"), catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+    model.publishMessage("The Task changed. Close and reopen it before trying that action again.", kind: .transition)
+    let first = model.messageSequence
+    #expect(model.takeAnnouncement(first), "a new message is announced")
+    #expect(!model.takeAnnouncement(first), "the same message reappearing is not announced again")
+    model.publishMessage("Couldn't sign out. The server rejected this request (HTTP 503).", kind: .signOut)
+    #expect(model.takeAnnouncement(model.messageSequence), "a newer message is announced")
 }

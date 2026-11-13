@@ -8,6 +8,8 @@ public enum ClientDiagnosticName: String, Codable, Sendable {
     case actionEnded = "ui.action.ended", refreshStarted = "refresh.started", refreshFinished = "refresh.finished"
     case requestStarted = "request.started", requestHeaders = "request.headers", requestFinished = "request.finished", decodeFinished = "decode.finished"
     case streamConnected = "stream.connected", streamDropped = "stream.dropped", availabilityChanged = "availability.changed", stall = "ui.stall", resourcesSampled = "resources.sampled"
+    /// Coalesced passive observations (scroll, window resize, split resize, timeline ticks).
+    case observed = "ui.observed"
 }
 public enum ClientDiagnosticTrigger: String, Codable, Sendable {
     case startup, profileSwitch, viewChange, filterChange, search, ownWrite, streamOperation, streamReady, reconnect, manual
@@ -377,6 +379,21 @@ public struct ClientDiagnosticSelectionContext: Codable, Sendable {
     public var journalFileBytes: Int
     public var journalBytesWritten: Int
 }
+/// What happened on screen without being an action, counted passively and coalesced: at most one
+/// record a second, none while nothing happens. Hover is not observed: it would need mouse-moved
+/// events or tracking areas, which change event delivery.
+public struct ClientDiagnosticObserved: Codable, Sendable, Equatable {
+    public var scrollEvents = 0
+    public var windowResizes = 0
+    public var splitResizes = 0
+    public var timelineTicks = 0
+    public var windowMS = 0.0
+    public init(scrollEvents: Int = 0, windowResizes: Int = 0, splitResizes: Int = 0, timelineTicks: Int = 0, windowMS: Double = 0) {
+        self.scrollEvents = scrollEvents; self.windowResizes = windowResizes; self.splitResizes = splitResizes; self.timelineTicks = timelineTicks; self.windowMS = windowMS
+    }
+    public var isEmpty: Bool { scrollEvents == 0 && windowResizes == 0 && splitResizes == 0 && timelineTicks == 0 }
+}
+
 public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public let id: UUID
     public let run: UUID
@@ -413,6 +430,10 @@ public struct ClientDiagnosticEvent: Codable, Sendable, Identifiable {
     public var phases: ClientDiagnosticRequestPhases?
     public var resources: ClientDiagnosticResources?
     public var applicationActive: Bool?
+    /// A stall's main-thread attribution (ui.stall only): image base names and code symbols only.
+    public var stallAttribution: ClientStallAttribution?
+    /// ui.observed only.
+    public var observed: ClientDiagnosticObserved?
     public var polls: ClientDiagnosticPollSummary?
     public var incomplete: [ClientDiagnosticIncomplete]?
     public init(name: ClientDiagnosticName, run: UUID, now: Double = ProcessInfo.processInfo.systemUptime * 1000) {

@@ -283,6 +283,11 @@ One-second polling backs off after errors to at most 30 seconds. The agent
 NDJSON read is proven by [verify-diagnostics](../verify-diagnostics/SKILL.md).
 Every Swift verification script, swift build/test and xcodebuild uses
 `./scripts/swift-slot.sh`.
+The gate cycle for a Mac candidate head is `scripts/gates.py`: HOLD (the live
+state tests in `apps/macos/scripts/verify-write-state.py`) first, then the 18
+gates, each asserting the same clean head. Every runner builds the state
+package through `apps/macos/scripts/state_package.py`, so no test product links
+the Keychain and each receipt's Keychain field comes from its guard.
 Nothing here lifts native HOLD.
 ## Headless Snapshot proof during HOLD
 

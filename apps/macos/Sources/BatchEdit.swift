@@ -39,7 +39,13 @@ struct BatchEditDraft: Identifiable {
   var field = BatchEditField.priority
   var value = "P1"
   var loading = true
-  var error: String?
+  enum MessageKind: Hashable { case reload, apply }
+  /// This dialog instance's messages under the one message rule (SurfaceMessages).
+  var messages = SurfaceMessages<MessageKind, String>()
+  var error: String? {
+    get { messages.value }
+    set { if let newValue { messages.publish(newValue, kind: .apply) } else { messages.end() } }
+  }
   var report: BatchEditReport?
   var valid: Bool {
     switch field {
@@ -81,16 +87,17 @@ extension TodoModel {
     guard let draft = batchEdit, !busy else { return }
     batchEdit?.loading = true
     batchEdit?.report = nil
-    batchEdit?.error = nil
+    guard let messageTicket = batchEdit?.messages.beginClean(.reload) else { return }
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
-      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id, profile == draft.profile, batchEdit?.messages.succeed(messageTicket) == true else { return }
       batchEdit?.targets = values
       batchEdit?.selected.formIntersection(Set(values.map(\.id)))
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error, at: .batchEdit)
+      let failureNotice = describe(error, at: .batchEdit)
+      batchEdit?.messages.fail(failureNotice, messageTicket)
     }
     if isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id { batchEdit?.loading = false }
   }
@@ -98,22 +105,30 @@ extension TodoModel {
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, !busy, let draft = batchEdit, !draft.loading, draft.valid, !draft.selected.isEmpty else { return }
     busy = true
-    batchEdit?.error = nil
+    guard let messageTicket = batchEdit?.messages.beginClean(.apply) else { return }
     defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
+    var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
     do {
       let items: [[String: Any]] = draft.targets.filter { draft.selected.contains($0.id) }.map { ["task_id": $0.id, "from_version": $0.row_version] }
       let payload = try JSONDecoder().decode(Operations.tasks_period_batchEdit.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "changes": draft.change, "dry_run": dryRun]))
       let response = try await client.tasks_period_batchEdit(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
+      if !dryRun { committed = true }
       let report = try JSONDecoder().decode(BatchEditReport.self, from: JSONEncoder().encode(response))
       guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
       // Once this sheet has closed, a committed apply still reaches the list and nothing is shown.
-      guard batchEdit?.id == draft.id else { if !dryRun { await refreshAfterWrite("Tasks updated", presenting: false) }; return }
-      batchEdit?.report = report
-      if !dryRun { await refreshAfterWrite("Tasks updated") }
+      guard batchEdit?.id == draft.id else { if !dryRun { await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket))) }; return }
+      // Only the newest apply of this sheet presents its report; an older one's commit still lands.
+      if batchEdit?.messages.succeed(messageTicket) == true { batchEdit?.report = report }
+      if !dryRun { await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket))) }
     } catch {
       authorize(error, epoch: credentialEpoch, profile: draft.profile)
+      // A committed apply whose reply could not be used still reads the catalog back (S1-19).
+      if !dryRun, committed || committedBeforeFailure(error), isCurrentCredential(credentialEpoch), profile == draft.profile {
+        await refreshAfterWrite("Tasks updated", owner: .surface(.batchEdit(draft.id), .init(messageTicket)))
+      }
       guard isCurrentCredential(credentialEpoch), batchEdit?.id == draft.id else { return }
-      batchEdit?.error = describe(error, at: .batchEdit)
+      let failureNotice = describe(error, at: .batchEdit)
+      batchEdit?.messages.fail(failureNotice, messageTicket)
     }
   }
 }
@@ -168,7 +183,7 @@ struct BatchEditView: View {
               }.toggleStyle(.checkbox).frame(minHeight: 56).disabled(model.busy || draft.loading).accessibilityLabel("Select \(task.title)").reportErrorBounds("row-" + task.id)
             }
           }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: compact ? 112 : 224).accessibilityLabel("Tasks to edit").reportErrorBounds("viewport")
+        }.frame(height: compact ? 112 + model.compactExtraHeight : 224).accessibilityLabel("Tasks to edit").reportErrorBounds("viewport")
         Divider()
         if let error = draft.error { ClientErrorNotice(model: model, text: error, position: .batchEdit) }
         HStack(spacing: 8) {
@@ -179,7 +194,7 @@ struct BatchEditView: View {
           if hasConflicts(draft) { applyButton(draft).buttonStyle(.bordered) }
           else { applyButton(draft).buttonStyle(.borderedProminent) }
         }.controlSize(.large)
-      }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: compact ? 390 : 502, maxHeight: compact ? 402 : 600).background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .batch)).accessibilityIdentifier("batch-edit")
+      }.padding(12).frame(minWidth: 340, idealWidth: 360, maxWidth: 480, minHeight: 340, idealHeight: compact ? 390 + model.compactExtraHeight : 502, maxHeight: compact ? 402 + model.compactExtraHeight : 600).background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .batch)).accessibilityIdentifier("batch-edit")
     }
   }
   private func hasConflicts(_ draft: BatchEditDraft) -> Bool { draft.report?.items.contains { $0.error?.code == "occ_conflict" } ?? false }

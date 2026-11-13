@@ -49,11 +49,22 @@ struct DependencyPicker: Identifiable {
     var candidates: [TaskSnapshot] = []
     var loading = false
     var pending: Set<String> = []
-    var operationFailure: DependencyNotice?
+    enum MessageKind: Hashable { case reload, link, followUp }
+    /// This picker instance's messages under the one message rule (SurfaceMessages). The search
+    /// notice is separate: it belongs to the search request generation, which already supersedes.
+    /// Link failures on different rows merge into one notice (D2); other kinds replace.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>(merge: { kind, parts in
+        guard kind == .link else { return nil }
+        let verbs = Set(parts.map(\.value.attemptVerb))
+        let verb = verbs.count == 1 ? verbs.first! : "change"
+        let reason = MergedFailureWording.reason(codes: parts.map(\.reasonCode), differing: "Try each again to see why.")
+        return DependencyNotice(message: "Couldn't \(verb) \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). \(reason)")
+    })
+    var operationFailure: DependencyNotice? { messages.value }
     var searchFailure: DependencyNotice?
     var failure: DependencyNotice? {
         get { operationFailure ?? searchFailure }
-        set { operationFailure = newValue }
+        set { if let newValue { messages.publish(newValue, kind: .link) } else { messages.end() } }
     }
     var warnings: [DependencyNotice] = []
     var feedback: String?
@@ -74,7 +85,13 @@ struct DependencyDelete: Identifiable {
     var loading = true
     var pending = false
     var changed = false
-    var failure: DependencyNotice?
+    enum MessageKind: Hashable { case reload, delete }
+    /// This confirmation's notice under the one message rule (SurfaceMessages): its reload and its
+    /// delete each take a ticket. A delete is gated by busy and pending; a newer reload supersedes
+    /// an older one. A reload's success turns a refusal that existed when it began into the review
+    /// text (`reviewFailure`), so it clears both kinds from before its mark and nothing newer.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    var failure: DependencyNotice? { messages.value }
     var reviewFailure: ServerFailure?
     var reviewExitDetail: String? { reviewFailure?.exitDetail }
     var action: String { edges.isEmpty ? "Delete Task" : "Delete Task and remove Dependencies" }
@@ -152,34 +169,47 @@ extension TodoModel {
         dependencies.picker?.direction = direction
         await reloadDependencyPicker()
     }
+    /// Reloads the picker for the person (opening it, a direction change, the Reload button): on
+    /// success it clears an earlier reload or link notice, asked after the read (S1-17), only while
+    /// this reload is still the newest of its picker.
     func reloadDependencyPicker() async {
-        guard let picker = dependencies.picker else { return }
-        guard connection == .live else { dependencies.picker?.loading = false; return }
-        if picker.purpose != .edit { await searchDependencyCandidates(); return }
+        guard let ticket = await readDependencyPicker() else { return }
+        if dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link, .followUp], since: ticket.mark) }
+    }
+    /// Refreshes the picker's data for a link's read-back or a background refresh; clears nothing.
+    func refreshDependencyPicker() async { _ = await readDependencyPicker() }
+    /// Returns the reload's ticket when it applied fresh data.
+    private func readDependencyPicker() async -> SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket? {
+        guard let picker = dependencies.picker else { return nil }
+        guard connection == .live else { dependencies.picker?.loading = false; return nil }
+        if picker.purpose != .edit { await searchDependencyCandidates(); return nil }
         dependencies.picker?.reloadRequest += 1
-        guard let request = dependencies.picker?.reloadRequest else { return }
+        guard let request = dependencies.picker?.reloadRequest else { return nil }
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
         let client = self.client
         let id = picker.id
         dependencies.picker?.loading = true
+        guard let ticket = dependencies.picker?.messages.begin(.reload) else { return nil }
         do {
             let root = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: picker.root.id)).ok.body.json)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             let linkedIDs = picker.direction == .dependsOn ? root.depends_on ?? [] : root.blocks ?? []
             var linked: [TaskSnapshot] = []
             for taskID in linkedIDs { linked.append(try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: taskID)).ok.body.json)) }
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             dependencies.picker?.root = root
             dependencies.picker?.linked = linked
             dependencies.picker?.requiresReload = false
-            dependencies.picker?.failure = nil
             await searchDependencyCandidates()
+            return ticket
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return }
-            dependencies.picker?.failure = dependencyNotice(error, context: .link)
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
+            let failureNotice = dependencyNotice(error, context: .link)
+            dependencies.picker?.messages.fail(failureNotice, ticket)
             dependencies.picker?.loading = false
+            return nil
         }
     }
     func searchDependencyCandidates() async {
@@ -220,46 +250,81 @@ extension TodoModel {
         let blocker = picker.direction == .dependsOn ? candidate : picker.root
         guard !dependencies.pendingDependents.contains(dependent.id) else { return }
         let remove = picker.checked(candidate.id)
+        let mark = messageMark
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
         dependencies.pendingDependents.insert(dependent.id)
         dependencies.picker?.pending.insert(candidate.id)
-        dependencies.picker?.failure = nil
+        // The newest link action presents: it ends an earlier link or reload notice now.
+        // The newest link action on this row presents: it ends this row's earlier link or follow-up
+        // notice and a reload notice now. Another row's link is live and keeps its own (D1).
+        dependencies.picker?.messages.clear([.reload])
+        dependencies.picker?.messages.clear([.link, .followUp], onlyTarget: dependent.id)
+        guard let linkTicket = dependencies.picker?.messages.begin(.link, target: dependent.id) else { return }
         dependencies.picker?.warnings = []
         defer {
             if discovery.credentialEpoch == epoch { dependencies.pendingDependents.remove(dependent.id) }
             if dependencies.picker?.id == picker.id { dependencies.picker?.pending.remove(candidate.id) }
         }
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         do {
             let report: DependencyEdgeReport
             if remove {
                 let response = try await client.tasks_period_undepend(path: .init(profile: picker.profile, task: dependent.id), body: .json(.init(blocker_id: blocker.id, from_version: dependent.row_version)))
+                if case .ok = response { committed = true }
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             } else {
                 let response = try await client.tasks_period_depend(path: .init(profile: picker.profile, task: dependent.id), body: .json(.init(blocker_id: blocker.id, from_version: dependent.row_version)))
+                if case .ok = response { committed = true }
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             }
+            // Ownership: the credential and Profile the edge was written under. (The Dependency
+            // generation is not ownership: closing a picker advances it.)
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
-            // Once this picker has closed, a committed edge still reaches the list and the picker shows nothing.
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
-                if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", presenting: false) }
-                return
+            // Presentation, only while this picker is still the one showing; a close at any point
+            // (including during its reload) cannot skip the committed edge's catalog read-back.
+            if dependencies.picker?.id == picker.id {
+                await refreshDependencyPicker()
+                if currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id,
+                   dependencies.picker?.messages.succeed(linkTicket) == true {
+                    dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")
+                    dependencies.picker?.warnings = report.warnings.map { $0.notice }
+                }
             }
-            await reloadDependencyPicker()
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
-            dependencies.picker?.feedback = report.outcome == "unchanged" ? (remove ? "Already removed" : "Already linked") : (remove ? "Dependency removed" : "Dependency added")
-            dependencies.picker?.warnings = report.warnings.map { $0.notice }
-            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated") }
+            // Data: a committed edge reaches the list whether or not the picker is still showing.
+            guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            // Presentation in the main window too: only the newest link of this picker may clear
+            // an earlier hand-off (a superseded one presents nothing anywhere).
+            if linkTicket.isNewest { clearMessage([.dependencyLink], since: mark, onlyTarget: dependent.id) }
+            if report.outcome != "unchanged" { await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket))) }
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else { return }
+            guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            // A committed edge whose reply could not be used still reads the catalog back (S1-19).
+            if committed || committedBeforeFailure(error) {
+                await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket)))
+                guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+            }
             var notice = dependencyNotice(error, context: dependent.status == "done" ? .linkDone : .link)
             notice.attemptTitle = candidate.title
             notice.attemptVerb = remove ? "remove" : "add"
-            dependencies.picker?.failure = notice
-            dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
+            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id else {
+                // The picker can be closed while a link is pending (Close and Escape are not gated):
+                // the newest link of that picker hands one named message to the main window, so the
+                // failure is not silent. A superseded link hands off nothing (S1-16). Both Tasks, the
+                // dependent first, whatever the picker's direction (candidate 8 ruling 2).
+                let attempt = remove ? "stop “\(dependent.title)” depending on “\(blocker.title)”" : "make “\(dependent.title)” depend on “\(blocker.title)”"
+                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title, reasonCode: notice.failure?.code ?? (error is URLError ? "connection" : nil), reasonText: notice.message,
+                        attempt: LinkAttempt(verb: remove ? "remove" : "add", dependentID: dependent.id, dependent: dependent.title, blockerID: blocker.id, blocker: blocker.title))
+                return
+            }
+            // A transport failure has no server code; it is labelled "connection" so two can merge (D2).
+            let reasonCode = notice.failure?.code ?? (error is URLError ? "connection" : nil)
+            if dependencies.picker?.messages.fail(notice, linkTicket, subject: candidate.title, reasonCode: reasonCode, reasonText: notice.message) == true {
+                dependencies.picker?.requiresReload = notice.failure?.code == "occ_conflict"
+            }
         }
     }
     func currentDependencyScope(profile expected: String, epoch: Int, run: Int) -> Bool {

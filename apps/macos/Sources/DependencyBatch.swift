@@ -13,7 +13,12 @@ struct DependencyBatchDraft: Identifiable {
     var remove = false
     var loading = true
     var pending = false
-    var failure: DependencyNotice?
+    enum MessageKind: Hashable { case reload, run }
+    /// This dialog instance's notice under the one message rule (SurfaceMessages): a reload and a
+    /// preview or apply each take a ticket; a run is gated by `pending`, a reload supersedes an
+    /// older reload, and a reload may still be loading while a run starts.
+    var messages = SurfaceMessages<MessageKind, DependencyNotice>()
+    var failure: DependencyNotice? { messages.value }
     var report: DependencyBatchReport?
     var items: [DependencyBatchItem] = []
     var versionFacts: [DependencyBatchVersionFact] = []
@@ -70,7 +75,7 @@ extension TodoModel {
         guard let batch = dependencies.batch, !batch.pending else { return }
         let epoch = discovery.credentialEpoch
         dependencies.batch?.reloadRequest += 1
-        guard let request = dependencies.batch?.reloadRequest else { return }
+        guard let request = dependencies.batch?.reloadRequest, let ticket = dependencies.batch?.messages.begin(.reload) else { return }
         dependencies.batch?.loading = true
         do {
             let rows = try await client.tasks_period_list(path: .init(profile: batch.profile)).ok.body.json.map(TaskSnapshot.decode)
@@ -81,12 +86,15 @@ extension TodoModel {
             dependencies.batch?.report = nil
             dependencies.batch?.items = []
             dependencies.batch?.loading = false
-            dependencies.batch?.failure = nil
+            // Fresh targets make an earlier reload or run notice untrue; one published after this
+            // reload began (a run that failed meanwhile) survives.
+            if dependencies.batch?.messages.isNewest(ticket) == true { dependencies.batch?.messages.clear([.reload, .run], since: ticket.mark) }
         } catch {
             authorize(error, epoch: epoch, profile: batch.profile)
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id, dependencies.batch?.reloadRequest == request else { return }
             dependencies.batch?.loading = false
-            dependencies.batch?.failure = dependencyNotice(error, context: .link)
+            let failureNotice = dependencyNotice(error, context: .link)
+            dependencies.batch?.messages.fail(failureNotice, ticket)
         }
     }
     func previewDependencyBatch() async {
@@ -114,27 +122,37 @@ extension TodoModel {
         guard let batch = dependencies.batch, canWrite, !batch.items.isEmpty, !batch.pending else { return }
         let epoch = discovery.credentialEpoch
         dependencies.batch?.pending = true
+        guard let ticket = dependencies.batch?.messages.begin(.run) else { return }
         defer { if dependencies.batch?.id == batch.id { dependencies.batch?.pending = false } }
         struct Payload: Encodable { let items: [DependencyBatchItem]; let dry_run: Bool }
+        var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         do {
             let payload = try decode(Operations.tasks_period_batchDepend.Input.Body.jsonPayload.self, Payload(items: batch.items, dry_run: dryRun))
             let response = try await client.tasks_period_batchDepend(path: .init(profile: batch.profile), body: .json(payload))
+            if !dryRun, case .ok = response { committed = true }
             if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
             let wire = try response.ok.body.json
             let report = try decode(DependencyBatchReport.self, wire)
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch) else { return }
             // Once this dialog has closed, a committed apply still reaches the list and nothing is shown.
-            guard dependencies.batch?.id == batch.id else { if !dryRun { await refreshAfterWrite("Dependencies updated", presenting: false) }; return }
+            guard dependencies.batch?.id == batch.id else { if !dryRun { await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyBatch(batch.id), .init(ticket))) }; return }
             if report.results.contains(where: { $0.error.map { $0.hasMalformedDependencyError || $0.exitDetail == nil } ?? false }) {
                 dependencies.batch?.report = nil
                 throw DependencyGraphReply.ProtocolError.incompatible
             }
             dependencies.batch?.report = report
-            if !dryRun { await refreshAfterWrite("Dependencies updated") }
+            dependencies.batch?.messages.succeed(ticket)
+            if !dryRun { await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyBatch(batch.id), .init(ticket))) }
         } catch {
             authorize(error, epoch: epoch, profile: batch.profile)
+            // A committed apply whose reply could not be used (or carried an unreadable row) still
+            // reads the catalog back (S1-19).
+            if !dryRun, committed || committedBeforeFailure(error), signedIn, profile == batch.profile, isCurrentCredential(epoch) {
+                await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyBatch(batch.id), .init(ticket)))
+            }
             guard signedIn, profile == batch.profile, isCurrentCredential(epoch), dependencies.batch?.id == batch.id else { return }
-            dependencies.batch?.failure = dependencyNotice(error, context: .link)
+            let failureNotice = dependencyNotice(error, context: .link)
+            dependencies.batch?.messages.fail(failureNotice, ticket)
         }
     }
 }
@@ -154,6 +172,7 @@ struct DependencyBatchView: View {
                     }.pickerStyle(.segmented)
                 }
                 if !model.canWrite && !batch.pending { Text("Offline or read only. Reconnect to change Dependencies.").font(.caption).foregroundStyle(.secondary) }
+                Divider().padding(.top, 8) // the scrolled list no longer meets the Action control flush (seat note 5)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         if batch.loading { ProgressView("Loading Tasks…") }
@@ -197,7 +216,7 @@ struct DependencyBatchView: View {
                         Button("Preview") { Task { await model.previewDependencyBatch() } }.disabled(!model.canWrite || batch.pending || batch.loading || batch.selected.isEmpty)
                     }
                 }.compactBounds("dependency-actions")
-            }.padding(16).frame(width: compact ? 393 : 600, height: compact ? 426 : 640).accessibilityIdentifier("dependency-batch-preview")
+            }.padding(16).frame(width: compact ? 393 : 600, height: compact ? 426 + model.compactExtraHeight : 640).accessibilityIdentifier("dependency-batch-preview")
         }
     }
 }

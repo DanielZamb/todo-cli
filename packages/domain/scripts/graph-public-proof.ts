@@ -40,6 +40,10 @@ export async function proveGraphPublic(input: {
       ["done", completionDependent.id, "--expected-version", "1", "--force"],
       2,
     ).code,
+    "invalid_args",
+  );
+  assert.equal(
+    run(["done", completionDependent.id, "--expected-version", "1"], 2).code,
     "blocked",
   );
   run(["done", completionBlocker.id, "--expected-version", "1"]);

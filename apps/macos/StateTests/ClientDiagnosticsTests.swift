@@ -286,6 +286,60 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         #expect(all.filter { $0.name == .layoutCommitted }.count == 2)
         recorder.clear(); await recorder.flush()
     }
+    /// A visible (ordered, offscreen) window holding one surface marker.
+    @MainActor private func surfaceWindow(_ monitor: ClientDiagnosticsMonitor, _ surface: ClientDiagnosticSurface, identity: String? = nil) -> NSWindow {
+        let window = NSWindow(contentRect: NSRect(x: -10000, y: -10000, width: 200, height: 100), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let marker = ClientDiagnosticNativeView(frame: NSRect(x: 0, y: 0, width: 200, height: 100))
+        marker.surface = surface; marker.identity = identity; marker.monitor = monitor
+        window.contentView = marker
+        window.orderFront(nil)
+        window.layoutIfNeeded(); window.displayIfNeeded()
+        var ancestor: NSView? = marker
+        while let view = ancestor { view.layoutSubtreeIfNeeded(); view.needsLayout = false; ancestor = view.superview }
+        monitor.register(marker)
+        #expect(window.isVisible && !marker.needsLayout, "the marker is a laid-out visible surface")
+        return window
+    }
+    @Test @MainActor func aLayoutLongAfterTheResultCannotCompleteAnActionWhoseSurfaceHadGone() async throws {
+        // A Save closes the inspector; the next inspector opened half an hour later must not be
+        // taken as the Save's layout. Its surface was absent when the result was published and did
+        // not appear within the bound, so the action stays unfinished.
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
+        let monitor = ClientDiagnosticsMonitor(recorder: recorder, notifications: NotificationCenter())
+        monitor.start(); defer { monitor.stop() }
+        monitor.resultWindowMS = 50
+        let action = try #require(monitor.begin(.save, surface: .inspector))
+        monitor.publish(action)
+        monitor.commitOpportunity()
+        try await Task.sleep(for: .milliseconds(120))
+        let later = surfaceWindow(monitor, .inspector); defer { later.close() }
+        monitor.commitOpportunity()
+        let records = (await recorder.snapshot()).recent
+        #expect(!records.contains { $0.name == .layoutCommitted && $0.actionID == action }, "a layout after the bound is not this action's")
+        let saves = (await recorder.snapshot()).actions.filter { $0.action == .save }
+        #expect(saves.allSatisfy { $0.count == 0 }, "the Save stays unfinished: no completed sample")
+        // Control: a surface present when the result is published completes its action.
+        let present = surfaceWindow(monitor, .diagnostics); defer { present.close() }
+        let opened = try #require(monitor.begin(.openDiagnostics, surface: .diagnostics))
+        monitor.publish(opened)
+        monitor.commitOpportunity()
+        #expect((await recorder.snapshot()).recent.contains { $0.name == .layoutCommitted && $0.actionID == opened })
+        recorder.clear(); await recorder.flush()
+    }
+    @Test @MainActor func aProfileSwitchIsReadyOnlyWhenTheNewProfilesCatalogHasArrived() throws {
+        // The ready check used to be satisfied by the state right after the switch (same
+        // connection, not loading), so the switch was laid out at once and timed at about 0 ms.
+        let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-profile-switch"), catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
+        model.connection = .live
+        #expect(!model.loading)
+        model.activateProfile("personal")
+        #expect(model.profile == "personal" && model.connection == .live && !model.loading, "the old check's conditions already hold")
+        #expect(!model.profileSwitchSettled("personal"), "but the new Profile's catalog has not arrived")
+        #expect(model.profileSwitchStarts("work"), "a different Profile starts a switch")
+        #expect(!model.profileSwitchStarts("personal"), "choosing the current Profile starts nothing")
+    }
     @Test @MainActor func unavailableNativeNotificationsAreExplicitAndScopeChangesDiscardTheOldRelease() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         let recorder = ClientDiagnosticsRecorder(journalDirectory: root); recorder.authorizeOwnerSession(true)
@@ -1054,6 +1108,27 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
     private func accessibilityLabels(_ element: Any, depth: Int = 0) -> [String] {
         guard depth < 40, let element = element as? any NSAccessibilityProtocol else { return [] }
         return [element.accessibilityLabel()].compactMap { $0 } + (element.accessibilityChildren() ?? []).flatMap { accessibilityLabels($0, depth: depth + 1) }
+    }
+    /// A layout record for a pointer or keyboard selection, decoded as the journal would hold it.
+    private func interaction(_ kind: String, hold: Double?, source: String?) throws -> ClientDiagnosticEvent {
+        var phases: [String: Any] = ["inputQueueMS": 30, "handlerWallMS": 40, "requestUnionMS": 0, "publicationToLayoutMS": 190]
+        if let hold { phases["holdMS"] = hold }
+        var fields: [String: Any] = ["id": UUID().uuidString, "run": UUID().uuidString, "monotonicMS": 1000, "epochMS": 1, "name": "ui.layout.committed",
+                                     "inputKind": kind, "actionPhases": phases, "action": ["subtype": "task.selection.pointer", "inventory_id": "I07"]]
+        if let source { fields["selectionContext"] = ["releaseSource": source, "refreshInFlight": false, "journalFileBytes": 0, "journalBytesWritten": 0] }
+        return try JSONDecoder().decode(ClientDiagnosticEvent.self, from: JSONSerialization.data(withJSONObject: fields))
+    }
+    @Test func theHoldRowSaysWhereTheReleaseCameFromAndWhenItWasNotMeasured() throws {
+        // Ruling 4 on the Opus seat's finding 5.
+        let derived = try #require(ClientDiagnosticDisplay.hold(try interaction("pointer", hold: 53.9, source: "nativeSelection")))
+        #expect(derived.label == "Hold before release, from selection (ms)" && derived.value == "53.9")
+        let observed = try #require(ClientDiagnosticDisplay.hold(try interaction("pointer", hold: 120, source: "mouseUp")))
+        #expect(observed.label == "Hold before release (ms)" && observed.value == "120.0")
+        let missing = ClientDiagnosticDisplay.hold(try interaction("pointer", hold: nil, source: nil))
+        #expect(missing?.label == "Hold before release (ms)" && missing?.value == "Not measured", "a pointer action without a release reads as not measured, not as nothing")
+        #expect(ClientDiagnosticDisplay.hold(try interaction("keyboard", hold: nil, source: nil)) == nil, "a key press has no hold")
+        #expect(ClientDiagnosticDisplay.event(.inputReleased) == "Hold before release", "one name for one quantity")
+        #expect(ClientDiagnosticDisplay.timingNote.contains("Clicks are timed from their release"), "the note says where click timings start")
     }
     @Test func localSummaryDoesNotInvalidateTheOtherDiagnosticsSections() {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("todo-s01-verify-panel-observation-" + UUID().uuidString)

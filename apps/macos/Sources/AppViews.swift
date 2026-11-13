@@ -19,8 +19,9 @@ struct RootView: View {
         }
         .frame(
             minWidth: compactMode ? TaskWindowSizing.compactSize.width : 900,
+            maxWidth: compactMode ? TaskWindowSizing.compactSize.width : .infinity,
             minHeight: compactMode ? TaskWindowSizing.compactSize.height : 640)
-        .background(TaskWindowSizing(compact: compactMode))
+        .background(TaskWindowSizing(compact: compactMode) { model.compactWindowHeight = $0 })
         .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .main, mode: compactMode ? .compact : .full))
         .toolbar {
             ToolbarItem {
@@ -40,24 +41,73 @@ struct RootView: View {
     }
 }
 
-struct TaskWindowSizing: NSViewRepresentable {
-    static let compactSize = NSSize(width: 393, height: 426)
-    let compact: Bool
+/// The Compact window's height (owner decision O34): 393 pt wide always, at least 426 pt tall,
+/// dragged taller by the person and remembered across launches and across switching to the full
+/// window and back. A stored value outside the range is clamped.
+struct CompactWindowHeight {
+    static let key = "compactWindowHeight"
+    static let minimum = TaskWindowSizing.compactSize.height
+    let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    static func clamp(_ height: CGFloat, maximum: CGFloat) -> CGFloat {
+        guard height.isFinite else { return minimum }
+        return min(max(height, minimum), max(minimum, maximum))
+    }
+    /// The height to open Compact at: the remembered one, clamped to what fits.
+    func restored(maximum: CGFloat) -> CGFloat {
+        Self.clamp((defaults.object(forKey: Self.key) as? NSNumber).map { CGFloat($0.doubleValue) } ?? Self.minimum, maximum: maximum)
+    }
+    func save(_ height: CGFloat, maximum: CGFloat) { defaults.set(Double(Self.clamp(height, maximum: maximum)), forKey: Self.key) }
+}
 
-    func makeNSView(context: Context) -> WindowView { WindowView() }
+struct TaskWindowSizing: NSViewRepresentable {
+    nonisolated static let compactSize = NSSize(width: 393, height: 426)
+    let compact: Bool
+    /// Where the Compact height is remembered (the app's defaults; a test passes its own).
+    var defaults: UserDefaults = .standard
+    /// The Compact content height whenever it changes (sheets size themselves from it).
+    var compactHeight: (CGFloat) -> Void = { _ in }
+
+    func makeNSView(context: Context) -> WindowView { WindowView(heights: CompactWindowHeight(defaults: defaults)) }
     func updateNSView(_ view: WindowView, context: Context) {
         view.compact = compact
+        view.compactHeight = compactHeight
         view.scheduleResize()
     }
 
     final class WindowView: NSView {
         var compact = false
+        var compactHeight: (CGFloat) -> Void = { _ in }
         private var appliedMode: Bool?
         private var expandedFrame: NSRect?
+        private var resizeObserver: NSObjectProtocol?
+        private let heights: CompactWindowHeight
+        init(heights: CompactWindowHeight) { self.heights = heights; super.init(frame: .zero) }
+        required init?(coder: NSCoder) { fatalError("not used") }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
+            if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) }
+            resizeObserver = window.map { window in
+                NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.windowResized() }
+                }
+            }
             scheduleResize()
+        }
+        isolated deinit { if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) } }
+
+        /// The tallest Compact content that fits the screen the window is on.
+        private var maximumHeight: CGFloat {
+            guard let window, let screen = window.screen ?? NSScreen.main else { return .greatestFiniteMagnitude }
+            return window.contentRect(forFrameRect: screen.visibleFrame).height
+        }
+        /// Remembers the height the person dragged Compact to.
+        private func windowResized() {
+            guard appliedMode == true, compact, let window else { return }
+            let height = window.contentRect(forFrameRect: window.frame).height
+            heights.save(height, maximum: maximumHeight)
+            compactHeight(CompactWindowHeight.clamp(height, maximum: maximumHeight))
         }
 
         func scheduleResize() {
@@ -71,13 +121,27 @@ struct TaskWindowSizing: NSViewRepresentable {
             window.contentMinSize = compact ? TaskWindowSizing.compactSize : NSSize(width: 900, height: 640)
             if compact {
                 if previousMode != nil { expandedFrame = window.frame }
-                setContentSize(TaskWindowSizing.compactSize, on: window)
+                let height = heights.restored(maximum: maximumHeight)
+                setContentSize(NSSize(width: TaskWindowSizing.compactSize.width, height: height), on: window)
+                compactHeight(height)
             } else if previousMode != nil {
-                if let expandedFrame {
-                    window.setFrame(expandedFrame, display: true)
-                } else {
-                    setContentSize(NSSize(width: 1100, height: 760), on: window)
-                }
+                restoreExpanded(window, attempts: 100)
+            }
+        }
+        /// The full window comes back once the content no longer limits the width to Compact's. A
+        /// layout pass applies the full content's limits now; a frame set while Compact's 393 pt limit
+        /// still stands would be clamped to it.
+        private func restoreExpanded(_ window: NSWindow, attempts: Int) {
+            guard appliedMode == false else { return }
+            window.contentView?.layoutSubtreeIfNeeded()
+            if window.contentMaxSize.width <= TaskWindowSizing.compactSize.width, attempts > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { [weak self, weak window] in if let window { self?.restoreExpanded(window, attempts: attempts - 1) } }
+                return
+            }
+            if let expandedFrame {
+                window.setFrame(expandedFrame, display: true)
+            } else {
+                setContentSize(NSSize(width: 1100, height: 760), on: window)
             }
         }
 
@@ -388,7 +452,11 @@ struct TaskListView: View {
                 }
             }.padding(.horizontal, 16).padding(.vertical, 8).compactBounds("header")
             Divider()
-            searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+            // The Find field belongs to the list; while the editor is shown it would take the
+            // editor's room (candidate 8 ruling 5). The search text is kept for Back to tasks.
+            if model.editor == nil || model.quickAdd {
+                searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+            }
             if model.editor != nil, let result = model.transferResult {
                 TaskTransferResultView(model: model, result: result)
                 Divider()
@@ -467,7 +535,8 @@ struct TaskListView: View {
         }
     }
     private func requestProfile(_ profile: String) {
-        model.clientDiagnosticsUI.perform(.profileSwitch, ready: { model.profile == profile && model.connection == .live && !model.loading }) { _ = await model.navigate(.profile(profile)) }
+        guard model.profileSwitchStarts(profile) else { return }
+        model.clientDiagnosticsUI.perform(.profileSwitch, ready: { model.profileSwitchSettled(profile) }) { _ = await model.navigate(.profile(profile)) }
     }
     var sidebar: some View {
         VStack(spacing: 0) {
@@ -587,15 +656,7 @@ struct TaskListView: View {
                 }.padding(12)
             }
             if let message = model.message {
-                if model.lookupError(at: .message, text: message) != nil {
-                    ClientErrorNotice(model: model, text: message, position: .message).padding()
-                } else {
-                    HStack {
-                        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
-                        Spacer()
-                        Button("Retry") { model.connect() }
-                    }.padding()
-                }
+                MessageBanner(model: model, message: message, sequence: model.messageSequence, control: (model.messageKind ?? .general).bannerControl)
             }
             if model.loading && model.appliedSearchSnapshot == nil {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -697,10 +758,13 @@ struct TaskListView: View {
                     .background(.regularMaterial, in: Capsule()).padding(16).accessibilityIdentifier("task-notice")
             }
         }
-        .task(id: model.deletionNotice) {
+        // Each confirmation gets its own three seconds: the timer is keyed by the notice's sequence,
+        // and a cancelled timer (a newer notice replaced it) ends nothing.
+        .task(id: model.noticeMessages.sequence) {
             guard model.deletionNotice != nil else { return }
-            defer { model.deletionNotice = nil }
-            try? await Task.sleep(for: .seconds(3))
+            let mark = model.noticeMessages.mark
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            model.expireNotice(since: mark)
         }
     }
     private func compactState(_ message: String, action: String, perform: @escaping () -> Void) -> some View {
@@ -729,6 +793,7 @@ struct TaskListView: View {
     }
     private func row(_ task: TaskSnapshot, overdue: Bool = false) -> some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
+            let _ = ClientObservedActivity.timelineTick()
             TaskRow(
                 task: task, now: referenceDate ?? context.date, canWrite: model.canWrite, overdue: overdue, compact: compactMode,
                 projectName: model.projects.first { $0.id == task.project_id }?.name,
@@ -911,8 +976,11 @@ struct QuickAddView: View {
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
+    @State private var completions = QuickAddCompletionGate()
     var body: some View {
         content
+            .onAppear { completions.renew() }
+            .onDisappear { completions.renew() }
             .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .quickAdd))
             .defaultFocus($focused, true)
             .task(id: model.profile + "\u{0}" + model.newTitle) { await model.parseDraft() }
@@ -920,7 +988,7 @@ struct QuickAddView: View {
             .preferredColorScheme(model.configuration.resolvedColorScheme(storedAppearance: appearance))
     }
     var content: some View {
-        QuickAddContentAnchor(compact: compact, identity: model.newTitle + String(model.dependencies.initial.count) + (model.quickAddError ?? "")) { maximumRows in
+        QuickAddContentAnchor(compact: compact, limit: model.compactWindowHeight, identity: model.newTitle + String(model.dependencies.initial.count) + (model.quickAddError ?? "")) { maximumRows in
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("New task").font(.headline)
@@ -1010,17 +1078,18 @@ struct QuickAddView: View {
                 Image(systemName: "xmark").font(.caption2)
             }.frame(minHeight: 28).contentShape(Rectangle())
         }.lineLimit(1).buttonStyle(.bordered).tint(nil as Color?).controlSize(.small).help(title).accessibilityLabel("Clear \(title)")
-            .background(measure(field)).preference(key: QuickAddChipLabels.self, value: [field: title])
+            .background(measure(field)).compactBounds("chip-" + field).preference(key: QuickAddChipLabels.self, value: [field: title])
     }
 
     private func measure(_ field: String) -> some View {
         GeometryReader { geometry in
             Color.clear.preference(key: QuickAddChipFrames.self, value: [field: geometry.frame(in: .named("quick-add-chips"))])
-        }
+        }.background(field.hasPrefix("control:") ? nil : QuickAddRegionRow())
     }
     private func add(edit: Bool) {
+        let opening = completions.opening
         model.clientDiagnosticsUI.perform(floating ? .quickAdd : .sheetAdd) {
-            if await model.create(openEditor: edit) {
+            if await model.create(openEditor: edit), completions.owns(opening) {
                 if !floating { dismiss() }
                 if edit { openWindow(id: "tasks") }
             }
@@ -1028,12 +1097,59 @@ struct QuickAddView: View {
     }
 }
 
+/// The main window's message banner. Connection messages keep one button, Reconnect; every other
+/// kind has a trailing Dismiss button, because a reconnect would not clear it. The message reads as
+/// one accessibility element and is announced when it appears. No time limit for errors.
+struct MessageBanner: View {
+    let model: TodoModel
+    let message: String
+    let sequence: Int
+    let control: TodoModel.MessageBannerControl
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if model.lookupError(at: .message, text: message) != nil {
+                // Keeps its own elements, so "Find Task by id" stays reachable.
+                ClientErrorNotice(model: model, text: message, position: .message)
+            } else {
+                Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
+                    .accessibilityElement(children: .combine).accessibilityLabel(spoken)
+            }
+            Spacer()
+            switch control {
+            case .reconnect:
+                Button("Reconnect") { model.connect() }.accessibilityIdentifier("message-reconnect")
+            case .dismiss:
+                Button { model.dismissMessage(sequence) } label: {
+                    Image(systemName: "xmark").frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
+                }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss").compactBounds("message-dismiss")
+            }
+        }.padding()
+            .onAppear { announce() }
+            .onChange(of: sequence) { _, _ in announce() }
+    }
+    /// Connection messages describe a state ("… The live view is reconnecting."); the others are errors.
+    private var spoken: String { control == .dismiss ? "Error. " + message : message }
+    /// Once per message: the banner reappearing with the same message announces nothing.
+    private func announce() { if model.takeAnnouncement(sequence) { AccessibilityNotification.Announcement(spoken).post() } }
+}
+
+/// The view side of quick-add's instance rule. The menu-bar window has no model instance, so its
+/// view keeps an opening token, renewed whenever it appears or disappears: a create that outlives
+/// the view that started it (closed, or closed and reopened) cannot dismiss or open windows for it.
+@MainActor final class QuickAddCompletionGate {
+    private(set) var opening = UUID()
+    func renew() { opening = UUID() }
+    func owns(_ token: UUID) -> Bool { token == opening }
+}
+
 struct QuickAddMetadataRegion<Content: View>: View {
     let maximumRows: Int
     let dependencies: InitialDependencySelection
     let content: Content
     @State private var parsedHeight: CGFloat = 0
-    @State private var dependencyHeight: CGFloat = 24
+    @State private var contentHeight: CGFloat = 0
+    @State private var chipFrames: [CGRect] = []
     init(maximumRows: Int, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
         self.maximumRows = maximumRows
         self.dependencies = dependencies
@@ -1042,46 +1158,76 @@ struct QuickAddMetadataRegion<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                dependencies.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddDependencyHeight.self, value: geometry.size.height) })
+                dependencies
                 content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(height: visibleHeight).compactBounds("quick-add-metadata")
+                .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionContentHeight.self, value: geometry.size.height) })
+                .coordinateSpace(name: QuickAddRegionRow.space)
+        }.frame(height: visibleHeight).scrollIndicators(.visible).compactBounds("quick-add-metadata")
+            .onPreferenceChange(QuickAddRegionContentHeight.self) { contentHeight = $0 }
+            .onPreferenceChange(QuickAddRegionRows.self) { chipFrames = $0 }
             .preference(key: QuickAddAddedMetadataHeight.self, value: Optional(visibleHeight - max(24, parsedHeight)))
             .onPreferenceChange(QuickAddParsedMetadataHeight.self) { parsedHeight = $0 }
-            .onPreferenceChange(QuickAddDependencyHeight.self) { dependencyHeight = $0 }
     }
+    /// The "Depends on" line, then up to `maximumRows` whole rows of chips, counting Dependency
+    /// chips and parsed-metadata chips alike, each row at its measured position and height, so the
+    /// region never ends partway into a row; more content scrolls, with visible scroll bars. The
+    /// Dependency chips are rows like any other: a long Dependency list scrolls too.
     private var visibleHeight: CGFloat {
-        let cap = 32 + CGFloat(maximumRows) * 20 + CGFloat(maximumRows - 1) * 8
-        return dependencyHeight > cap ? cap : max(24, parsedHeight, dependencyHeight)
+        let content = max(contentHeight, 24)
+        var rows: [(top: CGFloat, bottom: CGFloat)] = []
+        for frame in chipFrames.sorted(by: { $0.minY < $1.minY }) {
+            if let last = rows.last, abs(frame.minY - last.top) < 2 { rows[rows.count - 1].bottom = max(last.bottom, frame.maxY) } else { rows.append((frame.minY, frame.maxY)) }
+        }
+        guard rows.count > maximumRows, maximumRows > 0 else { return content }
+        return min(content, rows[maximumRows - 1].bottom)
     }
+}
+
+/// One chip's frame in its quick-add metadata region, for the region's whole-row height.
+struct QuickAddRegionRow: View {
+    static let space = "quick-add-region"
+    var body: some View {
+        GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionRows.self, value: [geometry.frame(in: .named(Self.space))]) }
+    }
+}
+struct QuickAddRegionRows: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
 }
 
 struct QuickAddContentAnchor<Content: View>: View {
     let compact: Bool
+    /// The Compact window's height (O34); 426 at its minimum.
+    var limit: CGFloat = TaskWindowSizing.compactSize.height
     let identity: String
     @ViewBuilder let content: (Int) -> Content
     @State private var addedHeight: CGFloat = 0
     @State private var maximumRows = 2
+    /// Two chip rows at 426 pt, and one more for each 42 pt the window is taller.
+    private var startRows: Int { compact ? 2 + Int(max(0, limit - TaskWindowSizing.compactSize.height) / 42) : 2 }
     var body: some View {
         content(maximumRows)
             .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddContentHeight.self, value: geometry.size.height) })
             .offset(y: -addedHeight / 2)
             .onPreferenceChange(QuickAddAddedMetadataHeight.self) { addedHeight = $0 ?? 0 }
             .onPreferenceChange(QuickAddContentHeight.self) { height in
-                if compact && height + addedHeight > 426 { maximumRows = 1 }
+                if compact && height + addedHeight > limit && maximumRows > 1 { maximumRows -= 1 }
             }
-            .onChange(of: identity) { _, _ in maximumRows = 2 }
+            .onAppear { maximumRows = startRows }
+            .onChange(of: identity) { _, _ in maximumRows = startRows }
+            .onChange(of: limit) { _, _ in maximumRows = startRows }
     }
 }
 struct QuickAddAddedMetadataHeight: PreferenceKey {
     static let defaultValue: CGFloat? = nil
     static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) { if let next = nextValue() { value = next } }
 }
-struct QuickAddDependencyHeight: PreferenceKey {
-    static let defaultValue: CGFloat = 24
+struct QuickAddContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
-struct QuickAddContentHeight: PreferenceKey {
+struct QuickAddRegionContentHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

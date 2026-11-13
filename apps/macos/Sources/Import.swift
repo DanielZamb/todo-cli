@@ -160,7 +160,7 @@ struct ImportView: View {
                             }
                         }.padding(.trailing, 8)
                     }.scrollIndicators(.visible)
-                        .frame(minHeight: compact ? 224 : 240, maxHeight: compact ? 224 : .infinity).clipped()
+                        .frame(minHeight: compact ? 224 + model.compactExtraHeight : 240, maxHeight: compact ? 224 + model.compactExtraHeight : .infinity).clipped()
                         .importFrame(.viewport).reportErrorBounds("viewport").background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview)).accessibilityIdentifier("import-preview-table")
                 }
             } else {
@@ -176,6 +176,7 @@ struct ImportView: View {
             }
             if compact && model.importReport != nil { Spacer(minLength: 0) }
             if let error = model.importError { ClientErrorNotice(model: model, text: error, position: .importTasks).font(.callout).accessibilityIdentifier("import-error") }
+            if let error = model.importFollowUpError { ClientErrorNotice(model: model, text: error, position: .importTasks).font(.callout).accessibilityIdentifier("import-follow-up-error") }
             if !model.canWrite && !model.busy { Text("Offline. Reconnect to preview or apply.").font(.callout).foregroundStyle(.secondary) }
             VStack(alignment: .leading, spacing: compact ? 8 : 12) {
                 if let report = model.importReport {
@@ -208,7 +209,7 @@ struct ImportView: View {
                 }.controlSize(compact ? .small : .regular)
             }.fixedSize(horizontal: false, vertical: true).importFrame(.footer)
         }.padding(compact ? 12 : 24)
-            .frame(width: compact ? 393 : 720, height: compact ? 426 : 620)
+            .frame(width: compact ? 393 : 720, height: compact ? 426 + model.compactExtraHeight : 620)
             .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview))
             .coordinateSpace(name: "import-layout")
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.json, .plainText, .data]) { result in
@@ -217,7 +218,7 @@ struct ImportView: View {
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     model.loadImport(data: try Data(contentsOf: url), name: url.lastPathComponent)
-                } catch { model.importError = "Cannot read this file. Choose a JSON array or NDJSON file." }
+                } catch { model.importMessages.publish("Cannot read this file. Choose a JSON array or NDJSON file.", kind: .file) }
             }
     }
     @ViewBuilder private func importRow(_ row: ImportSummary.Row, title: String, index: Int) -> some View {

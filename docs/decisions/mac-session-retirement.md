@@ -119,7 +119,11 @@ The rule, as ruled on 2026-11-11:
 3. Of those, it clears only the kinds its success makes untrue (table below).
 4. A message also ends when a newer message replaces it, or when the credential
    (`replaceCredential` with a different value) or the Profile (any change of
-   `profile`) changes.
+   `profile`) changes, or when the person dismisses it. Dismiss
+   (`dismissMessage(_:)`, ruled 2026-11-12) ends the message the banner showed
+   at that moment and nothing newer. The banner offers Reconnect for
+   connection messages only, because a reconnect clears only those; every
+   other kind offers Dismiss.
 5. Nothing saves or restores a message. An older message never comes back.
 6. Every kind has a success that clears it in ordinary use (table below).
 7. A surface is an instance: each opening of a sheet, picker or dialog gets a
@@ -201,7 +205,7 @@ no longer depends on the stream being live.
 
 | Kind | Published by | Success that clears it | Reachable in ordinary use |
 | --- | --- | --- | --- |
-| `connection` | Stream failure that goes Offline; write accepted with "… The live view is reconnecting."; stream 404 that cannot leave a deleted Profile; update reconnect check failure | Ready after a later connection attempt; a successful restore, sign-in, or write read-back | Yes: the stream retries automatically, and the banner's Retry reconnects |
+| `connection` | Stream failure that goes Offline; write accepted with "… The live view is reconnecting."; stream 404 that cannot leave a deleted Profile; update reconnect check failure | Ready after a later connection attempt; a successful restore, sign-in, or write read-back | Yes: the stream retries automatically, and the banner's Reconnect reconnects |
 | `restore` | Restore failure (server or stored-Session error) | Successful restore or sign-in | Yes: Retry Session or Sign in |
 | `signIn` | Sign-in failure | Successful sign-in or restore | Yes: Sign in again |
 | `sessionEnded` | A 401 that ends the Session | Successful sign-in or restore | Yes: the sign-in screen is shown |
@@ -210,7 +214,12 @@ no longer depends on the stream being live.
 | `delete` | Delete conflict on a Task that is not open in the editor | A later successful delete and its read-back | Yes: Delete again after the preview reloads |
 | `dependencyFollowUp` | Dependency follow-up Task read failure | A later successful follow-up | Yes: the same picker action |
 | `discoveryShow` | Discovery Show failure | A later successful Show | Yes: Show from Look up Task |
+| `dependencyLink` | A picker link or unlink that failed after its picker was closed while pending (ruling 2, 2026-11-12) | A later successful link or unlink | Yes: the picker again |
+| `quickAdd` | A quick-add create that failed after its quick-add was closed during the create | A later successful create | Yes: quick-add again |
 | `general` | Direct assignments only. No production writer remains. | Only rule 4 | Not used by production code |
+
+Every kind except `connection` can also be ended by the person with the
+banner's Dismiss button; `connection` keeps Reconnect.
 
 No refresh kind exists. Catalog and search failures publish to `searchError`
 and `taskLoadError`, which their own next read replaces, never to `message`.
@@ -220,11 +229,226 @@ message until a newer message, a credential change or a Profile change. That
 residual case belongs to the Opus Mac UI seat, which may add a dismiss control
 or a time limit.
 
-The sibling states each belong to one surface, and the ready path writes none
-of them: `editorError`, `quickAddError`, `searchError`, `taskLoadError`,
-`snapshotError`, `diagnosticsError`, `importError`, `historyError`,
-`profileDeletionError` and `deletionNotice`. Each is set and cleared by its own
-surface's actions, by a Profile activation, or by the Snapshot reload reset.
+### Surface-local messages (MAC-C1-S1-15)
+
+MAC-C1-S1-15 showed that the rule stopped at the main window. In one open
+Import report, follow-up A's success, finishing after a newer follow-up B had
+failed, cleared B's error and opened Quick Add. The ruling of 2026-11-12:
+moving a message into a surface does not exempt it from the rule.
+
+Every surface-local message is now kept by one helper,
+[SurfaceMessages](../../apps/macos/Sources/SurfaceMessages.swift), the same
+type that keeps the main window's `message`. Each surface instance holds its
+own value, so a new instance starts a new sequence. Within it:
+
+- An action takes a ticket at its start (`begin`): its kind, a generation of
+  that kind, and the sequence mark.
+- On success (`succeed`) it clears only a message of its own kind that already
+  existed at its mark.
+- On failure (`fail`) it publishes only while it is still the newest of its
+  kind.
+- A newer action of the same kind supersedes an older one still pending. The
+  older one's data result still applies if it committed something, but it
+  presents nothing: no message, no clearing, no feedback, no opening or
+  closing.
+- `beginClean` and `restart` start an action on a clean surface by ending what
+  is shown now. That is always older than the action.
+- Nothing saves or restores a message. The picker's background refresh used to
+  save its notice, reload and put the notice back. It now reloads without
+  clearing anything.
+
+| Field (surface instance) | Kinds | May set it | May clear it |
+| --- | --- | --- | --- |
+| `message` (main window; Settings shows it under Sign out while `messageKind == .signOut`) | `MessageKind` | The table above, by `publishMessage` and the newest of a follow-up's kind | Rule 2 and rule 4; Dismiss |
+| Dependency picker `failure` (`DependencyPicker.id`) | `reload`, `link`, `followUp` | A reload's failure, a link or unlink failure (newest on its row), or a follow-up failure (newest in the picker, whatever its row: a navigation), each only while newest. A follow-up failure is shown with the notice that offered it (that notice, its button and the failure, published as one `followUp` message; candidate 8 ruling 1). | A link's start (an earlier `link`, `reload` or `followUp` notice); opening, a direction change or the person's Reload on success (`reload`, `link` and `followUp` from before its mark: the Reload ruling below); a link's success (`link` from before its mark); a follow-up's success (`followUp` from before its mark); closing the picker. A link's read-back and the background refresh clear nothing. |
+| Import `importError` and `importFollowUpError` (`importInstance`) | `file`, `run`, `followUp` | Reading the file (`file`); a preview or apply failure (`run`); a follow-up failure (`followUp`), each only while newest of its kind | A preview or apply start (`file` and `run`); a run's success (`run` from before its mark); a follow-up's success (`followUp` from before its mark); closing or resetting Import |
+| Quick-add `quickAddError` and `parseError` (`quickAddInstance`) | `create`, `parse` | A create failure or a parse failure, each only while newest of its kind | A create start (`create`) or a parse start (`parse`); a success of the same kind from before its mark; opening quick-add |
+| Editor `editorError` (`TaskDraft.opening`) | `general`, `save`, `write`, `conflict`, `series`, `seriesSave`, `attachment` | Synchronous checks (`general`: validation, transition and delete conflict text, Attachment input checks); a Save, Move, Copy or transfer failure; a conflict definitions reload failure; a Series open or save failure; an Attachment write failure. Each asynchronous one only while newest of its kind. | Save, write and Series save start clean; a Series open starts by ending `series`; a success of the same kind from before its mark; a new editor opening; accepting a conflict |
+| Editor `historyError` (the open editor) | `load` | A History load failure while newest | A History load start; its success; opening an editor |
+| Batch edit `error`, with `report` (`BatchEditDraft.id`) | `reload`, `apply` | A target reload, preview or apply failure while newest | A reload, preview or apply start (clean); its success. The report appears only when the run succeeds as newest. |
+| Attachment batch `error`, with `report` (`AttachmentBatchDraft.id`) | `reload`, `apply` | As Batch edit | As Batch edit |
+| Dependency batch `failure`, with `report` (`DependencyBatchDraft.id`) | `reload`, `run` | A target reload failure, or a preview or apply failure, each only while newest of its kind | A reload's success (`reload` and `run` from before its mark); a run's success (`run` from before its mark); closing the dialog |
+| Delete confirmation `failure` (`DependencyDelete.id`) | `reload`, `delete` | A preview reload failure, or a delete refusal, conflict or unreadable reply, each only while newest of its kind | A reload's success (`reload` and `delete` from before its mark: an earlier refusal becomes the review text); closing the confirmation |
+| Dependency graph `failure` (`DependencyGraphState`, with `request`) | `read` | A graph read failure while newest | Its success (`read` from before its mark); closing the graph |
+| Settings `profileDeletionError` (the Delete Profile prompt) | `delete` | A Profile deletion refusal or failure while newest | A new prompt; "Delete Tasks too…"; a Profile activation |
+| Editor Attachments caption `attachmentInputError` (the editor opening; was the view's own `error`) | `open`, `paste`, `drop` | Opening an Attachment the section refuses or cannot open; a paste with no image; a drop whose file cannot be read or is over 20 MiB. A drop only while it is the newest drop of that opening and its credential is current. | A new open or a paste with an image (its own kind); a drop that completes (`drop` from before its mark); a new editor opening. Proof: the per-opening reset is a mutation control (M2: removing it, the earlier opening's drop failure shows in the new one; `LocalMessageLifetimeTests`). The drop's ticket, its credential check and the open and paste paths are view code (`AttachmentsSection`) that no state test reaches: inspected, for the seat. |
+| Diagnostics export caption (`ClientDiagnosticsView`, view state) | `export` | An export that fails, while it is the newest export | A newer export's success (`export` from before its mark); signing out. Proof: view code only (`ClientDiagnosticsView`); no state test reaches it: inspected, for the seat. The ordering it relies on is the helper's, which `SurfaceMessagesTests` covers. |
+| Main-window quiet confirmation `deletionNotice` (the main window) | `notice` | "Task added" for a Task the view filters out (newest create only), "Task deleted", a Profile switch after deletion | Its own three-second timer, which ends only the confirmation that existed when it started (`expireNotice(since:)`); a cancelled timer ends nothing. Proof: `expireNotice(since:)` is a mutation control (M1: an unconditional clear, the old view's behaviour, wipes the replacement “Task added”; `LocalMessageLifetimeTests`). The timer's cancel path (a cancelled timer ends nothing) is view code (`AppViews`): inspected, for the seat. |
+| Settings `snapshotError` | `list`, `write` | A Snapshot list failure, or a create, preview or restore failure, each only while newest of its kind | A list start (clean), including the list a create or restore runs after it succeeds; a preview's success (`write` from before its mark) |
+
+**What a Reload clears** (ruled 2026-11-12). A Reload the person asks for clears the
+notices its success makes untrue, not only its own kind, and only those that
+existed before the Reload began (its mark):
+
+- **Picker.** Opening, a direction change and the Reload button clear earlier
+  `reload`, `link` and `followUp` notices. A link notice that asked for a
+  reload, and a follow-up offered by it, are no longer true once the
+  Dependencies are fresh.
+- **Delete confirmation.** Its Reload clears earlier `reload` and `delete`
+  notices. An earlier refusal becomes the review text (`reviewFailure`).
+- **Dependency batch.** Its reload clears earlier `reload` and `run` notices.
+
+A refresh the person did not ask for clears nothing: the picker's background
+refresh and a link's read-back.
+
+**Supersession is final** (MAC-C1-S1-16, ruled 2026-11-12). A hand-off to the
+main window is a presentation like any other. Every completion checks, in
+order:
+
+1. ownership;
+2. authorization;
+3. data;
+4. whether it is still the newest of its kind in its instance;
+5. only then, where to present: in the surface if it is still showing; as a
+   named main-window message if the surface closed and a hand-off is ruled for
+   it; otherwise nowhere.
+
+An action superseded while its surface was open presents nothing anywhere,
+whether its surface is still open or has closed, and whether it succeeded or
+failed. A ticket carries its instance's generation table (`Ticket.isNewest`), so
+the check still works after the surface closed. The hand-off goes only through
+`handOff(_:kind:from:)`, which refuses a ticket that is not the newest. The
+ruled hand-offs are:
+
+- a picker link that fails after its picker closed;
+- a quick-add create that fails after its quick-add closed.
+
+A superseded action also clears no earlier hand-off and raises no "Task added"
+capsule. Its read-back runs but raises no "… The live view is reconnecting."
+message (`refreshAfterWrite(presents:)`).
+
+**No presentation permission crosses an await** (MAC-C1-S1-17, ruled
+2026-11-12). A decision to present is never taken before an await and used after
+it. Every function that may present after awaiting asks the helper at the moment
+of publishing.
+
+- **Read-backs** take a `ReadBackOwner`, asked when the read-back publishes:
+  - `.mainWindow(ticket)`: a row action, or a surface action that closed its own
+    surface on success (quick-add create, Save, Move, Delete).
+  - `.surface(instance, ticket)`: only while that instance is showing.
+- **`PresentationTicket`** can only be made from a real ticket.
+- **Removed from the Mac target:**
+  - `refreshAfterWrite(presents:)` and `refreshAfterWrite(presenting:)`;
+  - the pre-await `showing ? nil : surface` choice in quick-add create, Save
+    and Delete;
+  - `showing` read after the read-back in quick-add create (announce, return
+    value) and Save (announce);
+  - `openSeries(presenting:)`, now `openSeries()` and `loadSeries()`;
+  - `reloadDependencyPicker(clearing:)`, now `reloadDependencyPicker()` and
+    `refreshDependencyPicker()`.
+- **Now checked live after the await:**
+  - The editor write's transfer report and "Task updated" check the write ticket
+    and the opening. A Copy closed during its read-back reports nothing.
+  - A transition's editor text reaches only an editor showing that Task.
+- **Kept, because they are data or the person's request, not permission:**
+  `dryRun`, `erased`, `retry`, `changed`, `firstOccurrence` and `openEditor`.
+  `openEditor` is applied only after the live newest check.
+- **Control.** `SourcePresentationRuleTests` is a tripwire for the removed
+  names and patterns, not a proof of the rule. As the seat recorded, it does not
+  catch:
+  - a differently named Bool;
+  - a captured local holding a permission;
+  - a closure capturing a snapshot;
+  - a nested parameter list that evades its function pattern.
+
+  The rule's guarantees come from the API and the behavioural controls:
+  - `PresentationTicket` can only be made from a real ticket;
+  - `ReadBackOwner` is asked when a read-back publishes;
+  - the read-back sweep, the S1-16 and S1-17 interleavings and the seat's
+    probes exercise it.
+
+**Supersession is per target** (D1, ruled 2026-11-12, correcting S1-16 for
+candidate 8). An action is superseded only by a newer action of the same kind on
+the same target in the same instance. Examples of a target:
+
+- the dependent Task of a link or unlink;
+- the Task of a Save.
+
+**Writes and navigations** (coordinator ruling, 2026-11-12). An action that
+commits, or may have committed, a write is superseded only by a newer action of
+the same kind on the same target. An action whose result is a navigation (it
+opens or replaces a sheet) is superseded by any newer navigation of the same kind
+in the same surface instance, whatever its target. "Create follow-up" commits
+nothing and opens Quick Add, so in one picker only the newest follow-up is live:
+an older follow-up that later succeeds opens nothing, and one that later fails
+presents nothing. Its failure still belongs to its row (`fail(_:_:row:)`), so a
+link on that row ends it as before. The Import report's follow-ups were already
+superseded this way.
+
+Two actions on different targets are both live, and each reports its own
+outcome: in the surface while it is open, and as a hand-off after it closes, as
+the newest action for its target. Tickets carry their target
+(`begin(_:target:)`). A link's start clears only its own row's earlier link or
+follow-up notice. A link's success clears only its own row's earlier hand-off.
+
+The seat's S1-16 probe uses distinct dependents, so it now fails by design. The
+runner accepts its line 56, quoting the ruling, only if the probe's receipts
+show the older link reporting its own failure. The same-row version must still
+present nothing, and does.
+
+**Same-kind failures merge** (D2, ruled 2026-11-12; wording through the Opus Mac
+UI seat). When a new failure has the same kind as the one showing, for another
+target, the surface shows one merged message instead of replacing:
+
+- Picker: "Couldn't add 2 Dependencies: “A” and “B”. Try each again to see
+  why." The verb is "change" when the verbs differ.
+- Main banner: "Couldn't change N Dependencies: …. Open each Task's
+  Dependencies to see why."
+
+Messages name up to three Tasks, then "and N more". Errors of different kinds
+keep newest-wins. A success on one target removes only its own part. Only
+surfaces with targeted actions can produce two live same-kind failures: the
+picker, and the main banner's link hand-offs. Every other surface's same-kind
+actions are gated.
+
+**Known limit: one banner slot** (MAC-C1-S1-18, ruled 2026-11-12). The main
+window shows one message. A failure that arrives later is a newer message and
+replaces an earlier unread one, for example an old picker instance's link
+failure after a newer instance's hand-off. That is as two failed Completes in a
+row would be, and suppressing it would hide a failure. It replaces only by
+publishing its own message, never by clearing. An older action's success never
+clears or replaces a newer hand-off. How to keep an earlier unread failure
+reachable (a count, a short stack, or a combined message) is for the Opus Mac
+UI seat in candidate 8.
+
+Same-kind actions that are gated cannot interleave: Import apply (`busy`),
+Batch edit and Attachment batch apply (`busy`), Dependency batch run
+(`pending`), delete (`busy` and `pending`), editor Save (`busy`), quick-add
+create (`busy`), Profile deletion and Snapshot writes (`busy`). The control
+for those is that a second start while the first is held sends no second
+request.
+
+These stay outside the helper:
+
+- **Search notices.** `searchFailure` in the picker and the graph, and the
+  main list's `searchError` and `taskLoadError`, are governed by the Task
+  search generation that the formal search model checks.
+- **Discovery.** `discovery.error` is governed by the discovery model's
+  identity and generation, which the discovery formal check pins.
+- **Statuses and confirmations, not action messages:**
+  - `diagnosticsError` is a poll status, guarded by its generation.
+  - `renderError` is the graph web view's render status.
+  - `taskIDCopyFeedback` ("Copied") is governed by its own timer: a new copy
+    cancels the older timer before it can clear, and opening an editor clears
+    it.
+
+The controls run against the compiled scratch server. In each control below,
+the first action is held and the newer one runs before it is released.
+
+- **Three orders.** Older success after newer failure; older failure after
+  newer success; older success after newer success. These run for:
+  - Import report and picker follow-ups;
+  - picker link;
+  - Snapshot list;
+  - History;
+  - the editor's conflict definitions reload.
+- **Across kinds.** A run failure published while the Dependency batch was
+  reloading survives that reload's success. A delete refusal published while
+  the confirmation was reloading survives that reload's success.
+- **Gated surfaces.** For each one listed above, a second start while the first
+  is held sends no second request.
+- **The helper itself.** `SurfaceMessagesTests` checks the three orders,
+  own-kind clearing, and instance isolation.
 
 The controls run against the compiled scratch server with the in-memory
 SessionVault. They are the seat's three probes unchanged; the eleven

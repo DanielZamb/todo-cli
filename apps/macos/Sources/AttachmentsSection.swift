@@ -33,13 +33,11 @@ struct AttachmentsSection: View {
   @State private var addingLink = false
   @State private var hasImage = false
   @State private var dropTarget = false
-  @State private var error: String?
   init(model: TodoModel, showsLinkForm: Bool = false) {
     self.model = model
     _addingLink = State(initialValue: showsLinkForm)
   }
   private var disabled: Bool { !model.canWrite || model.conflict != nil }
-  private let imageTypes: [UTType] = [.png, .jpeg, .gif, .webP]
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       HStack {
@@ -66,7 +64,7 @@ struct AttachmentsSection: View {
           }.controlSize(.regular)
         }
       }
-      if let error { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")).accessibilityIdentifier("attachment-error") }
+      if let error = model.attachmentInputError { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")).accessibilityIdentifier("attachment-error") }
     }
     .padding(.top, 16).overlay(alignment: .top) { Divider() }
     .background(dropTarget ? Color.accentColor.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 8))
@@ -119,30 +117,29 @@ struct AttachmentsSection: View {
     }.contextMenu { labelActions(attachment) }.accessibilityIdentifier("attachment-row-\(attachment.id)").attachmentBounds("row-\(attachment.id)")
   }
   private func open(_ attachment: AttachmentSnapshot, reveal: Bool) {
+    // Synchronous: a new open ends an earlier open message and publishes at once.
+    let ticket = model.attachmentInputMessages.restart(.open)
     guard let url = AttachmentOpening.allowedURL(attachment) else {
-      error = "Todo cannot open executables, app bundles or missing files."
+      model.attachmentInputMessages.fail("Todo cannot open executables, app bundles or missing files.", ticket)
       return
     }
-    error = nil
     if reveal, url.isFileURL {
       NSWorkspace.shared.activateFileViewerSelecting([url])
     } else if !NSWorkspace.shared.open(url) {
-      error = "Could not open the Attachment."
+      model.attachmentInputMessages.fail("Could not open the Attachment.", ticket)
     }
   }
+  // Every input that resumes after an await (the open panel, a paste, a drop) captures its origin
+  // now and starts its write only while that origin is current (MAC-C1-S1-24).
   private func chooseFile() {
+    guard let origin = model.attachmentInputOrigin() else { return }
     let panel = NSOpenPanel()
     panel.canChooseDirectories = false
     panel.allowsMultipleSelection = true
-    let expectedTask = model.editor?.id
-    let expectedProfile = model.profile
     panel.begin { response in
       guard response == .OK else { return }
       let paths = panel.urls.map(\.path)
-      Task { @MainActor in
-        guard model.editor?.id == expectedTask, model.profile == expectedProfile else { return }
-        await model.attachPaths(paths, label: nil)
-      }
+      Task { @MainActor in await model.attachPaths(paths, label: nil, origin: origin) }
     }
   }
   private func pasteImage() {
@@ -150,69 +147,20 @@ struct AttachmentsSection: View {
       let bitmap = NSBitmapImageRep(data: tiff),
       let data = bitmap.representation(using: .png, properties: [:])
     else {
-      error = "Copy an image, then choose Paste image."
+      let ticket = model.attachmentInputMessages.restart(.paste)
+      model.attachmentInputMessages.fail("Copy an image, then choose Paste image.", ticket)
       return
     }
-    let expectedTask = model.editor?.id
-    let expectedProfile = model.profile
-    Task {
-      guard model.editor?.id == expectedTask, model.profile == expectedProfile else { return }
-      await model.uploadImage(data, mimeType: "image/png", label: nil)
-    }
+    guard let origin = model.attachmentInputOrigin() else { return }
+    model.attachmentInputMessages.clear([.paste])
+    Task { await model.uploadImage(data, mimeType: "image/png", label: nil, origin: origin) }
   }
   private func receive(_ providers: [NSItemProvider]) -> Bool {
-    guard !disabled else { return false }
-    let expectedTask = model.editor?.id
-    let expectedProfile = model.profile
-    Task { @MainActor in
-      for provider in providers {
-        do {
-          guard model.editor?.id == expectedTask, model.profile == expectedProfile else { return }
-          if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            let data = try await providerData(provider, type: UTType.fileURL.identifier)
-            guard model.editor?.id == expectedTask, model.profile == expectedProfile,
-              let url = URL(dataRepresentation: data, relativeTo: nil)
-            else { return }
-            await receiveFile(url)
-          } else if let type = imageTypes.first(where: {
-            provider.hasItemConformingToTypeIdentifier($0.identifier)
-          }), let mime = type.preferredMIMEType {
-            let data = try await providerData(provider, type: type.identifier)
-            guard model.editor?.id == expectedTask, model.profile == expectedProfile else { return }
-            await model.uploadImage(data, mimeType: mime, label: nil)
-          }
-        } catch { self.error = "Could not read the dropped file. Try Add file." }
-      }
-    }
+    guard !disabled, let origin = model.attachmentInputOrigin() else { return false }
+    // A drop takes a ticket in this editor opening; a newer drop supersedes it (S1-15, S1-16).
+    let ticket = model.attachmentInputMessages.begin(.drop)
+    Task { @MainActor in await model.receiveDroppedAttachments(providers, origin: origin, ticket: ticket) }
     return true
-  }
-  private func providerData(_ provider: NSItemProvider, type: String) async throws -> Data {
-    try await withCheckedThrowingContinuation { continuation in
-      provider.loadDataRepresentation(forTypeIdentifier: type) { data, error in
-        if let data {
-          continuation.resume(returning: data)
-        } else {
-          continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
-        }
-      }
-    }
-  }
-  private func receiveFile(_ url: URL) async {
-    if let type = UTType(filenameExtension: url.pathExtension), imageTypes.contains(type),
-      let mime = type.preferredMIMEType
-    {
-      guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-        size <= 20 * 1024 * 1024,
-        let data = try? Data(contentsOf: url)
-      else {
-        error = "Images must be 20 MiB or smaller."
-        return
-      }
-      await model.uploadImage(
-        data, mimeType: mime, name: url.lastPathComponent)
-    } else {
-      await model.attachPath(url.path, label: nil)
-    }
   }
 }
 

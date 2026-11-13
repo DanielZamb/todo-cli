@@ -93,7 +93,7 @@ struct DependencyGraphView: View {
                     Button("Close") { model.closeDependencyGraph() }.keyboardShortcut(.cancelAction).accessibilityIdentifier("dependency-graph-close")
                 }.compactBounds("dependency-graph-actions")
             }
-        }.padding(16).frame(width: compact ? 393 : 1000, height: compact ? 426 : 680)
+        }.padding(16).frame(width: compact ? 393 : 1000, height: compact ? 426 + model.compactExtraHeight : 680)
             .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .dependencies))
             .accessibilityIdentifier("dependency-graph")
             .task { focused = model.dependencies.graph?.focused.map { .init(task: $0, section: .shown) } }
