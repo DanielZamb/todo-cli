@@ -800,8 +800,12 @@ try {
         assert.equal(duplicate.code, 1, duplicate.stdout + duplicate.stderr);
         assert(
           (duplicate.stdout + duplicate.stderr).includes(
-            "Server database binding or singleton guard unavailable",
+            "Another Todo server is already running on this Todo database. Stop that server, or use it instead of starting a second one.",
           ),
+          duplicate.stdout + duplicate.stderr,
+        );
+        assert(
+          !(duplicate.stdout + duplicate.stderr).includes("UnknownError"),
           duplicate.stdout + duplicate.stderr,
         );
         assert.equal(fs.readFileSync(first.file, "utf8"), recordBefore);

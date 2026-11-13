@@ -17,7 +17,10 @@ import { expect, it } from "@effect/vitest";
 import { endpointPath } from "@todo/domain/database-route";
 import { openStore } from "@todo/domain/store";
 import { Effect } from "effect";
-import { databaseEndpoint } from "../src/database-endpoint.ts";
+import {
+  DatabaseHeldError,
+  databaseEndpoint,
+} from "../src/database-endpoint.ts";
 
 it.live(
   "unavailable descriptor evidence disables publication, proof and authorization",
@@ -125,6 +128,29 @@ it.live(
         rmSync(directory, { recursive: true, force: true });
       }
     }),
+);
+it.live("a second server on one Todo database is told who holds it", () =>
+  Effect.sync(() => {
+    const directory = mkdtempSync(join(tmpdir(), "todo-endpoint-held-"));
+    const path = join(directory, "scratch.db");
+    const first = databaseEndpoint(path);
+    if (!first) throw new Error("Missing endpoint");
+    try {
+      let refusal: unknown;
+      try {
+        databaseEndpoint(path)?.close();
+      } catch (error) {
+        refusal = error;
+      }
+      expect(refusal).toBeInstanceOf(DatabaseHeldError);
+      expect((refusal as Error).message).toBe(
+        "Another Todo server is already running on this Todo database. Stop that server, or use it instead of starting a second one.",
+      );
+    } finally {
+      first.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }),
 );
 // R1: verifyStore's evidence is a new descriptor on the kept file that appears
 // while the store opens. It holds only while nothing else in the server process

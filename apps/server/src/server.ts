@@ -295,7 +295,11 @@ export const serverLayer = (options: {
   Layer.unwrap(
     Effect.gen(function* () {
       const endpoint = yield* Effect.acquireRelease(
-        Effect.try(() => databaseEndpoint(options.path)),
+        Effect.try({
+          try: () => databaseEndpoint(options.path),
+          catch: (cause) =>
+            cause instanceof Error ? cause : new Error(String(cause)),
+        }),
         (endpoint) => Effect.sync(() => endpoint?.close()),
       );
       const outside = options.outsideCommit ?? new OutsideCommit();

@@ -41,6 +41,16 @@ const sameIdentity = (
   b: ReturnType<typeof identity>,
 ) => a.device === b.device && a.inode === b.inode && a.birth === b.birth;
 
+// A second server on one Todo database finds the guard already held.
+export class DatabaseHeldError extends Error {
+  constructor() {
+    super(
+      "Another Todo server is already running on this Todo database. Stop that server, or use it instead of starting a second one.",
+    );
+    this.name = "DatabaseHeldError";
+  }
+}
+
 // SQLite's unix VFS retains the main-file descriptor until connection close.
 // Only descriptors opened by this synchronous store acquisition count as evidence.
 // Nothing else in this process may open the database path in that window (see
@@ -106,7 +116,18 @@ export function databaseEndpoint(path: string) {
         throw new Error("Unsafe server lock file");
       const beforeGuard = descriptors();
       guard = new Database(guardPath);
-      guard.exec("PRAGMA busy_timeout=0; BEGIN EXCLUSIVE");
+      guard.exec("PRAGMA busy_timeout=0");
+      try {
+        guard.exec("BEGIN EXCLUSIVE");
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          "code" in error &&
+          error.code === "SQLITE_BUSY"
+        )
+          throw new DatabaseHeldError();
+        throw error;
+      }
       const afterGuard = descriptors();
       if (
         beforeGuard &&
@@ -277,6 +298,7 @@ export function databaseEndpoint(path: string) {
     guard?.close();
     if (lockDescriptor !== undefined) closeSync(lockDescriptor);
     closeSync(descriptor);
+    if (error instanceof DatabaseHeldError) throw error;
     throw new Error("Server database binding or singleton guard unavailable", {
       cause: error,
     });
