@@ -93,6 +93,8 @@ try:
     run([bin_dir / 'todo', 'login', '--password-stdin', '--profile', 'work', '--format', 'json'], 'login', environment, 'scratch verification passphrase\n')
     fixture = scratch / 'items.json'; fixture.write_text(json.dumps(owner_items('work')))
     run([bin_dir / 'todo', 'import', fixture, '--profile', 'work', '--format', 'json'], 'import', environment)
+    # O3's stop/switch sequence switches to a Profile of its own (the subscribers test deletes personal); it sorts after work, so a deleted Profile still falls back to work.
+    if subscribers_only: run([bin_dir / 'todo', 'init', '--profile', 'zo3switch', '--credential-profile', 'work', '--format', 'json'], 'init-zo3switch', environment)
     tasks = request('GET', '/profiles/work/tasks', credential=owner)
     shape = witness(tasks); assert shape['total'] == 178 and shape['descriptionChars'] == 222312 and shape['attachments'] == 108
     (EVIDENCE / 'fixture.json').write_text(json.dumps(shape, indent=2))
@@ -162,7 +164,7 @@ try:
     if retirement_stress:
         environment['TODO_MAC_RETIREMENT_STRESS'] = '1'
         environment['TODO_MAC_RETIREMENT_COUNTER'] = f'http://127.0.0.1:{proxy.server_port}/counts/health'
-    selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests|ClientNativeSelectionHookTests'
+    selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary|stoppingTheStreamEndsItsServerSubscriptionPromptly' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests|ClientNativeSelectionHookTests'
     run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', selected], 'swift', environment)
     artifact = ROOT / f'apps/macos/.build/{configuration}/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests'
     (EVIDENCE / 'swift-artifact.json').write_text(json.dumps(dict(sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(), configuration=configuration), indent=2))
@@ -196,7 +198,14 @@ try:
         result = dict(result='PASS', errors=0, production_transport=proof, keychain_called=False, app_launched=False, signed=False, pushed=False)
     elif stream_only:
         native = json.loads((EVIDENCE / ('stream-subscribers.json' if subscribers_only else 'stream-native.json')).read_text())
-        if subscribers_only: assert native['counts'] == [0, 1, 1, 1, 1, 1, 1, 0]
+        if subscribers_only:
+            assert native['counts'] == [0, 1, 1, 1, 1, 1, 1, 0]
+            # O3: open server subscriptions 400 ms after stop, reconnect, Profile switch and final stop.
+            for setup in ('production-session', 'client-factory'):
+                stop = json.loads((EVIDENCE / f'stream-stop-subscribers-{setup}.json').read_text())
+                assert stop['counts'] == [0, 1, 1, 0] and stop['before'] == 0, (setup, stop['counts'], stop['before'])
+                assert stop['resumed_from'] == stop['stopped_at'] and stop['event_written_while_stopped_delivered'], setup
+                native[f'stop_{setup}'] = stop
         else: assert native['stream_survived_idle'] and native['ordinary_timeout_observed'] and native['operations_received'] == 1
         result = dict(result='PASS', errors=0, native=native, keychain_called=False, app_launched=False, signed=False, pushed=False)
     else:

@@ -26,9 +26,10 @@ private actor IdleStreamObservation {
         model.replaceCredential(credential); model.selectedView = "all"; model.signedIn = true
         var counts = [Int]()
         func count() async throws -> Int { try await direct.diagnostics_period_snapshot().ok.body.json.clients.count }
+        struct NotLive: Error, CustomStringConvertible { let description: String }
         func live(_ profile: String) async throws {
             for _ in 0..<2000 { if model.profile == profile && model.canWrite && !model.loading { return }; try await Task.sleep(for: .milliseconds(10)) }
-            throw URLError(.timedOut)
+            throw NotLive(description: "waiting for \(profile): profile \(model.profile) connection \(model.connection) loading \(model.loading) canWrite \(model.canWrite) signedIn \(model.signedIn) counts so far \(counts) message \(model.message ?? "nil")")
         }
         counts.append(try await count())
         model.connect(); try await live("work"); counts.append(try await count())
@@ -51,6 +52,69 @@ private actor IdleStreamObservation {
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-subscribers.json"))
         #expect(counts == [0, 1, 1, 1, 1, 1, 1, 0])
     }
+    /// O3 (the stream-wake seat's finding): stopping the stream ends its native request, so the
+    /// server sees the subscription end promptly, without an event. The seat's sequence, sampled
+    /// 400 ms after each step: stop, reconnect, Profile switch, final stop, with the production
+    /// session (diagnostics on) and with the plain client factory (diagnostics off). After the
+    /// reconnect the stream resumes from its last event id: an event written while stopped arrives.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_IDLE_SUBSCRIBERS"] != nil), arguments: ["production-session", "client-factory"])
+    func stoppingTheStreamEndsItsServerSubscriptionPromptly(_ setup: String) async throws {
+        let env = ProcessInfo.processInfo.environment
+        let server = try #require(env["TODO_IDLE_NATIVE_SERVER"].flatMap(URL.init(string:)))
+        let output = URL(fileURLWithPath: try #require(env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"]))
+        let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
+        let direct = todoClient(server: server, credential: credential)
+        let journal = URL(fileURLWithPath: try #require(env["TODO_CLIENT_DIAGNOSTICS_JOURNAL"])).appendingPathComponent("o3-" + setup)
+        try FileManager.default.createDirectory(at: journal, withIntermediateDirectories: true)
+        let configuration = ClientConfiguration(server: server, initialProfile: "work", vaultService: "never-used-o3-" + UUID().uuidString)
+        let model = setup == "production-session"
+            ? TodoModel(configuration: configuration, clientDiagnostics: ClientDiagnosticsRecorder(journalDirectory: journal))
+            : TodoModel(configuration: configuration, clientFactory: { url, _ in todoClient(server: url, credential: credential) })
+        let prefix = "cursor.\(model.configuration.vaultService).\(server.absoluteString)."
+        for profile in ["work", "zo3switch"] { UserDefaults.standard.set(try #require(env["TODO_IDLE_START_CURSOR"]), forKey: prefix + profile) }
+        // The switch saves the chosen Profile in the defaults; the next test must start from its own.
+        let savedProfile = UserDefaults.standard.object(forKey: "profile")
+        defer {
+            for profile in ["work", "zo3switch"] { UserDefaults.standard.removeObject(forKey: prefix + profile) }
+            model.signedIn = false; model.connect()
+            if let savedProfile { UserDefaults.standard.set(savedProfile, forKey: "profile") } else { UserDefaults.standard.removeObject(forKey: "profile") }
+        }
+        model.restoreGeneration = try #require(env["TODO_IDLE_START_GENERATION"])
+        model.replaceCredential(credential); model.selectedView = "all"
+        func count() async throws -> Int { try await direct.diagnostics_period_snapshot().ok.body.json.clients.count }
+        func sample() async throws -> Int { try await Task.sleep(for: .milliseconds(400)); return try await count() }
+        struct NotLive: Error, CustomStringConvertible { let description: String }
+        func live(_ profile: String, _ step: String) async throws {
+            for _ in 0..<2000 { if model.profile == profile && model.connection == .live && model.canWrite && !model.loading { return }; try await Task.sleep(for: .milliseconds(10)) }
+            throw NotLive(description: "\(setup) \(step): profile \(model.profile) connection \(model.connection) loading \(model.loading) canWrite \(model.canWrite) signedIn \(model.signedIn) message \(model.message ?? "nil")")
+        }
+        let before = try await count()
+        model.signedIn = true; model.connect(); try await live("work", "first connect")
+        try await Task.sleep(for: .milliseconds(400))
+        model.signedIn = false; model.connect()
+        let stopped = try await sample()
+        let stoppedAt = try #require(model.lastSequence)
+        let title = "O3 written while stopped " + UUID().uuidString
+        _ = try await direct.tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: title)))
+        model.signedIn = true; model.connect(); try await live("work", "reconnect")
+        let reconnected = try await sample()
+        let resumedFrom = model.resumeSequence
+        for _ in 0..<500 { if model.tasks.contains(where: { $0.title == title }) { break }; try await Task.sleep(for: .milliseconds(10)) }
+        let delivered = model.tasks.contains { $0.title == title }
+        model.changeProfile("zo3switch"); try await live("zo3switch", "switch")
+        let switched = try await sample()
+        model.signedIn = false; model.connect()
+        let finalStopped = try await sample()
+        let counts = [stopped, reconnected, switched, finalStopped]
+        let receipt: [String: Any] = ["setup": setup, "labels": ["stopped", "reconnected", "switched_profile", "final_stopped"], "counts": counts, "before": before,
+                                      "resumed_from": resumedFrom ?? "nil", "stopped_at": stoppedAt, "event_written_while_stopped_delivered": delivered, "sample_ms": 400]
+        try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-stop-subscribers-\(setup).json"))
+        #expect(before == 0)
+        #expect(counts == [0, 1, 1, 0], "\(setup): open subscriptions after stop, reconnect, switch, final stop: \(counts)")
+        #expect(resumedFrom == stoppedAt, "\(setup): the reconnect resumes from the last event id")
+        #expect(delivered, "\(setup): the event written while stopped arrives after the reconnect")
+    }
+
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_IDLE_NATIVE_SERVER"] != nil))
     func nativeIdleStreamOutlivesOrdinaryTimeoutButOrdinaryReadsStillTimeOut() async throws {
         let environment = ProcessInfo.processInfo.environment
