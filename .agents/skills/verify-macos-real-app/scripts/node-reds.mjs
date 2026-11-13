@@ -13,6 +13,7 @@ try {
     ['receipt-stages.mjs', 'receipt-stages.test.mjs', 'completeRecipe: successful && ', 'completeRecipe: '],
     ['process-policy.mjs', 'process-policy.test.mjs', 'const result = { HOME:', 'const result = { ...process.env, HOME:'],
     ['mach-o-imports.mjs', 'mach-o-imports.test.mjs', "return names.map(name => name.startsWith('_') ? name.slice(1) : name);", 'return [];'],
+    ['production-outcomes.mjs', 'production-outcomes.test.mjs', 'sameOutcomes: !onlyBase.length && !onlyCandidate.length && !changed.length', 'sameOutcomes: true'],
   ]) {
     if (module === 'process-policy.mjs') fs.copyFileSync(path.resolve('.agents/skills/verify-macos-real-app/scripts/bun-policy.mjs'), directory + '/bun-policy.mjs');
     const sourcePath = path.resolve('.agents/skills/verify-macos-real-app/scripts', module);

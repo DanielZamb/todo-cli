@@ -68,6 +68,10 @@ Security credential trap and denies unlisted credential/settings/cloud brokers.
 Its fixed frontmost query runs in a separate, hash-pinned metadata child with
 its own restrictive profile. The child returns bounded JSON and exits without
 passing a broker handle; the app/server retain their stricter broker policy.
+Production state/offscreen preservation runs outside that strict profile,
+alternating the base and candidate and comparing every test outcome. A narrow
+deny-only guard for real Todo/Keychain access is kept only if it preserves the
+base outcomes; test processes retain credential traps and descriptor auditing.
 The corrected implementation remains under qualification, with visible runs
 and V02 held. See [ADR-0021](adr/0021-separate-mac-verification-app.md)
 and [verify-macos-real-app](../.agents/skills/verify-macos-real-app/SKILL.md).

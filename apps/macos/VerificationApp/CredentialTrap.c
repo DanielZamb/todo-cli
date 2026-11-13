@@ -39,9 +39,11 @@ const void *todo_verification_handler(const char *name) {
 }
 void todo_verification_trap_ready(void) {}
 
+#ifndef TODO_CREDENTIAL_TRAPS_ONLY
 extern const void *NSTemporaryDirectory(void);
 extern const void *verification_temporary_directory(void);
 __attribute__((used, section("__DATA,__interpose")))
 static const struct { const void *replacement; const void *original; } temporary_directory_binding = {
     (const void *)verification_temporary_directory, (const void *)NSTemporaryDirectory
 };
+#endif

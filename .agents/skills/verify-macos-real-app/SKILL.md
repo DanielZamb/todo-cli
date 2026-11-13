@@ -20,10 +20,10 @@ Read the [report](../../../docs/decisions/ui-speed/mac-verification-app-report.m
 and [guard design](../../../docs/decisions/ui-speed/mac-verification-guard-design.md)
 for the current evidence. The frozen 99f6ec69 headless run passed the compiled
 guards, trap/removal sweep and built-app manifest check, but failed in the
-production recipe. The corrected development launcher reaches the state tests,
-which fail under the test profile's broker denials. The import audit also needs
-its corrected names-only parser qualified from a clean head. No full or visible
-helper run is qualified for this correction.
+production recipe. The coordinator then separated production preservation
+from the app's strict profile. The new alternating comparison and corrected
+names-only import audit still need qualification from a clean head. No full or
+visible helper run is qualified for this correction.
 
 ## Launch
 
@@ -154,13 +154,29 @@ existing evidence. Before retiring superseded build outputs, require lsof to
 show no open file, preserve required symbol inputs by hash and record free disk
 before/after. Keep at least the 30 GiB soft floor.
 
-The production-proofs replacement explicitly links the isolation library,
-clears inherited configuration and runs the original state/offscreen recipes
-through a launcher adapter. Its C memory-defaults and temporary-directory
-component has passed; the Swift state suite ran and failed on this correction.
-The offscreen recipe remains unrun. See the report's broker/file denial evidence
-and pending production-test boundary decision; do not add app broker permissions
-to make these tests pass.
+The strict profile governs the verification app and its server child. Production
+state/offscreen suites run outside it, using the original scratch-HOME recipes
+through swift-slot.sh. production-proofs alternates base 8b9be429 and the frozen
+candidate, first without a suite sandbox and then with a deny-only profile for
+the real Todo/Keychain directories and Keychain Mach services. Every test must
+have the same identity and outcome. Record load and shared failures; a failure
+only on the candidate is a finding. Keep the deny-only profile only if it
+changes no base outcome; otherwise report its rejection and use the unguarded
+comparison. No broker and no app/server permission is added.
+
+The production audit library has credential traps and a 10 ms descriptor audit,
+without replacing defaults, temporary storage or production sources. The audit
+is sampled and cannot exclude a transient open between samples. The retained
+deny-only profile independently denies protected file access continuously.
+Each test process must verify its trap bindings and report a completed descriptor
+audit. An original credential call, missing audit or differing test list fails
+preservation. The corrected comparison still needs its frozen-head proof.
+The current late-load prerequisite refuses before a Swift suite: the standalone
+startup-linked audit checks all 1,638 bindings, but the dlopen control exits 79
+at AuthorizationCopyInfo. SwiftPM's test-bundle load similarly refused before
+any test. This does not qualify credential interposition in those test hosts.
+Startup loader settings have not been tried; their use needs the coordinator's
+ruling under the existing subprocess-environment constraint. Keep the refusal.
 The adapter substitutes the verified local resource copier for the recipe's
 resource command and records the expanded arguments, environment and exits.
 Historical receipts retain their original source-head attribution.

@@ -2,9 +2,10 @@ import json
 import os
 from pathlib import Path
 import runpy
+import re
 import subprocess
 import sys
-import urllib.parse
+import xml.etree.ElementTree as ET
 
 recipe, evidence, configuration = sys.argv[1:]
 settings = json.loads(Path(configuration).read_text())
@@ -27,15 +28,9 @@ class ExplicitProcess(Original):
             raise RuntimeError('A production proof HOME escaped scratch')
         env['CFFIXED_USER_HOME'] = env['HOME']
         env['TMPDIR'] = base['TMPDIR']
-        env.update(TODO_PROOF_ROOT=str(proof), TODO_PROOF_REPOSITORY=str(root), TODO_PROOF_EVIDENCE=settings['evidence'])
-        ports = set()
-        for key, value in env.items():
-            if key.startswith('TODO_') and value.startswith('http://127.0.0.1:'):
-                url = urllib.parse.urlparse(value)
-                if url.port: ports.add(str(url.port))
-        env['TODO_PROOF_PORTS'] = ','.join(sorted(ports))
+        env.update(TODO_PROOF_AUDIT=settings['audit'], TODO_PROOF_OWNER_HOME=settings['ownerHome'])
         if argv[:2] == ['node', 'apps/macos/scripts/graph-resources.mjs']:
-            argv = ['node', str(root / '.agents/skills/verify-macos-real-app/scripts/bundle-graph.mjs'), *argv[2:]]
+            argv = ['node', settings['graphCopier'], *argv[2:]]
         name = argv[0]
         if argv[:2] == ['bun', 'build'] and '--compile' in argv:
             argv[2:2] = ['--no-env-file', '--config=/dev/null', '--no-macros', '--no-compile-autoload-dotenv', '--no-compile-autoload-bunfig', '--no-compile-autoload-tsconfig', '--no-compile-autoload-package-json']
@@ -46,12 +41,19 @@ class ExplicitProcess(Original):
             if resolved.suffix == '.sh': argv = ['/bin/sh', str(resolved), *argv[1:]]
             else: raise RuntimeError('Unapproved relative executable: ' + name)
         swift = name == 'swift' or name == 'xcrun' and len(argv) > 1 and argv[1].startswith('swift')
+        self._test_xml = None
         if name == 'swift':
+            if argv[1] in ['test', 'build']: argv += ['--disable-keychain', '--disable-netrc']
             if argv[1] in ['test', 'build'] and '--show-bin-path' not in argv:
                 argv += ['-Xlinker', '-needed_library', '-Xlinker', settings['library']]
+            if argv[1] == 'test':
+                self._test_xml = str(Path(settings['evidence']) / ('tests-' + str(len(records)) + '.xml'))
+                argv += ['--xunit-output', self._test_xml]
             argv = ['/usr/bin/xcrun', 'swift', *argv[1:]]
         if swift:
             if any(Path(settings[key]).exists() for key in ['hold', 'parentHold']): raise RuntimeError('Coordinator holds new Swift jobs')
+            if settings['denyProfile']:
+                argv = ['/usr/bin/sandbox-exec', '-f', settings['denyProfile'], *argv]
             argv = ['/bin/sh', str(root / 'scripts/swift-slot.sh'), *argv]
         self._swift_job = swift
         self._queue_budget_added = False
@@ -67,11 +69,24 @@ class ExplicitProcess(Original):
             argv = ['/usr/bin/sandbox-exec', '-p', profile, *argv]
         options['env'] = env
         super().__init__(argv, *positional, **options)
-        records.append({'argv': argv, 'environment': env, 'pid': self.pid})
+        output = options.get('stdout')
+        records.append({'argv': argv, 'environment': env, 'pid': self.pid, 'testXML': self._test_xml, 'logFile': getattr(output, 'name', None), 'hostLoad': os.getloadavg()})
         (Path(settings['evidence']) / 'expanded-commands.json').write_text(json.dumps(records, indent=2))
     def _record_exit(self):
         for row in records:
-            if row['pid'] == self.pid: row['exit'] = self.returncode
+            if row['pid'] == self.pid:
+                row['exit'] = self.returncode
+                row['hostLoadAfter'] = os.getloadavg()
+                if self._test_xml and Path(self._test_xml).exists():
+                    cases = ET.parse(self._test_xml).getroot().iter('testcase')
+                    row['outcomes'] = [{'id': case.attrib.get('classname', '') + '/' + case.attrib['name'], 'outcome': 'failed' if case.find('failure') is not None or case.find('error') is not None else 'skipped' if case.find('skipped') is not None else 'passed'} for case in cases]
+                    if row['logFile']:
+                        log = Path(row['logFile']).read_text()
+                        xctest = re.findall(r'Executed (\d+) tests?', log)
+                        testing = re.findall(r'Test run with (\d+) tests?', log)
+                        row['minimumReportedTests'] = (int(xctest[-1]) if xctest else 0) + (int(testing[-1]) if testing else 0)
+                        if len(row['outcomes']) < row['minimumReportedTests']:
+                            raise RuntimeError('XML omitted reported tests: ' + self._test_xml)
         (Path(settings['evidence']) / 'expanded-commands.json').write_text(json.dumps(records, indent=2))
     def wait(self, *args, **kwargs):
         if self._swift_job and not self._queue_budget_added:

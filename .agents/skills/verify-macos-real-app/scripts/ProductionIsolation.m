@@ -1,63 +1,83 @@
-#import <Foundation/Foundation.h>
-#import <objc/runtime.h>
+#include <dlfcn.h>
 #include <fcntl.h>
+#include <libproc.h>
+#include <pthread.h>
+#include <stdatomic.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/proc_info.h>
 #include <sys/stat.h>
 #include <unistd.h>
-extern int sandbox_init(const char *, unsigned long long, char **);
-extern void verification_temporary_bind(int);
 
-@interface VerificationProofDefaults : NSUserDefaults
-@property(nonatomic, strong) NSMutableDictionary *memory;
-@property(nonatomic, strong) NSRecursiveLock *mutex;
-@end
-@implementation VerificationProofDefaults
-- (id)init { self = [super initWithSuiteName:@"local.todo.production-proof.memory"]; if (self) { _memory = [NSMutableDictionary dictionary]; _mutex = [NSRecursiveLock new]; } return self; }
-- (id)objectForKey:(NSString *)key { [_mutex lock]; id value = _memory[key]; [_mutex unlock]; return value; }
-- (void)setObject:(id)value forKey:(NSString *)key { [self willChangeValueForKey:key]; [_mutex lock]; if (value) _memory[key] = value; else [_memory removeObjectForKey:key]; [_mutex unlock]; [self didChangeValueForKey:key]; [[NSNotificationCenter defaultCenter] postNotificationName:NSUserDefaultsDidChangeNotification object:self]; }
-- (void)removeObjectForKey:(NSString *)key { [self setObject:nil forKey:key]; }
-- (NSDictionary *)dictionaryRepresentation { [_mutex lock]; NSDictionary *value = [_memory copy]; [_mutex unlock]; return value; }
-- (void)registerDefaults:(NSDictionary *)values { [_mutex lock]; for (NSString *key in values) if (!_memory[key]) _memory[key] = values[key]; [_mutex unlock]; }
-- (void)addSuiteNamed:(NSString *)name {}
-- (void)removeSuiteNamed:(NSString *)name {}
-- (NSDictionary *)volatileDomainForName:(NSString *)name { return @{}; }
-- (void)setVolatileDomain:(NSDictionary *)value forName:(NSString *)name {}
-- (void)removeVolatileDomainForName:(NSString *)name {}
-- (NSDictionary *)persistentDomainForName:(NSString *)name { return nil; }
-- (void)setPersistentDomain:(NSDictionary *)value forName:(NSString *)name {}
-- (void)removePersistentDomainForName:(NSString *)name {}
-- (BOOL)synchronize { return YES; }
-@end
-static NSUserDefaults *memory;
-static NSString *temporary;
-static id isolatedDefaults(id receiver, SEL selector) { return memory; }
-static id isolatedTemporary(id receiver, SEL selector) { return [NSURL fileURLWithPath:temporary isDirectory:YES]; }
-static NSString *literal(NSString *value) { return [NSString stringWithFormat:@"\"%@\"", [[value stringByReplacingOccurrencesOfString:@"\\" withString:@"\\\\"] stringByReplacingOccurrencesOfString:@"\"" withString:@"\\\""]]; }
+extern const void *todo_verification_handler(const char *);
+static pthread_t watcher;
+static atomic_int stopped;
+static int receipt = -1;
+static char home[4096];
+static unsigned samples, descriptors, bindings;
 
-__attribute__((constructor)) static void isolateProductionProof(void) {
- @autoreleasepool {
-  const char *base = getenv("TODO_PROOF_ROOT"), *repository = getenv("TODO_PROOF_REPOSITORY");
-  if (!base || !repository || strncmp(base, "/private/tmp/todo-mac-verify-", 29)) _exit(78);
-  int scope = open(base, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC); struct stat info; char actual[4096];
-  if (scope < 0 || fstat(scope, &info) || info.st_uid != getuid() || (info.st_mode & 077) || fcntl(scope, F_GETPATH, actual) || strcmp(actual, base)) _exit(78);
-  temporary = [[NSString stringWithUTF8String:base] stringByAppendingPathComponent:@"tmp"];
-  int temp = open(temporary.fileSystemRepresentation, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
-  verification_temporary_bind(temp); close(temp); close(scope);
-  NSString *root = [NSString stringWithUTF8String:base], *repo = [NSString stringWithUTF8String:repository];
-  NSMutableString *policy = [NSMutableString stringWithFormat:@"(version 1)(allow default)(deny file-read*)(deny file-write*)(allow file-read-data (literal \"/\"))(allow file-read* (subpath \"/System\") (subpath \"/usr/lib\") (subpath \"/usr/share\") (subpath \"/Library/Apple\") (subpath \"/Library/Fonts\") (subpath \"/Applications/Xcode.app\"))(allow file-read* (literal \"/dev/null\" \"/dev/random\" \"/dev/urandom\"))(allow file-write-data (literal \"/dev/null\"))(allow file-read* (subpath %@))(allow file-read* file-write* (subpath %@))", literal(repo), literal(root)];
-  [policy appendFormat:@"(allow file-write* (subpath %@))", literal([repo stringByAppendingPathComponent:@"apps/macos/DerivedData/V01Proof"])];
-  NSString *evidence = [NSString stringWithUTF8String:getenv("TODO_PROOF_EVIDENCE") ?: ""];
-  if (![evidence hasPrefix:[repo stringByAppendingPathComponent:@"docs/evidence/mac-verification-app/"]]) _exit(78);
-  [policy appendFormat:@"(allow file-write* (subpath %@))", literal(evidence)];
-  [policy appendFormat:@"(deny process-exec)(allow process-exec (subpath %@))(deny network-outbound)", literal(root)];
-  NSString *ports = [NSString stringWithUTF8String:getenv("TODO_PROOF_PORTS") ?: ""];
-  for (NSString *port in [ports componentsSeparatedByString:@","]) { NSInteger value = port.integerValue; if (value > 0 && value <= 65535 && [[NSString stringWithFormat:@"%ld", (long)value] isEqualToString:port]) [policy appendFormat:@"(allow network-outbound (remote ip4 \"localhost:%ld\"))", (long)value]; }
-  [policy appendString:@"(deny mach-lookup)(allow mach-lookup (global-name \"com.apple.windowserver.active\" \"com.apple.windowserver\" \"com.apple.FontObjectsServer\"))"];
-  char *error = NULL;
-  if (sandbox_init(policy.UTF8String, 0, &error)) { if (error) write(2, error, strlen(error)); _exit(78); }
-  memory = [VerificationProofDefaults new];
-  method_setImplementation(class_getClassMethod(NSUserDefaults.class, @selector(standardUserDefaults)), (IMP)isolatedDefaults);
-  method_setImplementation(class_getInstanceMethod(NSFileManager.class, @selector(temporaryDirectory)), (IMP)isolatedTemporary);
-  static const char receipt[] = "production-proof isolation: linked credential trap, memory defaults, scratch temp/files and credential-broker denials installed\n";
-  write(2, receipt, sizeof(receipt) - 1);
+void verification_child_cleanup(void) {}
+
+static int beneath(const char *path, const char *root) {
+ size_t length = strlen(root);
+ return !strncmp(path, root, length) && (!path[length] || path[length] == '/');
+}
+static int protected_path(const char *path) {
+ char root[8192];
+ const char *suffixes[] = { "/.todo-cli", "/Library/Keychains" };
+ for (unsigned i = 0; i < sizeof(suffixes) / sizeof(*suffixes); i++) {
+  snprintf(root, sizeof(root), "%s%s", home, suffixes[i]); if (beneath(path, root)) return 1;
+  snprintf(root, sizeof(root), "/System/Volumes/Data%s%s", home, suffixes[i]); if (beneath(path, root)) return 1;
  }
+ const char *system[] = { "/Library/Keychains", "/System/Library/Keychains", "/private/var/Keychains", "/var/Keychains" };
+ for (unsigned i = 0; i < sizeof(system) / sizeof(*system); i++) if (beneath(path, system[i])) return 1;
+ return 0;
+}
+static void inspect_descriptors(void) {
+ int capacity = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, NULL, 0);
+ if (capacity <= 0) _exit(78);
+ capacity += 32 * sizeof(struct proc_fdinfo);
+ struct proc_fdinfo *files = malloc(capacity); if (!files) _exit(78);
+ int bytes = proc_pidinfo(getpid(), PROC_PIDLISTFDS, 0, files, capacity); if (bytes <= 0 || bytes >= capacity) _exit(78);
+ for (unsigned i = 0; i < bytes / sizeof(*files); i++) {
+  if (files[i].proc_fdtype != PROX_FDTYPE_VNODE) continue;
+  struct vnode_fdinfowithpath value;
+  int size = proc_pidfdinfo(getpid(), files[i].proc_fd, PROC_PIDFDVNODEPATHINFO, &value, sizeof(value));
+  if (size != sizeof(value)) continue;
+  descriptors++;
+  if (protected_path(value.pvip.vip_path)) {
+   dprintf(receipt, "{\"pid\":%d,\"protectedDescriptor\":true,\"fd\":%d}\n", getpid(), files[i].proc_fd);
+   fsync(receipt); _exit(78);
+  }
+ }
+ free(files); samples++;
+}
+static void *watch(void *unused) {
+ while (!atomic_load(&stopped)) { inspect_descriptors(); usleep(10000); }
+ return NULL;
+}
+__attribute__((constructor)) static void begin_audit(void) {
+ const char *evidence = getenv("TODO_PROOF_AUDIT"), *owner = getenv("TODO_PROOF_OWNER_HOME");
+ if (!evidence || !owner || owner[0] != '/' || strlen(owner) >= sizeof(home)) _exit(78);
+ strcpy(home, owner);
+ struct stat info;
+ int directory = open(evidence, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+ if (directory < 0 || fstat(directory, &info) || info.st_uid != getuid() || (info.st_mode & 077)) _exit(78);
+ char name[64]; snprintf(name, sizeof(name), "process-%d.jsonl", getpid());
+ receipt = openat(directory, name, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600); close(directory);
+ if (receipt < 0) _exit(78);
+#define TRAP(api) if (dlsym(RTLD_DEFAULT, #api) != todo_verification_handler(#api)) { dprintf(receipt, "{\"pid\":%d,\"missingCredentialBinding\":\"%s\",\"originalCalled\":false}\n", getpid(), #api); dprintf(2, "Production audit refused: credential binding absent: %s; no original call attempted.\n", #api); _exit(79); } else bindings++;
+#include "CredentialSymbols.inc"
+#undef TRAP
+ if (dlsym(RTLD_DEFAULT, "SecTrustReportNetworkingAnalytics") != todo_verification_handler("SecTrustReportNetworkingAnalytics")) _exit(79);
+ bindings++;
+ inspect_descriptors();
+ dprintf(receipt, "{\"pid\":%d,\"started\":true,\"credentialBindingsChecked\":%u,\"protectedDescriptor\":false,\"intervalMicroseconds\":10000}\n", getpid(), bindings);
+ if (pthread_create(&watcher, NULL, watch, NULL)) _exit(78);
+}
+__attribute__((destructor)) static void end_audit(void) {
+ atomic_store(&stopped, 1); pthread_join(watcher, NULL); inspect_descriptors();
+ dprintf(receipt, "{\"pid\":%d,\"finished\":true,\"samples\":%u,\"descriptorsInspected\":%u,\"protectedDescriptor\":false,\"credentialBindingsChecked\":%u}\n", getpid(), samples, descriptors, bindings);
+ fsync(receipt); close(receipt);
 }

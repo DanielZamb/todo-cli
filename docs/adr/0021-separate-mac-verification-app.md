@@ -90,3 +90,16 @@ correction and its qualification gaps are recorded in the
 The earlier visible readback remains historical UI evidence; it does not prove
 the corrected boundary. The current verification skill is draft until its own
 corrected recipe passes end to end and the coordinator releases the reviews.
+
+The strict profile governs the verification app and its server child. Production
+state and offscreen suites run outside that profile and compare the unchanged
+test list and each outcome against base 8b9be429, alternating base and candidate.
+Use the existing scratch-HOME, unsigned recipes through the shared Swift slot.
+A deny-only profile protecting the real Todo and Keychain directories and
+Keychain Mach services is retained only if it changes no base test outcome
+against the unguarded base. Otherwise discard it and report the difference;
+retain scratch stores, credential traps that do not change outcomes and an
+audit of the test process's descriptors. Record load with any shared failure;
+a candidate-only failure is a finding. No service broker is introduced. This
+clarifies the boundary approved on 2026-11-12 and grants the verification app
+or its server no additional access.

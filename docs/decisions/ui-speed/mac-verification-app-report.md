@@ -1,6 +1,71 @@
 # Mac verification app V01 safety correction
 
-Current status: blocked on production-suite confinement compatibility, not
+Current stop: production credential instrumentation is unproved in SwiftPM's
+late-loaded test hosts. No new frozen full recipe or visible launch is qualified.
+The app and its server profiles are unchanged. No broker was introduced.
+
+The production-boundary ruling is encoded in ADR-0021, the architecture and
+skill. The alternating comparison records exact XML identities/outcomes and
+load, and rejects differing results even if totals agree. Its literal tests
+pass; the accept-differences mutation fails at 1. The deny-only C policy control
+passes at 0; removing its file or service denial fails at 1. The descriptor
+auditor's ordinary control passes at 0; holding an unread synthetic protected
+file exits 78; removing that detector makes the matching test fail at 1.
+These are development component receipts, not production preservation.
+
+The base 8b9be429 test package compiled successfully at exit 0 after the shared
+Swift wait. Its two test-host processes then refused in the new binding check
+before any test ran, leaving no XML results. The original state command and
+outer diagnostic exit 1. A small C dlopen reproduction exits 79 on the missing
+AuthorizationCopyInfo binding; the literal expected-zero test fails at 1.
+It does not invoke the original API. The same audit linked at executable
+startup verifies all 1,638 bindings and passes. The audit library loading is
+therefore not equivalent in the two hosts. Receipts:
+production-comparison-probe-e32843ac-v2,
+production-comparison-controls-e32843ac and production-late-binding-red-e32843ac.
+All name the development tooling head e32843ac, the committed base and the
+actual native-cache source head 99f6ec69. Nothing is restamped.
+
+The earlier strict production-development receipt's
+originalCredentialCalls=false field did not verify late interposition and is
+withdrawn as API-entry evidence. Its strict file/broker denial was independent;
+this correction does not disprove the standalone verification-app/native
+controls. No production preservation claim is made from those old state runs.
+
+Dropping the nonworking trap library would leave the required no-credential-
+binding attestation unsupported for the unguarded base comparison. A fixed,
+hash-pinned startup-loading setting from a fresh environment is a possible
+next step, but the earlier class-A subprocess instruction excludes DYLD
+variables. No such setting or startup launcher has been implemented or tried.
+The coordinator must rule before that step. No test service boundary is
+proposed. Dynamic rebinding is not selected: Apple's
+[dyld header](https://github.com/apple-oss-distributions/dyld/blob/main/include/mach-o/dyld_priv.h)
+explains that it cannot repair pointers a running program already copied, so it
+would not establish startup coverage by itself.
+
+Pending: that instrumentation ruling, the unguarded/deny-only base and candidate
+comparison, a clean frozen full headless pass with the corrected import audit,
+and the final root check. The visible recipe and V02 remain held. The baseline
+build/cache is retained for resumption so the same source need not be rebuilt.
+Superseded e32843ac candidate binaries were retired only after supported lsof
++D returned 1 with empty stdout/stderr. Hashes were kept for 361,659,272 logical
+bytes. Immediate free-space samples were 50,620,669,952 / 51,022,979,072 bytes,
+or 47.14 / 47.52 GiB. Shared-volume activity can affect that difference.
+Receipt: production-superseded-cache-retirement-e32843ac.json. No own Swift
+job remains running.
+
+Resumed under the coordinator's production-suite ruling. The strict profile
+continues to govern only the verification app and its server child. Production
+state/offscreen preservation runs outside it, alternating base 8b9be429 and
+the candidate. A narrow deny-only guard for real Todo/Keychain paths and
+Keychain services is kept only if it changes no base outcome. No broker is
+introduced. The revised harness keeps the production sources, defaults and
+temporary-directory behavior, links credential traps and samples descriptors.
+Its exact-test-list comparison has passing literal tests; a mutation that
+accepts differing outcomes fails at exit 1. New frozen qualification is pending.
+The earlier block and all earlier receipts below retain their attribution.
+
+Previous blocked handoff at e32843ac: production-suite confinement compatibility, not
 qualified. The runtime artifacts and frozen controls belong to
 `99f6ec69f098aa22964adf9df6deacbea99e641b`. Subsequent audit/launcher corrections
 are diagnostic changes and must qualify from a new clean head. All seven

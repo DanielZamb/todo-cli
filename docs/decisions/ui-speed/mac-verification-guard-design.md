@@ -90,6 +90,9 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Streaming HTTP | SSE silently constructs an ordinary default session | Verification stream session uses the same ephemeral policy and preserves per-stream cancellation; runtime qualification pending |
 | Credential symbols | A handwritten list omits a linked entry point | SDK export/runtime census plus built-binary import enumeration; every present binding pointer-tested and individually removed |
 | Import enumeration | A platform-specific nm output format silently produces an empty import list | Request names-only output, reject unexpected columns and require every generated binding in the library's imports; literal Darwin-output test and empty-parser mutation |
+| Production preservation | Totals match but a test disappeared or its outcome changed | Compare exact XML test identities and outcomes, require coverage of console-reported test counts, and fail the accept-differences mutation |
+| Production deny-only guard | The guard changes framework behavior and hides a candidate regression | Alternating unguarded and guarded base/candidate recipes; retain the guard only if base outcomes match, otherwise report its rejection and use unguarded preservation |
+| Production descriptor audit | A loaded library reports safety without checking the process's real descriptors | Verify trap pointers and sample self proc_pidfdinfo; held synthetic protected-file control exits 78, detector removal makes that matching test fail; disclose sampling limits |
 | Networking analytics | CFNetwork attempts Security telemetry, or a denial silently forwards it to a service | A local false-return binding ignores arguments and never calls the original; inspect the compiled body before the pointer/result probe; binding removal and result inversion fail |
 | Pointer test | Removing a trap calls the real credential API | Compare expected unique handler before invocation; missing binding exits 1 without calling original |
 | Framework credentials | A framework bypasses direct Sec imports via a broker | Deny all unlisted Mach lookup, Keychain paths; safe policy queries include securityd.xpc, autofill, Passkeys, CloudKit and ubiquity |
@@ -162,17 +165,20 @@ checks address only their own literal-loopback ports. Raw external app
 invocations with hostile loader injection are outside an intact-process trust
 boundary; the supported helper removes those settings before exec.
 
-The production-proof replacement explicitly links its isolation library and
-runs the original recipes through a launcher adapter. It uses memory defaults,
-scratch temporary storage, credential traps and sandboxed scratch servers.
-The adapter substitutes the verified local resource copier for the original
-resource command. Its C component passed. The original state suite subsequently
-ran under the linked test profile and failed at file-type, offscreen-render,
-private-pasteboard and process-resource checks, plus a search timeout. The
-offscreen recipe has not run. Own-PID kernel evidence shows denied framework
-brokers and /dev/fd. No new allowance was added. A production-test service
-boundary needs a coordinator decision before those suites can qualify; the
-app/server LaunchServices and credential-broker denials remain binding.
+The coordinator ruled that production preservation suites run outside the
+verification app's strict profile. No service boundary or broker is introduced.
+The original state/offscreen recipes alternate base 8b9be429 and the candidate;
+every test identity and outcome is compared, with load and shared failures
+retained. A deny-only policy protects real Todo/Keychain paths and Keychain Mach
+services, and is retained only if it changes no base outcome. Otherwise it is
+dropped and that rejection is explicit. A linked trap-only library verifies
+its bindings and samples the process's own descriptors every 10 ms, without
+replacing defaults or temporary storage. Sampling cannot exclude a short-lived
+open between samples; the retained deny-only guard supplies continuous denial.
+Original credential calls or missing audit completion fail preservation.
+The original resource command uses the existing hash-verified local copier.
+The previous strict-suite failure remains historical evidence; it does not
+justify weakening the app/server profiles or granting their denied brokers.
 
 The widened-root controls replace the literal rule with subpath "/" or widen
 file-read-data to file-read*. The same expected-zero boundary test must fail.

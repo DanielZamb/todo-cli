@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import { compareOutcomes } from './production-outcomes.mjs';
+const base = [{ id: 'Model/search', outcome: 'passed' }, { id: 'Model/copy', outcome: 'failed' }, { id: 'Render/graph', outcome: 'skipped' }];
+assert.deepEqual(compareOutcomes(base, [...base].reverse()), { sameList: true, sameOutcomes: true, onlyBase: [], onlyCandidate: [], changed: [], sharedFailures: ['Model/copy'], tests: 3 });
+assert.deepEqual(compareOutcomes(base, [base[0], base[2]]).onlyBase, ['Model/copy']);
+assert.equal(compareOutcomes(base, [base[0], base[2]]).sameOutcomes, false);
+assert.deepEqual(compareOutcomes(base, [...base, { id: 'Model/new', outcome: 'passed' }]).onlyCandidate, ['Model/new']);
+assert.deepEqual(compareOutcomes(base, [base[0], { id: 'Model/copy', outcome: 'passed' }, base[2]]).changed, [{ id: 'Model/copy', base: 'failed', candidate: 'passed' }]);
+assert.deepEqual(compareOutcomes(base, [{ id: 'Model/search', outcome: 'failed' }, base[1], base[2]]).changed, [{ id: 'Model/search', base: 'passed', candidate: 'failed' }]);
+assert.throws(() => compareOutcomes([], base), /actual test/);
+assert.throws(() => compareOutcomes(base, [base[0], base[0]]), /Duplicate/);
+console.log('PASS: exact identities and outcomes, including shared failures, omissions and candidate-only failures');
