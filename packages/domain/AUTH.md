@@ -113,25 +113,33 @@ it: one from a writer that commits more than a minute after reading its clock,
 or from a writer whose clock is behind (or steps back). The next repeat then
 appends one more row. The walk reads a row's event only if it is at most 4,096
 bytes; a larger row (a Task with a long description) is skipped unread, its
-size taken from the record header, so it neither matches nor hides. A refusal
-is always far smaller.
+size taken from the record header. A refusal is always far smaller (161 bytes
+at most). So that a History of long descriptions cannot carry the walk far past
+the window, every 257th large row the walk meets (a count small rows do not
+reset) is read for its kind and stamp and treated as ordinary evidence. A large
+row can therefore hide a refusal only when it is that sampled row: stamped
+before the horizon, committed after the refusal, and the 257th large row the
+walk meets since its last sample.
 
 The walk visits every row of that Profile between the newest row and the match
 or the stop. A repeat whose match is the newest row costs one step, but rows
 committed after the first refusal (an import in the same minute, for example)
 are passed again by every repeat until the minute ends. That holds no write
 lock, but on the server it runs on the one thread that serves every request.
-Before the size bound, the cost followed the bytes of those rows: the review
-seat measured each repeat at 7.9 ms after 5,000 imported Tasks with
-200-character descriptions, and at 57 to 67 ms after one import of 1,000 Tasks
-with 100,000-character descriptions, whose first refusal took 139 to 151 ms,
-about 70 ms of it under the write lock. With the bound (measured 2026-11-13,
-same method): after that 1,000-Task import, a repeat costs 0.34 ms (p99 0.44)
-and a first refusal 4.4 ms, 2.7 ms of it under the lock. Rows under the bound
-still cost what they cost: after 5,000 Tasks with 200-character descriptions,
-6.6 ms per repeat and an 18.1 ms first refusal, 10.2 ms of it under the lock.
-The cost now follows the number of rows of at most 4,096 bytes in the window,
-not their total size.
+The cost follows three things: the rows of at most 4,096 bytes in the window,
+which are read; at most one large row read per 256 skipped; and at most 256
+large rows (plus the one read) beyond the horizon, where a run of large
+recording-clock rows ends the walk. The review seat measured, before the size
+bound, 7.9 ms per repeat after 5,000 imported Tasks with 200-character
+descriptions and 57 to 67 ms after one import of 1,000 Tasks with
+100,000-character descriptions (first refusal 139 to 151 ms, about 70 ms under
+the write lock). Measured 2026-11-13 with the bound and sampling: after that
+1,000-Task import a repeat costs 0.73 ms (p99 1.4), three of those rows being
+read; a first refusal after it 7.2 ms. In a Profile whose History before the
+window is 20,000 Tasks with 5,000-character descriptions a first refusal costs
+5.6 ms (3.5 under the lock), where the bound without sampling cost 44 ms.
+Rows under the bound still cost what they cost: after 5,000 Tasks with
+200-character descriptions, 9 to 12 ms per repeat at load 8 to 12.
 A whole History inside the window must be searched on absence, twice: once in
 the read and once under the lock. Migration stamps, copied redaction stamps and supplied rejected-Task
 stamps never end the walk. See the

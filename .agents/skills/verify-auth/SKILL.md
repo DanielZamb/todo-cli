@@ -183,12 +183,14 @@ Purge retention. Its two race workers read clocks 50 ms apart; a later-clock
 process committing first must not let the earlier-clock refusal append (one
 row in race.json and clock-skew.json). Its barrier proves 5,000
 preceding-minute rows do not hide the first refusal. An older-than-horizon row
-deliberately permits a second refusal; a large row (over 4,096 bytes) in the
-same place does not. verify-walk-sqlite.ts (TODO_WALK_SQLITE_BINARY to reuse)
-zeroes every overflow page of 20 large rows in the SQLite the compiled binary
-loads: octet_length() and the production walk still answer, while length() and
-any column stored after event fail as malformed, proving a large event is never
-read. The process matrix starts a case in the
+deliberately permits a second refusal; a single large row (over 4,096 bytes)
+in the same place does not, because only every 257th large row the walk meets
+is read (the domain tests pin 256 and 257). verify-walk-sqlite.ts
+(TODO_WALK_SQLITE_BINARY to reuse) zeroes every overflow page of 20 large rows
+in the SQLite the compiled binary loads: octet_length() and the production walk
+still answer, while length() and any column stored after event fail as
+malformed. A second phase zeroes 598 of 600 large rows, all but the two the
+walk samples: the walk still answers; zeroing a sampled row too fails. The process matrix starts a case in the
 next minute when fewer than 15 seconds remain. Bench mode
 (`driver bench <dir> <evidence> <scenario>`) times the first refusal, a burst
 of 1,000 and each rejection transaction for quiet, null, whole-window,

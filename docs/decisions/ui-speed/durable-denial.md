@@ -11,13 +11,15 @@ For an attempt at t, let m = floor(t / 60000) and horizon = (m - 1) * 60000.
 Walk that Profile's rows by descending seq, in one pass: first in a read, and
 on absence again inside the rejection's immediate transaction. A row whose
 stored event is over 4,096 bytes is skipped unread (its length comes from the
-record header). A matching rejected auth event in minute m suppresses the
+record header), except that every 257th such row the walk meets, counted
+across small rows, is read for its kind and stamp and treated as ordinary
+evidence. A matching rejected auth event in minute m suppresses the
 append, whether its stamp is before or after t: two processes can read their
 clocks in one order and commit in the other, and the later-clock refusal
 committed first is still this minute's refusal. The first usable
 recording-clock stamp before the horizon ends the walk. A stamp after t, an
-invalid or absent stamp, a row without a known recording-clock provenance or a
-row over the size bound cannot end it. End of History means append.
+invalid or absent stamp, a row without a known recording-clock provenance or an
+unsampled row over the size bound cannot end it. End of History means append.
 Wrong passphrases always append because the lockout counts each one.
 
 The decision uses History alone and is the same in separate CLI and server
@@ -28,12 +30,14 @@ writers produce one: a writer that commits more than a minute after reading
 its clock, or a writer whose clock is behind another's (or steps back). The
 review seat measured two stores whose clocks were 30, 90 and 150 s apart,
 alternating ten refusals each: 1, 2 and 2 rows. The count stays bounded
-because each process's own newest row matches first. A larger row never hides
-a refusal: it is never read. The preceding minute is included so a writer
+because each process's own newest row matches first. A larger row hides a
+refusal only when the walk samples it: stamped before the horizon, committed
+after the refusal, and the 257th large row met since the last sample. Tests
+pin the boundary: 256 such rows hide nothing, 257 give a second row. The preceding minute is included so a writer
 crossing the current minute boundary does not hide that refusal. The tests pin
 these results: 5,000 rows at 00:19:59.999 committed after a 00:20:00.001
 refusal still yield one row; a later committed small row stamped 00:18:59.999
-permits a second row; a 100,000-byte row in the same place does not.
+permits a second row; a single 100,000-byte row in the same place does not.
 
 ## Timestamp writer audit
 
@@ -81,7 +85,9 @@ all() would unnecessarily materialize the entire Profile and is not used.
 
 Work is proportional to rows actually visited before that match or usable old
 row. Under ordinary ordering these are the Profile rows since the horizon plus
-one boundary row. Unusable/future/backdated rows can increase the walk; an
+the first usable row before it; large rows there add at most 256 skipped rows
+and one read row before a sampled one can end the walk. Unusable/future/backdated
+rows and small rows of kinds that never end the walk can increase it; an
 entire History inside the window is necessarily visited on absence. There is
 no constant row cap or absolute worst-case bound independent of History, and
 no time threshold is treated as a throughput guarantee.
@@ -198,6 +204,34 @@ bounded: quiet 3.1 / 3.7 / 5.1 ms; null Profile 4.0 / 4.3 / 4.0 ms; 200,000
 rows inside the window 4.4 / 214 / 278 ms, of which 110 and 141 ms under the
 lock. Repeats cost 0.011 to 0.019 ms in every arm, and no repeat opened a
 recording transaction outside the base.
+
+### Sampled large rows (review seat F6)
+
+With the size bound alone a large row could not end the walk. Every Task event
+carries whole Tasks, so every change to a Task with a description over about
+1,500 characters is such a row, and in a Profile of long descriptions a first
+refusal walked back past the window to the first small row, twice, half under
+the lock: the seat measured 9.2 ms for 5,000 such rows and 35.7 ms for 20,000,
+about 1.6 microseconds a row. The walk now reads every 257th large row it meets
+(K = 256 skipped between samples) for its kind and stamp, loading that row
+only, and counts it as evidence. The count is not reset by small rows, so small
+rows that cannot end the walk (rejected Task attempts between large edits)
+cannot defeat it. Past the horizon, a run of large recording-clock rows now
+ends the walk within K+1 of them.
+
+K trades the two costs. Each sample of a 100,000-character row costs about 70
+microseconds; the large-import repeat reads three (1,000 rows), so halving K
+adds about 0.2 ms there, and doubling it doubles the worst run past the horizon
+(about 0.4 ms of skipping at K = 256). Measured with the same method (three
+rounds, base / bounded without sampling 5853e9f1 / sampled 13ff84d6, load 7.5
+to 12): first refusal over 20,000 day-old large rows 3.7 / 44.3 / 5.6 ms (23.3
+and 3.5 under the lock); over 5,000, 3.1 / 14.9 / 3.4 ms; repeat after the
+1,000-Task import 0.03 / 0.51 / 0.73 ms (p99 1.4); first refusal after it 4.1 /
+5.4 / 7.2 ms. Rows under the bound are unaffected beyond reading seq: a direct
+A/B of the two walk functions in one process on 5,000 200-character Tasks gives
+a ratio of 1.035; the bench's 9.0 against 11.5 ms for that repeat at load 8 to
+12 is noise. A walk-sqlite phase zeroes 598 of 600 large rows' overflow pages:
+the walk still finds the refusal; zeroing a sampled row too fails.
 
 ### Considered and not taken: a remembered position
 
