@@ -91,7 +91,64 @@ try {
   const withLedger = spawnSync(process.execPath, [audit, "--worktree", "--ledger", outside], { cwd: root, encoding: "utf8" });
   rmSync(outside, { force: true });
   assert.equal(JSON.parse(withLedger.stdout).unknown, 1);
-  console.log(JSON.stringify({ pass: true, exit: run.status, observed, unknownWithExternalLedger: 1 }, null, 2));
+  // Review change records (*Review.changed[].to): a new value is a pin only
+  // while it is the newest record for its path. Each control runs alone so
+  // its exit code is its own.
+  const alone = (fixtures) => {
+    const tree = mkdtempSync(join(tmpdir(), "todo-pin-audit-records-"));
+    try {
+      mkdirSync(join(tree, "apps"), { recursive: true });
+      writeFileSync(join(tree, "apps/x.ts"), product);
+      for (const [path, value] of Object.entries(fixtures)) {
+        mkdirSync(dirname(join(tree, path)), { recursive: true });
+        writeFileSync(join(tree, path), `${JSON.stringify(value, null, 2)}\n`);
+      }
+      const done = spawnSync(process.execPath, [audit, "--worktree"], { cwd: tree, encoding: "utf8" });
+      const summary = JSON.parse(done.stdout);
+      return { exit: done.status, compared: summary.compared, historical: summary.historical, unknown: summary.unknown };
+    } finally {
+      rmSync(tree, { recursive: true, force: true });
+    }
+  };
+  const superseded = alone({
+    // Superseded by the live pin row of the same path.
+    ".agents/skills/verify-records/live.json": {
+      files: [{ path: "apps/x.ts", sha256: sha(product) }],
+      earlierReview: { changed: [{ path: "apps/x.ts", from: "a".repeat(64), to: wrong }] },
+    },
+    // No live row: the older to is superseded by a later record; the newest matches.
+    ".agents/skills/verify-records/later.json": {
+      firstReview: { changed: [{ path: "apps/x.ts", from: "b".repeat(64), to: wrong.replace(/1$/, "4") }] },
+      secondReview: { changed: [{ path: "apps/x.ts", from: "c".repeat(64), to: sha(product) }] },
+    },
+  });
+  assert.deepEqual(superseded, {
+    exit: 0,
+    compared: { match: 2, drift: 0 },
+    historical: {
+      "change record (key from names an old value)": 3,
+      "change-record new value superseded by the live pin row": 1,
+      "change-record new value superseded by a later record": 1,
+    },
+    unknown: 0,
+  });
+  const stale = alone({
+    // No live row, and the newest to does not match the file: a drift.
+    ".agents/skills/verify-records/stale.json": {
+      firstReview: { changed: [{ path: "apps/x.ts", from: "d".repeat(64), to: sha(product) }] },
+      secondReview: { changed: [{ path: "apps/x.ts", from: sha(product), to: wrong.replace(/1$/, "5") }] },
+    },
+  });
+  assert.deepEqual(stale, {
+    exit: 1,
+    compared: { match: 0, drift: 1 },
+    historical: {
+      "change record (key from names an old value)": 2,
+      "change-record new value superseded by a later record": 1,
+    },
+    unknown: 0,
+  });
+  console.log(JSON.stringify({ pass: true, exit: run.status, observed, unknownWithExternalLedger: 1, superseded, stale }, null, 2));
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

@@ -26,8 +26,11 @@
 //   array) under changes, or under a key with the word previous, before, from,
 //   old, after or to, is historical. A hash under a key with the word previous,
 //   before, from or old is historical. A hash under a key with the word after or
-//   to is a pin when a path sits beside it (it names the current value), and
-//   historical otherwise. A top-level "contract" is compared with the
+//   to is a pin when a path sits beside it, and historical otherwise. Among such
+//   new values in one pin file, a live pin row for the same path supersedes
+//   them all (historical); without one, the last in document order is the
+//   newest and stays a compared pin (a stale newest value is a drift), and
+//   earlier ones are historical. A top-level "contract" is compared with the
 //   commit's CONTRACT_ID; a nested "contract" belongs to a review record
 //   (historical). A sha256 beside a "url" pins a downloaded tool (historical:
 //   the artifact is not in the repository; the skill checks it on download).
@@ -179,6 +182,8 @@ for (const file of files) {
   if (found.length === 0) continue;
   // Structured verdicts for JSON, keyed by value; consumed in file order.
   const verdicts = new Map();
+  const newRecords = new Map();
+  const livePaths = new Set();
   const push = (value, verdict) => {
     const key = value.toLowerCase();
     verdicts.set(key, [...(verdicts.get(key) ?? []), verdict]);
@@ -259,8 +264,17 @@ for (const file of files) {
           } else {
             const actual = sha(read(pin.path));
             const match = actual === child.toLowerCase();
-            if (match) wholeFileMatches.add(pin.path);
-            push(child, { class: "compared", status: match ? "match" : "drift", rule: "file pin", where: here, path: pin.path, actual });
+            const verdict = { class: "compared", status: match ? "match" : "drift", rule: "file pin", where: here, path: pin.path, actual };
+            if (words.some((w) => newWords.has(w))) {
+              // A change record's new value (to, after...): decided after the
+              // whole file is read, by whether something supersedes it.
+              verdict.rule = `newest change-record value (key ${key}) for ${pin.path}`;
+              newRecords.set(pin.path, [...(newRecords.get(pin.path) ?? []), verdict]);
+            } else {
+              livePaths.add(pin.path);
+              if (match) wholeFileMatches.add(pin.path);
+            }
+            push(child, verdict);
           }
         } else {
           // Map form: a path as the key and the hash as the value.
@@ -283,6 +297,24 @@ for (const file of files) {
         }
     };
     if (json !== undefined) visit(json, "", 0, false);
+    // Supersession, per pin file. A live pin row for the path supersedes every
+    // change-record new value for it. Without one, the last record in the file
+    // (document order: renewals append) is the newest and stays a compared pin,
+    // so a stale newest value is still a drift; earlier ones are historical.
+    for (const [path, list] of newRecords) {
+      const live = livePaths.has(path);
+      list.forEach((verdict, index) => {
+        if (!live && index === list.length - 1) {
+          if (verdict.status === "match") wholeFileMatches.add(path);
+          return;
+        }
+        delete verdict.status;
+        verdict.class = "historical";
+        verdict.rule = live
+          ? `change-record new value superseded by the live pin row of ${path}`
+          : `change-record new value superseded by a later record for ${path}`;
+      });
+    }
   }
   for (const hit of found) {
     if (hit.embedded) {
@@ -318,7 +350,9 @@ for (const record of records)
 const count = (predicate) => records.filter(predicate).length;
 const byRule = {};
 for (const record of records.filter((r) => r.class === "historical")) {
-  const rule = record.rule.startsWith("function-body") ? "function-body hash covered by a matching whole-file pin" : record.rule;
+  const rule = record.rule.startsWith("function-body")
+    ? "function-body hash covered by a matching whole-file pin"
+    : record.rule.replace(/ (of|for) [^ ]+$/, "");
   byRule[rule] = (byRule[rule] ?? 0) + 1;
 }
 const problems = records.filter((r) => r.class === "unknown" || r.status === "drift");

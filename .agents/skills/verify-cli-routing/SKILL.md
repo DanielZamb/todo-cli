@@ -155,7 +155,11 @@ packages/domain/src. The map form and any hash key are read. A top-level
 
 Change records are read from what a key says. A key with the word previous,
 before, from or old holds an old value; one with after or to is compared when a
-path sits beside it.
+path sits beside it. Such a new value (a review's `changed[].to`, say) is a pin
+only while it is the newest record for its path in that pin file. A live pin row
+for the path, or a later record in document order, supersedes it, and it is then
+historical. A newest value that does not match its file is a drift. The
+self-test's two record controls hold both cases with literal counts.
 
 To audit another branch whose checkout has no ledger yet, run this script by its
 path from that checkout's root and pass this checkout's ledger:
