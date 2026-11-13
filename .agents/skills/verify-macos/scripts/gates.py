@@ -17,6 +17,9 @@ SSE is carried, not run: see `carried` below; update it whenever the server chan
 The dag-public step (dag-public-gate.py) checks both DAG pins' premise before the public check: a
 head that changes a file in a pin's scopes needs that pin renewed at that head (its check passing
 first), as the last, verification-only commit of its delivery.
+Test overlays (STATE_PACKAGE_OVERRIDE_DIR, SIGN_OUT_STREAM_TEST_OVERRIDE) change the tested sources
+under the head's name, so the runner refuses to start while either is set (MAC-C1-S1-31); its
+receipt is overrides.json.
 Nothing is signed, launched or pushed.
 """
 import hashlib, json, os, subprocess, sys, time
@@ -31,6 +34,11 @@ head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
 evidence = root / f'docs/evidence/mac-perf/c4/controls-final-{head[:8]}'
 evidence.mkdir(parents=True, exist_ok=False)
 owned = OwnedCommands(evidence / 'command-unsafe')
+# MAC-C1-S1-31: a test overlay would change the tested sources under the head's name. Refuse it.
+overlays = {name: os.environ.get(name) for name in ('STATE_PACKAGE_OVERRIDE_DIR', 'SIGN_OUT_STREAM_TEST_OVERRIDE')}
+(evidence / 'overrides.json').write_text(json.dumps({'refusedIfSet': sorted(overlays), 'set': {k: v for k, v in overlays.items() if v}}, indent=2) + '\n')
+if any(overlays.values()):
+    raise SystemExit(f'gates.py: refusing to start with a test overlay set: {[k for k, v in overlays.items() if v]}')
 env = {k: v for k, v in os.environ.items() if not k.startswith(('TODO_', 'MAC_PERF_'))}
 # The merged head's own server, CLI and seed (integ/server 2a840b55 merged): the server the owner gets.
 build = json.loads((root / '.scratch/bin/build.json').read_text())
