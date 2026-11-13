@@ -337,7 +337,13 @@ The raw store reaches only those two readers, typed as `StreamReads` and
 `CacheHygieneReads` so neither can build a writer, and a server test forbids the
 private connection, SQL transaction control and any other raw-store use in the
 server. Every transaction callback is synchronous, which the decorator and the
-loop rely on.
+loop rely on. One commit goes unsignalled: `signIn` verifies the passphrase on a
+promise outside its fiber, so an interrupted sign-in (for example, a client that
+disconnects) exits and signals first, and its decision then commits one
+Profile-less auth row (`AuthChanged` for a new Session, or
+`AuthAttemptRejected`) with no signal. No stream delivers it: streams deliver only
+committed rows of their own Profile, and the next pass moves past it. The domain
+is unchanged for it.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher and no IPC between the two processes. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.

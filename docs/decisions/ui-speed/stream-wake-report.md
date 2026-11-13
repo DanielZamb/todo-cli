@@ -393,3 +393,22 @@ none across waiting. No terminal authorization exemption was added to this proof
 Nothing was installed, signed, pushed or merged; the seat re-checks this correction.
 After the final checks, lsof confirmed twelve owned Bun compiler runtime copies
 were closed; cleanup removed 1,063,930,368 bytes and retained the receipt locally.
+
+## The one unsignalled commit (review 3, R3-L1)
+
+`Authentication.signIn` verifies the passphrase on a promise chained onto its
+sign-in queue, outside the calling fiber, and runs its decision transaction after
+the verification. If the fiber is interrupted while the verification runs (an HTTP
+client that disconnects, for example), the decorated `signIn` exits first: it marks
+and delivers its notification at once, outside any transaction. The detached
+decision then commits one row with no Profile, `AuthChanged` for a new Session or
+`AuthAttemptRejected` for a wrong passphrase, and nothing signals that commit.
+
+No stream delivers it. The stream sends only committed rows of its own Profile,
+and these rows have none; a new Session or a counted wrong guess changes no open
+stream's authorization. The next pass, woken by the timer or another commit,
+moves its cursor past the row silently, as the base did. `resetPassphrase` and
+`setupOwner` commit nothing once interrupted during hashing. The fix would belong
+in the domain (make verify-and-decide part of the fiber, or uninterruptible); the
+domain is unchanged for it. A Session issued to a client that has already
+disconnected is base behaviour.
