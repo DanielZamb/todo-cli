@@ -57,6 +57,18 @@ def prepare(mirror: Path = MIRROR, production_vault: bool = False) -> Path:
                     '--exclude', 'Todo.xcodeproj', '--exclude', '/Sources/SessionVault.swift',
                     str(ROOT / 'apps/macos') + '/', str(mirror) + '/'], check=True)
     swap_vault(mirror / 'Sources', production=production_vault)
+    # Failing-first and mutation runs: files from STATE_PACKAGE_OVERRIDE_DIR (paths relative to
+    # apps/macos) replace the mirror's copies. Product code is never touched; the next prepare()
+    # without it restores the mirror. SessionVault.swift cannot be overridden.
+    overrides = os.environ.get('STATE_PACKAGE_OVERRIDE_DIR')
+    if overrides:
+        for source in sorted(Path(overrides).rglob('*')):
+            if source.is_file():
+                relative = source.relative_to(overrides)
+                assert relative.name != 'SessionVault.swift', 'the vault is never overridden'
+                (mirror / relative).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, mirror / relative)
+                print(f'state_package: override {relative}', file=sys.stderr)
     return mirror
 
 
