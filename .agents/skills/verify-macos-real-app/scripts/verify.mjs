@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawn as adversarialSpawn } from 'node:child_process';
-import { command, environment, executable, run, start } from './process-policy.mjs';
+import { command, commandTimeout, environment, executable, run, start } from './process-policy.mjs';
 import { receipt } from './receipt-stages.mjs';
 import { generateGuardMutants } from './guard-mutants.mjs';
 import { runRegressions } from './regressions.mjs';
@@ -89,7 +89,7 @@ function record(argv, name, env, value, secret = false) {
 }
 function execute(argv, name, env = base, input, secret = false) {
   argv = job(argv);
-  const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: name === 'production-suites' ? 7200000 : 1200000 });
+  const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: commandTimeout(argv, name === 'production-suites' ? 7200000 : 1200000) });
   return record(argv, name, env, value, secret);
 }
 function must(argv, name, env = base, input, secret = false) {

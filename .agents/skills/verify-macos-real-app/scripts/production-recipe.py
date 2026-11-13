@@ -88,8 +88,8 @@ class ExplicitProcess(Original):
             timeout = args[0] if args else kwargs.get('timeout')
             if timeout is not None and timeout >= 60:
                 self._queue_budget_added = True
-                if args: args = (timeout + 1200, *args[1:])
-                else: kwargs['timeout'] = timeout + 1200
+                if args: args = (timeout + 3600, *args[1:])
+                else: kwargs['timeout'] = timeout + 3600
         value = super().wait(*args, **kwargs); self._record_exit(); return value
     def communicate(self, *args, **kwargs):
         value = super().communicate(*args, **kwargs); self._record_exit(); return value

@@ -1,5 +1,23 @@
 # Mac verification app V01 safety correction
 
+The resumed frozen da7a6b58f93f78092c9a7fffbe389a7928ad3ce5 recipe failed
+at the outer 20-minute Swift queue budget, before the guard compiler started.
+The queued command was observed behind the Mac seat's offscreen recipe. Its
+real result is status null, SIGTERM, spawnSync ETIMEDOUT; the expected-zero
+assertion and whole helper exit 1. Cleanup passed. Scratch CLI/server builds,
+boundary/memory/bootstrap probe builds and the memory Session control passed.
+No app build, guard matrix, production suite, root check or visible stage ran.
+Receipts are frozen-da7a6b58/result.json, commands.json and failing-first-queue.json.
+They remain failed and retain their original head.
+
+Commands that include swift-slot.sh now have a 60-minute outer budget in the
+main driver, expected-exit wrapper and standalone owner-policy component.
+Ordinary command budgets and the probes' own readiness/input/health deadlines
+are unchanged. Production state commands allow 60 minutes for queueing in
+addition to their original execution deadline. No guard, sandbox permission,
+application code or production behavior changed. A new clean head must now
+qualify; nothing is restamped. The visible recipe and V02 remain held.
+
 Disk stop on frozen qualification head de9ee85309176faed0e310c563f6df686305bbb1. The helper's
 --fresh-build --headless command exited 1 after shared free disk crossed the
 30 GiB floor at 29.9236 GiB. An operator-disk-stop receipt and swift-hold marker

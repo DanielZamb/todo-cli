@@ -32,6 +32,9 @@ export function command(argv) {
   if (program.endsWith('.sh')) return ['/bin/sh', path.resolve(program), ...args];
   return [executable(program), ...args];
 }
+export function commandTimeout(argv, ordinary = 1200000) {
+  return argv.some(value => typeof value === 'string' && value.endsWith('/scripts/swift-slot.sh')) ? Math.max(ordinary, 3600000) : ordinary;
+}
 export function run(argv, options) {
   const expanded = command(argv);
   assert(options?.env && !Object.keys(options.env).some(key => /^(DYLD_|CURL_|SSLKEYLOGFILE$|NODE_OPTIONS$|BUN_OPTIONS$|.*PROXY$)/i.test(key)), 'Ambient configuration reached a child boundary');

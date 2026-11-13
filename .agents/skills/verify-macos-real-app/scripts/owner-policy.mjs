@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { command, environment, run } from './process-policy.mjs';
+import { command, commandTimeout, environment, run } from './process-policy.mjs';
 process.umask(0o077);
 const evidence = process.argv[2], red = process.argv.includes('--red');
 assert(path.isAbsolute(evidence) && !fs.existsSync(evidence)); fs.mkdirSync(evidence, { recursive: true, mode: 0o700 });
@@ -13,7 +13,7 @@ function execute(argv, label, swift = false) {
         assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs');
         argv = ['/bin/sh', path.resolve('scripts/swift-slot.sh'), ...command(argv)];
     }
-    const value = run(argv, { env, encoding: 'utf8', timeout: 1200000, maxBuffer: 16 * 1024 ** 2 });
+    const value = run(argv, { env, encoding: 'utf8', timeout: commandTimeout(argv), maxBuffer: 16 * 1024 ** 2 });
     commands.push({ argv: command(argv), environment: env, exit: value.status, signal: value.signal });
     fs.writeFileSync(evidence + '/' + label + '.log', value.stdout + value.stderr); return value;
 }

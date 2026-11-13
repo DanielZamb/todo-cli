@@ -56,7 +56,10 @@ visible stages in owedStages. --guards-only always remains incomplete. A failed
 run cannot report completion even if its earlier stages passed. --development permits a dirty
 diagnostic; --focus-regressions requires it and cannot qualify a frozen head.
 
-Every Swift action runs inside scripts/swift-slot.sh. The helper compiles the
+Every Swift action runs inside scripts/swift-slot.sh. The driver allows a
+60-minute outer budget for commands queued through that script, including the
+expected-exit wrappers. Probe readiness, input and HTTP deadlines stay separate.
+A queue timeout fails qualification and never excludes a predicate. The helper compiles the
 CLI and server from the recorded committed head, pins their hashes in the test
 build, and uses fresh scratch fixtures. No inherited environment is forwarded.
 It never installs or launches the production app, invokes launchd or calls an
