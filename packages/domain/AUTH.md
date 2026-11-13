@@ -97,14 +97,21 @@ still require an existing Profile. Successful credential changes append
 failed transaction rolls back. The repeated-denial decision comes from History inside the same immediate
 write transaction as its append, so CLI and server processes decide alike.
 For a denial at time t, search that Profile by descending sequence for the same
-actor, action and detail in minute floor(t / 60000). Stop at a usable recording
-clock before the start of the preceding minute. Ignore missing, invalid, future
-and non-recording stamps. Wrong passphrases always append for the lockout.
+actor, action and detail in minute floor(t / 60000), in one pass. A refusal in
+that minute matches even when its stamp is later than t: another process may
+read its clock after this one and commit first. Stop at a usable recording
+clock before the start of the preceding minute. Missing, invalid, future and
+non-recording stamps never stop the walk. Wrong passphrases always append for
+the lockout.
 
 This look-back has a deliberate limit. A row committed more than a minute after
 its writer read the clock can hide an earlier matching refusal; the next repeat
-then appends one more row. A whole History inside the window must be searched on
-absence. Migration stamps, copied redaction stamps and supplied rejected-Task
+then appends one more row. The walk reads every row of that Profile between the
+newest row and the match or the stop, about one microsecond each: a repeat
+whose match is the newest row costs one step, but rows committed after the
+first refusal (an import of 5,000 Tasks in the same minute, for example) are
+read again by every repeat until the minute ends. A whole History inside the
+window must be searched on absence. Migration stamps, copied redaction stamps and supplied rejected-Task
 stamps never end the walk. See the
 [timestamp audit](../../docs/decisions/ui-speed/durable-denial.md).
 Denials fail with `AuthError`, code `auth`.

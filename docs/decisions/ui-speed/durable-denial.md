@@ -9,10 +9,13 @@ clarification remains subject to owner acceptance.
 
 For an attempt at t, let m = floor(t / 60000) and horizon = (m - 1) * 60000.
 Inside the rejection's existing immediate transaction, walk that Profile's rows
-by descending seq. A matching rejected auth event in minute m suppresses the
-append. The first usable recording-clock stamp before the horizon ends the
-walk. A stamp after t, an invalid or absent stamp, or a row without a known
-recording-clock provenance cannot end it. End of History means append.
+by descending seq, in one pass. A matching rejected auth event in minute m
+suppresses the append, whether its stamp is before or after t: two processes
+can read their clocks in one order and commit in the other, and the
+later-clock refusal committed first is still this minute's refusal. The first
+usable recording-clock stamp before the horizon ends the walk. A stamp after
+t, an invalid or absent stamp, or a row without a known recording-clock
+provenance cannot end it. End of History means append.
 Wrong passphrases always append because the lockout counts each one.
 
 The decision uses History alone and is the same in separate CLI and server
@@ -74,6 +77,22 @@ one boundary row. Unusable/future/backdated rows can increase the walk; an
 entire History inside the window is necessarily visited on absence. There is
 no constant row cap or absolute worst-case bound independent of History, and
 no time threshold is treated as a throughput guarantee.
+
+Measured on 2026-11-13 with the compiled driver's bench mode, five pairs in
+alternating order, base 2a840b55 against this branch, load 5 to 11 on ten
+cores. Medians: the first refusal costs about the same as the base when its
+Profile is quiet (3.9 ms against 4.4) or for the null Profile; 6.3 ms against
+2.0 after 5,000 small prior-minute rows; 11.2 ms against 2.1 after 5,000 real
+TaskCreated rows; 145 ms against 4.0 when all 200,000 rows lie inside the
+window. A burst of 1,000 repeats whose match is the newest row costs what the
+base costs (34 ms against 35). When 5,000 rows are committed after the first
+refusal, every repeat reads them again: the burst takes 3.7 s (small rows) and
+7.7 s (TaskCreated rows) against 0.03 s, and each rejection transaction holds
+the write lock 2.4 ms and 5.1 ms at the median, 14 and 16 ms at p99, 68 and
+182 ms at most. An owner can reach that case: a client retrying a refused
+credential during the minute after an import. Pushing the walk into SQLite does
+not help, because reading each row's event JSON is most of the cost. The
+first worker's index options remain the way to remove it.
 
 The old Set hit already ran within a dedicated BEGIN IMMEDIATE transaction.
 The new lookup adds no transaction. A read-only positive fast path would need

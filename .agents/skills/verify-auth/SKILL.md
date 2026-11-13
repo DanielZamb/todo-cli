@@ -179,8 +179,15 @@ CLI/server, server/CLI, server restart and two ready CLI processes plus a server
 request released over an IPC barrier. Every CLI refusal exits 3 and HTTP returns
 401. The domain driver proves Snapshot restore re-recording, four key changes,
 ten wrong-passphrase rows and one locked row, Profile deletion/name reuse and
-Purge retention. Its barrier proves 5,000 preceding-minute rows do not hide the
-first refusal. An older-than-horizon row deliberately permits a second refusal.
+Purge retention. Its two race workers read clocks 50 ms apart; a later-clock
+process committing first must not let the earlier-clock refusal append (one
+row in race.json and clock-skew.json). Its barrier proves 5,000
+preceding-minute rows do not hide the first refusal. An older-than-horizon row
+deliberately permits a second refusal. The process matrix starts a case in the
+next minute when fewer than 15 seconds remain. Bench mode
+(`driver bench <dir> <evidence> <scenario>`) times the first refusal, a burst
+of 1,000 and each rejection transaction for quiet, null, whole-window,
+prior-before/after and import-before/after; it is a measurement, not a gate.
 See features/history.md and docs/decisions/ui-speed/durable-denial.md.
 
 Doctor requires both compiled --version contracts to match this checkout.

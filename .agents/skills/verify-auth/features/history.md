@@ -50,5 +50,7 @@ The compiled process matrix and domain lifecycle drive are described in SKILL.md
 Require all six literal counts to equal one, including mixed processes and
 restart. The same-minute restored History must allow recording again. Keep the
 explicit two-row older-than-horizon limit and the one-row prior-minute barrier.
+A same-minute refusal stamped after the attempt, committed first by a process
+whose clock read later, still merges: one row.
 Malformed, future, migration, redaction and supplied Task-rejection stamps must
 not stop the walk. Wrong passphrases retain every row.
