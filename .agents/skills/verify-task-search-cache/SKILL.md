@@ -205,3 +205,11 @@ failed all three observer controls with their witnesses, restored, typechecked
 and stopped only at the stale hash. The uncached oracle is rebuilt for this
 product. The complete command's exit is in
 docs/decisions/ui-speed/stream-wake-integration.md.
+
+## c9 server integration renewal
+
+Immutable merged product 0bd8476df7d7147ea355b418346b57d33f403aee. No covered or
+hygiene file changed from a45ddeaa: the durable refusal touches only auth.ts and
+the new rejection-history.ts, neither mapped here. The uncached oracle is rebuilt
+for this product, and the complete command's exit is in
+docs/decisions/ui-speed/c9-server-integration.md.

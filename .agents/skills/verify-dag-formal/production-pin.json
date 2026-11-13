@@ -1,5 +1,5 @@
 {
-  "commit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
+  "commit": "0bd8476df7d7147ea355b418346b57d33f403aee",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -24,5 +24,14 @@
     "status": "candidate pending correctness-seat acceptance",
     "review": "docs/decisions/ui-speed/durable-denial-formal.md",
     "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Advanced again to fb55ff7c83b968703634feb75f85c0e027142fa3 for the read-first refusal decision in Authentication.perform (ruling 2026-11-13): auth.ts whole-file hash only; startSeries, append, requireCredential and mutate bodies unchanged. Advanced again to 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9 for the size-bounded walk in the unmapped auth/rejection-history.ts (seat review F1, F2); no mapped file changes. Advanced again to 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed for the sampled large-row bound in that same unmapped file (seat review F6). Fresh full default follows; no old result is relabelled."
+  },
+  "c9ServerIntegration": {
+    "product": "0bd8476df7d7147ea355b418346b57d33f403aee",
+    "review": "docs/decisions/ui-speed/c9-server-integration.md",
+    "scope": "Merged immutable product of integ/server-wake f89b6693 and fix/durable-denial 366398fe. Every pinned row equals the product's bytes; the full command follows on this product. No model, invariant or bound changes.",
+    "certifies": "Finite DAG safety and production/public conformance on the merged product, with the wake's server.ts and the durable refusal's auth.ts. Authentication.startSeries, append, requireCredential and mutate bodies are textually identical to the stream-wake product; perform's catch and record now decide repeats from History, outside the finite model, as for 13ff84d6. This is the full default run the 13ff84d6 renewal did not have.",
+    "previous": {
+      "commit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
+    }
   }
 }

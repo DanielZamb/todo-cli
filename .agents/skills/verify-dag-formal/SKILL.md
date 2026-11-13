@@ -3,6 +3,17 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## c9 server integration renewal
+
+Immutable merged product 0bd8476df7d7147ea355b418346b57d33f403aee combines the
+stream wake integration (a45ddeaa's mapping) and the durable refusal (13ff84d6's
+candidate). Every pinned row in both coverages equals the product's bytes:
+server.ts from the wake, auth.ts from the refusal. All 53 public control anchors
+match exactly once on the product before renewal. This renewal carries the full
+default run that 13ff84d6 was accepted without; its exit is in
+docs/decisions/ui-speed/c9-server-integration.md. No model, invariant or bound
+changed.
+
 ## Stream wake integration renewal
 
 Immutable merged product a45ddeaa6d00b1fc62560f70be48c2e0e1202495 adds the
