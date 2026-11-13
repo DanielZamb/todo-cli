@@ -1,5 +1,5 @@
 {
-  "commit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
+  "commit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
   "status": "Immutable integrated source passed generated matcher properties, five intended real-code failures and byte restoration at matcher-AFRja2. Separate model/client results retain their own scopes.",
   "normalization": "normalizeTaskSearch",
   "parsing": "parseTaskSearch",
@@ -17,5 +17,11 @@
     "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
     "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
   },
-  "previousCommit": "26367043daf92787fc128ac23544afcb5709a791"
+  "previousCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  }
 }

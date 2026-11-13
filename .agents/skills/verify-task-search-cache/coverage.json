@@ -1,5 +1,5 @@
 {
-  "productCommit": "b4b289066cca9f8c5e527c177abc4a3d759a7558",
+  "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
   "scope": "Reviewed runtime read-authority guards; immutable product ade8f941; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
@@ -21,11 +21,11 @@
     },
     {
       "path": "store/store.ts",
-      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186"
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "4ed23e32cffd61998f5cabd15616840d466ccbbe0e1d3d0e3121d730e2d827f9"
+      "sha256": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4"
     },
     {
       "path": "store/search-cache-events.ts",
@@ -49,15 +49,15 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "4ed23e32cffd61998f5cabd15616840d466ccbbe0e1d3d0e3121d730e2d827f9"
+      "sha256": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186"
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "d02c596f930c970e15ea67aad6c43c0ca041bb2dc598fff9e9873c99a9814378"
+      "sha256": "d935d13ffe26e9dee95c16db08a41c8cd8545c2dc1aec9a6300b98b7fe530de8"
     }
   ],
   "integrationReview": {
@@ -114,5 +114,11 @@
     "scope": "Only caller binding and nominal wrappers affect covered files. Epoch-before-auth, both preparation hooks, invalidation, accounting, source-text keys and finite models are retained.",
     "fullResult": "docs/evidence/perf-cache/verify-Xh1k3D/result.json",
     "result": "Complete properties, hygiene, admission model/code, compiled lifecycle, erasure and CLI defect command exited 0 on immutable product 219749f2."
+  },
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
   }
 }

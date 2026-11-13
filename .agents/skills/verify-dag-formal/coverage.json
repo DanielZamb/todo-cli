@@ -1,7 +1,7 @@
 {
-  "confirmedCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
-  "source": "The accepted SERVER-READS renewal changed three whole files (auth.ts, graph-queries.ts and store/store.ts); the other 13 were byte-identical. Covered functions, exact diffs and model-step review are in docs/decisions/ui-speed/server-reads-formal-renewal.md. The current integration requires a fresh merged-source renewal.",
-  "scope": "Reviewed SERVER-READS source: three whole files changed, 13 were byte-identical at its accepted renewal. This merged source is undergoing its own function-by-function review and full conformance stages.",
+  "confirmedCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
+  "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
   "modelRefinement": "Revert expected Versions come from the original resolved event, not a fresh observation",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
@@ -86,7 +86,7 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186",
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
       "functions": [
         "OperationStore.transaction",
         "OperationStore.validate",
@@ -147,7 +147,7 @@
     },
     {
       "path": "packages/domain/src/store/purge.ts",
-      "sha256": "12d8f3861ed8dcc891704108318668a9ef63e0afaefe81bf388497ce32716465",
+      "sha256": "954c21af26d0332a063d603fa4b2e6794fa8b55c2427df3f03b0fd8679107e6f",
       "functions": [
         "redactTaskHistory",
         "mentions"
@@ -216,5 +216,11 @@
     "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
     "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
     "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
   }
 }
