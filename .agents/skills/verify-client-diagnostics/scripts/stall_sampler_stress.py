@@ -27,6 +27,14 @@ def run(name, args, env=None, timeout=600):
     return result
 run('build', ['xcrun', 'clang', '-O2', '-Wall', '-Wextra', '-Werror', '-arch', 'arm64', '-arch', 'x86_64', f'-I{source}/include', source / 'ClientStallSampling.c', stress, '-o', binary])
 ok = steps['build']['exit'] == 0
+# The Keychain guard reads the built binary before anything runs; the receipt copies its answer.
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package
+keychain = state_package.guard(binary) if ok else None
+state_package.write(keychain, evidence / 'keychain-guard.json')
+if keychain and keychain['keychainLinked']: ok = False
+if ok:
+    ok = keychain['products'] == 1
 if ok:
     archs = run('archs', ['lipo', '-archs', binary]).stdout.split()
     release = run('release', [binary])
@@ -40,7 +48,7 @@ if ok:
           and report['windows_over_1ms'] == 0 and interactive.returncode == 0 and json.loads(interactive.stdout)['qos'] == 'user-interactive'
           and x86.returncode == 2 and 'UNSUPPORTED' in x86.stdout
           and control.returncode == 3 and 'watchdog' in control.stdout)
-result = dict(result='PASS' if ok else 'FAIL', steps=steps, nativeAppLaunched=False, keychainAccess=False)
+result = dict(result='PASS' if ok else 'FAIL', steps=steps, nativeAppLaunched=False, keychainAccess=keychain['keychainLinked'] if keychain else None, keychainGuard='keychain-guard.json')
 (evidence / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
 print(json.dumps(dict(result=result['result'], evidence=str(evidence))))
 sys.exit(0 if ok else 1)

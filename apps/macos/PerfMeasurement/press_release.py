@@ -13,6 +13,9 @@ import argparse, hashlib, io, json, os, re, shutil, subprocess, tarfile, time
 from pathlib import Path
 
 ROOT = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip())
+import sys
+sys.path.insert(0, str(ROOT / 'apps/macos/scripts'))
+import state_package  # the vault swap and the Keychain guard every runner uses
 HERE = ROOT / 'apps/macos/PerfMeasurement'
 parser = argparse.ArgumentParser()
 parser.add_argument('evidence')
@@ -65,6 +68,7 @@ def prepare(variant):
     shutil.rmtree(probe, ignore_errors=True); probe.mkdir()
     for source in (package / 'Sources').glob('*.swift'):
         if source.name != 'TodoApp.swift': shutil.copyfile(source, probe / source.name)
+    state_package.swap_vault(probe)  # the in-memory vault, never the production one
     shutil.copyfile(HERE / 'PressReleaseTrace.swift', probe / 'PressReleaseTrace.swift')
     main = (HERE / 'PressRelease.swift').read_text()
     # Trees with catalog environment triggers get private notification centers, so the probe
@@ -76,10 +80,10 @@ def prepare(variant):
     text = manifest.read_text(); assert text.count('    targets: [') == 1
     manifest.write_text(text.replace('    targets: [', '    targets: [\n        .executableTarget(name: "PressProbe", dependencies: [.product(name: "TodoAPI", package: "API")], path: "PressProbe"),', 1))
     provenance[variant] = dict(commit=sha, sources={p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(probe.glob('*.swift'))}, probe=hashlib.sha256((HERE / 'PressRelease.swift').read_bytes()).hexdigest())
-    (evidence / 'provenance.json').write_text(json.dumps(dict(refs=refs, variants=provenance, hold_ms=args.hold, visible=args.visible, physical_input=False, app_launched=False, keychain=False), indent=2) + '\n')
+    (evidence / 'provenance.json').write_text(json.dumps(dict(refs=refs, variants=provenance, hold_ms=args.hold, visible=args.visible, physical_input=False, app_launched=False, keychainGuard='keychain-guard-<variant>.json'), indent=2) + '\n')
     return package
 
-results = {}
+results, keychain = {}, {}
 for variant in args.variants.split(','):
     package = prepare(variant)
     scratch = ROOT / '.scratch/mac-press' / variant / 'build'
@@ -88,7 +92,8 @@ for variant in args.variants.split(','):
     code = run([ROOT / 'scripts/swift-slot.sh', 'swift', 'build', '-c', 'release', '--package-path', package, '--scratch-path', scratch, '--disable-automatic-resolution', '--jobs', '2', '--product', 'PressProbe'], f'{variant}-build.log')
     if code == 0:
         binary = scratch / 'release/PressProbe'
+        keychain[variant] = state_package.checked(binary, evidence / f'keychain-guard-{variant}.json')['keychainLinked']
         code = run([binary], f'{variant}.log', env)
     results[variant] = code
-(evidence / 'result.json').write_text(json.dumps(dict(exits=results, status='PASS' if all(v == 0 for v in results.values()) else 'FAIL'), indent=2) + '\n')
+(evidence / 'result.json').write_text(json.dumps(dict(exits=results, keychainLinked=keychain, status='PASS' if all(v == 0 for v in results.values()) else 'FAIL'), indent=2) + '\n')
 raise SystemExit(0 if all(v == 0 for v in results.values()) else 1)

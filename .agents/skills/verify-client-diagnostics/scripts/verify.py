@@ -165,7 +165,11 @@ try:
         environment['TODO_MAC_RETIREMENT_STRESS'] = '1'
         environment['TODO_MAC_RETIREMENT_COUNTER'] = f'http://127.0.0.1:{proxy.server_port}/counts/health'
     selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary|stoppingTheStreamEndsItsServerSubscriptionPromptly' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests|ClientNativeSelectionHookTests'
-    run([ROOT / 'scripts/swift-slot.sh', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--filter', selected], 'swift', environment)
+    # No test run links or calls the Keychain: state_package builds the mirrored package (in-memory
+    # vault), checks its products and only then runs them (coordinator ruling, 2026-11-13).
+    keychain_receipt = EVIDENCE / 'keychain-guard.json'
+    run([ROOT / 'scripts/swift-slot.sh', 'python3', ROOT / 'apps/macos/scripts/state_package.py', 'swift', 'test', '--configuration', configuration, '--no-parallel', '--disable-automatic-resolution', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', ROOT / 'apps/macos/.build', '--filter', selected], 'swift', dict(environment, STATE_PACKAGE_RECEIPT=str(keychain_receipt)))
+    keychain_linked = json.loads(keychain_receipt.read_text())['keychainLinked']
     artifact = ROOT / f'apps/macos/.build/{configuration}/TodoStateProofPackageTests.xctest/Contents/MacOS/TodoStateProofPackageTests'
     (EVIDENCE / 'swift-artifact.json').write_text(json.dumps(dict(sha256=hashlib.sha256(artifact.read_bytes()).hexdigest(), configuration=configuration), indent=2))
     if connections_only:
@@ -195,7 +199,7 @@ try:
             assert proof['refreshes'] == 2 and proof['requests'] == 16 and proof['reused_connections'] >= 8
             assert proof['credential_scope_requests'] == 8 and proof['credential_scope_new_connections'] >= 1
             assert json.loads((EVIDENCE / 'credential-request-cancel.json').read_text())['cancelled']
-        result = dict(result='PASS', errors=0, production_transport=proof, keychain_called=False, app_launched=False, signed=False, pushed=False)
+        result = dict(result='PASS', errors=0, production_transport=proof, keychain_called=keychain_linked, keychain_guard='keychain-guard.json', app_launched=False, signed=False, pushed=False)
     elif stream_only:
         native = json.loads((EVIDENCE / ('stream-subscribers.json' if subscribers_only else 'stream-native.json')).read_text())
         if subscribers_only:
@@ -207,12 +211,12 @@ try:
                 assert stop['resumed_from'] == stop['stopped_at'] and stop['event_written_while_stopped_delivered'], setup
                 native[f'stop_{setup}'] = stop
         else: assert native['stream_survived_idle'] and native['ordinary_timeout_observed'] and native['operations_received'] == 1
-        result = dict(result='PASS', errors=0, native=native, keychain_called=False, app_launched=False, signed=False, pushed=False)
+        result = dict(result='PASS', errors=0, native=native, keychain_called=keychain_linked, keychain_guard='keychain-guard.json', app_launched=False, signed=False, pushed=False)
     else:
         live = json.loads((EVIDENCE / 'live.json').read_text())
         assert live['errors'] == 0 and live['refreshes'] == 30 and live['enabled_requests'] == 120
         assert not list((scratch / 'journal').iterdir()), 'sign-out state did not clear journal'
-        result = dict(result='PASS', errors=0, refreshes=30, requests_recorded=120, tasks=178, keychain_called=False, app_launched=False, signed=False, pushed=False, native_input_proven=False)
+        result = dict(result='PASS', errors=0, refreshes=30, requests_recorded=120, tasks=178, keychain_called=keychain_linked, keychain_guard='keychain-guard.json', app_launched=False, signed=False, pushed=False, native_input_proven=False)
 
 finally:
     closing.set()

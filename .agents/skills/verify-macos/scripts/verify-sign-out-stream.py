@@ -27,6 +27,8 @@ import threading
 import time
 
 root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip())
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package  # the vault swap and the Keychain guard every runner uses
 evidence = Path(sys.argv[1])
 source = subprocess.check_output(['git', 'rev-parse', sys.argv[2] if len(sys.argv) > 2 else 'HEAD'], cwd=root, text=True).strip()
 if not evidence.is_absolute() or evidence.exists():
@@ -51,6 +53,11 @@ def cancelled(signum, frame):
 
 signal.signal(signal.SIGTERM, cancelled)
 signal.signal(signal.SIGINT, cancelled)
+
+def keychain_linked():
+    """From the guard's receipt (None if the guard never ran), never a constant."""
+    receipt = evidence / 'keychain-guard.json'
+    return json.loads(receipt.read_text())['keychainLinked'] if receipt.exists() else None
 
 def run(argv, log, environment=env, stdin=None):
     with (evidence / log).open('w') as output:
@@ -78,7 +85,7 @@ try:
         data = subprocess.check_output(['git', 'show', f'{source}:{file}'], cwd=root)
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
-    shutil.copyfile(fixtures / 'auth-epoch/SessionVault.swift', sources / 'SessionVault.swift')
+    state_package.swap_vault(sources)
     for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
@@ -92,7 +99,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
 ''')
     api_hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in (root / 'apps/macos/API/Sources/TodoAPI').rglob('*.swift')}
     cache = json.loads((root / '.scratch/bin/build.json').read_text())
-    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'tests': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(tests.glob('*.swift'))}, 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychain': False}, indent=2) + '\n')
+    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'tests': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(tests.glob('*.swift'))}, 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychainGuard': 'keychain-guard.json'}, indent=2) + '\n')
     if run([cache['seed'], str(scratch), 'diagnostics'], 'seed.log'):
         raise RuntimeError('Provisioner failed')
     with (evidence / 'server.log').open('w') as output:
@@ -295,19 +302,19 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
-    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url)
+    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url, STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
     # SIGN_OUT_STREAM_ONLY=<swift test filter> runs only those suites against the same server and
     # proxy: a short, targeted run while the shared Swift slot is scarce. Its status is TARGETED-*,
     # never PASS; the full proof is the run without it.
     only = os.environ.get('SIGN_OUT_STREAM_ONLY')
     if only:
-        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
+        exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
     else:
-        exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests|SeatCommittedWriteTests'], 'tests.log', test_env)
+        exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests|SeatCommittedWriteTests'], 'tests.log', test_env)
         # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
         # the model can still reconnect, and an exception there would hide the other suites.
-        seat_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
-        restore_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
+        seat_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
+        restore_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatRestoreCancellationBoundaryTests'], 'seat-restore-tests.log', test_env)
         # Coordinator ruling (second seat), 2026-11-11: after the probe's second, uncancelled restore
         # the intended state is not busy and signed in. Line 52 (!signedIn) is the one expected
         # difference; retryAllowed (53) and retried (54) carry MAC-C1-S1-08 and must pass.
@@ -316,10 +323,10 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         if restore_exit != 0 and issues == ['SeatRestoreCancellationBoundaryTests.swift:52']: restore_exit = 0
         seat_restore['accepted'] = restore_exit == 0
         (evidence / 'seat-restore.json').write_text(json.dumps(seat_restore, indent=2) + '\n')
-        interleaving_exit = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
+        interleaving_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatMessageInterleavingTests'], 'seat-interleaving-tests.log', test_env)
         seat_others = {}
         for suite in ['SeatRestoreCancellationCorrectedTests', 'SeatMessageScopeObservationTests', 'SeatSurfaceLifetimeTests', 'SeatSurfaceClassTests', 'SeatCandidate7InlineInterleavingTests', 'SeatCandidate7bBoundaryTests', 'SeatCandidate7cSupersessionTests', 'SeatGenerationLifetimeTests', 'SeatCommittedWriteTests']:
-            seat_others[suite] = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
+            seat_others[suite] = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', suite], f'{suite}.log', test_env)
         # Coordinator ruling 3 (second seat), 2026-11-12: "The two `#require(model.message)` lines
         # (SeatSurfaceLifetimeTests.swift:85 and SeatMessageScopeObservationTests.swift:42) are expected
         # differences under my ruling 3: the follow-up failure now lives in the surface that offered it
@@ -399,5 +406,5 @@ finally:
     if safe:
         shutil.rmtree(scratch)
     (evidence / 'cleanup.json').write_text(json.dumps({'serverStopped': server is None or server.poll() is not None, 'scratchRemoved': not scratch.exists()}) + '\n')
-    (evidence / 'result.json').write_text(json.dumps({'source': source, 'exit': exit_code, 'status': ('TARGETED-' if os.environ.get('SIGN_OUT_STREAM_ONLY') else '') + ('PASS' if exit_code == 0 else 'FAIL'), 'filter': os.environ.get('SIGN_OUT_STREAM_ONLY'), 'nativeAppLaunched': False, 'keychainAccess': False}) + '\n')
+    (evidence / 'result.json').write_text(json.dumps({'source': source, 'exit': exit_code, 'status': ('TARGETED-' if os.environ.get('SIGN_OUT_STREAM_ONLY') else '') + ('PASS' if exit_code == 0 else 'FAIL'), 'filter': os.environ.get('SIGN_OUT_STREAM_ONLY'), 'nativeAppLaunched': False, 'keychainAccess': keychain_linked(), 'keychainGuard': 'keychain-guard.json'}) + '\n')
 raise SystemExit(exit_code)
