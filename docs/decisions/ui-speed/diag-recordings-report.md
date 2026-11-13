@@ -3547,3 +3547,287 @@ Proven with node (`sandbox-controls.txt`):
 
 No pinned file changed. The pin audit at the head shows the one deferred
 mismatch (verify-discovery-formal's `task-client.ts`).
+
+## Merge of integ/c9-server (2026-11-13)
+
+Claude Opus 5.5. Evidence: `docs/evidence/ui-speed/recordings-c9/`.
+
+Merge commit 7e16bb71 has parents 6cbbb953 (this branch, passed by the seat in
+review 9) and 675aab82 (`integ/c9-server`: `integ/server` 2a840b55 plus the
+stream wake and the durable refusal fix). It is one merge, with no squash or
+rebase. Their common base is 2a840b55.
+
+### Resolutions
+
+Files changed on both sides since 2a840b55, and how each keeps both:
+
+| File | This branch | integ/c9-server | Result |
+| --- | --- | --- | --- |
+| `apps/server/src/server.ts` (conflict) | recordings service and routes, Diagnostics middleware, `encodedRead` | stream-wake wiring: `rawStore`, `StreamWake`, `streamWakeStore`, cache hygiene on `rawStore`, `changesLayer(rawStore, wake)` | both. The recordings service is built beside the wake, and recording routes use the decorated store for owner checks. integ/c9-server's `rawStore` lines are exactly as `raw-store-guards.test.ts` lists them |
+| `apps/server/src/sse.ts` (no markers) | stream ids, `commit_seen`/transport observation, generation tracking, guarded connect/disconnect/delivered | `wake.wait`, the version read on the next line, explicit `PassState`, `StreamReads` | both. The version read stays on the line after the wait. `generation` is one assignment inside the read callback. The delivery observation is a `Stream.tap` outside the unfold, so it runs outside the lease. Every return spells all four state fields |
+| `apps/server/src/raw-store-reads.ts` (type, no conflict) | | `StreamReads` picks Diagnostics `connect`/`disconnect`/`delivered` | also picks `profiler`, the in-memory recorder the observation needs. It reaches no database and no writer, so the raw reader stays unable to write |
+| `packages/domain/src/auth/auth.ts` (no markers) | `credentialCheck` spans | `perform`, `record`, `rejectionMinute`, `rejectionsThisMinute`, `verifyPassphrase` (durable refusal) | disjoint declarations: `credentialCheck` is this branch's, the rest are integ/c9-server's |
+| `apps/server/test/raw-store-guards.test.ts` | | the synchronous-transaction census (36) | 39, naming the three synchronous `recordings.db` transactions this branch adds in the recordings worker (prune, ingest, first initialization). They never touch the Task connection the wake decorator watches |
+| verify-dag-formal pins and coverage, verify-task-search-cache coverage (conflicts) | 34edaba7 candidates and review records | 0bd8476d/c9 candidates and records | integ/c9-server's pins and records plus this branch's records in the merge; renewed on the merged product afterwards |
+| verify-dag-formal and verify-task-search-cache `SKILL.md`, `docs/architecture.md`, verify-scheduler, verify-sse | sections | sections | both sides' sections |
+
+**Contract id: 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8,
+unchanged.** integ/c9-server touches nothing under `packages/api`, and
+`openapi.ts --check` exits 0.
+
+### What the text cannot show (63f9b6c8)
+
+- **Classification.** This branch adds no public member to OperationStore
+  (30), Authentication (43), Snapshots or ScheduledWork: the member sets are
+  identical at 2a840b55 and 6cbbb953. To show the guard holds on the merged
+  head, a temporary `recordingClassificationProbe` member on OperationStore
+  fails the typecheck twice, at `stream-wake-store.ts:170` (the policy table)
+  and at `stream-wake-compositions.ts:91` (the fixture catalog). With it
+  removed, the typecheck passes (`probe-member-typecheck.log`).
+- **`stream-wake-diagnostics.test.ts`** (new, 3 tests, all with literal
+  expectations):
+  1. The line after `yield* wake.wait(state.wakeVersion);` is
+     `const wakeVersion = wake.version;`.
+  2. On the real server with an explicit Diagnostics recorder:
+     - every delivery observation runs while no SQLite connection is in a
+       transaction, i.e. outside every lease;
+     - an idle stream makes 3 to 5 passes a second, before and after a write;
+     - a recordings upload (HTTP 200, accepted) leaves the wake version
+       unchanged;
+     - a Task write advances it by exactly one.
+  3. With an authentication span active, two refusals in one minute record 1
+     row and a third in the next minute records 2, and the span is present.
+- **Each part shown red by a mutant**, reverted after:
+  - an observation inside the lease callback fails `:183`;
+  - a recordings ingest that signals the wake fails `:180`;
+  - a step between the wait and the version read fails the source check.
+
+
+### Renewals on the merged product (9e468799, candidates for the seat)
+
+The merged product P2 is 63f9b6c8. Since this branch's previous candidate
+34edaba7, the pinned files change in exactly these declarations
+(`declaration-diff-34edaba7-to-merged.txt`):
+- in `auth.ts`, integ/c9-server's durable refusal: `perform`, `record`,
+  `rejectionMinute`, `rejectionsThisMinute` and `verifyPassphrase`;
+- in `server.ts`, `serverLayer`: the stream-wake wiring plus this branch's
+  recordings.
+
+Hashes were recomputed by script from P2's git objects. No coverage file was
+edited by hand.
+
+| Mapping | Procedure and result |
+| --- | --- |
+| verify-dag-formal (production-pin, public-pin, coverage, public-coverage) | `commit` and `confirmedCommit` set to P2; contract 55c6d138; `c9MergeQualification` added. `check.mjs` exit 0 (`dag-formal/check-ZgZ3cv`): 36 production and 53 public real-code controls, each behavior 1 and restore 0; clean recheck 19,784 distinct. `unchangedCore` is unchanged. |
+| verify-task-search-cache | Pre-renewal `check.mjs` and `check-hygiene.mjs` each exit 1. Both stopped at the hash gate after their controls (7/7 and 3/3). The pins taken in the merge are integ/c9-server's, where `task-filters.ts` is aff1e83b. This branch's reviewed diagnostics span (78f2f365, already in 34edaba7) makes it 6d6b5565. `build-baseline.mjs --uncached` on P2 exit 0, then `verify.mjs` P2 exit 0 (`perf-cache/verify-2yWfXB`). `reviewedCandidate` is false and `c9MergeReview` was added. |
+| verify-occ-atomicity | No renewal: the store.ts and projection.ts pins match the merged head, and `check.ts` exits 0 (`fv01/fv01-check-tbwH04`). No function in its coverage has new content. |
+| verify-task-search-formal | No renewal: `check.ts` P2 exit 0 (bounded C1 safety and liveness, the reviewed production mapping, real matcher properties). |
+| verify-discovery-formal | TypeScript side only: `prepare-inputs.ts` P2 exit 0 (`discovery-formal/prepare-fzxqs9`) and `check-electron.ts` P2 exit 0 (`discovery-formal/electron-VVHXBs`). The full check needs the Swift step, so it stops there. The one known drift, `apps/electron/src/task-client.ts`, stays until that step. |
+
+### Proofs on the merged head
+
+The proofs ran in two serial batches, every step gated on at least 40 GiB free:
+`gates9` (13:01 to 13:26) and `gates10` (14:57 to 15:06).
+
+`gates9` stopped at the floor, with 36 GiB free at 14:21, from other units'
+builds. Its stream comparison failed in setup:
+- both "before" builds exited 1, because this branch's `packages/api` imports the
+  Recording schemas that the e69230f9 domain lacks;
+- the stream run then failed to start the missing binary (ENOENT) and never
+  exited. It was stopped at 14:21 (exit 143).
+
+**The fix, accepted by the coordinator.** Scratch copies of
+`build-read-control.ts` and `build-read-cli.ts` (under `.scratch/c9/`) also read
+`packages/api/src` from e69230f9 on the before side, so "before" is one
+consistent base. integ/c9-server's `packages/api/src` is byte-identical to
+e69230f9's, so its own before build compiled the same api.
+
+The copies differ from the tracked scripts in only three ways:
+- the root is the working directory;
+- the entrypoint path;
+- the before-only api loader.
+
+The server copy also keeps the after variant from adding the timing headers. That
+patch targets integ/c9-server's middleware text, and this branch rewrote
+`diagnosticsMiddleware`.
+
+The head binaries from 13:26 were reused; their source has not changed.
+
+| Proof | Exit | Notes |
+| --- | ---: | --- |
+| Unit gates (21 steps: domain recording tests, build, initialization compile, profiler initialization, initialization on the server, foreign files, visibility, swap, race, classes, concurrent open, seat rate under load, temporary volume, access denial, journal holder, live initializer, access matrix, profiler verify, faults compile, recorder faults) | 0 each | domain recording tests 85/85 |
+| verify-sse (compositions and writer cases) | 0 | 71 focused tests; 3,696 compiled compositions |
+| 37 stream scenarios, gated | 0 | 37/37. 16 have identical frames; 21 show the approved ended-authority difference. `result.json` is identical to integ/c9-server's `c9-streams37-gated` run. |
+| verify-auth with `verify-durable.sh` | 0 | cross-process matrix `[1,1,1,1,1,1]` (cli-cli, server-server, cli-server, server-cli, server-restart, barrier); race and clock-skew 1 row each; walk-sqlite control |
+| verify-server-api | 0 | |
+| verify-snapshots | 0 | |
+| verify-diagnostics, without Swift | 0 | PASS, compiled; terminal PNGs HOLD (Swift) |
+| verify-task-search-formal `check.ts` P2 | 0 | |
+| verify-discovery-formal TypeScript stages | 0, 0 | Swift step not run |
+| verify-occ-atomicity `check.ts` | 0 | |
+| disk guard | 0 | |
+| Root check (`pnpm check` under the reference profile, TMPDIR outside the repository) | 0 | domain 599, server 164, cli 87, electron 168 (1 skipped) |
+
+**Contract id: 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8**,
+unchanged (`openapi.ts --check` exit 0; `public-pin.json` matches it).
+
+### Pin audit by enumeration
+
+The coordinator asked for this in place of the named-file audit. It uses
+`verify-cli-routing/scripts/pin-audit.mjs` from `feat/cli-through-server` at
+f17e56c1, run from this checkout against the merged head. It only reads and is
+not copied into this branch. Its ledger lives on that branch, so none of its
+entries apply here.
+
+The audit found 290 occurrences in 476 files (exit 1).
+
+**Compared: 136 (134 match, 2 drift).**
+- `verify-discovery-formal/coverage.json:69` `apps/electron/src/task-client.ts` is the known drift. It is deferred to the Swift step.
+- `verify-occ-atomicity/coverage.json:137` `mergeReview.previousStoreSha256` is not a pin. Its value f7f7aac1… is `store.ts` at 2a840b55, a change record. The script's change-record rule matches only a key named exactly `previous`, so it paired the hash with the sibling `evidence` path (this report). store.ts's live pin matches (489f3471…).
+
+**Historical: 73.**
+- 9 inside a longer name;
+- 14 contracts in review records: every `clientIntegrationReview` is 78a2be44, and every other review record is 55c6d138;
+- 5 tla2tools jar hashes pinned by url;
+- 45 function-body hashes covered by a matching whole-file pin.
+
+The one top-level contract (`verify-dag-formal/public-pin.json`) matches
+CONTRACT_ID 55c6d138.
+
+**Unknown: 81.** All 81 values are present at 2a840b55 and at both parents, so
+neither side of this merge introduced them. Each, and why it is not a live pin:
+
+| Count | Where | What it is |
+| --- | --- | --- |
+| 56 | `verify-discovery-formal/HISTORICAL-INPUTS.json` | Receipts at absolute paths in other worktrees and the orchestrator archive. The skill (`SKILL.md:27`) says no command opens these paths. |
+| 3 | `HISTORICAL-INPUTS.json:8, 270, 271` | The B9 `sourceHash` of builtHead 36f9. Under `previousCheckpoint`: `canonicalBSourceHash` and `legacyAttachmentCacheLabel`. |
+| 7 | The identical header line in dag-formal `SKILL.md:57`, `features/README.md:3`, `features/public.md:3`, `mapping.md:11`; discovery `SOURCE-MAPPING.md:3`; cache `admission/MAPPING.md:3`; task-search `CLIENT-MAPPING.md:11` | 78a2be44, the contract of the product the line names. `contract.ts` at 7d947f91 is exactly that value. |
+| 2 | dag-formal `SKILL.md:233`, task-search `REPORT.md:319` | The tla2tools 1.7.4 jar, the same value as the five url-pinned `tool.json` entries. |
+| 1 | `graph-response-properties.ts:331` | The `chain-1000.json` fixture hash, asserted at runtime. It equals HEAD. |
+| 1 | discovery `REPORT.md:115` | `Discovery.tla`. It equals HEAD. |
+| 5 | discovery `REPORT.md:182, 184–186`, task-search `CLIENT-MAPPING.md:90` | B9 source hash and the compiled todo, todo-server and seed SHAs of builtHead 36f9. These are build outputs, not repository files. |
+| 3 | task-search `MATCHER-REPORT.md:51–53` | Matcher sources at afcda567 (2026-11-08), recorded from matcher-RHxLBW. The live matcher pin is `matcher-candidate.json` commit 5f46e7b3, read through git archive. Note: the table sits under a heading that names candidate f85aef6f, whose `task-search.ts` and `task-filters.ts` differ from it. This is a stale label in that document on both parents; no check reads it. |
+| 1 | `MATCHER-REPORT.md:57` | Upstream Unicode `CaseFolding.txt`, also quoted in `task-search-case-fold.ts:4` and in the generator. |
+| 2 | occ `PURGE-RESTORE-MAPPING.md:7, 130` | :7 is the Version-1 Task seed data hash of a scratch trace. :130 is `store.ts` at e52f19e4, an earlier renewal; the live pin matches. |
+
+Two smaller notes:
+- `verify-dag-formal/SKILL.md:31` is the current contract, 55c6d138. It is classed as "inside a longer name" only because a full stop follows it.
+- No function listed in verify-occ-atomicity's coverage got new content: its store.ts and projection.ts pins match.
+
+#### The 81 unknown values, by rule
+
+Generated from `docs/evidence/ui-speed/recordings-c9/pin-audit/pin-audit-head.json`.
+Every value is present at 2a840b55, 6cbbb953 and 675aab82.
+
+**A. Receipt at a path outside the checkout (HISTORICAL-INPUTS.json; SKILL.md:27: no command opens these paths): 56**
+
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:24` `ac059420e71fee7976ab0ecf4c1db73b1d6b644ed524f9819467014a1711d347`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:28` `474608c247b3e91ada6ec62c84cdf43957e6dafa6688524af34bccfa837884a3`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:32` `cb17ccfa4489e644b4ab85b58f7350f19b6cce9a3e688be485b420dcc61163fa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:39` `223cf9ed82c5b280e2d91558a1d8b8789df54e5d39e831ed5ec82ce0215db565`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:43` `98b1229b6a90611e602d5fea246b26ce2460f15db3f6a2fd205ad17ef9d88186`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:47` `4070031488bbe95357b282d6bc62ba07cbc03b92c33e3ac22c1b3fdffa9d4d67`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:51` `988dbb670465eb539e29bfa80160772a114645dd718b92fd16d48a2e3230fda0`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:55` `5314af586ef7abd8a1ff1ce9fcbe63b2d4b05b94351884cc4f0bd2b7f6e5f435`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:59` `467184b538022ed5b6d2d1fc6fdc94a9894790561b7422513210eaa2ec25857b`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:63` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:68` `32c0282dd4406c168e74486bea143b3041525a68d3db4dd48e1a25e2634cc9a3`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:72` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:77` `4f129a271d0c7125942276b30d712f3cde1e59f61882bc3e1969fc35bc87d3f1`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:81` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:86` `015cb9ae61f082d1ef61021b6077252e8f364a5c485e9c227dd8804e9eeb31b9`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:90` `f3b876ee686d677d57fc13d0aef5005891b16721da73dfff9dce8f6c5e22ddc7`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:94` `9960fed3da6d0245ac22a0ae373b7a55a78c79ef4c19f5dac278bec6525ce563`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:98` `c3a20fde91c42cd13285a69f62d00e2da73db7192666b2642cba1e54c1449c54`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:102` `e1b26afd2a84ed863814afd3c41894f0fed538992fb3665203784478e62ead7e`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:106` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:111` `5edcd6f6aa5a48ff7256df0021a8c8b46d2c23972362b1cc9e3131798ef6bf80`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:115` `7fda25f6cd6804fe3b447484d127876cad7fc47f8cbdd959e2e995195575eb70`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:119` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:124` `5edcd6f6aa5a48ff7256df0021a8c8b46d2c23972362b1cc9e3131798ef6bf80`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:128` `81d8bf873743fb13848c39cb2f338d1b17448fc7558d20be216cefe798adacb0`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:132` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:137` `5edcd6f6aa5a48ff7256df0021a8c8b46d2c23972362b1cc9e3131798ef6bf80`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:141` `8d5a26ea59bd000381a3c27c1a4ebaed743f042739c5f87dcc7fc662d26f0944`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:145` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:150` `0f022192fa99f3a1f34a81c51c9c19310d5174d9cfbae5659a514e2fea899c4f`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:154` `9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:159` `c2f1af14dd01dbf6f939c796aa169e6c374f89708e696b77734e7d1d545fd18e`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:163` `34681749db3462d4da15662549df52195c16a669aef61a5ffad2ff17cc26caae`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:167` `1edb229648469e83b4238876c682e24377c1a3123f450e43dc9fc600fe26ff28`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:171` `0650bb1da4d79d640c534136259eec778eba3dbab36c7d5b38c1c31a41097642`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:175` `50b43b1bc26ed92720e902ccbf62438045e95892f081aa05a44b6f08dba9b3e9`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:179` `f7eb2d6ec0297dbd3c317c9ddf02853c4de8182462e1bfff67eba79ab4691d10`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:183` `b853636d986608b6c1f76796e5c67c454b8281f37c8dc728c1e6aeae7dc1f068`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:188` `b144ca7d05552b1c0e2f9688afee4872f65b7433773921457fe344c7642dd90d`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:193` `6a4f7697de1517166e71b9a0f124d9197b0ca219b105dc5ed1b01ef2fc5f56f0`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:198` `dd29af93acc8f5c6c82d6b66e3d15f78563a3ec53c053730234744d15778e9f7`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:203` `8318f58180a2b8605194209e602c3a38ecf734c891502708dd17c06be18f9352`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:208` `0c9b61805d221c60f17bdabd489afa69fd39d805f4a23457cf570fbada2449ca`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:213` `aabb61fcf1eb35aa0471d63fae8154c28b5f505d91ae112c31c05a07b4b630df`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:218` `0e1d39edfa5c32f9781984da0c5265d81346cf64dcc8fc4380ef6f4693e20ddf`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:223` `c266c3d598d0c8f50bbf83290bf8f9e13ef53f981e6ae93db9f27bf26f6b6639`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:228` `233aa8e82e39f0e14750943daa47c8c390451ddedda614bc8e705db977d67e54`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:233` `5f7bb74da8018432628c52f3576f36e3eb58dd2263ffd246c3a8a7ba2a1da880`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:238` `3fba9b0e427d6d2ffeae4f21ccf7368a31d11e45548673150c32d7165705ce91`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:243` `f5a26377c8c7af55a24b264d065a6b3f08ffe58d7e188d8ed59449085b41323d`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:248` `7423f9fcd29b45ead0c857a93186759d7fe8e1b88ec7303458989c81b3260f6a`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:253` `a73dddd179e48be392588cd4476015cb75a4721aa22785da9c7e051f856ff73f`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:258` `6bd546ba6518296b08d2317bc6b5c7c994adeb86211639e18fb5075d663ef590`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:288` `725152db259e21fd1adb62721005584a7d8aed56de780f6f95605bba819124b9`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:292` `92bb31f71e19f1dbda6c43ecbbb186eb36fdd2b5218857f5dec337d75a24e8c5`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:296` `fd4fb12c0e6318d34e581b3ba0b4342b964aa92bb436dae555a76ff2cdbdeb10`
+
+**B. Provenance hash in HISTORICAL-INPUTS.json with no file beside it (B9 source hash; previousCheckpoint source hash and cache label): 3**
+
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:8` `b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:270` `e76674ad89a63dabb3e603beae0fc2333264c29e47a659d9be9070ece95fa973`
+- `verify-discovery-formal/HISTORICAL-INPUTS.json:271` `7f8462c827387e08e48456e1819152d4e36c00a7509b130a1d4923f5d12972dd`
+
+**C. Contract of product 7d947f91, named on the same line (contract.ts at 7d947f91 is this value): 7**
+
+- `verify-dag-formal/SKILL.md:57` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+- `verify-dag-formal/features/README.md:3` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+- `verify-dag-formal/features/public.md:3` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+- `verify-dag-formal/mapping.md:11` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+- `verify-discovery-formal/SOURCE-MAPPING.md:3` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+- `verify-task-search-cache/admission/MAPPING.md:3` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+- `verify-task-search-formal/CLIENT-MAPPING.md:11` `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`
+
+**D. tla2tools 1.7.4 jar (same value as the five url-pinned tool.json entries): 2**
+
+- `verify-dag-formal/SKILL.md:233` `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`
+- `verify-task-search-formal/REPORT.md:319` `936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88`
+
+**E. Hash of a repository file that equals HEAD (chain-1000.json fixture asserted at runtime; Discovery.tla): 2**
+
+- `verify-dag-formal/graph-response-properties.ts:331` `9954c8d86f6e9abac1ac3fb46be0ea16a7043297e2815dff32533a4c5de93c8f`
+- `verify-discovery-formal/REPORT.md:115` `76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24`
+
+**F. B9 source hash and compiled binary SHAs of builtHead 36f9 (build outputs, not repository files): 5**
+
+- `verify-discovery-formal/REPORT.md:182` `b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced`
+- `verify-discovery-formal/REPORT.md:184` `ac059420e71fee7976ab0ecf4c1db73b1d6b644ed524f9819467014a1711d347`
+- `verify-discovery-formal/REPORT.md:185` `474608c247b3e91ada6ec62c84cdf43957e6dafa6688524af34bccfa837884a3`
+- `verify-discovery-formal/REPORT.md:186` `cb17ccfa4489e644b4ab85b58f7350f19b6cce9a3e688be485b420dcc61163fa`
+- `verify-task-search-formal/CLIENT-MAPPING.md:90` `b9ec2d8ebf6eed046577134dccdc4a4004a10d76a5409a44af4e2f8b62f19ced`
+
+**G. Matcher source hashes at afcda567, receipt matcher-RHxLBW (live pin is matcher-candidate.json 5f46e7b3): 3**
+
+- `verify-task-search-formal/MATCHER-REPORT.md:51` `196d91957dc059666cca0414aa0d73204349a0075f054732479358f6061230c5`
+- `verify-task-search-formal/MATCHER-REPORT.md:52` `4f44913d63f3de2d65ecbee037b8810388945f0514d76079e7b24cc6141fe08e`
+- `verify-task-search-formal/MATCHER-REPORT.md:53` `96df592e0ce243c63397924c154e437973b8bc8f30e40948a75045498a7739cf`
+
+**H. Upstream Unicode CaseFolding.txt (quoted in task-search-case-fold.ts:4 and its generator): 1**
+
+- `verify-task-search-formal/MATCHER-REPORT.md:57` `ff8d8fefbf123574205085d6714c36149eb946d717a0c585c27f0f4ef58c4183`
+
+**I. Version-1 Task seed data hash of a scratch trace (a database state, not a file): 1**
+
+- `verify-occ-atomicity/PURGE-RESTORE-MAPPING.md:7` `fd68adcacf2ab99704d59ef4abae846ce20a1caa47ac795d886138ca7e4c9157`
+
+**J. store.ts at e52f19e4, an earlier renewal (live store.ts pin matches): 1**
+
+- `verify-occ-atomicity/PURGE-RESTORE-MAPPING.md:130` `8dbb9b9ba322c1cb29d41732072792f4c929cea185770f1597d25a393e5787e1`
+
+Total: 81.
