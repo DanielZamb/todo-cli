@@ -1,7 +1,12 @@
 # Durable refusal candidate mapping renewal
 
-Product capture: 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8.
+Product capture: 635a93d1c2a0d99c13857244c36b4a1656d73e92.
 Previous DAG product: 5f46e7b3c36afaffe8f2328df6453b8546be27a5.
+First proposed capture: 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8. It advanced to
+635a93d1c2a0d99c13857244c36b4a1656d73e92 to include the
+later-stamp match fix in auth/rejection-history.ts, the driver and its test.
+Between the two, no mapped file changes; git diff of every coverage path is
+empty.
 This renewal is a candidate pending independent correctness-seat acceptance.
 No model, invariant, bound, expected result or control changes.
 

@@ -229,7 +229,8 @@ under f1-closure-5PIxSP/order30-find-before.txt.
 
 ## Durable refusal candidate renewal
 
-The candidate product is 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8.
+The candidate product is 635a93d1c2a0d99c13857244c36b4a1656d73e92 (first proposed as
+1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8; every mapped file is byte-identical between them).
 See docs/decisions/ui-speed/durable-denial-formal.md. Only the auth.ts whole-file
 hash changes. All four covered Authentication methods and all other mapped
 files are byte-identical. Auth recording remains outside the finite DAG model.
