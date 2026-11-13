@@ -83,13 +83,18 @@ try {
   if (boundary === "matrix") {
     const rows = [];
     let index = 0;
+    // One fixed base: each case's due time is unique. Reminders are received
+    // per Task and due millisecond, so a due time relative to a moving clock
+    // repeats whenever a case takes exactly one second, and runDue then
+    // correctly fires nothing.
+    const dueBase = Date.now();
     const send = async (method, route, body) => {
       const reply = await fetch(base + route, { method, headers: { Authorization: `Bearer ${credential}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
       assert.equal(reply.status, 200); return reply.json();
     };
     for (const path of compositionPaths) for (const rollback of [false, true]) for (const leaf of compositionLeaves) {
       const target = (await run(raw.tasks())).find((value) => value.id === task.task.id);
-      await send("PATCH", `/profiles/work/tasks/${target.id}`, { from_version: target.row_version, changes: { due_at: { kind: "instant", utc: new Date(Date.now() - 10000 - index * 1000).toISOString(), time_zone: "UTC" } } });
+      await send("PATCH", `/profiles/work/tasks/${target.id}`, { from_version: target.row_version, changes: { due_at: { kind: "instant", utc: new Date(dueBase - 10000 - index * 1000).toISOString(), time_zone: "UTC" } } });
       const cursor = (await run(raw.history())).at(-1).seq;
       await until(() => frames.some((frame) => frame.event === "operation" && frame.data.seq === cursor));
       const controls = () => output.split("\n").filter((line) => line.startsWith("CONTROL "));
