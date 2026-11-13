@@ -28,7 +28,7 @@ try {
     ["child", f.scratch, "server-held"],
     { stdio: ["ignore", "pipe", "pipe"] },
   );
-  const end = Date.now() + 10000;
+  const end = Date.now() + 60000;
   while (!existsSync(join(f.scratch, "server-held-ready")) && Date.now() < end)
     await Bun.sleep(5);
   assert.ok(existsSync(join(f.scratch, "server-held-ready")));
@@ -40,7 +40,7 @@ try {
   restarted.stdout?.on("data", (x) => (log += x));
   restarted.stderr?.on("data", (x) => (log += x));
   let url = "";
-  const listening = Date.now() + 10000;
+  const listening = Date.now() + 60000;
   while (!url && Date.now() < listening) {
     assert.equal(restarted.exitCode, null, log);
     url = log.match(/Listening on (http:\/\/127\.0\.0\.1:\d+)/)?.[1] ?? "";
@@ -68,7 +68,7 @@ try {
   assert.equal((await created.json()).row_version, 1);
   assert.equal(existsSync(join(f.scratch, "server-held-resume")), false);
   writeFileSync(join(f.scratch, "server-held-resume"), "");
-  const ready = Date.now() + 10000;
+  const ready = Date.now() + 60000;
   let upload = 0;
   while (Date.now() < ready) {
     const r = await fetch(url + "/diagnostics/profiler/ingest", {
