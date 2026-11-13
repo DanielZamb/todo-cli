@@ -1,7 +1,8 @@
 # Private Diagnostics recordings
 
 The current delivery corrects SQL7 and SQL8 from the second SQLite review. See
-"SQLite progress and format corrections" below. Earlier sections record the
+"Resume verification after disk hold" below for the completed gate. Earlier
+sections record the
 previous implementations and their receipts.
 
 The SQLite implementation replaces the unshipped file journal with a separate
@@ -2238,3 +2239,153 @@ charges, not an attributed APFS free-space delta. The final guard reports
 The original Task-database/copy control and cost interpretation remain owed
 under the coordinator's hold. The branch is committed and parked until the
 coordinator gives the word to continue.
+
+
+## Resume verification after disk hold
+
+The coordinator lifted the hold and restored the standing 30 GiB soft floor.
+The implementation remains 6468bd05db5b8bef498699b3a72fb07b69f42674. This follow-up
+adds a reusable boundary control, its skill instructions and these receipts;
+no product source changes. All work deferred by the hold is now complete.
+
+### Finding receipts and chosen limits
+
+SQL7 retains both unchanged seat witnesses and their failing-first results on
+9da2a17a: compiled 128-Show client exit 1, real HTTP 224-Show control exit 1.
+The lightly loaded pre-fix client positive boundary remains separately labelled
+exit 0. After the fix the archived client and HTTP witnesses exit 0. The final
+client control passes five repeats at loads 15.10 through 15.68 with no healthy
+worker retirement. The HTTP control accepts unrelated ingestion after the burst.
+The slow-progress and stopped-read controls, genuine held-worker recovery, and
+Task/state assertions remain green in the final-source pre-hold receipts.
+
+Call/readiness deadlines stay 5000 ms and expire only the caller. The separate
+inactivity watchdog is 10000 ms. Valid replies and bounded long-read steps reset
+it. The largest deliberately slowed step observed at loads 13.18 to 16.79 is
+541.262 ms, giving more than 18 times that duration as inactivity margin.
+Queued expiry cannot retire the worker. One operation is dispatched at a time;
+expired queued work is never dispatched, and expired active work keeps its
+charge until reply or retirement. The 1024-call / 1048576-byte admission bounds
+remain, plus a 5000 ms work estimate: 1.5 times the maximum of the last eight
+service samples per method, with 60000 ms expiry. Cold floors are Show 25 ms,
+Compare 50 ms, export 10 ms and other methods 1 ms. Active work consumes the
+larger of its estimated service and its elapsed time. Admission refuses overload
+with counted content-free refusals. Actual inactivity/failure uses the existing
+60000 ms recovery backoff. No product test deadline is relaxed.
+
+SQL8 retains the archived events(x TEXT) witness at exit 1 before / 0 after.
+The six broader native refusal cases are red before and green after; the current
+seven-test format suite passes again. The original real Task-database/copy
+boundary witness now passes on the final source. The new compiled
+sqlite-format-boundary control additionally asserts both directories remain
+0750 and both files remain 0640, with identical before/after SHA-256 hashes.
+A scratch Task database is created through the compiled CLI, not synthesized
+as a one-table approximation. Its copy is refused with the same guarantees.
+Real store reopen and existing-empty-file initialization controls pass.
+
+Recognition remains read-only before any mode change, journal switch or DDL:
+application id 0x544f4452, user_version 1 and the exact owned catalog, followed
+by integrity/foreign-key checks. Only an exclusively created or empty file may
+initialize. The unit has never been installed; no migration is provided.
+
+### Refreshed gates
+
+The three skill recipes pass again after the hold, using fresh scratch data.
+verify-diagnostics uses its explicit no-Swift mode; terminal PNGs remain HOLD.
+The exact root command passes on its first resumed run: 457 domain, 38 server,
+80 CLI and 168 Electron tests, with the existing one skip. Its one-minute loads
+are 5.076 at start and 5.697 at end. Disk guard runs first; the 30 GiB check also
+passes. No worker cap or timeout override is used. Earlier pressure failures
+and the unchanged Electron five-second timeout remain in the historical section.
+
+| Receipt | Actual command | Exit |
+| --- | --- | --- |
+| resume-boundary-original | bun .scratch/recordings-sqlite-s1/database-boundary.ts | 0 |
+| resume-boundary | .scratch/bin/sqlite-format-boundary $PWD/docs/evidence/ui-speed/recordings-sql-progress/resume/boundary | 0 |
+| resume-helper-types | bun --bun node_modules/typescript/bin/tsc -p .agents/skills/verify-ui-profiler/tsconfig.json | 0 |
+| resume-types | pnpm typecheck | 0 |
+| resume-format | pnpm --filter @todo/domain test recording-format.test.ts | 0 |
+| resume-contract | bun packages/api/scripts/openapi.ts --check | 0 |
+| resume-producer | env TODO_PROFILER_STRESS=1 bun .agents/skills/verify-ui-profiler/scripts/verify.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/resume/producer | 0 |
+| resume-diagnostics | env TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-progress/resume/diagnostics | 0 |
+| resume-api | .agents/skills/verify-server-api/scripts/verify.sh $PWD/docs/evidence/ui-speed/recordings-sql-progress/resume/api | 0 |
+| resume-root | /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 |
+| resume-cost | env TODO_RECORDING_COST_REQUESTS=20 /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun .agents/skills/verify-ui-profiler/scripts/sqlite-cost.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/resume/cost | 0 |
+| resume-cost-report | bun .agents/skills/verify-ui-profiler/scripts/sqlite-report.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/resume/cost | 0 |
+| resume-prior-cost-report | bun .agents/skills/verify-ui-profiler/scripts/sqlite-report.ts $PWD/docs/evidence/ui-speed/recordings-sql-progress/cost | 0 |
+
+Evidence stays under docs/evidence/ui-speed/recordings-sql-progress; resumed fixture output is under its resume directory.
+Only reusable inputs are tracked. The compiled product source hash remains
+2dad926ef22fb8ce4d1e6f17b22c834e680ac3708652de98fcb4095c317d66a6.
+The precommit manifest's HEAD is the earlier base; the source hash and unchanged
+apps/packages diff identify the actual tested implementation.
+
+### Frozen cost result
+
+The fresh same-binary comparison completes 100 cells, ten alternating pairs
+per scenario, with 20 literal Task reads and writes per cell: 2000 reads and
+2000 writes all pass. No imposed pressure or other verification job overlaps.
+Boundary one-minute loads range from 4.195 to 6.635. The tracked recipe, defaults,
+quiet ceiling and assertions are unchanged; TODO_RECORDING_COST_REQUESTS=20 is
+the already declared bounded variant.
+
+The synthetic 32-producer flood adds median 10.329 ms to Task-write p50, with
+paired range [8.770,12.683]. It accepts 2423 / 6400 batches and counts 3977
+refusals. Server CPU across threads is median 4675 ms per cell with ingestion
+versus 105 ms without; driver CPU with ingestion is 395 ms. This confirms real
+server work, not just load-generator work. It does not apportion a percentile
+among validation, cloning, SQLite and I/O. The seat's component measurements and
+assumed real-cadence costs above remain relevant; early validation refusal is
+still not shipped. The native seed maximum is 41.352 ms, so SQLite remains in
+the worker under the two-millisecond criterion. No allocation count is claimed.
+
+Write differences for 16-event cells and eviction are positive beyond their
+pair-to-pair spread. Read effects, expiry writes and the magnitude of the
+128-event write effect lie within variation and are inconclusive, not evidence
+of no overhead. The earlier pre-hold run also completes and is now
+reduced: its flood paired median is 20.215 ms [10.667,38.776]. Both runs use the
+same implementation with different host/disk conditions. Their differences do
+not establish a software speedup. All pair values, loads, CPU and outcomes are
+preserved in each run's raw.json and tables.md.
+
+| Challenge | Read p50 without / with | Write p50 without / with | Accepted / dropped batches |
+| --- | --- | --- | --- |
+| 16 events | 1.036 [0.743, 1.325] / 1.108 [0.812, 1.209] | 1.069 [0.706, 1.343] / 1.792 [1.327, 1.998] | 200 / 0 |
+| 128 events | 1.008 [0.728, 1.314] / 1.122 [0.832, 2.315] | 1.015 [0.691, 1.221] / 2.595 [1.959, 4.008] | 200 / 0 |
+| 32 producers | 0.852 [0.719, 1.102] / 0.931 [0.766, 1.145] | 0.871 [0.696, 1.106] / 11.183 [9.522, 13.789] | 2423 / 3977 |
+| Expiry | 0.992 [0.808, 1.482] / 0.902 [0.850, 1.245] | 0.958 [0.793, 1.646] / 1.345 [1.322, 2.022] | 0 / 0 |
+| Eviction | 0.846 [0.811, 1.258] / 0.979 [0.893, 1.379] | 0.906 [0.827, 1.524] / 2.295 [2.180, 2.841] | 200 / 0 |
+
+| Challenge | Read paired differences, pairs 1 through 10, ms | Write paired differences, ms |
+| --- | --- | --- |
+| 16 events | 0.113, 0.043, 0.102, 0.077, 0.036, -0.011, -0.144, -0.033, 0.069, -0.063 | 0.800, 0.631, 0.759, 0.669, 0.662, 0.637, 0.655, 0.701, 0.621, 0.479 |
+| 128 events | 0.105, 0.130, 0.224, 0.033, 0.033, -0.185, 0.185, 0.020, 1.356, 0.104 | 1.662, 1.615, 1.564, 1.485, 1.505, 1.460, 1.642, 1.364, 3.056, 1.267 |
+| 32 producers | -0.031, 0.022, 0.194, 0.165, 0.353, -0.038, 0.043, -0.111, -0.002, 0.064 | 8.889, 8.770, 9.892, 10.351, 10.790, 10.483, 12.683, 9.926, 10.733, 10.307 |
+| Expiry | 0.095, -0.132, -0.050, 0.174, 0.026, -0.081, -0.138, -0.564, 0.149, -0.348 | 0.589, 0.401, 0.442, 0.624, 0.518, 0.369, 0.321, -0.314, 0.933, 0.188 |
+| Eviction | 0.192, 0.103, 0.129, -0.089, 0.137, 0.097, 0.167, 0.120, 0.082, 0.122 | 1.327, 1.528, 1.374, 1.244, 1.523, 1.376, 1.402, 1.475, 1.353, 1.317 |
+
+| Challenge | Server CPU without / with, ms | Driver CPU with, ms | Boundary one-minute load range |
+| --- | --- | --- | --- |
+| 16 events | 125.000 [90.000, 160.000] / 240.000 [170.000, 260.000] | 19.006 [10.234, 32.390] | 5.378 to 6.635 |
+| 128 events | 125.000 [90.000, 150.000] / 465.000 [340.000, 610.000] | 25.814 [15.576, 46.953] | 5.631 to 6.344 |
+| 32 producers | 105.000 [90.000, 140.000] / 4675.000 [4000.000, 5380.000] | 394.944 [333.912, 463.512] | 4.781 to 5.801 |
+| Expiry | 110.000 [100.000, 180.000] / 210.000 [200.000, 320.000] | 8.149 [6.879, 13.674] | 4.533 to 5.000 |
+| Eviction | 110.000 [100.000, 160.000] / 535.000 [500.000, 690.000] | 24.957 [21.103, 33.114] | 4.195 to 4.833 |
+
+
+Old and new contract id are both
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+The fresh contract and root checks pass. No TypeScript pin, golden, OpenAPI or
+Swift source changes; no formal mapping changes because Task store.ts and
+projection.ts remain byte-identical. No native app, Swift, Keychain, signing,
+real user data or push is used. Quiet-machine confirmation under the unchanged
+ceiling, actual two/three-app upload cadence and terminal PNG rendering remain
+integration debt, as already agreed. No core verification remains held on disk.
+
+Final resumed cleanup retires 5 closed proof binaries/compile temporaries,
+446353408 allocated bytes, with zero open-file skips. SHA-256 hashes remain
+in resume/retired.json; source inputs and every cited receipt remain. The final
+guard reports 126.0 GB free. No global free-space delta is attributed to these
+file charges. Archived SQL7/SQL8 input hashes match their originals, recorded
+in resume/witnesses-unchanged.json. The current compiled CLI/server/seed stay
+for reproducibility; no binary or generated evidence is tracked.

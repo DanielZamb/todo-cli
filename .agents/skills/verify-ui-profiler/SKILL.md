@@ -146,6 +146,11 @@ Run the native format controls with `pnpm --filter @todo/domain test recording-f
 They assert unchanged hashes, 0640 file and 0750 directory modes for overlapping
 tables, wrong columns/id/version/index/trigger; real and empty stores reopen.
 
+Compile `scripts/sqlite-format-boundary.ts` to `.scratch/bin/sqlite-format-boundary`
+and run that binary from the checkout root with a fresh evidence path. It creates
+a real Task database through the compiled CLI in a scratch HOME and refuses both
+that database and a copy, preserving their hashes and 0640/0750 modes.
+
 Compile `scripts/sqlite-progress.ts` to `.scratch/bin/sqlite-progress`, then run
 that binary with a fresh evidence path. A slow progressing read outlives its
 caller deadline without retirement; a read stopped after its third step retires
