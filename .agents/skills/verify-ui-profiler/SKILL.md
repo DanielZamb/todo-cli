@@ -310,3 +310,31 @@ data or create denial: main data, WAL data, and file creation. All three must
 answer retrying with no files and no advice. Four controls must keep their
 true refusals: no owner read bit, a directory in place of `recordings.db`, a
 symbolic link in its place, and an unwritable directory.
+
+## Journal judgments need a lock, and a failed open changes nothing
+
+Before the exclusion, the store judges sidecars only when `recordings.db` is
+absent; nobody can be initializing a file that does not exist. With an empty
+main present, the journal and sidecar judgments wait until this open holds
+the exclusion. `hot_journal`, and `foreign_header` for a non-empty main, are
+judged while this open holds at least a shared lock on its own descriptor;
+if it cannot take one within 100 ms, the answer is `initialization_busy`. The
+sidecar clean-up decides every sidecar before removing any.
+
+`bun .agents/skills/verify-ui-profiler/scripts/sqlite-journal-holder.ts <checkout> <evidence>`
+has three cases:
+- a live rollback-mode writer holding a journal on our store gets
+  `initialization_busy` with no files and no advice, and the store opens after
+  the writer releases;
+- a journal left by an initializer killed inside its first commit is refused
+  `interrupted_initialization`;
+- a journal left by a writer killed inside its transaction is refused
+  `hot_journal`.
+
+Files are unchanged in every case. Review 8's `live-initializer.ts` (a second
+opener during a live first commit) must answer `initialization_busy`, never
+advice.
+
+An ACL deny or an immutable flag on the store's own 0600 file answers
+`check_unavailable` with its stage for as long as the restriction stays.
+`lstat` cannot establish an ACL or a flag, so this is the intended answer.

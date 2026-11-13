@@ -732,3 +732,23 @@ it("R7-1 words an unwritable recordings directory as a fact about the directory"
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+it("R8-1 decides every sidecar before removing any, so a refusal leaves an empty -wal in place", () => {
+  const root = scratch();
+  try {
+    const dir = join(root, "store");
+    mkdirSync(dir, { mode: 0o700 });
+    writeFileSync(join(dir, "recordings.db"), "", { mode: 0o600 });
+    writeFileSync(join(dir, "recordings.db-wal"), "", { mode: 0o600 });
+    writeFileSync(join(dir, "keep.txt"), "", { mode: 0o600 });
+    linkSync(join(dir, "keep.txt"), join(dir, "recordings.db-shm"));
+    const before = snapshot(dir);
+    expect(refusalWithDetail(dir)).toEqual({
+      reason: "foreign_sidecar",
+      detail: undefined,
+    });
+    expect(snapshot(dir)).toEqual(before);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

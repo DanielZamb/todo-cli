@@ -227,17 +227,19 @@ const sameFile = (fd: number, path: string) => {
   }
 };
 function clearEmptySidecars(path: string, sides: readonly string[]) {
-  for (const side of sides) {
-    const file = path + side;
-    let fd: number;
-    try {
-      fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
-    } catch (error) {
-      if (missing(error)) continue;
-      if (aboutTheFile(error, file)) return refuse("foreign_sidecar");
-      return unavailable("sidecar open", error);
-    }
-    try {
+  const decided: Array<{ file: string; fd: number }> = [];
+  try {
+    for (const side of sides) {
+      const file = path + side;
+      let fd: number;
+      try {
+        fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+      } catch (error) {
+        if (missing(error)) continue;
+        if (aboutTheFile(error, file)) return refuse("foreign_sidecar");
+        return unavailable("sidecar open", error);
+      }
+      decided.push({ file, fd });
       const stat = fstatSync(fd);
       if (
         !stat.isFile() ||
@@ -246,14 +248,15 @@ function clearEmptySidecars(path: string, sides: readonly string[]) {
       )
         refuse("foreign_sidecar");
       if (!sameFile(fd, file)) refuse("replaced");
+    }
+    for (const { file } of decided)
       try {
         unlinkSync(file);
       } catch (error) {
         unavailable("sidecar removal", error);
       }
-    } finally {
-      closeSync(fd);
-    }
+  } finally {
+    for (const { fd } of decided) closeSync(fd);
   }
 }
 function inspect(fd: number, path: string, image: () => number) {
@@ -447,11 +450,7 @@ export function openRecordingDatabase(
     );
   const path = join(directory, "recordings.db"),
     sides = ["-wal", "-shm", "-journal"];
-  const mainSize = sizeOf(path);
-  if (mainSize === undefined || mainSize === 0) {
-    const journal = sizeOf(path + "-journal");
-    if (mainSize === 0 && journal !== undefined && journal > 0)
-      refuse("interrupted_initialization");
+  if (sizeOf(path) === undefined) {
     for (const side of sides) {
       let stat: ReturnType<typeof lstatSync>;
       try {
@@ -551,13 +550,23 @@ export function openRecordingDatabase(
         throw new RecordingOpenRefusal("initialization_busy");
       releaseRecordingExclusion(fd);
     }
-    if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
     for (const s of sides) {
       const size = sizeOf(path + s);
       if (size !== undefined && size > totalBytes) refuse("oversized");
     }
-    const journal = sizeOf(path + "-journal");
-    if (journal !== undefined && journal > 0) refuse("hot_journal");
+    const held = performance.now() + 100;
+    while (!tryRecordingExclusion(fd, true)) {
+      if (performance.now() > held)
+        throw new RecordingOpenRefusal("initialization_busy");
+      wait();
+    }
+    try {
+      if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
+      const journal = sizeOf(path + "-journal");
+      if (journal !== undefined && journal > 0) refuse("hot_journal");
+    } finally {
+      releaseRecordingExclusion(fd);
+    }
     consistentInspection(fd, path);
     for (let attempt = 0; ; attempt++) {
       if (!sameFile(fd, path)) refuse("replaced");
