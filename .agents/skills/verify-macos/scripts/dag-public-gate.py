@@ -11,6 +11,10 @@ untracked files):
 - public-pin.json, over its `scopes`;
 - production-pin.json, over its `scopes`, or, when it has none, over the default list that
   candidate-inputs.mjs's materialize() uses (read from that file, never copied here).
+As in materialize() (`pin.scopes ?? [...]`), only a missing or null `scopes` takes the default; an
+empty list is an empty list. A pin whose scopes are empty names no file at all, so its premise cannot
+be checked: the step exits 6 before the check starts, naming the pin.
+Git's path lists are read with -z, so a path with a space or a newline is named whole.
 On a difference it exits 5 before the check starts, naming the pin, its commit and the paths.
 Otherwise it runs public-check.mjs and exits with its exit code.
 
@@ -36,13 +40,15 @@ def default_scopes() -> list:
     return re.findall(r'"([^"]+)"', match.group(1))
 
 
-def git(*args) -> str:
-    return subprocess.run(['git', *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout
+def git_paths(*args) -> list:
+    """A NUL-separated path list from git (-z), so every path is whole."""
+    out = subprocess.run(['git', *args], cwd=ROOT, capture_output=True, check=True).stdout
+    return [path.decode() for path in out.split(b'\0') if path]
 
 
 def differing(commit: str, scopes: list) -> list:
-    changed = git('diff', '--name-only', commit, '--', *scopes).split()
-    untracked = git('ls-files', '--others', '--exclude-standard', '--', *scopes).split()
+    changed = git_paths('diff', '-z', '--name-only', commit, '--', *scopes)
+    untracked = git_paths('ls-files', '-z', '--others', '--exclude-standard', '--', *scopes)
     return sorted(set(changed) | set(untracked))
 
 
@@ -50,10 +56,16 @@ receipt = {'pins': []}
 stale = []
 for name in ['public-pin.json', 'production-pin.json']:
     pin = json.loads((SKILL / name).read_text())
-    scopes = pin.get('scopes') or default_scopes()
+    own = pin.get('scopes')  # absent or null: materialize()'s default; [] stays []
+    scopes = default_scopes() if own is None else own
+    if not scopes:
+        receipt.update(result='NO-SCOPE', check='not started', pin=name)
+        if len(sys.argv) > 1: Path(sys.argv[1]).write_text(json.dumps(receipt, indent=2) + '\n')
+        print(f'PIN HAS NO SCOPE: {name} names {pin["commit"]} with an empty scopes list, so no file can be compared.', flush=True)
+        sys.exit(6)
     paths = differing(pin['commit'], scopes)
     receipt['pins'].append({'pin': name, 'commit': pin['commit'], 'scopes': scopes,
-                            'scopesFrom': 'pin' if pin.get('scopes') else 'candidate-inputs.mjs default', 'differing': paths})
+                            'scopesFrom': 'candidate-inputs.mjs default' if own is None else 'pin', 'differing': paths})
     if paths:
         stale.append(f"{name} names {pin['commit']}, but these paths in its scopes differ in this checkout: {', '.join(paths)}")
 if stale:
