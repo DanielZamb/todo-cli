@@ -40,6 +40,8 @@ struct DependencyNoticeContent: View {
     let notice: DependencyNotice
     var warning = false
     var font: Font = .callout
+    /// The exit-code line ("error 2 - validation or usage"); the main window's banner leaves it out.
+    var showsDetail = true
     private var titles: [String] { notice.path.map { id in model.tasks.first { $0.id == id }?.title ?? id } }
     private var headline: String {
         let prefix = notice.attemptTitle.map { "Can't \(notice.attemptVerb) \($0). " } ?? ""
@@ -58,7 +60,7 @@ struct DependencyNoticeContent: View {
                 }.buttonStyle(.link)
             }
             if let id = notice.followUp {
-                Button("Create follow-up") { Task { await model.createDependencyFollowUp(id) } }.accessibilityIdentifier("dependency-follow-up")
+                Button("Create follow-up") { Task { await model.createDependencyFollowUp(id) } }.accessibilityIdentifier("dependency-follow-up").compactBounds("dependency-follow-up")
                 if let failed = notice.followUpFailure {
                     Text(failed).font(.caption).foregroundStyle(TodoColors.color("destructive"))
                         .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("dependency-follow-up-error")
@@ -66,7 +68,7 @@ struct DependencyNoticeContent: View {
             } else if let failure = notice.failure, failure.isTaskLookup {
                 Button("Find Task by id") { Task { await model.findTaskAfterLookupError(failure) } }
             }
-            if let detail = notice.detail { Text(detail).font(.caption).foregroundStyle(.secondary) }
+            if showsDetail, let detail = notice.detail { Text(detail).font(.caption).foregroundStyle(.secondary).compactBounds("dependency-detail") }
         }.font(font).foregroundStyle(warning ? TodoColors.color("warning") : .primary)
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(warning ? "dependency-warning" : "dependency-error")

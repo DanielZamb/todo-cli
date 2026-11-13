@@ -40,6 +40,8 @@ struct Snapshots {
     func renderScreens() async throws {
         if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT1"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT2"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SC1_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
+        /// Candidate 9's images, both appearances (verify-design.py's C9_IMAGES).
+        let c9Images = 4
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         #expect(NSColor(named: "primary", bundle: TodoColors.bundle) != nil)
@@ -118,7 +120,7 @@ struct Snapshots {
                     }
                 }
                 try await Task.sleep(for: .milliseconds(100))
-                if name.hasPrefix("c8-") {
+                if name.hasPrefix("c8-") || name.hasPrefix("c9-") {
                     // Candidate 8 bounds receipt: the window, where its content starts (global frames
                     // include the title bar), every Compact frame, and whether every action, footer
                     // and Dismiss frame lies inside the content (nothing cut off at this size).
@@ -139,6 +141,13 @@ struct Snapshots {
                             fields[String(key.dropFirst(6))] = ["visible": bottom <= body.maxY + 0.5, "visibleFromHeight": Int((height - (body.maxY - bottom)).rounded(.up))]
                         }
                         try JSONSerialization.data(withJSONObject: ["window_height": height, "body_bottom": body.maxY, "fields": fields], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-field-heights-\(mode).json"))
+                    }
+                    if name.hasSuffix("banner-reopen-refused") {
+                        // Mac UI review 2, item 3: the notice with its button, and no exit-code line.
+                        #expect(compactMeasurements.frames["message-dependency-notice"] != nil, "\(name): the banner shows the Dependency notice")
+                        #expect(compactMeasurements.frames["dependency-follow-up"] != nil, "\(name): Create follow-up is in the banner")
+                        #expect(compactMeasurements.frames["dependency-detail"] == nil, "\(name): no exit-code line in the banner")
+                        #expect(compactMeasurements.frames["message-dismiss"] != nil, "\(name): the banner keeps Dismiss")
                     }
                     if name.hasSuffix("series-custom") {
                         #expect(compactMeasurements.frames["series-raw-rule"] != nil, "\(name): a custom rule keeps its raw rule")
@@ -371,6 +380,25 @@ struct Snapshots {
                     #expect(actionOrder == true)
                 }
 
+            }
+            // Candidate 9 states: part of the full suite (each asserted below in render), or alone with
+            // TODO_SNAPSHOT_C9_ONLY=1. Not in the other subset modes, whose counts are fixed.
+            let environment = ProcessInfo.processInfo.environment
+            let c9Only = environment["TODO_SNAPSHOT_C9_ONLY"] == "1"
+            let subsetMode = environment.contains { $0.key.hasPrefix("TODO_SNAPSHOT_") && ($0.key.hasSuffix("_ONLY") || $0.key.contains("CHECKPOINT")) && $0.value == "1" }
+            if c9Only || !subsetMode {
+                // Mac UI review 2, item 3: Reopen refused with no editor showing the Task. The main
+                // window's banner shows the Dependency notice (the done Task and Create follow-up)
+                // and no exit-code line.
+                let refused = fixture(); refused.signedIn = true
+                let doneDependent = DependencySnapshots.task("done-dependent", title: "Approved launch", status: "done")
+                let reopenFailure = try DependencyFixtureCases.failure("blocks_done_task", details: ["task_id": refused.tasks[0].id, "done_dependents": [try DependencyFixtureCases.wire(doneDependent)], "follow_up_depends_on": doneDependent.id])
+                refused.serverErrors[.message] = reopenFailure; refused.dependencyErrorContexts[.message] = .reopen
+                let reopenNotice = DependencyNotice.project(reopenFailure, context: .reopen)
+                refused.publishMessage([reopenNotice.message, reopenNotice.detail].compactMap { $0 }.joined(separator: "\n"), kind: .transition)
+                try await render("c9-banner-reopen-refused", WorkspaceSnapshot(model: refused), width: 1100, height: 720)
+                try await render("c9-compact-banner-reopen-refused", TaskListView(model: refused, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                if c9Only { continue }
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" {
                 // Candidate 8 review states for the Opus Mac UI seat: rulings 1, 2, 3 and 5, and D1/D2.
@@ -1191,12 +1219,12 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 52 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C9_ONLY"] == "1" ? c9Images : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 52 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362 + c9Images))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
             files += discovery + dependencies
-            #expect(files.count == 872)
+            #expect(files.count == 872 + c9Images)
             #expect(Set(files).count == files.count)
             var manifest = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: directory.appendingPathComponent("manifest.json"))) as? [String: Any])
             manifest["files"] = files

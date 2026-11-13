@@ -1114,6 +1114,11 @@ struct MessageBanner: View {
             if model.lookupError(at: .message, text: message) != nil {
                 // Keeps its own elements, so "Find Task by id" stays reachable.
                 ClientErrorNotice(model: model, text: message, position: .message)
+            } else if let notice = dependencyNotice {
+                // A Dependency refusal reads as it does in the editor: the Tasks it names and Create
+                // follow-up, without the exit-code line (Mac UI review 2, item 3).
+                DependencyNoticeContent(model: model, notice: notice, showsDetail: false)
+                    .accessibilityLabel(spoken).compactBounds("message-dependency-notice")
             } else {
                 Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
                     .accessibilityElement(children: .combine).accessibilityLabel(spoken)
@@ -1132,8 +1137,17 @@ struct MessageBanner: View {
             .onAppear { announce() }
             .onChange(of: sequence) { _, _ in announce() }
     }
+    /// The Dependency failure this message was described from, if it is one.
+    private var dependencyNotice: DependencyNotice? {
+        guard let failure = model.serverError(at: .message, text: message), failure.isDependencyFailure else { return nil }
+        return .project(failure, context: model.dependencyErrorContexts[.message] ?? .link)
+    }
     /// Connection messages describe a state ("… The live view is reconnecting."); the others are errors.
-    private var spoken: String { control == .dismiss ? "Error. " + message : message }
+    /// A Dependency refusal is spoken without its exit-code line, as it is shown.
+    private var spoken: String {
+        let text = dependencyNotice?.message ?? message
+        return control == .dismiss ? "Error. " + text : text
+    }
     /// Once per message: the banner reappearing with the same message announces nothing.
     private func announce() { if model.takeAnnouncement(sequence) { AccessibilityNotification.Announcement(spoken).post() } }
 }
