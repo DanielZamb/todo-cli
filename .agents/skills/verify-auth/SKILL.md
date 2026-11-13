@@ -163,3 +163,27 @@ also carry their originating database identity. Creation is private to the
 credential-check module; ports inspect private fields, kind and database before
 using any Profile or parsed field. Optional `TODO_AUTHORITY_EVIDENCE` writes the
 complete attempt matrix to an ignored local JSON path.
+
+## Durable repeated refusals
+
+The normal Launch command also runs scripts/verify-durable.sh. Set
+TODO_CLI_BINARY, TODO_SERVER_BINARY and optionally TODO_AUTH_DENIAL_BINARY to
+source-matching scratch binaries to reuse builds. Run that helper independently
+with a fresh absolute evidence directory for a focused proof. It builds
+packages/domain/scripts/verify-durable-denial.ts and drives the real domain API,
+then check-cross-process.mjs drives the compiled CLI/server process matrix.
+Both use only fresh scratch data; HTTP ports come from owned listen logs.
+
+The literal process counts are [1,1,1,1,1,1] for CLI/CLI, server/server,
+CLI/server, server/CLI, server restart and two ready CLI processes plus a server
+request released over an IPC barrier. Every CLI refusal exits 3 and HTTP returns
+401. The domain driver proves Snapshot restore re-recording, four key changes,
+ten wrong-passphrase rows and one locked row, Profile deletion/name reuse and
+Purge retention. Its barrier proves 5,000 preceding-minute rows do not hide the
+first refusal. An older-than-horizon row deliberately permits a second refusal.
+See features/history.md and docs/decisions/ui-speed/durable-denial.md.
+
+Doctor requires both compiled --version contracts to match this checkout.
+Evidence contains domain/proof.json, processes/parity.json and commands.log.
+Cleanup removes only newly created scratch state and awaits owned children;
+evidence survives. No native app, Keychain or launchd is needed.

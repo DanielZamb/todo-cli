@@ -94,8 +94,20 @@ keys. It adds the owner hash and credential tables. `op_log.profile` is nullable
 so sign-in failures can be recorded before any Profile exists. Task mutations
 still require an existing Profile. Successful credential changes append
 `AuthChanged`; denials append `AuthAttemptRejected` with reason `auth` after the
-failed transaction rolls back. A denial that repeats the same actor, Profile,
-action and detail within one minute appends nothing (ADR-0007 amendment). Denials fail with `AuthError`, code `auth`.
+failed transaction rolls back. The repeated-denial decision comes from History inside the same immediate
+write transaction as its append, so CLI and server processes decide alike.
+For a denial at time t, search that Profile by descending sequence for the same
+actor, action and detail in minute floor(t / 60000). Stop at a usable recording
+clock before the start of the preceding minute. Ignore missing, invalid, future
+and non-recording stamps. Wrong passphrases always append for the lockout.
+
+This look-back has a deliberate limit. A row committed more than a minute after
+its writer read the clock can hide an earlier matching refusal; the next repeat
+then appends one more row. A whole History inside the window must be searched on
+absence. Migration stamps, copied redaction stamps and supplied rejected-Task
+stamps never end the walk. See the
+[timestamp audit](../../docs/decisions/ui-speed/durable-denial.md).
+Denials fail with `AuthError`, code `auth`.
 SQLite, corrupt storage and cryptographic failures use `StoreError`.
 Task projection replay ignores auth events and retains credential tables.
 Auth tables hold canonical credential state and are outside Task snapshots.

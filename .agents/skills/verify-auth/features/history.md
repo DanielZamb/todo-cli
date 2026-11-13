@@ -41,3 +41,14 @@ pre-reads. Run it with TODO_CLI_BINARY and TODO_SERVER_BINARY from the same sour
 hash; TODO_CLI_EVIDENCE retains auth-history-actions.json without bearer secrets.
 Four revoked move/copy cases also require exactly one authenticate rejection
 through the CLI and HTTP, with the same selected Profile and unchanged Task.
+
+## Durable repetition
+
+Run ../scripts/verify-durable.sh with a fresh absolute evidence directory from
+the checkout, using the full path .agents/skills/verify-auth/scripts/verify-durable.sh.
+The compiled process matrix and domain lifecycle drive are described in SKILL.md.
+Require all six literal counts to equal one, including mixed processes and
+restart. The same-minute restored History must allow recording again. Keep the
+explicit two-row older-than-horizon limit and the one-row prior-minute barrier.
+Malformed, future, migration, redaction and supplied Task-rejection stamps must
+not stop the walk. Wrong passphrases retain every row.
