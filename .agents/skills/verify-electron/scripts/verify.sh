@@ -50,7 +50,9 @@ cd "$root"
   if [ "${TODO_VERIFY_SNAPSHOTS:-0}" = 1 ]; then
     pnpm --filter @todo/electron exec bun scripts/verify-snapshots.ts "$scratch" "$evidence"
   elif [ "${TODO_ELECTRON_VERIFY_HOST:-0}" = 1 ]; then
-    if [ "${TODO_VERIFY_TASK_SEARCH:-0}" = 1 ]; then
+    if [ "${TODO_VERIFY_STREAM_WAKE:-0}" = 1 ]; then
+      pnpm --filter @todo/electron exec bun scripts/verify-stream-wake.ts "$scratch" "$evidence"
+    elif [ "${TODO_VERIFY_TASK_SEARCH:-0}" = 1 ]; then
       pnpm --filter @todo/electron exec bun scripts/verify-task-search.ts "$scratch" "$evidence"
     elif [ "${TODO_VERIFY_PRIORITY_GROUPS:-0}" = 1 ]; then
       pnpm --filter @todo/electron exec bun scripts/verify-priority-groups.ts "$scratch" "$evidence"

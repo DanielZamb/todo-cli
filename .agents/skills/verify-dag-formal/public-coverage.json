@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "7d1d589a41276e96e0ded770d823359c3546e6f55cfe79f74eb429591db6eb38"
+      "sha256": "0b743e8e5b245cf792118b20ff721e6f7fe38d59b12d34d2dc4676e4070c5982"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e"
+      "sha256": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -547,5 +547,28 @@
     "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "streamWakeIntegration": {
+    "product": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
+    "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "review": "docs/decisions/ui-speed/stream-wake-integration.md",
+    "scope": "Merged immutable product of integ/server 2a840b55 and perf/stream-wake 21a4a52e. Covered-body review and actual-source controls precede renewal; the full command follows on this product. No model, invariant or bound changes.",
+    "certifies": "Finite DAG safety and production/public conformance of the covered bodies on this product. server.ts changes only by the wake wiring: rejectUnknownQuery and the importTasks, depend, undepend and batchDepend handlers are textually unchanged and now reach their commands through the decorated store, which signals open streams at the outermost exit."
+  },
+  "durableDenialCandidate": {
+    "product": "13ff84d64f4bb0fb8e206dcc700f11b2956e38ed",
+    "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "status": "candidate pending correctness-seat acceptance",
+    "review": "docs/decisions/ui-speed/durable-denial-formal.md",
+    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Advanced again to fb55ff7c83b968703634feb75f85c0e027142fa3 for the read-first refusal decision in Authentication.perform (ruling 2026-11-13): auth.ts whole-file hash only; startSeries, append, requireCredential and mutate bodies unchanged. Advanced again to 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9 for the size-bounded walk in the unmapped auth/rejection-history.ts (seat review F1, F2); no mapped file changes. Advanced again to 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed for the sampled large-row bound in that same unmapped file (seat review F6). Fresh full default follows; no old result is relabelled."
+  },
+  "c9ServerIntegration": {
+    "product": "0bd8476df7d7147ea355b418346b57d33f403aee",
+    "review": "docs/decisions/ui-speed/c9-server-integration.md",
+    "scope": "Merged immutable product of integ/server-wake f89b6693 and fix/durable-denial 366398fe. Every pinned row equals the product's bytes; the full command follows on this product. No model, invariant or bound changes.",
+    "certifies": "Finite DAG safety and production/public conformance on the merged product, with the wake's server.ts and the durable refusal's auth.ts. Authentication.startSeries, append, requireCredential and mutate bodies are textually identical to the stream-wake product; perform's catch and record now decide repeats from History, outside the finite model, as for 13ff84d6. This is the full default run the 13ff84d6 renewal did not have.",
+    "previous": {
+      "confirmedCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
+    }
   }
 }

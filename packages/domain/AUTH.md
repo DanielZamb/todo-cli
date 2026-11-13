@@ -94,8 +94,57 @@ keys. It adds the owner hash and credential tables. `op_log.profile` is nullable
 so sign-in failures can be recorded before any Profile exists. Task mutations
 still require an existing Profile. Successful credential changes append
 `AuthChanged`; denials append `AuthAttemptRejected` with reason `auth` after the
-failed transaction rolls back. A denial that repeats the same actor, Profile,
-action and detail within one minute appends nothing (ADR-0007 amendment). Denials fail with `AuthError`, code `auth`.
+failed transaction rolls back. The repeated-denial decision comes from History
+alone, so CLI and server processes decide alike. It is made first in a read,
+outside any transaction: a match appends nothing and opens no write
+transaction. Absence takes the immediate write transaction and decides again
+inside it before appending, so two processes that both miss leave one row.
+For a denial at time t, search that Profile by descending sequence for the same
+actor, action and detail in minute floor(t / 60000), in one pass. A refusal in
+that minute matches even when its stamp is later than t: another process may
+read its clock after this one and commit first. Stop at a usable recording
+clock before the start of the preceding minute. Missing, invalid, future and
+non-recording stamps never stop the walk. Wrong passphrases always append for
+the lockout.
+
+This look-back has a deliberate limit. A row of at most 4,096 bytes stamped
+before the start of the preceding minute and committed after a refusal can hide
+it: one from a writer that commits more than a minute after reading its clock,
+or from a writer whose clock is behind (or steps back). The next repeat then
+appends one more row. The walk reads a row's event only if it is at most 4,096
+bytes; a larger row (a Task with a long description) is skipped unread, its
+size taken from the record header. A refusal is always far smaller (161 bytes
+at most). So that a History of long descriptions cannot carry the walk far past
+the window, every 257th large row the walk meets (a count small rows do not
+reset) is read for its kind and stamp and treated as ordinary evidence. A large
+row can therefore hide a refusal only when it is that sampled row: stamped
+before the horizon, committed after the refusal, and the 257th large row the
+walk meets since its last sample.
+
+The walk visits every row of that Profile between the newest row and the match
+or the stop. A repeat whose match is the newest row costs one step, but rows
+committed after the first refusal (an import in the same minute, for example)
+are passed again by every repeat until the minute ends. That holds no write
+lock, but on the server it runs on the one thread that serves every request.
+The cost follows three things: the rows of at most 4,096 bytes in the window,
+which are read; at most one large row read per 256 skipped; and at most 256
+large rows (plus the one read) beyond the horizon, where a run of large
+recording-clock rows ends the walk. The review seat measured, before the size
+bound, 7.9 ms per repeat after 5,000 imported Tasks with 200-character
+descriptions and 57 to 67 ms after one import of 1,000 Tasks with
+100,000-character descriptions (first refusal 139 to 151 ms, about 70 ms under
+the write lock). Measured 2026-11-13 with the bound and sampling: after that
+1,000-Task import a repeat costs 0.73 ms (p99 1.4), three of those rows being
+read; a first refusal after it 7.2 ms. In a Profile whose History before the
+window is 20,000 Tasks with 5,000-character descriptions a first refusal costs
+5.6 ms (3.5 under the lock), where the bound without sampling cost 44 ms.
+Rows under the bound still cost what they cost: after 5,000 Tasks with
+200-character descriptions, 9 to 12 ms per repeat at load 8 to 12.
+A whole History inside the window must be searched on absence, twice: once in
+the read and once under the lock. Migration stamps, copied redaction stamps and supplied rejected-Task
+stamps never end the walk. See the
+[timestamp audit](../../docs/decisions/ui-speed/durable-denial.md).
+Denials fail with `AuthError`, code `auth`.
 SQLite, corrupt storage and cryptographic failures use `StoreError`.
 Task projection replay ignores auth events and retains credential tables.
 Auth tables hold canonical credential state and are outside Task snapshots.
