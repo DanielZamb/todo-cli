@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "e484efc6ee83d7bc475831761d184a11190ece35",
+  "productionSyncCommit": "5e44a58901ab92a863129f2cba74ea099dcc6768",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54",
+      "sha256": "63a1d4027287637c6116cd24c89201a095db4f851be33c0499956a0468c2f9dc",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
+  "previousProductionSyncCommit": "e484efc6ee83d7bc475831761d184a11190ece35",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -562,5 +562,17 @@
       }
     ],
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "renewalReview": {
+    "product": "5e44a58901ab92a863129f2cba74ea099dcc6768",
+    "controls": "check-swift passed on 5e44a589: docs/evidence/discovery-formal/swift-XWdUPp",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54",
+        "to": "63a1d4027287637c6116cd24c89201a095db4f851be33c0499956a0468c2f9dc"
+      }
+    ],
+    "review": "Candidate 8 freeze: AppViews.swift changed only in the Quick Add metadata region, which now caps its height at whole measured chip rows (Dependency and parsed chips alike) instead of the whole Dependency block; the region's chips report their frames in a named coordinate space. No search field, Task search request, refresh, discovery dialog or credential epoch code changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
   }
 }

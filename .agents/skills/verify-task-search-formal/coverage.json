@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54"
+      "sha256": "63a1d4027287637c6116cd24c89201a095db4f851be33c0499956a0468c2f9dc"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -400,5 +400,17 @@
       }
     ],
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "renewalReview": {
+    "product": "5e44a58901ab92a863129f2cba74ea099dcc6768",
+    "controls": "check-swift passed on 5e44a589: docs/evidence/discovery-formal/swift-XWdUPp",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54",
+        "to": "63a1d4027287637c6116cd24c89201a095db4f851be33c0499956a0468c2f9dc"
+      }
+    ],
+    "review": "Candidate 8 freeze: AppViews.swift changed only in the Quick Add metadata region, which now caps its height at whole measured chip rows (Dependency and parsed chips alike) instead of the whole Dependency block; the region's chips report their frames in a named coordinate space. No search field, Task search request, refresh, discovery dialog or credential epoch code changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
   }
 }
