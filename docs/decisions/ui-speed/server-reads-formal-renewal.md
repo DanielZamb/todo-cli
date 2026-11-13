@@ -442,4 +442,27 @@ O2 records a discriminated pass check: not-observed, missing, live or ended. Eve
 
 ## Qualification
 
-Pending the committed immutable product, pin renewal and full permitted recipes. The stock TaskSearch formal runner invokes TLC, TypeScript and real matcher checks, not Swift; Swift client/runtime mapping still owes the compiled production TodoModel task-search drive under the Swift slot. Nothing Swift/native/Keychain/signing is run here.
+Immutable product/control input is eca430bf1f3b5b9aeeb69a82c0086e3dab364249, with unchanged runtime source from ac6e7bd2. Both skills now pin that Git object; verifier inputs are committed at 1dcef6fd. DAG qualification remains incomplete at the public prerequisite described below. The stock TaskSearch formal runner invokes TLC, TypeScript and real matcher checks, not Swift; Swift client/runtime mapping still owes the compiled production TodoModel task-search drive under the Swift slot. Nothing Swift/native/Keychain/signing is run here.
+
+## Parked on the coordinator's disk hold
+
+No more formal stage, suite, product compilation or large evidence write starts until the coordinator releases the hold. The three already-running top-level commands were allowed to finish. The per-function audit and mapping review are complete; no model change was required or made.
+
+| Command / attempt | Real exit and evidence |
+| --- | --- |
+| 37 stream scenarios | 0; docs/evidence/ui-speed/server-reads/formal-read-renewal/stream-37/ and control-summary.json |
+| Old revocation-proxy sensitivity on direct removal | 1 at the intended three-versus-two wire assertion; direct-old-proxy.log |
+| Standalone matcher check at eca430bf | 0; matcher-0B0sqT under docs/evidence/task-search-formal |
+| First DAG full command | 1 after model/algorithm/replay/integration success, missing repo-local jar for nested AtomicCAS; check-QDsDY9 / conformance-XkkutV |
+| Second DAG full command | 1 at missing e717 baseline CLI/provenance; model, all 36 library mutants, exact restoration, integration, replay and guarded AtomicCAS pass; check-uI3bD0 / conformance-94Buj4 / public-60i3xA |
+| First TaskSearch full command | 1 at stale source-map hash: the first pin-write helper hit its default child-output buffer on generated source before completing the search map; model and all intended controls pass; check-Qy9FpV |
+| Corrected TaskSearch full command at eca430bf | 0, model, sensitivity, restoration, strict TypeScript, source map and real matcher; check-9Np8ay |
+| Exact standing order 27 root check | 0 after disk guard 0; 431 domain, 69 CLI, 32 server, 168 Electron and one existing skip; root-check.log |
+
+All main logs above are under docs/evidence/ui-speed/server-reads/formal-read-renewal/; formal detail directories are under docs/evidence/dag-formal/ and docs/evidence/task-search-formal/. Initial controller typecheck 1 (closure narrowing) and initial direct-base capture 1 (literal UUID from the deletion case) were wiring failures, corrected before the 37-case green. The exact direct-removal base reload UUID is 00000000-0000-4000-8000-000000000009, sequence 18.
+
+The DAG public runner requires the preserved immutable e7170510a376b51eaf3525bb9933cb0dd588b233 CLI and its metadata at .scratch/bin/dag-f-todo-1aa1db7f8ede6a9401d4f9eaf5e52823ed8ec52a3275cd02b71e71040c95713b plus .provenance.json. Those were removed in the coordinator's disk prune. The run passed the current candidate's 31-case input matrix before stopping there. This is a missing verification prerequisite, not a product/model counterexample. It must be reconstructed through the immutable baseline recipe after release, then the public controls and complete DAG recipe must finish. No public full-pass is claimed.
+
+Swift owed: the production TodoModel task-search/client-refinement drive, unhosted GeneratedContractTests and StateTests via scripts/swift-slot.sh apps/macos/scripts/verify-write-state.py with fresh scratch evidence and matching compiled CLI/server/seed inputs. The exact scope is .agents/skills/verify-macos/features/task-search.md: pending/late success/error, ABA, filters, Profile/view resets, full/query catalog debt, reload and real SSE refusal/recovery. The stock verify-task-search-formal/check.ts contains no Swift process invocation; its entire permitted stock recipe passed. Swift runtime/client proof is still owed, not inferred from source hashes or TLC. No Swift, native app, Keychain or signing was run.
+
+Contract remains 78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289. Eleven closed runtime copies (620,626,142 bytes) are retired by hash in park-runtime-retirement.json; the follow-up found zero further copies. A root-cache cleanup attempt exited 1 because the pruned build.json manifest was absent; park-root-binaries.json records that no binary was removed by that attempt. DAG artifacts needed for the held continuation remain.
