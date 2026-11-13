@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "635a93d1c2a0d99c13857244c36b4a1656d73e92",
+  "confirmedCommit": "fb55ff7c83b968703634feb75f85c0e027142fa3",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "1c2fc611163e594cd331c199b63783918fe05c42eae2bba83d12a29dbefd5049"
+      "sha256": "0b743e8e5b245cf792118b20ff721e6f7fe38d59b12d34d2dc4676e4070c5982"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -549,10 +549,10 @@
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
   },
   "durableDenialCandidate": {
-    "product": "635a93d1c2a0d99c13857244c36b4a1656d73e92",
+    "product": "fb55ff7c83b968703634feb75f85c0e027142fa3",
     "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
     "status": "candidate pending correctness-seat acceptance",
     "review": "docs/decisions/ui-speed/durable-denial-formal.md",
-    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Fresh full default follows; no old result is relabelled."
+    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Advanced again to fb55ff7c83b968703634feb75f85c0e027142fa3 for the read-first refusal decision in Authentication.perform (ruling 2026-11-13): auth.ts whole-file hash only; startSeries, append, requireCredential and mutate bodies unchanged. Fresh full default follows; no old result is relabelled."
   }
 }
