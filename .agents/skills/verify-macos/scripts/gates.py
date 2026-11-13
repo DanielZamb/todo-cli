@@ -134,6 +134,37 @@ def keychain_summary():
     unknown = sorted(k for k, v in values.items() if v is None)
     answer = None if unknown or not values else any(values.values())
     return dict(anyLinked=answer, unknown=unknown, receipts=values)
+# Candidate 10, group C: the compiled server, CLI and seed the Mac runners spawn run under the
+# reference isolation profile (.agents/skills/verify-macos/isolation, briefs/ISOLATION.md) after its
+# five node controls; each such runner writes isolation.json. Every gate gets a line in result.json.
+isolation_receipts = {gate: f'{gate}/isolation.json' for gate in
+                      ['hold', 'sign-out-stream', 'stress', 'race', 'connections', 'sockets', 'restart', 'diagnostics', 'idle', 'subscribers']}
+isolation_none = {
+    'design': 'spawns no Todo binary (the full design suite; only TODO_SNAPSHOT_GRAPH_REFRESH_ONLY would)',
+    'state': 'spawns no Todo binary (the tests that do need TODO_W06_*, which this gate does not set)',
+    'unsigned': 'xcodebuild only; a Swift build cannot be wrapped',
+    'discovery-prepare': 'prepares inputs; spawns no Todo binary',
+    'discovery-quarantine-temporaries': 'moves Bun leftovers; spawns no Todo binary',
+    'doc-links': 'reads documents; spawns no Todo binary',
+}
+isolation_outside = {
+    'discovery-formal': 'not wrapped: verify-discovery-formal\'s own checker (TLA+, a Swift build and its tests, which cannot be wrapped); not a Mac runner',
+    'task-search-formal': 'not wrapped: verify-task-search-formal\'s own checker; not a Mac runner',
+    'dag-public': 'not wrapped: verify-dag-formal\'s public check compiles and runs its pinned candidate under its own compile guards, which need ps (unavailable in the profile without the proxy); not a Mac runner',
+    'root': 'not wrapped: the repository\'s own check (pnpm check); not a Mac runner',
+}
+def isolation_summary():
+    rows = {}
+    for command in commands:
+        gate = command['name']
+        if gate in isolation_receipts:
+            path = evidence / isolation_receipts[gate]
+            receipt = json.loads(path.read_text()) if path.exists() else None
+            rows[gate] = {'binariesUnderProfile': receipt.get('binariesUnderProfile') if receipt else None, 'receipt': isolation_receipts[gate]}
+        else:
+            rows[gate] = {'binariesUnderProfile': None, 'reason': isolation_none.get(gate) or isolation_outside.get(gate, 'unknown gate')}
+    missing = sorted(gate for gate, row in rows.items() if gate in isolation_receipts and row['binariesUnderProfile'] is not True)
+    return dict(gates=rows, runnersNotIsolated=missing)
 try:
     helper = '.agents/skills/verify-client-diagnostics/scripts/verify.py'
     # HOLD (the live state tests against the scratch server) is a gate from now on, so a ruling
@@ -177,9 +208,11 @@ try:
     run('doc-links', ['node', 'scripts/check-doc-links.mjs', 'HEAD'])
     keychain = keychain_summary()
     assert keychain['anyLinked'] is False, ('Keychain answer is not a clean no', keychain)
-    result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain, pushed=False)
+    isolated = isolation_summary()
+    assert not isolated['runnersNotIsolated'], ('a Mac runner\'s binaries did not run under the isolation profile', isolated['runnersNotIsolated'])
+    result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain, isolation=isolated, pushed=False)
 except BaseException as error:
-    result = dict(result='FAIL', errors=1, head=head, gates_finished=len(commands), reason=repr(error), carried=carried)
+    result = dict(result='FAIL', errors=1, head=head, gates_finished=len(commands), reason=repr(error), carried=carried, isolation=isolation_summary())
     raise
 finally:
     (evidence / 'result.json').write_text(json.dumps(result, indent=2))

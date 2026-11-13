@@ -33,6 +33,8 @@ sys.path.insert(0, str(root / '.agents/skills/verify-macos-lifecycle/scripts'))
 from owned_process import OwnedCommands
 sys.path.insert(0, str(root / 'apps/macos/scripts'))
 import state_package  # the state package with the in-memory vault, and the Keychain guard
+sys.path.insert(0, str(root / '.agents/skills/verify-macos/isolation'))
+import isolation  # candidate 10, group C: compiled Todo binaries run under the reference profile
 
 unsafe = evidence / 'command-unsafe'
 owned = OwnedCommands(unsafe)
@@ -115,9 +117,12 @@ with scratch_directory() as temporary:
         if code or packages:
             raise RuntimeError(f'{name} failed: command exit {code}, Package.resolved diff exit {packages}')
 
+    isolated = {}
     try:
         if shared:
             url = shared['url']
+            # A shared server (snapshots only) was started, and isolated, by its own runner.
+            isolation.write_receipt(evidence, {}, None, reason='a shared server from another runner; this run spawns no Todo binary')
         else:
             for override, name, source in [('TODO_SERVER_BINARY', 'server', 'apps/server/src/main.ts'), ('TODO_SEED_BINARY', 'seed', 'apps/server/scripts/seed-verification.ts')]:
                 if binary := (os.environ.get(override) or (os.environ.get('TODO_PROVISIONER_BINARY') if name == 'seed' else None)):
@@ -129,11 +134,23 @@ with scratch_directory() as temporary:
                     (evidence / 'commands.json').write_text(json.dumps(actions, indent=2) + '\n')
                 else:
                     run(['bun', 'build', '--compile', str(root / source), '--outfile', str(scratch / name)], f'compile-{name}.log')
-            run([str(scratch / 'seed'), str(scratch), 'diagnostics'], 'seed.log')
             if os.environ.get('TODO_CLI_BINARY'):
                 shutil.copy2(os.environ['TODO_CLI_BINARY'], scratch / 'todo')
             else:
                 run(['bun', 'build', '--compile', str(root / 'apps/cli/src/main.ts'), '--outfile', str(scratch / 'todo')], 'compile-cli.log')
+            # Candidate 10, group C: the server, seed and CLI run under the reference isolation profile
+            # (briefs/ISOLATION.md), after its five node controls. Each binary moves to real/ and a
+            # wrapper takes its name, so every spawn (here, and TODO_F10_CLI / TODO_W06_PROVISIONER in
+            # the tests) goes through the profile.
+            isolation_controls = isolation.controls(evidence)
+            for name in ['server', 'seed', 'todo']:
+                real = scratch / 'real' / name
+                real.parent.mkdir(exist_ok=True)
+                (scratch / name).rename(real)
+                isolation.wrap(real, scratch / name)
+                isolated[name] = {'real': real.resolve(), 'wrapper': scratch / name}
+            isolation.write_receipt(evidence, isolated, isolation_controls)
+            run([str(scratch / 'seed'), str(scratch), 'diagnostics'], 'seed.log')
             if not snapshots_only:
                 run([str(scratch / 'todo'), '--profile', 'zzz-c11-import', '--format', 'json', 'init'], 'import-profile.log', dict(env, TODO_DB=str(scratch / 'scratch.db')))
             server_env = dict(env, TODO_DB=str(scratch / 'scratch.db'), TODO_PORT='0')
@@ -159,8 +176,11 @@ with scratch_directory() as temporary:
             assert health == {'service': 'todo-server', 'contract': contract, 'build': health['build']}
         recovery_seed = os.environ.get('SEC_SEARCH_RECOVERY_SEED')
         if not recovery_seed and not snapshots_only:
-            run(['bun', 'build', '--compile', str(root / '.agents/skills/verify-task-search/seed-recovery.ts'), '--outfile', str(scratch / 'search-recovery-seed')], 'compile-search-recovery-seed.log')
-            recovery_seed = str(scratch / 'search-recovery-seed')
+            run(['bun', 'build', '--compile', str(root / '.agents/skills/verify-task-search/seed-recovery.ts'), '--outfile', str(scratch / 'real' / 'search-recovery-seed')], 'compile-search-recovery-seed.log')
+            # The recovery seed (a compiled Todo driver) runs under the profile too.
+            recovery_seed = str(isolation.wrap(scratch / 'real' / 'search-recovery-seed', scratch / 'search-recovery-seed'))
+            isolated['search-recovery-seed'] = {'real': (scratch / 'real' / 'search-recovery-seed').resolve(), 'wrapper': Path(recovery_seed)}
+            isolation.write_receipt(evidence, isolated, isolation_controls)
         test_env = dict(env, TODO_DB=str(scratch / "scratch.db"), TODO_F10_CLI=str(scratch / "todo"), TODO_W06_SERVER=url, TODO_W06_RECEIPT=str(evidence / 'http-receipt.json'), TODO_W06_PROVISIONER=str(scratch / 'seed'), TODO_W06_SCRATCH=str(scratch))
         if recovery_seed:
             test_env['SEC_SEARCH_RECOVERY_SEED'] = recovery_seed

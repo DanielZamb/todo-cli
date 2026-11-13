@@ -55,6 +55,13 @@ swift_files = sorted([*ROOT.glob('apps/macos/Sources/*.swift'), *ROOT.glob('apps
 (EVIDENCE / 'sources.json').write_text(json.dumps({str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest() for path in swift_files}, indent=2))
 scratch = Path(tempfile.mkdtemp(prefix='todo-s01-verify-client-diagnostics-'))
 home = scratch / 'home'; home.mkdir()
+# Candidate 10, group C: the compiled server, CLI and seed run under the reference isolation profile
+# (briefs/ISOLATION.md), after its five node controls; binaries.json above hashes the real binaries.
+sys.path.insert(0, str(ROOT / '.agents/skills/verify-macos/isolation'))
+import isolation
+isolation_controls = isolation.controls(EVIDENCE)
+isolated = {name: isolation.wrap(bin_dir / name, scratch / 'isolated' / name) for name in ['todo', 'todo-server', 'seed']}
+isolation.write_receipt(EVIDENCE, {name: {'real': bin_dir / name, 'wrapper': isolated[name]} for name in isolated}, isolation_controls)
 environment = dict(base, HOME=str(home), CFFIXED_USER_HOME=str(home), TODO_DB=str(scratch / 'scratch.db'), TODO_PORT='0')
 server = None
 proxy = None
@@ -63,9 +70,9 @@ restart_lock = threading.Lock()
 closing = threading.Event()
 result = dict(result='FAIL', errors=1)
 try:
-    run([bin_dir / 'seed', scratch], 'seed', environment)
+    run([isolated['seed'], scratch], 'seed', environment)
     log = (EVIDENCE / 'server.log').open('w')
-    server = subprocess.Popen([str(bin_dir / 'todo-server')], env=environment, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+    server = subprocess.Popen([str(isolated['todo-server'])], env=environment, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     port = None
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
@@ -90,11 +97,11 @@ try:
     token = request('POST', '/auth/tokens', {'name': 'client diagnostics scratch', 'scope': 'read-only', 'profile': 'work'}, owner, 200)['credential']
     request('GET', '/diagnostics', credential=token, expected=403)
     environment['TODO_SERVER_URL'] = f'http://127.0.0.1:{port}'
-    run([bin_dir / 'todo', 'login', '--password-stdin', '--profile', 'work', '--format', 'json'], 'login', environment, 'scratch verification passphrase\n')
+    run([isolated['todo'], 'login', '--password-stdin', '--profile', 'work', '--format', 'json'], 'login', environment, 'scratch verification passphrase\n')
     fixture = scratch / 'items.json'; fixture.write_text(json.dumps(owner_items('work')))
-    run([bin_dir / 'todo', 'import', fixture, '--profile', 'work', '--format', 'json'], 'import', environment)
+    run([isolated['todo'], 'import', fixture, '--profile', 'work', '--format', 'json'], 'import', environment)
     # O3's stop/switch sequence switches to a Profile of its own (the subscribers test deletes personal); it sorts after work, so a deleted Profile still falls back to work.
-    if subscribers_only: run([bin_dir / 'todo', 'init', '--profile', 'zo3switch', '--credential-profile', 'work', '--format', 'json'], 'init-zo3switch', environment)
+    if subscribers_only: run([isolated['todo'], 'init', '--profile', 'zo3switch', '--credential-profile', 'work', '--format', 'json'], 'init-zo3switch', environment)
     tasks = request('GET', '/profiles/work/tasks', credential=owner)
     shape = witness(tasks); assert shape['total'] == 178 and shape['descriptionChars'] == 222312 and shape['attachments'] == 108
     (EVIDENCE / 'fixture.json').write_text(json.dumps(shape, indent=2))
@@ -143,7 +150,7 @@ try:
                         old = server.pid; owned.stop(server)
                         assert not closing.is_set(), 'helper closed during restart'
                         offset = (EVIDENCE / 'server.log').stat().st_size
-                        server = subprocess.Popen([str(bin_dir / 'todo-server')], env=dict(environment, TODO_PORT=str(port)), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                        server = subprocess.Popen([str(isolated['todo-server'])], env=dict(environment, TODO_PORT=str(port)), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
                         deadline = time.monotonic() + 30
                         while time.monotonic() < deadline:
                             assert server.poll() is None, 'restarted owned server exited'

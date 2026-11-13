@@ -1,0 +1,10 @@
+(version 1)
+; The reference isolation profile (briefs/ISOLATION.md, proven 2026-11-13), with the owner's real
+; data directory passed as a parameter (REAL_TODO_HOME) so no machine path is written here.
+(allow default)
+(deny file-read* file-write* (subpath (param "REAL_TODO_HOME")))
+(deny network-outbound)
+(allow network-outbound (remote ip "localhost:*"))
+(allow network-outbound (remote unix-socket))
+(deny network-outbound (remote tcp "*:4310") (remote udp "*:4310") (remote tcp "*:14310") (remote udp "*:14310"))
+(deny network-bind network-inbound (local tcp "*:4310") (local udp "*:4310") (local tcp "*:14310") (local udp "*:14310"))

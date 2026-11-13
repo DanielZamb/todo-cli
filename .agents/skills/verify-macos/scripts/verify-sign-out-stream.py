@@ -108,10 +108,18 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     api_hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in (root / 'apps/macos/API/Sources/TodoAPI').rglob('*.swift')}
     cache = json.loads((root / '.scratch/bin/build.json').read_text())
     (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'tests': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(tests.glob('*.swift'))}, 'harness': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), 'compiledServer': cache, 'binaries': {k: hashlib.sha256(Path(cache[k]).read_bytes()).hexdigest() for k in ['cli', 'server', 'seed']}, 'nativeApp': False, 'keychainGuard': 'keychain-guard.json'}, indent=2) + '\n')
-    if run([cache['seed'], str(scratch), 'diagnostics'], 'seed.log'):
+    # Candidate 10, group C: the compiled server, CLI and seed run under the reference isolation
+    # profile (briefs/ISOLATION.md), after its five node controls; the provenance above hashes the
+    # real binaries, and every spawn below (and SEAT_CLI for the tests) uses the wrappers.
+    sys.path.insert(0, str(root / '.agents/skills/verify-macos/isolation'))
+    import isolation
+    isolation_controls = isolation.controls(evidence)
+    isolated = {name: isolation.wrap(Path(cache[name]), scratch / 'isolated' / name) for name in ['cli', 'server', 'seed']}
+    isolation.write_receipt(evidence, {name: {'real': cache[name], 'wrapper': isolated[name]} for name in isolated}, isolation_controls)
+    if run([str(isolated['seed']), str(scratch), 'diagnostics'], 'seed.log'):
         raise RuntimeError('Provisioner failed')
     with (evidence / 'server.log').open('w') as output:
-        server = subprocess.Popen([cache['server']], cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
+        server = subprocess.Popen([str(isolated['server'])], cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
     deadline = time.monotonic() + 60
     url = None
     while time.monotonic() < deadline:
@@ -124,27 +132,27 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
         time.sleep(0.1)
     if not url:
         raise RuntimeError('Server readiness timed out')
-    if run([cache['cli'], 'login', '--password-stdin', '--profile', 'work', '--format', 'json'], 'login.log', dict(env, TODO_SERVER_URL=url), 'scratch verification passphrase\n'):
+    if run([str(isolated['cli']), 'login', '--password-stdin', '--profile', 'work', '--format', 'json'], 'login.log', dict(env, TODO_SERVER_URL=url), 'scratch verification passphrase\n'):
         raise RuntimeError('CLI login failed')
     for index in range(3):
-        if run([cache['cli'], 'add', f'Open scratch Task {index}', '--profile', 'work', '--format', 'json'], f'seed-task-{index}.log', dict(env, TODO_SERVER_URL=url)):
+        if run([str(isolated['cli']), 'add', f'Open scratch Task {index}', '--profile', 'work', '--format', 'json'], f'seed-task-{index}.log', dict(env, TODO_SERVER_URL=url)):
             raise RuntimeError('CLI add failed')
     # A second Profile that a message-scope control deletes from another client.
-    if run([cache['cli'], 'init', '--profile', 'doomed', '--credential-profile', 'work', '--format', 'json'], 'init-doomed.log', dict(env, TODO_SERVER_URL=url)):
+    if run([str(isolated['cli']), 'init', '--profile', 'doomed', '--credential-profile', 'work', '--format', 'json'], 'init-doomed.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init doomed failed')
-    if run([cache['cli'], 'add', 'Doomed Profile Task', '--profile', 'doomed', '--credential-profile', 'work', '--format', 'json'], 'seed-doomed.log', dict(env, TODO_SERVER_URL=url)):
+    if run([str(isolated['cli']), 'add', 'Doomed Profile Task', '--profile', 'doomed', '--credential-profile', 'work', '--format', 'json'], 'seed-doomed.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI add to doomed failed')
     # A destination Profile for the Move and Copy read-back controls (S1-17).
-    if run([cache['cli'], 'init', '--profile', 'transfer', '--credential-profile', 'work', '--format', 'json'], 'init-transfer.log', dict(env, TODO_SERVER_URL=url)):
+    if run([str(isolated['cli']), 'init', '--profile', 'transfer', '--credential-profile', 'work', '--format', 'json'], 'init-transfer.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init transfer failed')
     # The seat's held-write probe (SeatCommittedWriteTests) writes in a `personal` Profile.
-    if run([cache['cli'], 'init', '--profile', 'personal', '--credential-profile', 'work', '--format', 'json'], 'init-personal.log', dict(env, TODO_SERVER_URL=url)):
+    if run([str(isolated['cli']), 'init', '--profile', 'personal', '--credential-profile', 'work', '--format', 'json'], 'init-personal.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init personal failed')
     # An empty Profile for the deleted-Profile read-back control (S1-19).
-    if run([cache['cli'], 'init', '--profile', 'deletable', '--credential-profile', 'work', '--format', 'json'], 'init-deletable.log', dict(env, TODO_SERVER_URL=url)):
+    if run([str(isolated['cli']), 'init', '--profile', 'deletable', '--credential-profile', 'work', '--format', 'json'], 'init-deletable.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init deletable failed')
     # The Profile a deletion and a Snapshot restore race over (ProfileRestoreWakeTests, candidate 9 merge).
-    if run([cache['cli'], 'init', '--profile', 'wakerestore', '--credential-profile', 'work', '--format', 'json'], 'init-wakerestore.log', dict(env, TODO_SERVER_URL=url)):
+    if run([str(isolated['cli']), 'init', '--profile', 'wakerestore', '--credential-profile', 'work', '--format', 'json'], 'init-wakerestore.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init wakerestore failed')
 
     lock = threading.Lock()
@@ -202,7 +210,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
             if parts[0] == 'write':
                 titles = [f'Sign-out window {parts[2]} {i}' for i in range(int(parts[1]))]
                 for i, title in enumerate(titles):
-                    if run([cache['cli'], 'add', title, '--profile', 'work', '--format', 'json'], f'write-{parts[2]}-{i}.log', dict(env, TODO_SERVER_URL=url)):
+                    if run([str(isolated['cli']), 'add', title, '--profile', 'work', '--format', 'json'], f'write-{parts[2]}-{i}.log', dict(env, TODO_SERVER_URL=url)):
                         return self.reply({'error': 'cli'}, 500)
                 return self.reply({'titles': titles})
             if parts[0] == 'ops':
@@ -313,7 +321,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
-    test_env = dict(env, SEAT_CLI=str(cache['cli']), TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url, STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
+    test_env = dict(env, SEAT_CLI=str(isolated['cli']), TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url, STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
     # SIGN_OUT_STREAM_ONLY=<swift test filter> runs only those suites against the same server and
     # proxy: a short, targeted run while the shared Swift slot is scarce. Its status is TARGETED-*,
     # never PASS; the full proof is the run without it.

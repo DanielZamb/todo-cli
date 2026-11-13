@@ -25,6 +25,17 @@ ready and dense priority renders in both appearances and window sizes. Run every
 Swift command through the shared swift-slot script specified by the active run.
 This proof never launches Todo.app or accesses Keychain.
 
+## Isolation of compiled Todo binaries
+
+The Mac runners (`apps/macos/scripts/verify-write-state.py`, `scripts/verify-sign-out-stream.py`
+and verify-client-diagnostics' `verify.py`) run the compiled server, CLI and seeds they spawn
+under the reference profile in `isolation/` (`profile.sb`, from the run's ISOLATION brief, with
+the owner's real data directory passed at run time). Each run first proves the profile with the
+five node controls in `isolation/isolation.py` (`isolation-controls.json`) and writes
+`isolation.json`. `scripts/gates.py` records one isolation line per gate in `result.json` and
+fails if a Mac runner's binaries did not run under the profile. Swift builds and test processes
+cannot be wrapped; the binaries they spawn are the wrappers.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not
