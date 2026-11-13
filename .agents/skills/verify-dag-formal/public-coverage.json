@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+  "confirmedCommit": "2558b23e407ab2b9f4ca139faaec767b42bde463",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "a484f1aab49343f66d70076975d131490a9b935b2f278b1468bbe8192f140d8d"
+      "sha256": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -378,7 +378,7 @@
         "reloadDependencyDelete",
         "confirmDependencyDelete"
       ],
-      "sha256": "989ec095bafd94d255dffaa7f238a7474ead4c2c2b4c7c14d29617e102e42b03"
+      "sha256": "f8c702ccd0fcfaf9f06a8a1d3724bcc80b14960eb6812878a676704c9524b943"
     },
     {
       "path": "apps/macos/Sources/DependencyGraphState.swift",
@@ -387,7 +387,7 @@
         "graph node state",
         "search publication"
       ],
-      "sha256": "d92da0c040730e6035cd59627a19e1b626e705eed0e0548f00a33aae899980de"
+      "sha256": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71"
     },
     {
       "path": "apps/macos/Sources/DependencyWebView.swift",
@@ -404,14 +404,14 @@
         "refresh status without diagram layout changes",
         "graph search accessibility hint"
       ],
-      "sha256": "d5287a6f734d3ffcf3e2e3fc88116f6620b58e6a3d2fb25ad518333dc9f0ae47"
+      "sha256": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d"
     },
     {
       "path": "apps/macos/Sources/DependencyErrors.swift",
       "functions": [
         "DependencyNotice.project"
       ],
-      "sha256": "db9dbe5380df1d65da8073136e1e99f2fdf472cf88714db3495d5a195d2d8a97"
+      "sha256": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002"
     },
     {
       "path": "apps/macos/Sources/DependencyViews.swift",
@@ -419,7 +419,7 @@
         "actual Delete review pair",
         "existing picker state and row/menu UI"
       ],
-      "sha256": "ba046217fe547918839fa3c490357dc05442f881fef98ff35ba5210171b9e87f"
+      "sha256": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -570,5 +570,50 @@
     "previous": {
       "confirmedCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
     }
+  },
+  "macLineClientReview": {
+    "product": "2558b23e407ab2b9f4ca139faaec767b42bde463",
+    "previousConfirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Dependencies.swift",
+        "from": "a484f1aab49343f66d70076975d131490a9b935b2f278b1468bbe8192f140d8d",
+        "to": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58"
+      },
+      {
+        "path": "apps/macos/Sources/DependencyDelete.swift",
+        "from": "989ec095bafd94d255dffaa7f238a7474ead4c2c2b4c7c14d29617e102e42b03",
+        "to": "f8c702ccd0fcfaf9f06a8a1d3724bcc80b14960eb6812878a676704c9524b943"
+      },
+      {
+        "path": "apps/macos/Sources/DependencyGraphState.swift",
+        "from": "d92da0c040730e6035cd59627a19e1b626e705eed0e0548f00a33aae899980de",
+        "to": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71"
+      },
+      {
+        "path": "apps/macos/Sources/DependencyGraphView.swift",
+        "from": "d5287a6f734d3ffcf3e2e3fc88116f6620b58e6a3d2fb25ad518333dc9f0ae47",
+        "to": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d"
+      },
+      {
+        "path": "apps/macos/Sources/DependencyErrors.swift",
+        "from": "db9dbe5380df1d65da8073136e1e99f2fdf472cf88714db3495d5a195d2d8a97",
+        "to": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002"
+      },
+      {
+        "path": "apps/macos/Sources/DependencyViews.swift",
+        "from": "ba046217fe547918839fa3c490357dc05442f881fef98ff35ba5210171b9e87f",
+        "to": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be"
+      }
+    ],
+    "review": {
+      "summary": "The six Swift client fences were stale on the Mac line since 0bd8476d (2026-11-10). Review of each mapped function against its 0bd8476d version (delivery note mac-c9-delivery-2558b23e.md, section 7): Dependencies.swift differs only in a way the model allows (a superseded link's occ_conflict no longer sets requiresReload; the server still refuses a stale Version); DependencyDelete, DependencyGraphState, DependencyGraphView, DependencyErrors and DependencyViews keep the mapped behaviour (message ownership, post-await guards, authorization first, diagnostics, heights). No change in a class the model does not allow.",
+      "reviewer": "MAC-PERF (Claude Opus 5.5)",
+      "rulingBy": "coordinator, candidate 9 (choice 1)",
+      "pendingSeat": true
+    },
+    "checkEvidence": [
+      "docs/evidence/dag-formal/public-M128ka"
+    ]
   }
 }
