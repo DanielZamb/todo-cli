@@ -40,7 +40,8 @@ with (evidence / 'server.log').open('w') as log:
     server = subprocess.Popen([str(scratch / 'server')], env={**env, 'TODO_PORT': '0'}, stdout=log, stderr=log)
     try:
         base = None
-        for _ in range(100):
+        readiness_deadline = time.monotonic() + 60
+        while time.monotonic() < readiness_deadline:
             match = re.search(r'http://127\.0\.0\.1:\d+', (evidence / 'server.log').read_text())
             if match:
                 base = match.group()

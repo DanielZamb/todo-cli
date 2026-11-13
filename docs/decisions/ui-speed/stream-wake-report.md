@@ -226,6 +226,10 @@ concurrent Mac work; F2's test lifetime regression is fixed within this unit.
 
 ## Correctness review corrections
 
+Code correction commit: `0f8366e7a055e36bef384bc131e963a48c836661`, after
+`fd76a438` without an amendment. The following readiness follow-up changes only
+the verification helper and documentation.
+
 F1: observer defects are contained for generic Effect finalizers, conditional
 finalizers and synchronous Snapshot methods. Task creation remains successful and
 records exactly one TaskCreated even if signal throws. Original typed failures,
@@ -277,3 +281,12 @@ the delivered tests. `root-check-session.log` is the final locked check, exit ze
 `["5", "6"]` after rollback and reuse. A redundant queued red run was cancelled before acquiring
 the Swift slot; the existing red receipt is reused. New verification outputs
 remain local. All corrections are committed after fd76a438 without amending it.
+
+A post-commit SSE run exposed the inherited five-second readiness loop in the
+helper under one-minute load 15.39. The server remained alive with no listen line
+before the helper stopped it; its failed receipt remains in
+`committed-sse/`. The helper now uses the standing order's 60-second minimum for
+scratch startup. Event-delivery limits and the Mac reconnect expectation are
+unchanged. The unchanged event assertions, all 19 tests and the compiled nested-wire proof
+pass on retry in `committed-sse-retry/`, exit zero. Production sources and the
+Mac tests did not change in this readiness-only follow-up.

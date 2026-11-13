@@ -41,7 +41,8 @@ The database and HOME both live there. Each run owns its server, CLI copy,
 credentials, port and database, so independent runs can coexist.
 
 The compiled server starts with `TODO_DB=<scratch>/scratch.db TODO_PORT=0`.
-`Listening on http://127.0.0.1:<port>` means ready. A zero helper exit and
+`Listening on http://127.0.0.1:<port>` means ready. The helper waits up to
+60 seconds for scratch startup and fails early if its child exits. A zero helper exit and
 `PASS; evidence survived cleanup` mean the full drive passed and cleaned up.
 
 ## Doctor
