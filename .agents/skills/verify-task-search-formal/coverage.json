@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c"
+      "sha256": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -408,20 +408,15 @@
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
   },
   "renewalReview": {
-    "product": "f6393ab5e216342ab8c711a028ba7ae2144a0c57",
-    "controls": "check-swift passed on f6393ab5: docs/evidence/discovery-formal/swift-ozV5Xk",
+    "product": "8290ff1e034a524a64eb780f93009e05aef68978",
+    "controls": "check-swift passed on 8290ff1e: docs/evidence/discovery-formal/swift-3YvPSi",
     "changed": [
       {
-        "path": "apps/macos/Sources/TodoModel.swift",
-        "from": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248",
-        "to": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52"
-      },
-      {
         "path": "apps/macos/Sources/AppViews.swift",
-        "from": "63a1d4027287637c6116cd24c89201a095db4f851be33c0499956a0468c2f9dc",
-        "to": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c"
+        "from": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c",
+        "to": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee"
       }
     ],
-    "review": "Corrected candidate 8 on merged head (integ/server 2a840b55 merged; TypeScript pins unchanged): the Swift files changed since 5e44a589 are AttachmentModel (S1-23 authorizes a committed write's secondary error before any guard; S1-24 captures an AttachmentInputOrigin with the credential epoch, read from discovery.credentialEpoch and compared with isCurrentEpoch, and starts a write only while it is current), TodoModel (the Compact window height and the merged banner hand-off's LinkAttempt), and AppViews, DiscoveryView and BatchEdit (the taller Compact: window sizing and sheet heights). No discovery publication, Show or Close guard, discovery authorization order, Task search request, refresh, performRefresh, canPublishSearch or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    "review": "Candidate 9 changes AppViews.swift in three places only: CompactWindowHeight.restored opens Compact at min(640 pt, the screen) when no height is stored (UI review 2, item 1); MessageBanner shows a Dependency failure as its DependencyNoticeContent without the exit-code line (item 3); and Compact Quick Add's metadata region and content anchor (parsed chips first, the region sized from the room it is given, no offset in Compact; item 2). refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
   }
 }

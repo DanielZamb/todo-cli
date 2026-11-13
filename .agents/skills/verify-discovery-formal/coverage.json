@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "f6393ab5e216342ab8c711a028ba7ae2144a0c57",
+  "productionSyncCommit": "8290ff1e034a524a64eb780f93009e05aef68978",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c",
+      "sha256": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "5e44a58901ab92a863129f2cba74ea099dcc6768",
+  "previousProductionSyncCommit": "f6393ab5e216342ab8c711a028ba7ae2144a0c57",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -564,35 +564,15 @@
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
   },
   "renewalReview": {
-    "product": "f6393ab5e216342ab8c711a028ba7ae2144a0c57",
-    "controls": "check-swift passed on f6393ab5: docs/evidence/discovery-formal/swift-ozV5Xk",
+    "product": "8290ff1e034a524a64eb780f93009e05aef68978",
+    "controls": "check-swift passed on 8290ff1e: docs/evidence/discovery-formal/swift-3YvPSi",
     "changed": [
       {
-        "path": "apps/macos/Sources/TodoModel.swift",
-        "from": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248",
-        "to": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52"
-      },
-      {
         "path": "apps/macos/Sources/AppViews.swift",
-        "from": "63a1d4027287637c6116cd24c89201a095db4f851be33c0499956a0468c2f9dc",
-        "to": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c"
-      },
-      {
-        "path": "apps/macos/Sources/DiscoveryView.swift",
-        "from": "99d4fe04019a550269723afa21a2b47766242603ea8b393c14c33ce863a10de9",
-        "to": "00c2d0bdf06e0785200e53a1b22d3f6f61bf8de631c8e302c68525951cba083f"
-      },
-      {
-        "path": "apps/macos/Sources/AttachmentModel.swift",
-        "from": "9df4f107b7a55c575ef686d4f7cfea2b997c3b62358dc745dc6b203c0719709f",
-        "to": "a58d146e2cdc7a1f95be8c3c8f971c15def77627e7f738b507c543940131579e"
-      },
-      {
-        "path": "apps/macos/Sources/BatchEdit.swift",
-        "from": "c1dec82009160bc1da39bf6869beb4fcc3010d34213bc7f0088468f0972e0ddb",
-        "to": "2325eb5c4f4b7074e1c0042ce1604ebf74319750b5eb2a7bcf21f2d76c6aba1c"
+        "from": "a5e8297d19bf43b665f9135ecf601b0b86d0aa24847927aff07db9f6a5ad190c",
+        "to": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee"
       }
     ],
-    "review": "Corrected candidate 8 on merged head (integ/server 2a840b55 merged; TypeScript pins unchanged): the Swift files changed since 5e44a589 are AttachmentModel (S1-23 authorizes a committed write's secondary error before any guard; S1-24 captures an AttachmentInputOrigin with the credential epoch, read from discovery.credentialEpoch and compared with isCurrentEpoch, and starts a write only while it is current), TodoModel (the Compact window height and the merged banner hand-off's LinkAttempt), and AppViews, DiscoveryView and BatchEdit (the taller Compact: window sizing and sheet heights). No discovery publication, Show or Close guard, discovery authorization order, Task search request, refresh, performRefresh, canPublishSearch or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    "review": "Candidate 9 changes AppViews.swift in three places only: CompactWindowHeight.restored opens Compact at min(640 pt, the screen) when no height is stored (UI review 2, item 1); MessageBanner shows a Dependency failure as its DependencyNoticeContent without the exit-code line (item 3); and Compact Quick Add's metadata region and content anchor (parsed chips first, the region sized from the room it is given, no offset in Compact; item 2). No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
   }
 }
