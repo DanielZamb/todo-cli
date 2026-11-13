@@ -213,5 +213,9 @@ actual outputs and each accepted flag's consumer or explicit exception.
 Task editing flags belong only to add/edit. Delete/Purge flags belong only to
 rm. Changes to those registrations must preserve rm's dry run, Dependency
 preview/fingerprint and Purge through verify-dag's public and closure recipes.
-The inventory explicitly reports documented username compatibility and the
-separate detach label finding; it does not silently classify those as consumers.
+The inventory retains init/login username as explicit compatibility exceptions
+with their exact help text. Detach rejects label, which remains available on
+attach and label-attachment. The same compiled test preserves all table bytes
+and the external file, covers early md/JSON refusals, and checks label values.
+The flag contract also records the intentional --force compatibility change
+for edit/done/cancel/reopen, including before and after behavior.

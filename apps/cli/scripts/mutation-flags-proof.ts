@@ -68,7 +68,7 @@ const digest = (value: string | Uint8Array) =>
   createHash("sha256").update(value).digest("hex");
 const usageMessage = (command: string, flag: string) =>
   `Unrecognized flag: --${flag} in command todo ${command}${command === "edit" && flag === "force" ? "\n\n  Did you mean this?\n    --source" : command === "rm" && flag === "source" ? "\n\n  Did you mean this?\n    --force" : ""}`;
-const tables = (path: string) => {
+export const tables = (path: string) => {
   const db = new Database(
     existsSync(`${path}-wal`) ? path : `file:${path}?immutable=1`,
     { readonly: true },

@@ -1279,7 +1279,7 @@ const attachmentCommand = (detach: boolean) =>
     {
       id: Argument.String("task-id"),
       value: Argument.String(detach ? "attachment-id" : "path-or-url"),
-      label: Flag.String("label").pipe(Flag.optional),
+      ...(detach ? {} : { label: Flag.String("label").pipe(Flag.optional) }),
       expected: Flag.Int("expected-version").pipe(Flag.withDefault(0)),
       ...(detach ? { dryRun: bool("dry-run") } : {}),
     },
@@ -1300,7 +1300,7 @@ const attachmentCommand = (detach: boolean) =>
               expected: input.expected,
               detach,
               dryRun,
-              ...(Option.isSome(input.label)
+              ...(input.label !== undefined && Option.isSome(input.label)
                 ? { label: input.label.value }
                 : {}),
             });

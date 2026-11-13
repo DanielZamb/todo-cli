@@ -440,7 +440,6 @@
         "--format",
         "--help",
         "--help-human-flag",
-        "--label",
         "--log-level",
         "--no-color",
         "--profile",
@@ -449,7 +448,7 @@
         "-h",
         "-v"
       ],
-      "help_sha256": "4080acc7e95a338b2a207e5b0363df25b4429ec2245810de7f003fdf02cc8135",
+      "help_sha256": "ea927e111da2ce3e22efd40f2a701f99b391e2a87f6217bc670f4e541a04c07f",
       "schema_sha256": "4e86ade9560e8ff968e4720f38b7a00304bb41ede267e4ee659606047ddd28e3"
     },
     "label-attachment": {

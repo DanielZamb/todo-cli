@@ -9,6 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterAll, beforeAll, it } from "@effect/vitest";
+import { proveDetachLabelFlag } from "../scripts/detach-label-proof.ts";
 import {
   auditFlagInventory,
   captureFlagInventory,
@@ -44,6 +45,13 @@ it("rejects every unsupported mutation flag before changing any table or databas
   assert.deepEqual(
     await proveMutationFlags(binary, join(scratch, "mutation-cases"), evidence),
     { status: "PASS", cases: 64 },
+  );
+}, 60000);
+
+it("rejects detach labels before writes and preserves attach and label-attachment labels", () => {
+  assert.deepEqual(
+    proveDetachLabelFlag(binary, join(scratch, "detach-label"), evidence),
+    { status: "PASS", refusals: 2, early_refusals: 4, labels_preserved: true },
   );
 }, 60000);
 it("keeps every compiled help flag and published schema at its reviewed contract", () => {

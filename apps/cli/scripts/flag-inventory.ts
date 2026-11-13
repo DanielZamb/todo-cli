@@ -170,14 +170,12 @@ export function flagConsumer(command: string, flag: string) {
     return {
       kind: "documented-compatibility-no-op",
       consumer:
-        "help.ts explicitly retains username as a compatibility flag; ADR-0005 single owner; handlers do not read it",
+        'help.ts: "--username <name> (default unset, compatibility flag)"; ADR-0005 single owner; retained unchanged by coordinator ruling',
     };
   if (command === "detach" && flag === "--label")
-    return {
-      kind: "ignored-attachment-factory",
-      consumer:
-        "main.ts attachmentCommand passes label; attachments.ts changeAttachment detach branch never reads label",
-    };
+    throw new Error(
+      "detach --label has no consumer and must not be registered",
+    );
   const local: Record<string, Record<string, string>> = {
     init: {
       "--password": "setupOwner(password)",

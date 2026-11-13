@@ -37,7 +37,7 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | `batch-edit` | `--dry-run` |
 | `attach-many` | `--dry-run` |
 | `attach` | `--expected-version`, `--label` |
-| `detach` | `--dry-run`, `--expected-version`, `--label` |
+| `detach` | `--dry-run`, `--expected-version` |
 | `label-attachment` | `--expected-version`, `--label` |
 | `move` | `--dry-run`, `--expected-version`, `--inbox`, `--overdue`, `--priority`, `--project`, `--status`, `--tag`, `--to`, `--today` |
 | `copy` | `--dry-run`, `--expected-version`, `--inbox`, `--overdue`, `--priority`, `--project`, `--status`, `--tag`, `--to`, `--today` |
@@ -71,28 +71,44 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | `config get` | None |
 | `config set` | None |
 
-The exact 803 command/flag pairs have source consumer references in
+The exact 802 command/flag pairs have source consumer references in
 `flag-consumers.json`, produced by the verification recipe.
 `apps/cli/scripts/flag-inventory.ts` checks every collected flag against that
 reviewed mapping and refuses a flag without a consumer entry.
 The regression compares full normalized help hashes, accepted flag sets and
 response-schema hashes against `test/fixtures/cli-flag-contract.json`.
 The fixture was derived from the unchanged reviewed CLI by removing exactly
-the 64 unsupported mutation registrations. Remaining flag order and all other
+the 64 unsupported mutation registrations, followed by only detach --label.
+Remaining flag order and all other
 help/schema content stay unchanged. The five original Go output goldens do not change.
 
 ## Reported exceptions
 
 | Command | Flag | Actual behavior and disposition |
 | --- | --- | --- |
-| init, login | --username | Explicitly documented compatibility no-op under the single-owner model. Retained; changing that documented behavior needs a ruling. |
-| detach | --label | Attachment factory accepts it; detach ignores the value and commits normal detach. Reported separately and left unchanged pending a ruling for that other factory. |
+| init | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
+| login | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 
 The 800 other pairs have consumers, including the four Delete/Purge flags only
 on rm and Task editing fields only on add/edit. Some modifiers apply only to
 their documented branch, such as a label on a supplied Attachment or Markdown
 export templates. This is a compiled registration inventory plus source trace,
 not a claim that every flag combination was executed.
+
+## Compatibility change for scripts
+
+Scripts that supplied --force to edit, done, cancel or reopen previously ran
+the normal command. These commands now reject --force with exit 2. This is an
+intentional compatibility change from older DAG builds and named main, where
+that flag was accepted and ignored. Remove --force from those scripts. It
+continues to mean Purge only on rm.
+
+| Command | Flag | Before | After |
+| --- | --- | --- | --- |
+| edit | --force | Accepted; normal edit runs | Usage error, exit 2; no mutation |
+| done | --force | Accepted; normal completion runs | Usage error, exit 2; no mutation |
+| cancel | --force | Accepted; normal cancellation runs | Usage error, exit 2; no mutation |
+| reopen | --force | Accepted; normal reopen runs | Usage error, exit 2; no mutation |
 
 ## Executable checks
 
@@ -111,3 +127,11 @@ extra advertised flags. Never use the installed CLI or a real HOME.
 The DAG public drive separately checks rm preview, with-dependencies, matching
 and stale fingerprints, Purge and real PTY confirmation/cancellation. It now
 requires done --force to fail as usage, then plain blocked done to fail as blocked.
+
+The same recipe also runs the detach label boundary proof. Both md and JSON
+refuse --label before writes, preserve every table and the external file, and
+leave the Task at Version 2 with its original Attachment. Four cold cases,
+including --dry-run, refuse before database creation. Positive controls require
+attach to retain Original label, label-attachment to retain Renamed label and
+clear it when omitted, then normal detach to work. Only detach loses one help
+flag in this follow-up; all response schemas stay equal.

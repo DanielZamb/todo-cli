@@ -1,5 +1,11 @@
 # Reject unsupported mutation flags
 
+The coordinator accepted fixing all 64 pairs and has now ruled on the listed
+exceptions. [The detach-label follow-up](fix-purge-restore-detach-label.md) fixes
+that neighbouring factory, retains username compatibility, and states the
+intentional --force change for scripts. The pending language below describes
+the original 65fe3d84 submission.
+
 R4-C1 is corrected as one separate commit on top of
 `1a0a4c132225f0ead1d71361afb359bdbcc718a8`. The fourth correctness review
 accepted the previous Purge/restore work, preview guard, second mapping renewal,
