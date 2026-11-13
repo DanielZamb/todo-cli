@@ -172,6 +172,7 @@ struct DependencyBatchView: View {
                     }.pickerStyle(.segmented)
                 }
                 if !model.canWrite && !batch.pending { Text("Offline or read only. Reconnect to change Dependencies.").font(.caption).foregroundStyle(.secondary) }
+                Divider().padding(.top, 8) // the scrolled list no longer meets the Action control flush (seat note 5)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         if batch.loading { ProgressView("Loading Tasks…") }
