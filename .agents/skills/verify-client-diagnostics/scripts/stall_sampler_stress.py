@@ -30,11 +30,15 @@ ok = steps['build']['exit'] == 0
 if ok:
     archs = run('archs', ['lipo', '-archs', binary]).stdout.split()
     release = run('release', [binary])
+    # The app samples at user-interactive QoS (MAC-C1-S1-21 review): measured, reported, not gated
+    # on the 1 ms window (a preempted window has no user-space maximum); it must still pass.
+    interactive = run('release-user-interactive', [binary], env={'STALL_STRESS_QOS': 'user-interactive'})
     x86 = run('x86_64', ['arch', '-x86_64', binary])
     control = run('control', [binary, '--control-lock-in-window'], env={'STALL_STRESS_WATCHDOG_SECONDS': '20'})
     report = json.loads(release.stdout)
     ok = (sorted(archs) == ['arm64', 'x86_64'] and release.returncode == 0 and report['result'] == 'PASS'
-          and report['windows_over_1ms'] == 0 and x86.returncode == 2 and 'UNSUPPORTED' in x86.stdout
+          and report['windows_over_1ms'] == 0 and interactive.returncode == 0 and json.loads(interactive.stdout)['qos'] == 'user-interactive'
+          and x86.returncode == 2 and 'UNSUPPORTED' in x86.stdout
           and control.returncode == 3 and 'watchdog' in control.stdout)
 result = dict(result='PASS' if ok else 'FAIL', steps=steps, nativeAppLaunched=False, keychainAccess=False)
 (evidence / 'result.json').write_text(json.dumps(result, indent=2) + '\n')

@@ -91,6 +91,11 @@ sampler's suspended C window without Swift, the app or Keychain:
 - It takes 100,000 samples of a thread churning malloc and two locks. Every
   sample must succeed, the target must advance after every resume, and no window
   may exceed 1 ms.
+- It runs the same 100,000 samples again from a user-interactive thread, the
+  app's watchdog QoS. That run must pass, and its windows are reported, not
+  gated. Both runs replay the app's per-stall rule (2 ms of suspended time,
+  checked before each suspend) on stalls of 20 samples and report the worst
+  stall's total with and without it.
 - It checks that the x86_64 slice reports unsupported.
 - It runs a control that takes the target's lock inside the window. The control
   must hang and be caught by the watchdog (exit 3).

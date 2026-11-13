@@ -17,6 +17,7 @@
 #include <mach/mach_time.h>
 #include <os/lock.h>
 #include <pthread.h>
+#include <pthread/qos.h>
 #include <signal.h>
 #include <stdatomic.h>
 #include <stdint.h>
@@ -82,6 +83,10 @@ int main(int argc, char **argv) {
     signal(SIGALRM, watchdog);
     const char *seconds = getenv("STALL_STRESS_WATCHDOG_SECONDS");
     alarm(seconds ? (unsigned)atoi(seconds) : 120);
+    // STALL_STRESS_QOS=user-interactive samples at the app's watchdog QoS (MAC-C1-S1-21 review).
+    const char *qos = getenv("STALL_STRESS_QOS");
+    int interactive = qos && strcmp(qos, "user-interactive") == 0;
+    if (interactive && pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0) != 0) { puts("{\"result\":\"FAIL\",\"reason\":\"qos\"}"); return 1; }
     pthread_t thread;
     pthread_create(&thread, NULL, target, NULL);
     while (!atomic_load(&ready)) {}
@@ -111,16 +116,31 @@ int main(int argc, char **argv) {
     atomic_store(&stop, 1);
     pthread_join(thread, NULL);
     alarm(0);
+    // The app's per-stall rule replayed on these windows, in stalls of 20 samples: a sample starts
+    // only if spent + 1 ms still fits 2 ms. Reports the worst stall's suspended total without and
+    // with that budget, and how many samples it would have refused.
+    uint64_t worst_raw = 0, worst_budgeted = 0, refused = 0;
+    for (int g = 0; g + 20 <= SAMPLES; g += 20) {
+        uint64_t raw = 0, spent = 0;
+        for (int k = 0; k < 20; k++) {
+            raw += windows[g + k];
+            if (spent + 1000000 <= 2000000) spent += windows[g + k]; else refused++;
+        }
+        if (raw > worst_raw) worst_raw = raw;
+        if (spent > worst_budgeted) worst_budgeted = spent;
+    }
     qsort(windows, SAMPLES, sizeof(uint64_t), compare);
     uint64_t over = 0;
     for (int i = 0; i < SAMPLES; i++) if (windows[i] > 1000000) over++;
     int pass = statuses[TODO_SAMPLE_OK] == SAMPLES && stalled_progress == 0 && frames >= SAMPLES;
     printf("{\"result\":\"%s\",\"control\":%s,\"samples\":%d,\"ok\":%llu,\"suspend_failed\":%llu,\"state_failed\":%llu,\"resume_failed\":%llu,"
            "\"frames_total\":%llu,\"target_progress\":%llu,\"no_progress_within_50ms\":%llu,"
-           "\"window_us\":{\"median\":%.2f,\"p99\":%.2f,\"max\":%.2f},\"windows_over_1ms\":%llu}\n",
+           "\"window_us\":{\"median\":%.2f,\"p99\":%.2f,\"max\":%.2f},\"windows_over_1ms\":%llu,\"qos\":\"%s\","
+           "\"stall_of_20_us\":{\"worst_unbudgeted\":%.2f,\"worst_budgeted\":%.2f,\"samples_refused\":%llu}}\n",
            pass ? "PASS" : "FAIL", control ? "true" : "false", SAMPLES,
            statuses[TODO_SAMPLE_OK], statuses[TODO_SAMPLE_SUSPEND_FAILED], statuses[TODO_SAMPLE_STATE_FAILED], statuses[TODO_SAMPLE_RESUME_FAILED],
            frames, (unsigned long long)atomic_load(&progress), stalled_progress,
-           windows[SAMPLES / 2] / 1000.0, windows[SAMPLES * 99 / 100] / 1000.0, windows[SAMPLES - 1] / 1000.0, over);
+           windows[SAMPLES / 2] / 1000.0, windows[SAMPLES * 99 / 100] / 1000.0, windows[SAMPLES - 1] / 1000.0, over,
+           interactive ? "user-interactive" : "default", worst_raw / 1000.0, worst_budgeted / 1000.0, refused);
     return pass ? 0 : 1;
 }
