@@ -489,17 +489,55 @@ const program = Effect.acquireUseRelease(
             const firstHolds = [...holds];
             if (scenario.endsWith("-after")) bulk(target);
             holds.length = 0;
+            // Each repeat's write transactions, in order: the failed check's
+            // own, then a recording transaction if one was opened.
+            const repeats: { ms: number; holds: number[] }[] = [];
             const burst = performance.now();
-            for (let i = 0; i < 1000; i++) yield* attempt();
+            for (let i = 0; i < 1000; i++) {
+              const from = holds.length;
+              const one = performance.now();
+              yield* attempt();
+              repeats.push({
+                ms: performance.now() - one,
+                holds: holds.slice(from),
+              });
+            }
             const burstMs = performance.now() - burst;
             assert.equal(count(db, target) - before, 1);
+            // CLI-shaped: every repeat in a newly opened store, as each CLI
+            // run is a new process with nothing in memory.
+            const fresh: { openMs: number; refuseMs: number }[] = [];
+            for (let i = 0; i < 20; i++) {
+              const opened = performance.now();
+              yield* Effect.acquireUseRelease(
+                openStore({ path }),
+                (other) =>
+                  Effect.gen(function* () {
+                    const ready = performance.now();
+                    if (target === null)
+                      yield* Effect.flip(
+                        other.auth.signOut({ credential: "tok_forged" }),
+                      );
+                    else yield* refuse(other);
+                    fresh.push({
+                      openMs: ready - opened,
+                      refuseMs: performance.now() - ready,
+                    });
+                  }),
+                (other) => Effect.orDie(other.close()),
+              );
+            }
+            // One on this branch; the base appends one per fresh store.
+            const freshRows = count(db, target) - before;
             observations.push({
               scenario,
               firstMs,
               firstHolds,
               burstMs,
-              burstHolds: [...holds],
+              repeats,
+              fresh,
               refusalRows: 1,
+              freshRows,
             });
           }
           mark("bench", observations);

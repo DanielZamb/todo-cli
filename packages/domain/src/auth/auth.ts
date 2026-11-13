@@ -594,15 +594,31 @@ export class Authentication<Read> {
                       .get(profile)
                   ? profile
                   : null;
-            this.transaction(() =>
-              this.record({
-                action,
-                time,
+            // ADR-0007: a repeat is decided first in a read. One SELECT is one
+            // read snapshot and holds nothing open afterwards; a match there
+            // appends nothing and takes no write lock. Absence takes the lock,
+            // and record() decides again inside it with the same walk.
+            // Wrong passphrases never merge, so they never take this exit.
+            const repeat =
+              error.detail !== "invalid_passphrase" &&
+              !this.db.inTransaction &&
+              repeatedAuthRejection(this.db, {
                 actor: error.actor,
                 profile: target,
-                error,
-              }),
-            );
+                action,
+                detail: error.detail,
+                time,
+              });
+            if (!repeat)
+              this.transaction(() =>
+                this.record({
+                  action,
+                  time,
+                  actor: error.actor,
+                  profile: target,
+                  error,
+                }),
+              );
             throw error;
           }
         },
