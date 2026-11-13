@@ -263,16 +263,34 @@ const program = Effect.acquireUseRelease(
           observations.push({ olderThanHorizonLimit: 2 });
           // A large row (over the walked-event bound) stamped before the
           // horizon is skipped unread, so it does not hide the newest refusal.
+          const largeAt = Schema.decodeUnknownSync(Instant)(
+            "2026-11-13T00:18:59.999Z",
+          );
           db.query(
-            "INSERT INTO op_log(actor,profile,entity_version,event,outcome,reason) VALUES ('import',?,1,?,'committed',NULL)",
+            "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES ('import',?,1,?,NULL,1,'committed',NULL)",
           ).run(
             profile,
-            JSON.stringify({
-              kind: "TaskCreated",
-              entity_version: 1,
-              occurred_at: "2026-11-13T00:18:59.999Z",
-              task: { description: "x".repeat(100_000) },
-            }),
+            JSON.stringify(
+              Schema.encodeSync(Event)(
+                Schema.decodeUnknownSync(Event)({
+                  kind: "TaskCreated",
+                  entity_version: 1,
+                  occurred_at: largeAt,
+                  task: resolveTaskCreation(
+                    Schema.decodeUnknownSync(CreateTask)({
+                      title: "Large",
+                      description: "x".repeat(100_000),
+                    }),
+                    profile,
+                    Schema.decodeUnknownSync(TaskId)("large-older-row"),
+                    largeAt,
+                  ),
+                  series: null,
+                  project: null,
+                  tags: [],
+                }),
+              ),
+            ),
           );
           yield* refuse(store);
           assert.equal(count(db), 2);
@@ -522,7 +540,7 @@ const program = Effect.acquireUseRelease(
                 200000,
                 target,
               );
-              if (!after) bulk(target);
+              if (scenario.endsWith("-before")) bulk(target);
               if (stage === "seed" && after) {
                 yield* attempt();
                 bulk(target);
