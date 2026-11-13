@@ -607,10 +607,18 @@
       }
     ],
     "review": {
-      "summary": "The six Swift client fences were stale on the Mac line since 0bd8476d (2026-11-10). Review of each mapped function against its 0bd8476d version (delivery note mac-c9-delivery-2558b23e.md, section 7): Dependencies.swift differs only in a way the model allows (a superseded link's occ_conflict no longer sets requiresReload; the server still refuses a stale Version); DependencyDelete, DependencyGraphState, DependencyGraphView, DependencyErrors and DependencyViews keep the mapped behaviour (message ownership, post-await guards, authorization first, diagnostics, heights). No change in a class the model does not allow.",
+      "summary": "The six Swift client fences were stale on the Mac line since the fenced bytes of 6e599b7b (2026-11-10), which the mapping's confirmed commit 0bd8476d (2026-11-13) carried. Review of each mapped function against its 0bd8476d version (delivery note mac-c9-delivery-2558b23e.md, section 7). Dependencies.swift differs in ways the model allows: a superseded link's occ_conflict no longer sets requiresReload (the server still refuses a stale Version); a committed edge's catalog read-back is no longer skipped when the picker closes (ownership is credential and Profile, S1-19); a closed picker's newest link failure is handed to the main window; a 401 is authorized first; pendingDependents is released only under the same credential epoch. DependencyGraphState.swift differs in a way the model allows: its background refresh calls refreshDependencyPicker, clears no message, and stops if the credential or the Dependency generation changed. DependencyDelete, DependencyGraphView, DependencyErrors and DependencyViews keep the mapped behaviour (message ownership, post-await guards, authorization first, diagnostics, heights). No change in a class the model does not allow.",
       "reviewer": "MAC-PERF (Claude Opus 5.5)",
       "rulingBy": "coordinator, candidate 9 (choice 1)",
-      "pendingSeat": true
+      "pendingSeat": false,
+      "seatAcceptance": {
+        "seat": "MAC-C1-S1",
+        "review": "delta c334462b",
+        "date": "2026-11-13",
+        "verdict": "Renewal ACCEPTED (hashes and conclusion correct)",
+        "report": "reports/mac-c1-seat1/candidate-9-review.md, section Delta c334462b",
+        "wordingCorrections": "applied here: Dependencies.swift's other allowed changes and DependencyGraphState.swift's change named; 0bd8476d is dated 2026-11-13, the fenced Swift bytes date from 6e599b7b (2026-11-10)"
+      }
     },
     "checkEvidence": [
       "docs/evidence/dag-formal/public-M128ka"
