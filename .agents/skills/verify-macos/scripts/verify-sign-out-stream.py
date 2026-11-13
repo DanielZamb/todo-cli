@@ -88,6 +88,14 @@ try:
     state_package.swap_vault(sources)
     for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
+    # A failing-first run replaces a copied test with its red variant (SIGN_OUT_STREAM_TEST_OVERRIDE:
+    # a directory of test files); the committed fixtures are never edited for it. Recorded below.
+    test_overrides = os.environ.get('SIGN_OUT_STREAM_TEST_OVERRIDE')
+    if test_overrides:
+        for override in sorted(Path(test_overrides).glob('*.swift')):
+            target = override.name.replace('-red-20d592d3', '')
+            shutil.copyfile(override, tests / target)
+            (evidence / 'test-overrides.json').write_text(json.dumps({'source': str(override), 'replaces': target, 'sha256': hashlib.sha256(override.read_bytes()).hexdigest()}) + '\n')
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
     (package / 'Package.swift').write_text('''// swift-tools-version: 6.2

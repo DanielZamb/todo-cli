@@ -1765,6 +1765,54 @@ private actor ScriptGate: ClientTransport {
         }
         await finish(model, gate, vault)
     }
+
+    /// MAC-C1-S1-30: a Dependency row drop has S1-24's shape. The person drops one row on another;
+    /// the dragged Task's data arrives later (a held NSItemProvider here). Under each boundary in
+    /// between, nothing is written and nothing is reported; with none, the Dependency is added.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["none", "credential", "profile", "signOut"])
+    func aRowDropWritesOnlyUnderTheOriginItWasMadeIn(_ boundary: String) async throws {
+        let gate = ScriptGate(); let (model, vault, target) = try await live(gate)
+        let title = "Drop source " + UUID().uuidString
+        _ = try await todoClient(server: url, credential: try await owner()).tasks_period_create(path: .init(profile: "work"), body: .json(.init(title: title)))
+        await model.refreshAfterWrite("drop source")
+        try await wait("source in catalog") { model.tasks.contains { $0.title == title } }
+        let source = try #require(model.tasks.first { $0.title == title })
+        // If an old drop wrote anyway, the write fails: that failure would show in the newer state.
+        if boundary != "none" { await gate.next("tasks.depend", .fail(503, "OLD drop link")) }
+        let drop = RowDropDriver(model: model, source: DependencyDragSource(profile: "work", task: source.id), target: target)
+        drop.begin()
+        try await wait("provider asked") { drop.requested }
+        switch boundary {
+        case "credential":
+            let streams = await gate.streamCount
+            model.replaceCredential(try await owner()); model.connect()
+            try await ready(model, gate, streams: streams + 1)
+        case "profile":
+            let streams = await gate.streamCount
+            model.changeProfile("personal")
+            try await ready(model, gate, streams: streams + 1)
+        case "signOut":
+            await model.signOut()
+            let streams = await gate.streamCount
+            model.replaceCredential(try await owner()); model.signedIn = true; model.connect()
+            try await ready(model, gate, streams: streams + 1)
+        default: break
+        }
+        await drop.resume()
+        if boundary == "none" {
+            #expect(await gate.count("tasks.depend") == 1, "the ordinary drop adds the Dependency")
+            let canonical = try await todoClient(server: url, credential: try await owner()).tasks_period_show(path: .init(profile: "work", task: target.id)).ok.body.json
+            #expect(try TaskSnapshot.decode(canonical).depends_on?.contains(source.id) == true)
+        } else {
+            #expect(await gate.count("tasks.depend") == 0, "\(boundary): nothing is written")
+            #expect(model.dependencies.picker?.failure == nil && model.message == nil, "\(boundary): nothing reports: \(model.message ?? model.dependencies.picker?.failure?.message ?? "nil")")
+            let canonical = try await todoClient(server: url, credential: try await owner()).tasks_period_show(path: .init(profile: "work", task: target.id)).ok.body.json
+            #expect(try TaskSnapshot.decode(canonical).depends_on?.contains(source.id) != true, "\(boundary): the canonical Task has no new Dependency")
+        }
+        model.closeDependencyPicker()
+        await finish(model, gate, vault)
+    }
 }
 
 /// Drives one Attachment input path as the view does: `begin` is the person's act (it captures the
@@ -1815,4 +1863,39 @@ private final class HeldFileProvider: @unchecked Sendable {
 private func onePixelPNG() -> Data {
     let image = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1, pixelsHigh: 1, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 4, bitsPerPixel: 32)!
     return image.representation(using: .png, properties: [:])!
+}
+
+/// Drives a row drop as the view does: `begin` is the drop (the origin is captured and the
+/// provider's data is requested), `resume` delivers the data and waits for what follows.
+@MainActor private final class RowDropDriver {
+    let model: TodoModel, source: DependencyDragSource, target: TaskSnapshot
+    private let provider = HeldDragProvider()
+    private var dropping: Task<Void, Never>?
+    init(model: TodoModel, source: DependencyDragSource, target: TaskSnapshot) {
+        self.model = model; self.source = source; self.target = target
+        provider.data = try? JSONEncoder().encode(source)
+    }
+    var requested: Bool { provider.requested }
+    func begin() {
+        let origin = model.dependencyDropOrigin(source: source, target: target)
+        let provider = provider.provider, model = model, target = target
+        dropping = Task { await model.receiveDependencyDrop(provider, origin: origin, target: target) }
+    }
+    func resume() async { provider.deliver(); await dropping?.value }
+}
+
+/// A real NSItemProvider whose dragged-Task data is delivered only when the test says so.
+private final class HeldDragProvider: @unchecked Sendable {
+    let provider = NSItemProvider()
+    var data: Data?
+    private let lock = NSLock()
+    private var completion: (@Sendable (Data?, Error?) -> Void)?
+    init() {
+        provider.registerDataRepresentation(forTypeIdentifier: DependencyDragSource.contentType.identifier, visibility: .ownProcess) { [self] done in
+            lock.withLock { completion = done }
+            return nil
+        }
+    }
+    var requested: Bool { lock.withLock { completion != nil } }
+    func deliver() { let done = lock.withLock { completion }; done?(data, nil) }
 }
