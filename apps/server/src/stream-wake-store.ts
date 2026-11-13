@@ -1,39 +1,21 @@
+import { Database } from "bun:sqlite";
 import type { OperationStore } from "@todo/domain/store";
-import { Context, Effect } from "effect";
+import { Effect } from "effect";
 import type { StreamWake } from "./stream-wake.ts";
 
-const activeWrite = Context.Reference<StreamWake | undefined>(
-  "todo/server/active-stream-write",
-  {
-    defaultValue: () => undefined,
-  },
-);
+type Finished = (changed: () => boolean) => void;
 
-const notify = (wake: StreamWake, changed: () => boolean = () => true) => {
-  try {
-    if (changed()) wake.signal();
-  } catch {}
-};
-
-const afterWrite = <A, E, R>(
+const after = <A, E, R>(
   effect: Effect.Effect<A, E, R>,
-  wake: StreamWake,
-  changed: (value: A) => boolean = () => true,
+  finished: Finished,
+  changed: (value: A) => boolean,
 ) =>
-  Effect.flatMap(activeWrite, (active) =>
-    active === wake
-      ? effect
-      : effect.pipe(
-          Effect.provideService(activeWrite, wake),
-          Effect.onExit((exit) =>
-            Effect.sync(() =>
-              notify(
-                wake,
-                () => exit._tag === "Failure" || changed(exit.value),
-              ),
-            ),
-          ),
-        ),
+  effect.pipe(
+    Effect.onExit((exit) =>
+      Effect.sync(() =>
+        finished(() => exit._tag === "Failure" || changed(exit.value)),
+      ),
+    ),
   );
 
 type Policy<T> = Record<keyof T, "read" | "write">;
@@ -41,25 +23,48 @@ type Policy<T> = Record<keyof T, "read" | "write">;
 const observe = <T extends object>(
   target: T,
   policy: Policy<T>,
-  wake: StreamWake,
+  finished: Finished,
   overrides: Partial<T> = {},
 ): T =>
   new Proxy(target, {
     get(target, key, receiver) {
       if (Object.hasOwn(overrides, key)) return Reflect.get(overrides, key);
       const value: unknown = Reflect.get(target, key, receiver);
-      if (typeof value !== "function" || Reflect.get(policy, key) !== "write")
-        return value;
+      if (typeof value !== "function") return value;
+      const writes = Reflect.get(policy, key) === "write";
       return (...args: unknown[]) => {
-        const result: unknown = Reflect.apply(value, target, args);
-        if (Effect.isEffect(result)) return afterWrite(result, wake);
-        notify(wake);
+        let result: unknown;
+        try {
+          result = Reflect.apply(value, target, args);
+        } catch (cause) {
+          finished(() => false);
+          throw cause;
+        }
+        if (Effect.isEffect(result))
+          return result.pipe(
+            Effect.onExit(() => Effect.sync(() => finished(() => writes))),
+          );
+        finished(() => writes);
         return result;
       };
     },
   });
 
 export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
+  const connection: unknown = Reflect.get(store, "db");
+  if (!(connection instanceof Database))
+    throw new Error("Expected the store's Bun SQLite connection");
+  let pending = false;
+  const finished: Finished = (changed) => {
+    try {
+      pending = changed() || pending;
+      const inside = connection.inTransaction;
+      if (!inside && pending) {
+        pending = false;
+        wake.signal();
+      }
+    } catch {}
+  };
   const scheduled = observe(
     store.scheduled,
     {
@@ -67,12 +72,12 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
       nextAt: "read",
       runDue: "write",
     },
-    wake,
+    finished,
     {
       runDue: () =>
-        afterWrite(
+        after(
           store.scheduled.runDue(),
-          wake,
+          finished,
           ({ woken, reminders }) => woken > 0 || reminders > 0,
         ),
     },
@@ -102,10 +107,10 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
       mutate: "write",
       revert: "write",
     },
-    wake,
+    finished,
     {
       cleanupExpired: () =>
-        afterWrite(store.auth.cleanupExpired(), wake, (count) => count > 0),
+        after(store.auth.cleanupExpired(), finished, (count) => count > 0),
     },
   );
   const snapshots = observe(
@@ -127,12 +132,12 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
       prune: "write",
       runDaily: "write",
     },
-    wake,
+    finished,
     {
       runDaily: () =>
-        afterWrite(
+        after(
           store.snapshots.runDaily(),
-          wake,
+          finished,
           (snapshot) => snapshot !== null,
         ),
     },
@@ -170,7 +175,7 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
       rebuild: "write",
       revert: "write",
     },
-    wake,
+    finished,
   );
   return new Proxy(observed, {
     get(target, key, receiver) {

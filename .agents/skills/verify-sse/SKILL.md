@@ -156,9 +156,13 @@ and Task search behavior retain their current recipes.
 The server decorates its store in `stream-wake-store.ts`. The exhaustive policies
 cover the store, Authentication, Snapshots and ScheduledWork. A new public member
 requires a policy choice at typecheck. Write-capable Effects signal after completion,
-including failure or cancellation after a partial commit. An Effect context marks
-the outer write so nested store calls cannot wake streams inside its transaction. Read-only calls do not
-signal. Empty scheduler passes, credential cleanup and daily Snapshot checks do not
+including failure or cancellation after a partial commit. A pending bit belongs
+to the connection's adapter. Every decorated member exit, including reads and
+synchronous methods, checks Bun SQLite's native `inTransaction` flag and flushes
+the pending signal only outside a transaction. The connection is obtained once
+from the existing store, without changing pinned domain code. A fiber's inherited
+context does not decide transaction lifetime. Read-only calls do not create
+notifications. Empty scheduler passes, credential cleanup and daily Snapshot checks do not
 signal. SSE and cache hygiene retain the raw store to prevent self-waking polls.
 The domain transaction and projection implementations remain unchanged.
 
@@ -168,7 +172,7 @@ at once, including a commit after History was read. Several signals between pass
 collapse into one pass. The 250 ms timer still finds CLI commits and expired
 credentials. Its losing waiter is cancelled on timeout, wake or stream closure.
 
-The helper now also runs `test/sse.test.ts`, `test/stream-wake.test.ts`, `test/stream-wake-store.test.ts` and `test/stream-wake-observers.test.ts` with its
+The helper now also runs `test/sse.test.ts`, `test/stream-wake.test.ts`, `test/stream-wake-store.test.ts`, `test/stream-wake-observers.test.ts` and `test/stream-wake-compositions.test.ts` with its
 compiled CLI. These freeze the Effect clock to prove server delivery without a
 timer advance and compiled CLI delivery only after 250 ms, remembered signals,
 burst collapsing, five-waiter broadcast and cancellation/reopening counts. Without
@@ -202,6 +206,27 @@ trigger without changing the production stream. It requires literal seq 5 and 6
 TaskCreated events, full equality with durable History, and no provisional reminder
 after the outer transaction rolls back. Its optional second argument is a store
 source file for an explicit red control; default verification uses current source.
+Its third argument selects `mutate`, `readSnapshot`, `sync-snapshot` or `matrix`.
+The helper runs all four. The matrix generates all six one/two-boundary paths
+over `auth.mutate` and `auth.readSnapshot`, with commit and rollback, and all 56
+callable member fixtures: 672 compositions. The fixture catalog is exhaustive at
+typecheck. Properties and connection close are excluded; closing the connection
+does not compose with continuing its transaction. Password changes use synchronous
+validation failures because their successful hashing is asynchronous and cannot
+run inside these synchronous callbacks. Destructive operations use refusal or
+preview fixtures. Every case first creates a provisional reminder, checks that
+the revision stays fixed at every inner exit, and requires literal event kinds,
+full operation equality with durable committed Profile History, and literal reused
+sequence numbers after rollback. The detached-child test advances only 100 ms and
+requires a fresh waiter to resume before the fallback can run.
+
+To measure the connection guard's idle cost separately, compile the reviewed
+decorator and current decorator with `scripts/build-idle-meter.mjs <binary>
+[reviewed-store-source]`, then run `scripts/measure-idle.mjs <before> <after>
+<fresh-evidence>`. It alternates five pairs on copied synthetic 178-Task databases,
+with one/two/five idle streams. The meter counts native state checks and SQL query
+calls, passes and process CPU; counters exist only in the compiled meter. Report
+the actual intervals and load, and do not interpret noisy CPU ranges as zero cost.
 The dedicated Mac order transport owns an ephemeral URLSession per order. It
 closes and awaits its forwarding Task, invalidates its session and requires zero
 remaining native requests. Cancelling the Swift body reader alone can leave an

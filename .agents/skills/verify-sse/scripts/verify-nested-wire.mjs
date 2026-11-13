@@ -5,10 +5,12 @@ import { join, resolve } from "node:path";
 import { Effect, Schema } from "effect";
 import { Profile, ZonedInstant } from "../../../../packages/domain/src/index.ts";
 import { openStore, TaskCommands } from "../../../../packages/domain/src/store/store.ts";
+import { compositionLeaves, compositionPaths } from "../../../../apps/server/test/fixtures/stream-wake-compositions.ts";
 
 const root = resolve(import.meta.dirname, "../../../..");
 const evidence = resolve(process.argv[2]);
 const storeSource = process.argv[3];
+const boundary = process.argv[4] ?? "mutate";
 mkdirSync(evidence, { recursive: false });
 const scratch = mkdtempSync(join(tmpdir(), "todo-nested-wire-"));
 const run = Effect.runPromise;
@@ -37,7 +39,7 @@ try {
         const scheduler = "yield* scheduler(store).pipe(Effect.forkScoped);";
         assert.equal(source.split(store).length, 2);
         assert.equal(source.split(scheduler).length, 2);
-        source = source.replace(store, `${store} globalThis.streamWakeProbeStore = store;`).replace(scheduler, "yield* Effect.void;");
+        source = source.replace(store, `${store} globalThis.streamWakeProbeStore = store; globalThis.streamWakeProbeWake = wake;`).replace(scheduler, "yield* Effect.void;");
         return { contents: source, loader: "ts" };
       });
       if (storeSource) build.onLoad({ filter: /apps\/server\/src\/stream-wake-store\.ts$/ }, () => ({ contents: readFileSync(storeSource, "utf8"), loader: "ts" }));
@@ -78,7 +80,47 @@ try {
     } catch (error) { if (!controller.signal.aborted) throw error; }
   })();
   await until(() => frames.some((frame) => frame.event === "ready"));
-  child.stdin.write(`${JSON.stringify({ credential })}\n`);
+  if (boundary === "matrix") {
+    const rows = [];
+    let index = 0;
+    const send = async (method, route, body) => {
+      const reply = await fetch(base + route, { method, headers: { Authorization: `Bearer ${credential}`, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      assert.equal(reply.status, 200); return reply.json();
+    };
+    for (const path of compositionPaths) for (const rollback of [false, true]) for (const leaf of compositionLeaves) {
+      const target = (await run(raw.tasks())).find((value) => value.id === task.task.id);
+      await send("PATCH", `/profiles/work/tasks/${target.id}`, { from_version: target.row_version, changes: { due_at: { kind: "instant", utc: new Date(Date.now() - 10000 - index * 1000).toISOString(), time_zone: "UTC" } } });
+      const cursor = (await run(raw.history())).at(-1).seq;
+      await until(() => frames.some((frame) => frame.event === "operation" && frame.data.seq === cursor));
+      const controls = () => output.split("\n").filter((line) => line.startsWith("CONTROL "));
+      const previous = controls().length;
+      child.stdin.write(`${JSON.stringify({ credential, path, rollback, leaf: leaf.name })}\n`);
+      await until(() => controls().length > previous);
+      const control = controls().at(-1);
+      const observation = JSON.parse(control.slice(control.indexOf("{")));
+      const successor = await send("POST", "/profiles/work/tasks", { title: "Durable successor" });
+      const witness = await send("POST", "/profiles/work/tasks", { title: "Next cursor witness" });
+      await until(() => frames.some((frame) => frame.event === "operation" && frame.data.event.kind === "TaskCreated" && frame.data.event.task.id === witness.id));
+      const durable = (await run(raw.history(cursor))).filter((entry) => entry.outcome === "committed" && entry.profile === "work");
+      const operations = frames.filter((frame) => frame.event === "operation" && frame.data.seq > cursor);
+      const received = operations.map((frame) => frame.data);
+      const kinds = rollback ? ["TaskCreated", "TaskCreated"] : ["ReminderFired", "TaskCreated", "TaskCreated"];
+      rows.push({ index, path, leaf: leaf.name, rollback, cursor, control, durable: durable.map((entry) => [entry.seq, entry.event.kind]), received: received.map((entry) => [entry.seq, entry.event.kind]), passed: observation.checks.every((value) => value === 0) && observation.after === observation.before + 1 && JSON.stringify(received) === JSON.stringify(durable) });
+      writeFileSync(join(evidence, "result.json"), JSON.stringify({ cases: rows.length, leaves: compositionLeaves.map((leaf) => leaf.name), paths: compositionPaths, rows }, null, 2));
+      assert.equal(control.startsWith(`CONTROL ${rollback ? "Failure" : "Success"}`), true, JSON.stringify(rows.at(-1)));
+      assert.deepEqual(observation.checks, Array(path.length + 2).fill(0), JSON.stringify(rows.at(-1)));
+      assert.equal(observation.after, observation.before + 1);
+      assert.deepEqual(durable.map((entry) => entry.event.kind), kinds);
+      assert.deepEqual(received.map((entry) => entry.event.kind), kinds, JSON.stringify(rows.at(-1)));
+      if (rollback) assert.deepEqual(received.map((entry) => entry.seq), [cursor + 1, cursor + 2]);
+      assert.deepEqual(received, durable);
+      assert.deepEqual(operations.map((frame) => frame.id), durable.map((entry) => String(entry.seq)));
+      assert.deepEqual(received.filter((entry) => entry.event.kind === "TaskCreated").map((entry) => entry.event.task.id), [successor.id, witness.id]);
+      index++;
+    }
+    console.log(`PASS; ${rows.length} generated compositions delivered exactly durable History`);
+  } else {
+  child.stdin.write(`${JSON.stringify({ credential, boundary })}\n`);
   await until(() => output.includes("CONTROL Failure"));
   const afterRollback = await run(raw.history(4));
   assert.deepEqual(afterRollback, []);
@@ -92,12 +134,13 @@ try {
   const durable = durableEntries.map((entry) => [entry.seq, entry.event.kind, entry.event.task?.title]);
   const received = operations.map((frame) => [frame.data.seq, frame.data.event.kind, frame.data.event.task?.title]);
   const expected = [[5, "TaskCreated", "Durable successor"], [6, "TaskCreated", "Next cursor witness"]];
-  writeFileSync(join(evidence, "result.json"), JSON.stringify({ cursor: 4, afterRollback, durable, received, expected, instrumentation: "store reference and stdin trigger; scheduler held; production SSE/decorator", passed: JSON.stringify(received) === JSON.stringify(expected) }, null, 2));
+  writeFileSync(join(evidence, "result.json"), JSON.stringify({ boundary, cursor: 4, afterRollback, durable, received, expected, instrumentation: "store reference and stdin trigger; scheduler held; production SSE/decorator", passed: JSON.stringify(received) === JSON.stringify(expected) }, null, 2));
   assert.deepEqual(durable, expected);
   assert.deepEqual(received, expected);
   assert.deepEqual(operations.map((frame) => frame.id), ["5", "6"]);
   assert.deepEqual(operations.map((frame) => frame.data), durableEntries);
   console.log("PASS; stream delivered exactly durable History after nested rollback and seq reuse");
+  }
 } finally {
   controller.abort();
   if (streamReader) await streamReader;

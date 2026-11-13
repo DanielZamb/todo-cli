@@ -1,10 +1,11 @@
 # In-process stream wake
 
-Implementation: `4dad570ae4543a034a0bc27aca57264f2fb67c8c`, branch
+Initial implementation: `4dad570ae4543a034a0bc27aca57264f2fb67c8c`, branch
 `perf/stream-wake`, based on `6b167266fc34c3304e30ed220bb652b4d17c05ab`.
 The delivery also registers the verifier and records this report. No client
 application code, dependency, contract id, route, header or event changed.
 Nothing was installed, signed, pushed or merged. All data and processes were scratch.
+The later review corrections below supersede the original transaction guard.
 
 ## Commit coverage and waiting
 
@@ -15,12 +16,17 @@ classify every public member of OperationStore, Authentication, Snapshots and
 ScheduledWork. New routes using these boundaries need no signal call. New public
 members require a policy at typecheck. Preview forks remain isolated.
 
-`afterWrite` signals in its Effect finalizer, after the outer operation finishes.
-Its Effect context reaches synchronous nested mutation callbacks, so inner appends
-cannot signal inside the enclosing transaction or produce another empty pass.
+The adapter records a pending notification after a write boundary finishes. Every
+decorated member exit checks the actual connection's native `inTransaction` flag;
+the first exit outside a transaction clears and delivers the pending notification.
+Read and synchronous boundaries therefore defer nested writes correctly, and a
+detached child signals after its own commit. No inherited fiber marker is used.
+The server adapter obtains the existing Bun SQLite connection once through its
+runtime `db` member and validates its native type; this is an explicit coupling to
+the pinned store's existing field. It adds no SQL query or domain accessor.
 Errors and interruption can produce harmless extra passes. runDue, cleanupExpired
-and runDaily signal only for actual work or failure. Snapshot create, restore and
-prune use the same wrapper. Initialization finishes before streams exist.
+and runDaily mark work only for a nonempty result or failure. Snapshot create,
+restore and prune use the same exit mechanism. Initialization finishes before streams exist.
 Authentication reads can append rejected History, which SSE excludes.
 
 SSE and cache hygiene use the raw store to avoid self-waking polls. Neither
@@ -236,8 +242,8 @@ records exactly one TaskCreated even if signal throws. Original typed failures,
 defects and interruption causes compare exactly with the undecorated Effect.
 The timer still wakes after 250 ms when the observer fails.
 
-F3: all conditional operations now use the same afterWrite helper, consult the
-active-write marker and provide it during their work. Each nested runDue,
+The first F3 correction made conditional operations share the afterWrite helper
+and active-write marker. Each nested runDue,
 cleanupExpired and runDaily rollback case observes revision zero inside the
 transaction and one harmless signal after it ends. Idle work remains silent.
 The compiled loopback regression uses production SSE and the decorator, with only
@@ -246,7 +252,10 @@ The reviewed decorator emits provisional `[5, ReminderFired]`, rolls back, and
 skips the durable TaskCreated reusing seq 5. The corrected stream emits exactly
 `[5, TaskCreated, Durable successor]` and `[6, TaskCreated, Next cursor witness]`.
 Both the literal tuples and the complete operation entries must equal durable
-History. No test-only product route, header or flag was added.
+History. No test-only product route, header or flag was added. Review 2 rejected
+that correction: readSnapshot and synchronous boundaries still signalled inside
+transactions, and a detached child inherited an ended marker. The connection
+guard and generated proof below replace that design.
 
 B1 remains outside this unit. The existing ProfileDeleted exception sends final
 TaskDeleted/ProfileDeleted to a revoked scoped Token on both base and head,
@@ -290,3 +299,97 @@ scratch startup. Event-delivery limits and the Mac reconnect expectation are
 unchanged. The unchanged event assertions, all 19 tests and the compiled nested-wire proof
 pass on retry in `committed-sse-retry/`, exit zero. Production sources and the
 Mac tests did not change in this readiness-only follow-up.
+
+## Second review correction: connection transaction state
+
+This correction is on top of `22f12b3c869b7d10f758bb53b3f58e93c086b566`, without
+amending it. The final review-2.md was reread in full. Its remaining F3 findings
+reject the premise that an inherited Effect context describes a live transaction.
+The adapter now uses the database connection as described above. All generic,
+conditional, read and synchronous exits share one pending bit and one native state
+check. Clearing pending before signalling also makes reentrant observers safe.
+Rollback can cause one empty pass after the transaction ends. No signal is emitted
+while the connection is in a transaction. Pinned domain and projection files,
+production SSE, app production, contract and dependencies are unchanged in this correction.
+
+F3 red on 22f12b3c: both compiled readSnapshot and synchronous-Snapshot compositions
+emit `[5, ReminderFired]`, roll back, then skip the durable TaskCreated reusing 5.
+Both corrected compiled witnesses deliver exactly
+`[5, TaskCreated, Durable successor]`, `[6, TaskCreated, Next cursor witness]`,
+including complete entry equality and literal SSE ids `["5", "6"]`. The detached
+child control is also red: its committed reminder leaves revision 1 and a fresh
+waiter asleep. The corrected test advances only 100 ms, requires revision 2 and
+joins the waiter before the 250 ms fallback can run. Original rollback and
+partial-commit interruption controls still pass.
+
+The reusable generator classifies every public member of all four decorated
+objects at typecheck. It generates six paths over both callback boundaries,
+auth.mutate and auth.readSnapshot, at two and three member levels, crossed with
+56 callable member fixtures and commit/rollback: 672 compositions. Properties and
+connection close are excluded. Password operations exercise synchronous validation
+failures; successful asynchronous hashing cannot run in these synchronous callback
+boundaries. Destructive methods use refusal or preview cases. Every composition
+starts a provisional reminder, checks a fixed revision at every inner exit, and
+requires literal durable event kinds and full committed Profile History equality.
+The compiled driver also requires the actual reused sequence numbers after every
+rollback. The 22f12b3c control fails at mutate/snapshots.createSync, with inner
+revision deltas `[0, 1, 1]`. Current source passes all 672 cases twice, including
+through the complete verify-sse recipe. Its 672 frozen-clock store compositions
+pass too. The new generator changes no production route or stream implementation.
+
+F1 remains green: the seat's 46-case observer matrix was rerun against this source,
+exit 0, including same-fiber cause equality, synchronous thrown identity, external
+interruption, three accepted Tasks and fallback timers. F2 remains green: the full
+Mac helper exits 0 with 160 tests in 33 suites; the unchanged reconnect test takes
+8.242 s and the three-order proof takes 2.088 s. Diagnostic/contract and durable
+HTTP follow-ups also pass. No Swift test or app source changed in this correction.
+O1's shared host clock remains in both reusable meters. The earlier corrected
+latency measurements remain historical evidence; this correction measures idle
+cost against 22f12b3c rather than claiming another latency comparison.
+
+The idle meter uses compiled production servers with identical counters, five
+alternating pairs, one/two/five streams and cloned synthetic databases with 178
+open Tasks, five Projects, 39 Tags and 108 link Attachments. Intervals are
+2.007–2.012 s, measured on the shared host clock; one-minute load is 5.08–5.84.
+The table reports process CPU ms per elapsed second, median and range across five
+samples. Meter accounting is included equally in both arms.
+
+| Idle streams | 22f12b3c CPU ms/s | Connection guard CPU ms/s | Passes/s before / after | Query calls per sample before / after | New state checks/s |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 27.05 [21.33–27.74] | 22.28 [15.97–29.81] | 3.984 / 3.984 | 156 / 156 | 4.980 |
+| 2 | 19.32 [17.26–33.52] | 17.94 [14.98–32.04] | 7.967 / 7.966 | 228 / 228 | 4.979 |
+| 5 | 25.84 [20.44–33.16] | 22.53 [18.71–33.53] | 19.918 / 19.914 | 444 / 444 | 4.979 |
+
+Every sample has exactly 8/16/40 History reads and passes, respectively, and ten
+new native state checks. There is no extra idle signal, pass or SQL query. The five
+checks per second are the scheduler's five decorated member exits, independent of
+stream count; SSE/cache hygiene keep their raw store. CPU ranges overlap, so these
+observations establish no measurable idle regression and do not establish a CPU
+improvement or literally zero cost.
+
+Revision evidence is local under `.scratch/revision3/evidence/`: `boundaries-red.log`,
+`wire-read-red/`, `wire-sync-red/` and `matrix-red/` retain the red controls.
+`matrix-green/` and `verify-sse/composition-matrix/` retain all generated compiled
+results. `verify-sse/read-snapshot-wire/` and `verify-sse/sync-snapshot-wire/` retain
+the literal seq 5/6 witnesses. `observer-matrix.log`, `interruption.log`, `idle/`,
+`idle-summary.json`, `mac/`, `server-suite.log` and `root-check.log` retain the
+passing checks and raw measurements. Intermediate fixture typing/expectation
+failures remain visible; they are not product regressions.
+
+Final required exits: verify-sse 0 (34 focused tests, three direct wire witnesses,
+672 generated compiled compositions and the unchanged real CLI/HTTP drive);
+server suite 0 (62 tests); full Mac state helper 0; `sh scripts/disk-guard.sh` 0;
+`/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check` 0 (387 domain, 69 CLI,
+62 server, 168 Electron passed, one Electron skipped). Source checks confirm no
+domain production, API, Electron or Mac changes relative to 22f12b3c.
+
+O3 is report-only: the seat found retained native Mac requests after stop,
+reconnect and Profile switch on both base and head, with subscriptions 1/2/3
+draining only after data arrives. The Mac worker owns that production lifetime
+fix. B1 and O2 retain their integration/later-work dispositions above. Strict-read
+integration must capture the revision before the authorized pass, retain it through
+absent/terminal/generation states, obtain a fresh checked lease every pass and hold
+none across waiting. No terminal authorization exemption was added to this proof.
+Nothing was installed, signed, pushed or merged; the seat re-checks this correction.
+After the final checks, lsof confirmed twelve owned Bun compiler runtime copies
+were closed; cleanup removed 1,063,930,368 bytes and retained the receipt locally.

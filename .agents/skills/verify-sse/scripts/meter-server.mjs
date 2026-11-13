@@ -3,8 +3,10 @@ import { now } from "./host-clock.mjs";
 
 let historyReads = 0;
 let passes = 0;
+let queryCalls = 0;
 const query = Database.prototype.query;
 Database.prototype.query = function (sql, ...args) {
+  queryCalls++;
   const statement = query.call(this, sql, ...args);
   if (sql.startsWith("SELECT seq,json_extract(event,'$.generation') AS generation FROM op_log") && !this.inTransaction) {
     return new Proxy(statement, {
@@ -49,5 +51,5 @@ Database.prototype.transaction = function (...args) {
   return wrapped;
 };
 process.stdin.setEncoding("utf8");
-process.stdin.on("data", () => process.stdout.write(`METER ${JSON.stringify({ cpu: process.cpuUsage(), historyReads, passes, sampledAt: now() })}\n`));
+process.stdin.on("data", () => process.stdout.write(`METER ${JSON.stringify({ cpu: process.cpuUsage(), historyReads, passes, queryCalls, stateChecks: globalThis.streamWakeStateChecks ?? 0, sampledAt: now() })}\n`));
 await import("../../../../apps/server/src/main.ts");

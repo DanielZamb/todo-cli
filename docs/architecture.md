@@ -238,8 +238,12 @@ work does not signal; SSE and cache hygiene use the raw store. The domain transa
 and projection code are unchanged. A stream remembers the wake revision from before
 its pass, so commits during a pass force the next wait to return immediately.
 Bursts collapse into one pending pass per stream, and cancellation removes waiters.
-Generic and conditional write observers share the enclosing-write guard. Observer
-defects cannot change a write's result or cause; the timer remains its fallback.
+All decorated member exits, including reads and synchronous calls, check the
+connection's native SQLite transaction state. Writes mark a pending notification;
+the first exit outside a transaction delivers it. Nested writes cannot signal
+before the outer transaction ends, and detached children signal their own commits.
+The adapter obtains the existing connection once without changing domain code.
+Observer defects cannot change a write's result or cause; the timer remains its fallback.
 The generation check, History cursor, authorization and emitted events are unchanged.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
 There is no file watcher and no IPC between the two processes. Reconnect with
