@@ -84,8 +84,13 @@ import TodoAPI
         worker.start(); defer { port.finish() }
         while port.value == nil {}
         let sampler = ClientStallSampler(thread: try #require(port.value), ownImages: [], windowLimitNS: 0)
-        #expect(!sampler.tick(stall: UUID(), pendingMS: 150, nowMS: 1000))
+        let stall = UUID()
+        #expect(!sampler.tick(stall: stall, pendingMS: 150, nowMS: 1000))
         #expect(sampler.disabled?.contains("suspended window") == true, "\(sampler.disabled ?? "nil")")
+        // S1-25: the suspension that turned sampling off is still recorded, with its summary.
+        let record = try #require(sampler.finish(stall: stall, nowMS: 1100))
+        #expect(record.samples == 0 && record.suspendedMicroseconds?.count == 1 && record.suspensions == 1, "\(record)")
+        #expect(record.suspendedTotalMicroseconds == record.suspendedLongestMicroseconds && (record.suspendedLongestMicroseconds ?? -1) >= 0)
         let before = port.spins.read(), deadline = ProcessInfo.processInfo.systemUptime + 2
         while port.spins.read() == before && ProcessInfo.processInfo.systemUptime < deadline {}
         #expect(port.spins.read() > before, "the sampled thread was resumed")

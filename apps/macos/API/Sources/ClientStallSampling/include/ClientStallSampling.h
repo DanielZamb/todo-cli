@@ -21,7 +21,7 @@ typedef struct {
     uint32_t count;
     int32_t status;
     uint64_t lr;              ///< link register (PAC stripped): a leaf's caller before it pushes a frame
-    uint64_t suspended_ticks; ///< mach_absolute_time ticks from the suspend's return to the resume's
+    uint64_t suspended_ticks; ///< mach_absolute_time ticks from before the suspend call to after the resume (conservative)
 } todo_stall_sample;
 
 /// Suspends `thread`, reads its registers, walks its frame-pointer chain with

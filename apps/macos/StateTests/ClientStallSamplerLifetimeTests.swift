@@ -118,9 +118,13 @@ import TodoAPI
         #expect(record.samples == 1 && record.suspendedMicroseconds?.count == 1, "each window is recorded: \(record.suspendedMicroseconds ?? [])")
     }
 
-    @Test func diagnosticsShowsWhatTheSamplerCost() {
+    @Test func diagnosticsShowsWhatTheSamplerCost() throws {
         let attribution = ClientStallAttribution(samples: 3, inLabel: "f", agreeing: 3, frames: [], disabled: nil, suspendedMicroseconds: [120, 80, 300])
         #expect(ClientDiagnosticDisplay.samplerCost(attribution) == "Sampled 3 times: main thread held 0.50 ms, longest 0.30 ms")
+        // S1-25: the journal record carries the count, the total and the longest.
+        #expect(attribution.suspensions == 3 && attribution.suspendedTotalMicroseconds == 500 && attribution.suspendedLongestMicroseconds == 300)
+        let encoded = String(decoding: try JSONEncoder().encode(attribution), as: UTF8.self)
+        #expect(encoded.contains("\"suspensions\":3") && encoded.contains("\"suspendedTotalMicroseconds\":500") && encoded.contains("\"suspendedLongestMicroseconds\":300"), "\(encoded)")
         let once = ClientStallAttribution(samples: 1, inLabel: "f", agreeing: 1, frames: [], disabled: nil, suspendedMicroseconds: [45])
         #expect(ClientDiagnosticDisplay.samplerCost(once) == "Sampled once: main thread held 0.04 ms, longest 0.04 ms")
         #expect(ClientDiagnosticDisplay.samplerCost(.init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: "off")) == nil)

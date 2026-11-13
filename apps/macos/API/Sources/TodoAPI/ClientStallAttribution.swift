@@ -24,12 +24,20 @@ public struct ClientStallAttribution: Codable, Sendable, Equatable {
     public var frames: [ClientStallFrame]
     /// Why sampling is off for the rest of this run (a failure or a window over 1 ms), if it is.
     public var disabled: String?
-    /// How long each sample held the main thread suspended, in microseconds, in order: what the
-    /// sampler cost this stall (MAC-C1-S1-21 review). Absent in records written before it.
+    /// How long each suspension held the main thread, in microseconds, in order, measured from
+    /// before the suspend call to after the resume (conservative, S1-25): what the sampler cost this
+    /// stall. It includes a window that turned sampling off. Absent in records written before it.
     public var suspendedMicroseconds: [Int]?
+    /// The same cost summarised for the journal: how many suspensions, their total and the longest.
+    public var suspensions: Int?
+    public var suspendedTotalMicroseconds: Int?
+    public var suspendedLongestMicroseconds: Int?
     public init(samples: Int, inLabel: String?, agreeing: Int, frames: [ClientStallFrame], disabled: String?, suspendedMicroseconds: [Int]? = nil) {
         self.samples = samples; self.inLabel = inLabel; self.agreeing = agreeing; self.frames = frames; self.disabled = disabled
         self.suspendedMicroseconds = suspendedMicroseconds
+        suspensions = suspendedMicroseconds?.count
+        suspendedTotalMicroseconds = suspendedMicroseconds?.reduce(0, +)
+        suspendedLongestMicroseconds = suspendedMicroseconds?.max()
     }
 }
 
@@ -193,7 +201,10 @@ public final class ClientStallSampler: @unchecked Sendable {
         guard spentNS + windowLimitNS <= Self.stallBudgetNS else { return false }
         let slot = buffer.advanced(by: index)
         let status = Int(todo_sample_thread(thread, slot))
+        // Conservative: from before the suspend call to after the resume (S1-25). Every suspension
+        // that happened is recorded, even one that turns sampling off.
         let windowNS = slot.pointee.suspended_ticks * UInt64(timebase.numer) / UInt64(max(timebase.denom, 1))
+        if windowNS > 0 { windows.append(windowNS); spentNS += windowNS }
         if status != Int(TODO_SAMPLE_OK) {
             disabled = "sample failed with status \(status)"
             return false
@@ -204,7 +215,6 @@ public final class ClientStallSampler: @unchecked Sendable {
         }
         taken = index + 1
         samplesTaken += 1
-        windows.append(windowNS); spentNS += windowNS
         lastSampleMS = nowMS
         return true
     }
@@ -220,8 +230,8 @@ public final class ClientStallSampler: @unchecked Sendable {
         if nowMS - hourStartMS >= 3_600_000 { hourStartMS = nowMS; attributedThisHour = 0 }
         guard attributedThisHour < Self.perHour else { return nil }
         attributedThisHour += 1
-        guard sampled else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0) } }
-        let suspended = windows.prefix(count).map { Int($0 / 1000) }
+        let suspended = stall == id ? windows.map { Int($0 / 1000) } : []
+        guard sampled else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0, suspendedMicroseconds: suspended.isEmpty ? nil : suspended) } }
         var stacks: [[ClientStallSymbol]] = []
         for index in 0..<count {
             let sample = buffer.advanced(by: index).pointee

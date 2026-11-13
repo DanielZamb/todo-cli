@@ -32,11 +32,13 @@ int32_t todo_sample_thread(thread_act_t thread, todo_stall_sample *out) {
     out->lr = 0;
     out->suspended_ticks = 0;
 #if defined(__arm64__)
+    // The clock starts before the suspend call (MAC-C1-S1-25), so the recorded window is
+    // conservative: it covers the whole suspension, from before the call to after the resume.
+    uint64_t started = mach_absolute_time();
     if (thread_suspend(thread) != KERN_SUCCESS) {
         out->status = TODO_SAMPLE_SUSPEND_FAILED;
         return out->status;
     }
-    uint64_t started = mach_absolute_time();
     // ---- suspended: only kernel calls into stack-local and caller buffers below ----
     int32_t status = TODO_SAMPLE_OK;
     arm_thread_state64_t state;
