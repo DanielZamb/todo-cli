@@ -3266,3 +3266,100 @@ I broke the coordinator's floor once: the first R5-4 green measurement started
 with free space at 39.0 GiB, because its free-space reading and its start were
 in one command. It finished and left no temporary files. Every later run was
 gated on a separate reading.
+
+## Review 6 finding R6-1 (2026-11-13)
+
+Claude Opus 5.5. Commits 37e1d00c, 8def9d76 and e3f00677. Evidence:
+`docs/evidence/ui-speed/recordings-r6/`.
+
+**Defect.** R5-4's temporary image was written inside the catalog reader's
+`try`, whose `catch` answered `foreign_catalog`. So a missing, read-only or
+full temporary directory refused a good recovering store with advice to
+remove it.
+
+**Ruling applied.** A refusal with removal advice is reported only for
+something established about the files. A failure of the store's own
+machinery answers the new retrying reason `check_unavailable`: no files, no
+removal advice, and a content-free detail `<stage>: <error code>` that
+reaches Diagnostics.
+
+| Proof | 0f381871 | 37e1d00c / 8def9d76 |
+| --- | --- | --- |
+| Seat `temp-failure.ts` (missing, read-only TMPDIR) | `foreign_catalog` with removal advice (`r61-red-temp-failure.json`) | `check_unavailable`, retry text |
+| `sqlite-check-temp.sh`: owned 8 MiB HFS+ volume, about 800 KB free, 400-batch recovering store | missing, read-only, full: `foreign_catalog` | missing: `temporary image create: ENOENT`; read-only: `temporary image create: EACCES`; full: `temporary image write: ENOSPC` |
+| Foreign catalog committed in the WAL, TMPDIR missing | `foreign_catalog` | `foreign_catalog` (decided before any image) |
+| Temporary directory listing before and after, every case | unchanged | unchanged; nothing left behind and nothing written outside the `mkdtemp` directory the store creates |
+| Domain tests (`recording-open-refusal.test.ts`), run in a 0f381871 capture | 2 of 31 fail (both R6-1 cases) | 32 of 32, including a drive through the real worker into the owner's health |
+
+### Every `catch` on the open path
+
+"Fact" means a judgment about the files, which keeps its refusal reason and
+removal advice. "Machinery" means `check_unavailable`, retrying, with the
+stage named. The file-nature codes that count as facts: ELOOP, EISDIR,
+ENOTDIR, ENXIO, EACCES, EPERM and EFTYPE, because the store's own private
+files should never produce them. The SQLite codes that count as facts:
+SQLITE_NOTADB and SQLITE_CORRUPT*.
+
+| Site | Fact | Machinery (stage) |
+| --- | --- | --- |
+| directory create (`mkdirSync`) | none | every error → `open_failed`, retrying, `directory create: <code>` |
+| `sizeOf` (`lstat`) | ENOENT → absent | other → `file size` |
+| `sameFile` (`lstat`) | ENOENT → `replaced` | other → `path check` |
+| sidecar pre-check (`lstat`, before any create) | ENOENT → skip; not regular, not one link, WAL or journal data → `foreign_sidecar` | other → `sidecar check` |
+| main create (`O_CREAT|O_EXCL`) | EEXIST → reopen; file-nature → `not_private` | other (ENOSPC, EROFS, EMFILE, …) → `main create` |
+| main reopen | ENOENT → `replaced`; file-nature → `not_private` | other → `main open` |
+| main header read | none | `header read` |
+| initialization DDL (unix-none) | none | busy → `initialization_busy`; other → `initialization` (an empty main this open created is removed) |
+| sidecar clear under exclusion (`open`, `unlink`) | ENOENT → skip; file-nature, not regular or linked → `foreign_sidecar`; inode moved → `replaced` | open other → `sidecar open`; unlink → `sidecar removal` |
+| WAL open in the reader | ENOENT → no WAL; file-nature → `not_private` | other → `wal open` |
+| store reads (`readSync`) | none | `store read` |
+| catalog parse (`recording-format.ts`) | `CatalogShapeError` or `RangeError` from malformed offsets → `foreign_catalog`; header or identifier mismatch → `foreign_header` | any other error is rethrown → `inspection` |
+| temporary image create (`mkdtemp`, `open`) | none | `temporary image create` |
+| temporary image write (`writeSync`) | none | `temporary image write` |
+| image page reread (short read) | none | `inspection` (the store changed mid-check) |
+| preflight open | NOTADB, CORRUPT → `foreign_catalog` | other → `catalog check open` |
+| preflight catalog check | our catalog verdict, NOTADB, CORRUPT → `foreign_catalog`; busy → retry | other → `catalog check` |
+| integrity check | `quick_check`/`foreign_key_check` not ok, NOTADB, CORRUPT → `integrity`; busy → retry | other → `integrity check` |
+| `consistentInspection` | refusals need two stable agreeing inspections (R5-3) | non-refusal throw → `inspection: <code>`. `check_unavailable` is answered at once only when both files' stamps held still during that attempt; otherwise it retries within the 500 ms bound and ends in `store_busy`. `finally` closes and removes the temporary directory |
+| `fileStamp` | none (stamps only; decides nothing) | errors give a stable "absent" stamp |
+| writable connection open (`create: false`) | path no longer ours → `replaced` | otherwise `connection open` |
+| live catalog check | our verdict, NOTADB, CORRUPT → `foreign_catalog`; busy → retry | other → `live catalog check` |
+| inner live `catch` | closes under the shared exclusion (no checkpoint), retries busy, rethrows | |
+| outer `catch` | refusals rethrown | busy → `initialization_busy`; other → `open` (previously `foreign_catalog`) |
+| store setup (pragmas, counters) | none | busy after 49 tries → `initialization_busy`; other → `store setup` (previously a raw error) |
+| sidecar `chmod`, `presentRecordingFiles` | none | best effort; no verdict |
+| worker construction (`recordings.ts`) | a `RecordingOpenRefusal` keeps its reason and detail | any other error → `open_failed`, retrying |
+
+The third commit came out of this round's own gate run. Under a concurrent
+writer, the check copy's page reread found the WAL changed mid-check, and that
+machinery failure was answered at once. So a damaged store under load answered
+retrying instead of being refused: 57 of 4,792 opens at the seat's rate, and
+nearly all unpaced (`gates5/under-load-*`). R5-3's proof requires a damaged
+store under load to stay refused. With the machinery failure going through
+the stability rule:
+- at 85 commits/s, the damaged store is refused `integrity` on 3,076 of 3,076
+  opens and the foreign store `foreign_catalog` on 7,408 of 7,408;
+- unpaced, every open is refused with its reason or answered `store_busy`;
+  none opens and none answers `check_unavailable`;
+- a missing, read-only or full temporary directory still answers
+  `check_unavailable` at once, because the store's files hold still.
+
+### Gates on e3f00677 (gates6, sandboxed, each step gated on at least 40 GiB free)
+
+| Gate | Exit | Result |
+| --- | ---: | --- |
+| domain recordings tests | 0 | 82 |
+| initialization, initialization-server, foreign-files, visibility, swap, race, refusal-classes | 0 each | |
+| seat `classes.ts` | 1 | 20 of 21; the one row is the expectation the seat withdrew in review 6 |
+| seat `guidance-real`, `live-writer`, `temp-failure` | 0 each | temp-failure: normal opens; missing and read-only answer `check_unavailable` |
+| seat `concurrent-open`, 60 s | 0 | 2,029 opens, all opened |
+| under load at 85 commits/s, 60 s | 0 | foreign 14,551 of 14,551 `foreign_catalog`; damaged 3,165 `integrity`, 2 `store_busy` |
+| under an unpaced writer, 30 s | 0 | foreign 845 `foreign_catalog`, 15 `store_busy`; damaged 62 `integrity`, 44 `store_busy`; none opened |
+| `sqlite-check-temp.sh` (owned volume) | 0 | as in the table above |
+| image cost, 173 MiB and 253 MiB | 0, 0 | 63 MiB peak at 253 MiB with frames |
+| verify-ui-profiler `verify.ts`, recorder faults, verify-occ-atomicity `check.ts` | 0 each | |
+| disk guard, then root `lockf pnpm check` | 0, 0 | domain 572, server 38, Electron 168 + 1 skipped, CLI 87 |
+
+No file pinned by any mapping changed in this round. The pin audit at the
+head shows the same one mismatch: verify-discovery-formal's `task-client.ts`,
+deferred for the Swift step.
