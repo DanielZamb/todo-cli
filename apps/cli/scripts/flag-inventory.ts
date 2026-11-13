@@ -200,6 +200,37 @@ export function flagConsumer(command: string, flag: string) {
     diagnostics: {
       "--server": "diagnosticsRead URL",
       "--follow": "Effect.forever polling and NDJSON output",
+      "--detail":
+        "diagnosticsRead ?detail=true; refused with --follow before reading credentials",
+    },
+    "diagnostics runs": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--cursor": "recordingCommand runs cursor -> /diagnostics/profiler/runs",
+      "--ndjson": "recordingCommand emit compact JSON",
+    },
+    "diagnostics show": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--run": "recordingCommand runId -> /diagnostics/profiler/runs/:run",
+      "--ndjson": "recordingCommand emit compact JSON",
+    },
+    "diagnostics export": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--run":
+        "recordingCommand runId -> /diagnostics/profiler/runs/:run/export",
+      "--cursor": "recordingCommand export page offset",
+      "--ndjson": "recordingCommand export follows every page as NDJSON",
+    },
+    "diagnostics import": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--file": "recordingCommand reads and validates the local file",
+      "--dry-run": "recordingCommand ingest ?dry_run=true",
+      "--ndjson": "recordingCommand emit compact JSON",
+    },
+    "diagnostics compare": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--before": "recordingCommand runId -> compare before",
+      "--after": "recordingCommand runId -> compare after",
+      "--ndjson": "recordingCommand emit compact JSON",
     },
     top: { "--server": "diagnosticsRead -> runTop or non-TTY snapshot" },
     lookup: { "--prefix": "LookupQuery -> Discovery.lookup" },

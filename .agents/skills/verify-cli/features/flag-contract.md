@@ -2,7 +2,7 @@
 
 This inventory is generated from the compiled CLI help tree and checked against
 `schema --list`. No command or accepted flag list is transcribed from source.
-The 53 entries include the root and command groups; 52 command response schemas
+The 58 entries include the root and command groups; 57 command response schemas
 plus the help/error schemas are captured. Schema documents describe responses,
 not CLI flag registrations. Their normalized hashes remain unchanged.
 
@@ -18,7 +18,7 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | Compiled command | Additional accepted flags |
 | --- | --- |
 | `todo` | None |
-| `diagnostics` | `--follow`, `--server` |
+| `diagnostics` | `--detail`, `--follow`, `--server` |
 | `top` | `--server` |
 | `schema` | `--list` |
 | `snapshot` | None |
@@ -70,15 +70,22 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | `config show` | None |
 | `config get` | None |
 | `config set` | None |
+| `diagnostics runs` | `--cursor`, `--ndjson`, `--server` |
+| `diagnostics show` | `--ndjson`, `--run`, `--server` |
+| `diagnostics export` | `--cursor`, `--ndjson`, `--run`, `--server` |
+| `diagnostics import` | `--dry-run`, `--file`, `--ndjson`, `--server` |
+| `diagnostics compare` | `--after`, `--before`, `--ndjson`, `--server` |
 
-The exact 802 command/flag pairs have source consumer references in
+The exact 886 command/flag pairs have source consumer references in
 `flag-consumers.json`, produced by the verification recipe.
 `apps/cli/scripts/flag-inventory.ts` checks every collected flag against that
 reviewed mapping and refuses a flag without a consumer entry.
 The regression compares full normalized help hashes, accepted flag sets and
 response-schema hashes against `test/fixtures/cli-flag-contract.json`.
 The fixture was derived from the unchanged reviewed CLI by removing exactly
-the 64 unsupported mutation registrations, followed by only detach --label.
+the 64 unsupported mutation registrations, followed by only detach --label. The Diagnostics merge then added `diagnostics --detail` and
+the five recording subcommands, each registering only the flags its handler reads, and
+the Diagnostics response schema hash shared by `diagnostics` and `top`.
 Remaining flag order and all other
 help/schema content stay unchanged. The five original Go output goldens do not change.
 
@@ -89,7 +96,7 @@ help/schema content stay unchanged. The five original Go output goldens do not c
 | init | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 | login | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 
-The 800 other pairs have consumers, including the four Delete/Purge flags only
+The 884 other pairs have consumers, including the four Delete/Purge flags only
 on rm and Task editing fields only on add/edit. Some modifiers apply only to
 their documented branch, such as a label on a supplied Attachment or Markdown
 export templates. This is a compiled registration inventory plus source trace,

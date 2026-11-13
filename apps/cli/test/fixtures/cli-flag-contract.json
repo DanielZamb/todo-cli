@@ -24,6 +24,7 @@
         "--completions",
         "--credential-profile",
         "--db",
+        "--detail",
         "--follow",
         "--format",
         "--help",
@@ -37,8 +38,8 @@
         "-h",
         "-v"
       ],
-      "help_sha256": "8bd07fd520b5d3761c579969674dd2c3beb0d0a8b9dbdf88d30b1d4f4bc3b3a4",
-      "schema_sha256": "7e5500cfbe3aa1f3b6b79151c322fe5b45cf25b3593fbc4328166580b1796f51"
+      "help_sha256": "16d0cf251d175df52dc49abe0f0156bfebdeb18af90294d715ccbec85661a770",
+      "schema_sha256": "79d06577721c3456272d41c28414cd61a8b860196004f1b5483d6227c1f93614"
     },
     "top": {
       "flags": [
@@ -58,7 +59,7 @@
         "-v"
       ],
       "help_sha256": "1274e3cec31e3c8a3d9a941ecc45b7e1cc595218b2f8a42acc1212ee60c7f8b6",
-      "schema_sha256": "7e5500cfbe3aa1f3b6b79151c322fe5b45cf25b3593fbc4328166580b1796f51"
+      "schema_sha256": "79d06577721c3456272d41c28414cd61a8b860196004f1b5483d6227c1f93614"
     },
     "schema": {
       "flags": [
@@ -864,6 +865,119 @@
       ],
       "help_sha256": "23042233143839252bb2fe75a1db3684277a7d65a0a1711b42b697df9d963207",
       "schema_sha256": "895114613ea6e5d034f5adb8cf6570008aae05672a3cc99ccb35e968ca0cfc29"
+    },
+    "diagnostics runs": {
+      "flags": [
+        "--completions",
+        "--credential-profile",
+        "--cursor",
+        "--db",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--log-level",
+        "--ndjson",
+        "--no-color",
+        "--profile",
+        "--server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "dd947a39043dd9475bf602e650e003060dc6deb0a4720c04be2a1b24fc651927",
+      "schema_sha256": "ad2c3dce6d9710f2fb047ccf9fc6bff3a9fe0e6fba939edfaf44784fd73b5eb6"
+    },
+    "diagnostics show": {
+      "flags": [
+        "--completions",
+        "--credential-profile",
+        "--db",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--log-level",
+        "--ndjson",
+        "--no-color",
+        "--profile",
+        "--run",
+        "--server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "dab5efd3ced13551c8d2e52f3d92b5ae6bede64d4ceb87d8057c8801231f209b",
+      "schema_sha256": "bf64c69691fc0709da020a7c318d772cecba1251e8f776d89a723b8686d50f66"
+    },
+    "diagnostics export": {
+      "flags": [
+        "--completions",
+        "--credential-profile",
+        "--cursor",
+        "--db",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--log-level",
+        "--ndjson",
+        "--no-color",
+        "--profile",
+        "--run",
+        "--server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "98ea4d5eb8ab340134934c70bf6eeb9b6ac6f3a8f3403e57168583a27e425360",
+      "schema_sha256": "a6a5b21ec58173b7d6fd927832e655e96838e27ed9942928fc580f6c966b288a"
+    },
+    "diagnostics import": {
+      "flags": [
+        "--completions",
+        "--credential-profile",
+        "--db",
+        "--dry-run",
+        "--file",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--log-level",
+        "--ndjson",
+        "--no-color",
+        "--profile",
+        "--server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "c1ed6b6b81709ebe1c4614c2f8df2eadc944a823130b7f0bd0ce1f41afc819e2",
+      "schema_sha256": "1ab2ebf72510af1d1de5686212c00f92a81ca26874601f115e0b67a1f4bbe1f3"
+    },
+    "diagnostics compare": {
+      "flags": [
+        "--after",
+        "--before",
+        "--completions",
+        "--credential-profile",
+        "--db",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--log-level",
+        "--ndjson",
+        "--no-color",
+        "--profile",
+        "--server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "b548bc75f621cb850bca962688f08c50c1ff6b9db789c6738c1bbb787e157a04",
+      "schema_sha256": "ed72c5f4f5056b6ff7b9b50de7d5897235176de4211cdfc4ca38e1db23b3b3cd"
     },
     "snapshot create": {
       "flags": [

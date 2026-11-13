@@ -188,12 +188,10 @@ const guides = {
     purpose:
       "runs private metadata recordings through the local server using an owner Session.",
     synopsis:
-      "todo diagnostics runs --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+      "todo diagnostics runs [--server <loopback-url>] [--cursor <value>] [--ndjson]",
     flags: [
-      "--run <uuid> for show/export",
-      "--before <uuid> --after <uuid> for compare",
-      "--file <path> for import; --dry-run validates without storing",
-      "--cursor <value> resumes a page; --ndjson streams export pages",
+      "--cursor <value> resumes the run list",
+      "--ndjson prints one compact object",
     ],
     examples: [
       "todo diagnostics runs --format json",
@@ -210,12 +208,10 @@ const guides = {
     purpose:
       "show private metadata recordings through the local server using an owner Session.",
     synopsis:
-      "todo diagnostics show --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+      "todo diagnostics show --run <uuid> [--server <loopback-url>] [--ndjson]",
     flags: [
-      "--run <uuid> for show/export",
-      "--before <uuid> --after <uuid> for compare",
-      "--file <path> for import; --dry-run validates without storing",
-      "--cursor <value> resumes a page; --ndjson streams export pages",
+      "--run <uuid> selects the run",
+      "--ndjson prints one compact object",
     ],
     examples: [
       "todo diagnostics runs --format json",
@@ -232,12 +228,11 @@ const guides = {
     purpose:
       "export private metadata recordings through the local server using an owner Session.",
     synopsis:
-      "todo diagnostics export --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+      "todo diagnostics export --run <uuid> [--server <loopback-url>] [--cursor <value>] [--ndjson]",
     flags: [
-      "--run <uuid> for show/export",
-      "--before <uuid> --after <uuid> for compare",
-      "--file <path> for import; --dry-run validates without storing",
-      "--cursor <value> resumes a page; --ndjson streams export pages",
+      "--run <uuid> selects the run",
+      "--cursor <value> resumes a page",
+      "--ndjson streams every export page",
     ],
     examples: [
       "todo diagnostics runs --format json",
@@ -254,12 +249,11 @@ const guides = {
     purpose:
       "import private metadata recordings through the local server using an owner Session.",
     synopsis:
-      "todo diagnostics import --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+      "todo diagnostics import --file <path> [--server <loopback-url>] [--dry-run] [--ndjson]",
     flags: [
-      "--run <uuid> for show/export",
-      "--before <uuid> --after <uuid> for compare",
-      "--file <path> for import; --dry-run validates without storing",
-      "--cursor <value> resumes a page; --ndjson streams export pages",
+      "--file <path> reads one batch, an export page or NDJSON pages",
+      "--dry-run validates without storing",
+      "--ndjson prints one compact object",
     ],
     examples: [
       "todo diagnostics runs --format json",
@@ -276,12 +270,10 @@ const guides = {
     purpose:
       "compare private metadata recordings through the local server using an owner Session.",
     synopsis:
-      "todo diagnostics compare --server <loopback-url> [--run <uuid>] [--file <path>] [--dry-run] [--before <uuid> --after <uuid>] [--cursor <value>] [--ndjson]",
+      "todo diagnostics compare --before <uuid> --after <uuid> [--server <loopback-url>] [--ndjson]",
     flags: [
-      "--run <uuid> for show/export",
-      "--before <uuid> --after <uuid> for compare",
-      "--file <path> for import; --dry-run validates without storing",
-      "--cursor <value> resumes a page; --ndjson streams export pages",
+      "--before <uuid> --after <uuid> select the two runs",
+      "--ndjson prints one compact object",
     ],
     examples: [
       "todo diagnostics runs --format json",

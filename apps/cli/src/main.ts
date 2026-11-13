@@ -2059,6 +2059,82 @@ const schema = Command.make(
         );
   },
 ).pipe(withGuide("schema"));
+const recordingServer = () =>
+  string("server", process.env.TODO_SERVER_URL || "http://127.0.0.1:4310");
+const runRecording = (
+  name: "runs" | "show" | "export" | "import" | "compare",
+  input: Partial<Parameters<typeof recordingCommand>[1]> & { server: string },
+) =>
+  Effect.gen(function* () {
+    const cfg = yield* root;
+    const credential = yield* io(() => loadCredential(cfg));
+    yield* recordingCommand(
+      name,
+      {
+        run: "",
+        before: "",
+        after: "",
+        file: "",
+        cursor: "",
+        dryRun: false,
+        ndjson: false,
+        ...input,
+      },
+      credential,
+      (value, ndjson) =>
+        write(
+          ndjson
+            ? JSON.stringify(value) + "\n"
+            : JSON.stringify(value, null, 2) + "\n",
+        ),
+    );
+  });
+const recordingSubcommands = [
+  Command.make(
+    "runs",
+    {
+      server: recordingServer(),
+      cursor: string("cursor"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("runs", input),
+  ).pipe(withGuide("diagnostics runs")),
+  Command.make(
+    "show",
+    { server: recordingServer(), run: string("run"), ndjson: bool("ndjson") },
+    (input) => runRecording("show", input),
+  ).pipe(withGuide("diagnostics show")),
+  Command.make(
+    "export",
+    {
+      server: recordingServer(),
+      run: string("run"),
+      cursor: string("cursor"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("export", input),
+  ).pipe(withGuide("diagnostics export")),
+  Command.make(
+    "import",
+    {
+      server: recordingServer(),
+      file: string("file"),
+      dryRun: bool("dry-run"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("import", input),
+  ).pipe(withGuide("diagnostics import")),
+  Command.make(
+    "compare",
+    {
+      server: recordingServer(),
+      before: string("before"),
+      after: string("after"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("compare", input),
+  ).pipe(withGuide("diagnostics compare")),
+] as const;
 const diagnostics = Command.make(
   "diagnostics",
   {
@@ -2096,41 +2172,7 @@ const diagnostics = Command.make(
         );
       yield* snapshot;
     }),
-).pipe(
-  Command.withSubcommands(
-    (["runs", "show", "export", "import", "compare"] as const).map((name) =>
-      Command.make(
-        name,
-        {
-          server: string(
-            "server",
-            process.env.TODO_SERVER_URL || "http://127.0.0.1:4310",
-          ),
-          run: string("run"),
-          before: string("before"),
-          after: string("after"),
-          file: string("file"),
-          cursor: string("cursor"),
-          dryRun: bool("dry-run"),
-          ndjson: bool("ndjson"),
-        },
-        (input) =>
-          Effect.gen(function* () {
-            const cfg = yield* root;
-            const credential = yield* io(() => loadCredential(cfg));
-            yield* recordingCommand(name, input, credential, (value, ndjson) =>
-              write(
-                ndjson
-                  ? JSON.stringify(value) + "\n"
-                  : JSON.stringify(value, null, 2) + "\n",
-              ),
-            );
-          }),
-      ).pipe(withGuide(`diagnostics ${name}`)),
-    ),
-  ),
-  withGuide("diagnostics"),
-);
+).pipe(Command.withSubcommands(recordingSubcommands), withGuide("diagnostics"));
 const top = Command.make(
   "top",
   {
