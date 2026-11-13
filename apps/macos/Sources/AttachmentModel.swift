@@ -1,7 +1,72 @@
 import Foundation
 import TodoAPI
+import UniformTypeIdentifiers
+
+/// What an Attachment input belonged to when the person dropped, chose or pasted it (MAC-C1-S1-24):
+/// the credential epoch and the editor opening, with its Task and Profile. An input that resumes
+/// after an await may start a write only while all of them are still current.
+struct AttachmentInputOrigin: Equatable {
+  let credentialEpoch: Int
+  let opening: UUID
+  let taskID: String
+  let profile: String
+}
 
 extension TodoModel {
+  /// The origin of an input starting now in the open editor, or nil when no editor is open.
+  func attachmentInputOrigin() -> AttachmentInputOrigin? {
+    editor.map { AttachmentInputOrigin(credentialEpoch: discovery.credentialEpoch, opening: $0.opening, taskID: $0.id, profile: profile) }
+  }
+  /// The one check for every Attachment input that resumes after an await (drop, open panel,
+  /// paste): a file dropped under one Session is never written under another, and never reports
+  /// into a later opening.
+  func isCurrentAttachmentInput(_ origin: AttachmentInputOrigin) -> Bool {
+    isCurrentEpoch(origin.credentialEpoch) && editor?.opening == origin.opening && editor?.id == origin.taskID && profile == origin.profile
+  }
+  static let attachmentImageTypes: [UTType] = [.png, .jpeg, .gif, .webP]
+
+  /// A drop or a pasted provider (S1-24). Each provider's data arrives after an await; a file or
+  /// image is written only while the origin is current, and the caption reports only into it.
+  func receiveDroppedAttachments(_ providers: [NSItemProvider], origin: AttachmentInputOrigin, ticket: SurfaceMessages<AttachmentInputKind, String>.Ticket) async {
+    var failed = false
+    for provider in providers {
+      do {
+        guard isCurrentAttachmentInput(origin) else { return }
+        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+          let data = try await Self.providerData(provider, type: UTType.fileURL.identifier)
+          guard isCurrentAttachmentInput(origin), let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
+          await receiveDroppedFile(url, origin: origin, ticket: ticket)
+        } else if let type = Self.attachmentImageTypes.first(where: { provider.hasItemConformingToTypeIdentifier($0.identifier) }), let mime = type.preferredMIMEType {
+          let data = try await Self.providerData(provider, type: type.identifier)
+          await uploadImage(data, mimeType: mime, label: nil, origin: origin)
+        }
+      } catch {
+        failed = true
+        guard isCurrentAttachmentInput(origin) else { return }
+        attachmentInputMessages.fail("Could not read the dropped file. Try Add file.", ticket)
+      }
+    }
+    if !failed, isCurrentAttachmentInput(origin) { attachmentInputMessages.succeed(ticket) }
+  }
+  private func receiveDroppedFile(_ url: URL, origin: AttachmentInputOrigin, ticket: SurfaceMessages<AttachmentInputKind, String>.Ticket) async {
+    if let type = UTType(filenameExtension: url.pathExtension), Self.attachmentImageTypes.contains(type), let mime = type.preferredMIMEType {
+      guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 20 * 1024 * 1024, let data = try? Data(contentsOf: url) else {
+        if isCurrentAttachmentInput(origin) { attachmentInputMessages.fail("Images must be 20 MiB or smaller.", ticket) }
+        return
+      }
+      await uploadImage(data, mimeType: mime, name: url.lastPathComponent, origin: origin)
+    } else {
+      await attachPath(url.path, label: nil, origin: origin)
+    }
+  }
+  static func providerData(_ provider: NSItemProvider, type: String) async throws -> Data {
+    try await withCheckedThrowingContinuation { continuation in
+      provider.loadDataRepresentation(forTypeIdentifier: type) { data, error in
+        if let data { continuation.resume(returning: data) } else { continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown)) }
+      }
+    }
+  }
+
   var attachmentTask: TaskSnapshot? {
     guard let base = editor?.base else { return nil }
     return tasks.first { $0.id == base.id && $0.profile_id == base.profile_id } ?? base
@@ -13,10 +78,13 @@ extension TodoModel {
     case committed(Error)
   }
 
-  private func changeAttachment(_ operation: (Client, TaskDraft) async throws -> AttachmentResult)
+  private func changeAttachment(origin: AttachmentInputOrigin? = nil, _ operation: (Client, TaskDraft) async throws -> AttachmentResult)
     async
   {
-    let credentialEpoch = discovery.credentialEpoch
+    // An input that resumed after an await starts nothing unless what it belonged to is current;
+    // its write then runs under the epoch it was made under (S1-24).
+    if let origin, !isCurrentAttachmentInput(origin) { return }
+    let credentialEpoch = origin?.credentialEpoch ?? discovery.credentialEpoch
     guard canWrite, let draft = editor, conflict == nil else { return }
     busy = true
     let attachmentTicket = editorMessages.beginClean(.attachment)
@@ -67,17 +135,17 @@ extension TodoModel {
     }
   }
 
-  func attachPath(_ path: String, label: String? = nil) async {
-    await attachLocation(
+  func attachPath(_ path: String, label: String? = nil, origin: AttachmentInputOrigin? = nil) async {
+    await attachLocation(origin: origin,
       [
         "kind": ["png", "jpg", "jpeg", "gif", "webp"].contains(
           URL(fileURLWithPath: path).pathExtension.lowercased()) ? "image" : "file",
         "path": URL(fileURLWithPath: path).standardizedFileURL.path,
       ], label: label)
   }
-  func attachPaths(_ paths: [String], label: String? = nil) async {
+  func attachPaths(_ paths: [String], label: String? = nil, origin: AttachmentInputOrigin? = nil) async {
     guard !paths.isEmpty else { return }
-    await changeAttachment { client, draft in
+    await changeAttachment(origin: origin) { client, draft in
       let attachments = paths.map { path -> [String: String] in
         var value = ["kind": ["png", "jpg", "jpeg", "gif", "webp"].contains(URL(fileURLWithPath: path).pathExtension.lowercased()) ? "image" : "file", "path": URL(fileURLWithPath: path).standardizedFileURL.path]
         if let label, !label.isEmpty { value["label"] = label }
@@ -111,8 +179,8 @@ extension TodoModel {
     }
     await attachLocation(["kind": "link", "url": text], label: label)
   }
-  private func attachLocation(_ location: [String: String], label: String?) async {
-    await changeAttachment { client, draft in
+  private func attachLocation(origin: AttachmentInputOrigin? = nil, _ location: [String: String], label: String?) async {
+    await changeAttachment(origin: origin) { client, draft in
       var value: [String: Any] = ["from_version": draft.base.row_version, "location": location]
       if let label, !label.isEmpty { value["label"] = label }
       let payload = try JSONDecoder().decode(
@@ -129,12 +197,13 @@ extension TodoModel {
       return .accepted(try TaskSnapshot.decode(response.ok.body.json))
     }
   }
-  func uploadImage(_ data: Data, mimeType: String, name: String? = nil, label: String? = nil) async {
+  func uploadImage(_ data: Data, mimeType: String, name: String? = nil, label: String? = nil, origin: AttachmentInputOrigin? = nil) async {
+    if let origin, !isCurrentAttachmentInput(origin) { return }
     guard data.count <= 20 * 1024 * 1024 else {
       editorError = "Images must be 20 MiB or smaller."
       return
     }
-    await changeAttachment { client, draft in
+    await changeAttachment(origin: origin) { client, draft in
       var value: [String: Any] = [
         "from_version": draft.base.row_version, "mime_type": mimeType,
         "data": data.base64EncodedString(), "name": name ?? "Image.png",

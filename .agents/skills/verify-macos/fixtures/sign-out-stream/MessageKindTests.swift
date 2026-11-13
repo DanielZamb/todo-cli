@@ -4,6 +4,8 @@ import OpenAPIRuntime
 import OpenAPIURLSession
 import Testing
 import TodoAPI
+import AppKit
+import UniformTypeIdentifiers
 @testable import TodoState
 
 // The message rule, kind by kind, against the compiled scratch server (SEAT_SERVER).
@@ -1721,4 +1723,96 @@ private actor ScriptGate: ClientTransport {
         #expect((try? vault.load()) ?? nil == nil, "the saved Session is removed")
         await finish(model, gate, vault)
     }
+
+    // MARK: MAC-C1-S1-24: an Attachment input that resumes after an await writes only under its origin
+
+    /// The seat's kind of headless drive. The drop runs through a real NSItemProvider held until
+    /// delivered; the open panel and the paste call what the view calls after its await, with the
+    /// origin captured when the person chose or pasted. Under each boundary nothing starts and
+    /// nothing reports into the newer opening; with none, the input attaches.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
+          arguments: ["drop", "choose", "paste"], ["none", "credential", "reopen"])
+    func anAttachmentInputWritesOnlyUnderTheOriginItWasMadeIn(_ path: String, _ boundary: String) async throws {
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("s124-\(UUID().uuidString).txt")
+        try Data("dropped".utf8).write(to: file); defer { try? FileManager.default.removeItem(at: file) }
+        model.beginEditing(task)
+        let operation = path == "drop" ? "tasks.attach" : path == "choose" ? "tasks.attachMany" : "tasks.uploadAttachment"
+        // If an old request started anyway, it fails: on 6d00929c that failure reached the newer opening.
+        if boundary != "none" { await gate.next(operation, .fail(503, "OLD input request")) }
+        let before = (model.tasks.first { $0.id == task.id }?.attachments ?? []).count
+        let input = AttachmentInputDriver(model: model, path: path, file: file)
+        try await input.begin()
+        try await wait("provider asked") { input.ready }
+        switch boundary {
+        case "credential":
+            let streams = await gate.streamCount
+            model.replaceCredential(try await owner()); model.connect()
+            try await ready(model, gate, streams: streams + 1)
+        case "reopen":
+            model.editor = nil
+            model.beginEditing(model.tasks.first { $0.id == task.id } ?? task)
+        default: break
+        }
+        await input.resume()
+        let label = "\(path) after \(boundary)"
+        if boundary == "none" {
+            #expect(await gate.count(operation) == 1, "\(label): the ordinary input attaches")
+            try await wait("attached") { (model.tasks.first { $0.id == task.id }?.attachments ?? []).count == before + 1 }
+        } else {
+            #expect(await gate.count(operation) == 0, "\(label): nothing starts")
+            #expect(model.editorError == nil && model.attachmentInputMessages.value == nil, "\(label): nothing reports into the newer opening: \(model.editorError ?? model.attachmentInputMessages.value ?? "nil")")
+        }
+        await finish(model, gate, vault)
+    }
+}
+
+/// Drives one Attachment input path as the view does: `begin` is the person's act (it captures the
+/// origin; a drop starts reading a held provider), `resume` is what runs after the await.
+@MainActor private final class AttachmentInputDriver {
+    let model: TodoModel, path: String, file: URL
+    private let provider = HeldFileProvider()
+    private var origin: AttachmentInputOrigin?
+    private var dropping: Task<Void, Never>?
+    init(model: TodoModel, path: String, file: URL) { self.model = model; self.path = path; self.file = file; provider.url = file }
+    var ready: Bool { path != "drop" || provider.requested }
+    struct NoEditor: Error {}
+    func begin() throws {
+        guard let current = model.attachmentInputOrigin() else { throw NoEditor() }
+        origin = current
+        if path == "drop", let origin {
+            let ticket = model.attachmentInputMessages.begin(.drop)
+            let provider = provider.provider, model = model
+            dropping = Task { await model.receiveDroppedAttachments([provider], origin: origin, ticket: ticket) }
+        }
+    }
+    func resume() async {
+        guard let origin else { return }
+        switch path {
+        case "drop": provider.deliver(); await dropping?.value
+        case "choose": await model.attachPaths([file.path], label: nil, origin: origin)
+        default: await model.uploadImage(onePixelPNG(), mimeType: "image/png", label: nil, origin: origin)
+        }
+    }
+}
+
+/// A real NSItemProvider whose file URL is delivered only when the test says so.
+private final class HeldFileProvider: @unchecked Sendable {
+    let provider = NSItemProvider()
+    var url: URL?
+    private let lock = NSLock()
+    private var completion: (@Sendable (Data?, Error?) -> Void)?
+    init() {
+        provider.registerDataRepresentation(forTypeIdentifier: UTType.fileURL.identifier, visibility: .all) { [self] done in
+            lock.withLock { completion = done }
+            return nil
+        }
+    }
+    var requested: Bool { lock.withLock { completion != nil } }
+    func deliver() { let done = lock.withLock { completion }; done?(url?.dataRepresentation, nil) }
+}
+
+private func onePixelPNG() -> Data {
+    let image = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1, pixelsHigh: 1, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 4, bitsPerPixel: 32)!
+    return image.representation(using: .png, properties: [:])!
 }
