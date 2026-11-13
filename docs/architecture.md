@@ -209,8 +209,10 @@ Credential checks create read authorities inside the authentication module.
 Profile, scope, parsed fields and database identity live in ECMAScript private
 fields. Query ports validate the genuine instance, exact prototype, authority
 kind, database, live transaction lease, failed-scope ancestry, expiry and the
-credential check's write serial before SQL or image access. Commit, rollback,
-interruption and failure end the lease. Failed nested scopes invalidate their
+credential check's write serial before SQL or image access. The outer checked
+callback's finally closes the lease before native COMMIT and transaction-exit
+cleanup. A final fallback handles failed admission. Rollback, interruption and
+failure also close it. Failed nested scopes invalidate their
 values without ending Discovery's outer snapshot. A later checked scope verifies
 credentials again and requires the original restore generation. Copies,
 subclasses, mutation and retained values cannot grant access; refusal uses the
