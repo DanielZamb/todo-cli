@@ -171,10 +171,12 @@ struct Snapshots {
                     let frames = compactMeasurements.frames
                     let body = try #require(frames["editor-scroll"]), footer = try #require(frames["editor-footer"])
                     #expect(footer.minY >= body.maxY - 0.5, "the footer starts at or below the body: \(footer) \(body)")
-                    #expect(footer.maxY <= height + 0.5 && body.minY >= 0, "both inside the window")
+                    // Global frames include the title bar: measure from where the content starts.
+                    let top = window.frame.height - window.contentRect(forFrameRect: window.frame).height
+                    #expect(footer.maxY <= top + height + 0.5 && body.minY >= top - 0.5, "both inside the window's content: top \(top), \(footer) \(body)")
                     #expect(frames["search"] == nil, "no Find field over the editor")
                     let fields = frames.filter { ["task-title", "task-id", "edit-description"].contains($0.key) }
-                    let receipt: [String: Any] = ["window_height": height, "body": [body.minY, body.maxY], "footer": [footer.minY, footer.maxY],
+                    let receipt: [String: Any] = ["window_height": height, "contentTop": Double(top), "body": [body.minY, body.maxY], "footer": [footer.minY, footer.maxY],
                         "fields": fields.mapValues { ["minY": $0.minY, "maxY": $0.maxY, "fully_visible": $0.maxY <= body.maxY + 0.5] }]
                     try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-editor-bounds-\(mode).json"))
                 }

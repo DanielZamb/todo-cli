@@ -1020,7 +1020,7 @@ struct QuickAddView: View {
     private func measure(_ field: String) -> some View {
         GeometryReader { geometry in
             Color.clear.preference(key: QuickAddChipFrames.self, value: [field: geometry.frame(in: .named("quick-add-chips"))])
-        }
+        }.background(field.hasPrefix("control:") ? nil : QuickAddRegionRow())
     }
     private func add(edit: Bool) {
         let opening = completions.opening
@@ -1084,9 +1084,8 @@ struct QuickAddMetadataRegion<Content: View>: View {
     let dependencies: InitialDependencySelection
     let content: Content
     @State private var parsedHeight: CGFloat = 0
-    @State private var dependencyHeight: CGFloat = 24
     @State private var contentHeight: CGFloat = 0
-    @State private var chipRowHeight: CGFloat = 0
+    @State private var chipFrames: [CGRect] = []
     init(maximumRows: Int, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
         self.maximumRows = maximumRows
         self.dependencies = dependencies
@@ -1095,29 +1094,42 @@ struct QuickAddMetadataRegion<Content: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                dependencies.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddDependencyHeight.self, value: geometry.size.height) })
+                dependencies
                 content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
             }.frame(maxWidth: .infinity, alignment: .leading)
                 .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionContentHeight.self, value: geometry.size.height) })
+                .coordinateSpace(name: QuickAddRegionRow.space)
         }.frame(height: visibleHeight).scrollIndicators(.visible).compactBounds("quick-add-metadata")
             .onPreferenceChange(QuickAddRegionContentHeight.self) { contentHeight = $0 }
-            .onPreferenceChange(QuickAddChipFrames.self) { frames in
-                chipRowHeight = frames.filter { !$0.key.hasPrefix("control:") }.values.map(\.height).max() ?? 0
-            }
+            .onPreferenceChange(QuickAddRegionRows.self) { chipFrames = $0 }
             .preference(key: QuickAddAddedMetadataHeight.self, value: Optional(visibleHeight - max(24, parsedHeight)))
             .onPreferenceChange(QuickAddParsedMetadataHeight.self) { parsedHeight = $0 }
-            .onPreferenceChange(QuickAddDependencyHeight.self) { dependencyHeight = $0 }
     }
-    /// The Dependency block, then up to `maximumRows` whole rows of chips at their measured height
-    /// (about 34 pt, not the 20 pt the old cap assumed), so the region never ends partway into a
-    /// row; more content scrolls, with visible scroll bars. The two blocks are stacked, so the
-    /// height is their sum, not the larger of the two.
+    /// The "Depends on" line, then up to `maximumRows` whole rows of chips, counting Dependency
+    /// chips and parsed-metadata chips alike, each row at its measured position and height, so the
+    /// region never ends partway into a row; more content scrolls, with visible scroll bars. The
+    /// Dependency chips are rows like any other: a long Dependency list scrolls too.
     private var visibleHeight: CGFloat {
-        let row = chipRowHeight > 0 ? chipRowHeight : 34
-        let cap = max(24, dependencyHeight) + 8 + CGFloat(maximumRows) * row + CGFloat(max(0, maximumRows - 1)) * 8
         let content = max(contentHeight, 24)
-        return min(content, cap)
+        var rows: [(top: CGFloat, bottom: CGFloat)] = []
+        for frame in chipFrames.sorted(by: { $0.minY < $1.minY }) {
+            if let last = rows.last, abs(frame.minY - last.top) < 2 { rows[rows.count - 1].bottom = max(last.bottom, frame.maxY) } else { rows.append((frame.minY, frame.maxY)) }
+        }
+        guard rows.count > maximumRows, maximumRows > 0 else { return content }
+        return min(content, rows[maximumRows - 1].bottom)
     }
+}
+
+/// One chip's frame in its quick-add metadata region, for the region's whole-row height.
+struct QuickAddRegionRow: View {
+    static let space = "quick-add-region"
+    var body: some View {
+        GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionRows.self, value: [geometry.frame(in: .named(Self.space))]) }
+    }
+}
+struct QuickAddRegionRows: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
 }
 
 struct QuickAddContentAnchor<Content: View>: View {
@@ -1140,10 +1152,6 @@ struct QuickAddContentAnchor<Content: View>: View {
 struct QuickAddAddedMetadataHeight: PreferenceKey {
     static let defaultValue: CGFloat? = nil
     static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) { if let next = nextValue() { value = next } }
-}
-struct QuickAddDependencyHeight: PreferenceKey {
-    static let defaultValue: CGFloat = 24
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 struct QuickAddContentHeight: PreferenceKey {
     static let defaultValue: CGFloat = 0

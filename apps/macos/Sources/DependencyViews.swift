@@ -18,6 +18,7 @@ struct InitialDependencySelection: View {
                         }.font(.caption).buttonStyle(.bordered).controlSize(.small).help(task.title)
                             .frame(height: 20).disabled(!enabled).accessibilityLabel("Remove Dependency \(task.title)")
                             .accessibilityIdentifier("dependency-initial-\(task.id)").compactBounds("dependency-initial-\(task.id)")
+                            .background(QuickAddRegionRow())
                     }
                 }
             }

@@ -41,7 +41,7 @@ and long content scrolling inside its body.
 | Profile deletion | `compact-profile-delete-*` | refusal | Yes | — |
 | Snapshot restore | `compact-snapshot-restore*` | error | Yes | — |
 | Find Task by id | `discovery-compact-*` | copied | Yes | — |
-| Quick-add (popover) | `compact-quick-add*`, `c8-compact-quick-add-short` | short | Yes; the receipt's controls are inside | — |
+| Quick-add (popover) | `compact-quick-add*`, `c8-compact-quick-add-short`, `dag-compact-initial-many-invalid` | short; 13 invalid Dependencies | Yes; the receipt's controls are inside. The chip region shows "Depends on" and two whole rows of any chips, then scrolls (fixed after the frozen-head design gate found 28a93dd9 left the Dependency chips uncapped) | — |
 | Editor (inspector in Compact) | `compact-editor`, `c8-compact-editor` | editor | Yes; the receipt's controls are inside | Ruling 5 holds: no Find field, a three-line description and a regular footer |
 
 ## Candidate 8 review captures (rulings 1, 2, 3, 5 and D1/D2)
