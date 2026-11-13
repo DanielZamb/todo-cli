@@ -261,6 +261,22 @@ const program = Effect.acquireUseRelease(
           yield* refuse(store);
           assert.equal(count(db), 2);
           observations.push({ olderThanHorizonLimit: 2 });
+          // A large row (over the walked-event bound) stamped before the
+          // horizon is skipped unread, so it does not hide the newest refusal.
+          db.query(
+            "INSERT INTO op_log(actor,profile,entity_version,event,outcome,reason) VALUES ('import',?,1,?,'committed',NULL)",
+          ).run(
+            profile,
+            JSON.stringify({
+              kind: "TaskCreated",
+              entity_version: 1,
+              occurred_at: "2026-11-13T00:18:59.999Z",
+              task: { description: "x".repeat(100_000) },
+            }),
+          );
+          yield* refuse(store);
+          assert.equal(count(db), 2);
+          observations.push({ largeOlderRowDoesNotHide: 2 });
           time += 60_000;
           yield* refuse(store);
           assert.equal(count(db), 3);
@@ -408,9 +424,11 @@ const program = Effect.acquireUseRelease(
           });
           // quiet: 200,000 rows before the horizon. null: the same for the
           // null Profile. whole-window: 200,000 rows inside the window.
-          // *-before: 5,000 prior-minute rows committed before the first
-          // refusal; *-after: committed after it, so every repeat walks them.
-          // prior-*: small AuthChanged rows; import-*: real TaskCreated rows.
+          // *-before: a prior-minute bulk committed before the first refusal;
+          // *-after: committed after it, so every repeat has to pass it.
+          // prior-*: 5,000 small AuthChanged rows; import-*: 5,000 TaskCreated
+          // rows with a title only; desc200-*: 5,000 with 200-character
+          // descriptions; big-*: 1,000 with 100,000-character descriptions.
           const scenario = process.argv[5];
           assert.ok(
             scenario &&
@@ -422,8 +440,17 @@ const program = Effect.acquireUseRelease(
                 "prior-after",
                 "import-before",
                 "import-after",
+                "desc200-before",
+                "desc200-after",
+                "big-before",
+                "big-after",
               ].includes(scenario),
           );
+          const shape = scenario.startsWith("big")
+            ? { tasks: 1000, description: 100_000 }
+            : scenario.startsWith("desc200")
+              ? { tasks: 5000, description: 200 }
+              : { tasks: 5000, description: 0 };
           const bulk = (target: ProfileId | null) => {
             const at = "2026-11-13T00:19:59.999Z";
             if (scenario.startsWith("prior"))
@@ -433,10 +460,18 @@ const program = Effect.acquireUseRelease(
             );
             const occurred_at = Schema.decodeUnknownSync(Instant)(at);
             db.transaction(() => {
-              for (let i = 0; i < 5000; i++) {
+              for (let i = 0; i < shape.tasks; i++) {
                 const task = resolveTaskCreation(
                   Schema.decodeUnknownSync(CreateTask)({
                     title: `Imported Task ${i}`,
+                    ...(shape.description > 0
+                      ? {
+                          description: `${i} `.padEnd(
+                            shape.description,
+                            "lorem ipsum ",
+                          ),
+                        }
+                      : {}),
                   }),
                   profile,
                   Schema.decodeUnknownSync(TaskId)(`import-${i}`),
@@ -460,26 +495,6 @@ const program = Effect.acquireUseRelease(
           };
           {
             const target = scenario === "null" ? null : profile;
-            const before = count(db, target);
-            // TODO_BENCH_STAGE=seed builds the scenario's History and stops,
-            // so one fixture can be cloned for every arm; =run reuses it.
-            const stage = process.env.TODO_BENCH_STAGE;
-            if (stage !== "run") {
-              noise(
-                db,
-                scenario === "whole-window"
-                  ? stamp()
-                  : "2026-11-13T00:18:59.999Z",
-                200000,
-                target,
-              );
-              if (scenario.endsWith("-before")) bulk(target);
-            }
-            if (stage === "seed") {
-              db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
-              mark("seed", { scenario, rows: count(db, target) - before });
-              return;
-            }
             const attempt = () =>
               target === null
                 ? Effect.map(
@@ -492,12 +507,40 @@ const program = Effect.acquireUseRelease(
                     },
                   )
                 : refuse(store);
+            // TODO_BENCH_STAGE=seed builds the scenario's History and stops,
+            // so one fixture is cloned for every arm; =run reuses it. For an
+            // *-after scenario the seed also holds the first refusal and the
+            // bulk after it, so no run rewrites the bulk.
+            const stage = process.env.TODO_BENCH_STAGE;
+            const after = scenario.endsWith("-after");
+            if (stage !== "run") {
+              noise(
+                db,
+                scenario === "whole-window"
+                  ? stamp()
+                  : "2026-11-13T00:18:59.999Z",
+                200000,
+                target,
+              );
+              if (!after) bulk(target);
+              if (stage === "seed" && after) {
+                yield* attempt();
+                bulk(target);
+              }
+            }
+            if (stage === "seed") {
+              db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+              mark("seed", { scenario, refusals: count(db, target) });
+              return;
+            }
+            const before = count(db, target);
             holds.length = 0;
             const start = performance.now();
             yield* attempt();
             const firstMs = performance.now() - start;
             const firstHolds = [...holds];
-            if (scenario.endsWith("-after")) bulk(target);
+            const firstRows = count(db, target) - before;
+            if (stage !== "run" && after) bulk(target);
             holds.length = 0;
             // Each repeat's write transactions, in order: the failed check's
             // own, then a recording transaction if one was opened.
@@ -513,7 +556,8 @@ const program = Effect.acquireUseRelease(
               });
             }
             const burstMs = performance.now() - burst;
-            assert.equal(count(db, target) - before, 1);
+            const burstRows = count(db, target) - before - firstRows;
+            assert.equal(burstRows, 0);
             // CLI-shaped: every repeat in a newly opened store, as each CLI
             // run is a new process with nothing in memory.
             const fresh: { openMs: number; refuseMs: number }[] = [];
@@ -546,7 +590,8 @@ const program = Effect.acquireUseRelease(
               burstMs,
               repeats,
               fresh,
-              refusalRows: 1,
+              firstRows,
+              burstRows,
               freshRows,
             });
           }

@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { mkdtempSync, rmSync } from "node:fs";
+import { closeSync, mkdtempSync, openSync, rmSync, writeSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
@@ -7,6 +7,11 @@ import { AuthError, ProfileId } from "@todo/domain";
 import { type OperationStore, openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
+import {
+  maxWalkedEventBytes,
+  repeatedAuthRejection,
+} from "../src/auth/rejection-history.ts";
+import { AuthAction, AuthAttemptRejected } from "../src/events.ts";
 import { work } from "./store-fixtures.ts";
 
 const time = Date.parse("2026-11-13T00:20:00.001Z");
@@ -166,6 +171,132 @@ it.effect("merges a same-minute refusal stamped after the attempt", () =>
       yield* TestClock.setTime(time - 60_000);
       yield* refuse(path);
       expect(count(path)).toBe(2);
+    }),
+  ),
+);
+
+// Events larger than maxWalkedEventBytes are skipped unread. A refusal can
+// never be one of them: its largest possible form is far below the bound.
+it("keeps every possible refusal far below the walked-event bound", () => {
+  const longest = (values: readonly string[]) =>
+    values.reduce((a, b) => (b.length > a.length ? b : a));
+  const largest = JSON.stringify({
+    kind: "AuthAttemptRejected",
+    code: "auth",
+    detail: longest(AuthAttemptRejected.fields.detail.literals),
+    action: longest(AuthAction.literals),
+    entity_version: 1,
+    occurred_at: "2026-11-13T00:20:00.001Z",
+  });
+  expect(Buffer.byteLength(largest)).toBeLessThan(200);
+  expect(maxWalkedEventBytes).toBe(4096);
+});
+
+const largeEvent = (occurred_at: string) =>
+  JSON.stringify({
+    kind: "TaskCreated",
+    entity_version: 1,
+    occurred_at,
+    task: { title: "Imported", description: "x".repeat(100_000) },
+  });
+
+// A large row stamped before the horizon and committed after the refusal used
+// to end the walk and let the repeat append; it is now skipped unread.
+it.effect("a large older-stamped row no longer hides a refusal", () =>
+  withDatabase((path) =>
+    onStore(path, (store) =>
+      Effect.gen(function* () {
+        yield* TestClock.setTime(time);
+        yield* refuseStore(store);
+        const db = new Database(path);
+        try {
+          db.function("domain_write_allowed", () => 1);
+          db.query(
+            "INSERT INTO op_log(actor,profile,entity_version,event,outcome,reason) VALUES ('import','work',1,?,'committed',NULL)",
+          ).run(largeEvent("2026-11-13T00:18:59.999Z"));
+        } finally {
+          db.close();
+        }
+        yield* refuseStore(store);
+        expect(count(path)).toBe(1);
+      }),
+    ),
+  ),
+);
+
+// The walk must not load a large event at all: with every overflow page of
+// 20 large rows zeroed, any read of their content fails as corrupt, yet the
+// production walk passes over them and finds the refusal below.
+it.effect("walks past large events without reading their content", () =>
+  withDatabase((path) =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(time);
+      yield* onStore(path, refuseStore);
+      const db = new Database(path);
+      let overflow: number[];
+      let pageSize: number;
+      let actor: string;
+      try {
+        actor =
+          db
+            .query<{ actor: string }, []>(
+              "SELECT actor FROM op_log WHERE outcome='rejected' AND profile='work'",
+            )
+            .get()?.actor ?? "";
+        db.function("domain_write_allowed", () => 1);
+        const insert = db.query(
+          "INSERT INTO op_log(actor,profile,entity_version,event,outcome,reason) VALUES ('import','work',1,?,'committed',NULL)",
+        );
+        db.transaction(() => {
+          for (let index = 0; index < 20; index++)
+            insert.run(largeEvent("2026-11-13T00:19:59.999Z"));
+        }).immediate();
+        db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+        pageSize =
+          db.query<{ page_size: number }, []>("PRAGMA page_size").get()
+            ?.page_size ?? 0;
+        overflow = db
+          .query<{ pageno: number }, []>(
+            "SELECT pageno FROM dbstat WHERE name='op_log' AND pagetype='overflow'",
+          )
+          .all()
+          .map((row) => row.pageno);
+      } finally {
+        db.close();
+      }
+      expect(overflow.length).toBeGreaterThan(400);
+      const file = openSync(path, "r+");
+      try {
+        for (const page of overflow)
+          writeSync(
+            file,
+            Buffer.alloc(pageSize),
+            0,
+            pageSize,
+            (page - 1) * pageSize,
+          );
+      } finally {
+        closeSync(file);
+      }
+      const check = new Database(path, { readonly: true });
+      try {
+        expect(() =>
+          check
+            .query("SELECT length(event) FROM op_log WHERE profile='work'")
+            .all(),
+        ).toThrow(/malformed/);
+        expect(
+          repeatedAuthRejection(check, {
+            actor,
+            profile,
+            action: "authenticate",
+            detail: "invalid_credential",
+            time,
+          }),
+        ).toBe(true);
+      } finally {
+        check.close();
+      }
     }),
   ),
 );
