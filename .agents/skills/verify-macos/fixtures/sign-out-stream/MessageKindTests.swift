@@ -382,7 +382,8 @@ private actor ScriptGate: ClientTransport {
         _ = await newerFollowUpError(model, gate)
         let notice = String(describing: model.dependencies.picker?.failure)
         #expect(model.dependencies.picker?.failure?.message == "ORIGINAL This Task blocks done Tasks." && model.dependencies.picker?.failure?.followUp == task.id, "the original notice and its follow-up stay: \(notice)")
-        #expect(notice.contains("Couldn't prepare the follow-up Task") && notice.contains("NEWER follow-up failed") && notice.contains("Try again"), "the failure is shown with it: \(notice)")
+        // Read the field itself: a debug description escapes the apostrophe in "Couldn't".
+        #expect(model.dependencies.picker?.failure?.followUpFailure == "Couldn't prepare the follow-up Task: NEWER follow-up failed Try again.", "the failure is shown with it: \(notice)")
         #expect(model.message == nil, "not under the sheet: \(model.message ?? "")")
         model.closeDependencyPicker()
         #expect(model.message == nil)
@@ -1040,7 +1041,9 @@ private actor ScriptGate: ClientTransport {
         try await wait("older held") { await gate.isHeld("tasks.show") }
         if order == "older-success-after-newer-failure" {
             await gate.next("tasks.show", .fail(404, "NEWER follow-up failed"))
-            await model.createDependencyFollowUp(UUID().uuidString)
+            // The picker's follow-ups are targeted by their row (D1): only a newer one for the same
+            // row supersedes. The Import report's are not targeted, so any newer one does.
+            await model.createDependencyFollowUp(surface == "picker" ? task.id : UUID().uuidString)
             let newer = try #require(shown(), "\(surface): the newer failure shows")
             await gate.release("tasks.show"); await older.value
             #expect(shown() == newer, "\(surface): the older success leaves the newer failure: \(shown() ?? "nil")")
@@ -1128,7 +1131,9 @@ private actor ScriptGate: ClientTransport {
         }
     }
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil),
-          arguments: ["picker-link", "snapshot-list", "history", "editor-conflict"], ["older-success-after-newer-failure", "older-failure-after-newer-success", "older-success-after-newer-success"])
+          // The picker's links are targeted by their row (D1, 2026-11-12): the D1 tests below cover
+          // them, on another row (both live) and on the same row (superseded).
+          arguments: ["snapshot-list", "history", "editor-conflict"], ["older-success-after-newer-failure", "older-failure-after-newer-success", "older-success-after-newer-success"])
     func anOlderActionCannotChangeANewerOneOfItsKindInTheSameSurface(_ surface: String, _ order: String) async throws {
         let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
         let s = try await interleaving(surface, model, gate, vault, task)
@@ -1553,6 +1558,39 @@ private actor ScriptGate: ClientTransport {
         #expect(model.dependencies.picker?.feedback == "Dependency added", "B succeeds")
         await gate.release("tasks.depend"); await older.value
         #expect(model.dependencies.picker?.failure?.attemptTitle == a.title, "A's refusal shows for its own row: \(model.dependencies.picker?.failure?.message ?? "nil")")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func anOlderLinkOnAnotherRowSucceedingLeavesTheNewerRefusalAndShowsItsOwnSuccess() async throws {
+        let gate = ScriptGate(); let (model, vault, root) = try await live(gate)
+        let (a, b) = try await blocksPicker(model, gate, vault, root: root)
+        await gate.next("tasks.depend", .hold, .fail(503, "ROW B refused"))
+        let older = Task { await model.toggleDependency(a) }
+        try await wait("A held") { await gate.isHeld("tasks.depend") }
+        await model.toggleDependency(b)
+        let refusal = try #require(model.dependencies.picker?.failure, "B's refusal shows")
+        await gate.release("tasks.depend"); await older.value
+        #expect(model.dependencies.picker?.failure?.attemptTitle == refusal.attemptTitle && refusal.attemptTitle == b.title, "B's refusal stays: \(model.dependencies.picker?.failure?.message ?? "nil")")
+        #expect(model.dependencies.picker?.feedback == "Dependency added", "A reports its own success")
+        await finish(model, gate, vault)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil))
+    func anOlderFollowUpForAnotherRowStillOpensItsQuickAdd() async throws {
+        // D1: follow-ups for two rejected rows are both live. The older one's success opens its
+        // Quick Add, which closes the picker and the newer row's failure with it.
+        let gate = ScriptGate(); let (model, vault, task) = try await live(gate)
+        pickerFor(model, task)
+        await gate.next("tasks.show", .hold)
+        let older = Task { await model.createDependencyFollowUp(task.id) }
+        try await wait("older held") { await gate.isHeld("tasks.show") }
+        await gate.next("tasks.show", .fail(404, "OTHER ROW follow-up failed"))
+        await model.createDependencyFollowUp(UUID().uuidString)
+        #expect(model.dependencies.picker?.failure?.message.contains("OTHER ROW follow-up failed") == true, "the other row's failure shows first")
+        await gate.release("tasks.show"); await older.value
+        #expect(model.quickAdd && model.dependencies.picker == nil && model.dependencies.initial.contains { $0.id == task.id }, "the older row's follow-up presents")
+        #expect(model.message == nil, "nothing moves to the banner")
         await finish(model, gate, vault)
     }
 
