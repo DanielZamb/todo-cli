@@ -3078,5 +3078,125 @@ branch carried before the merge. AtomicCAS now matches its candidate.
   - real uploader cadence;
   - terminal PNGs;
   - quiet-host confirmation.
-- The integrity class with committed WAL frames may still update SQLite's -shm
-  index when it refuses (see SQL10).
+- Superseded by the delta below: the integrity class is closed, and the only
+  remaining change is the live-writer read mark.
+
+## Delta after the coordinator's second round (2026-11-13)
+
+Claude Opus 5.5. Evidence: `docs/evidence/ui-speed/recordings-sql10-sql11/residual/`
+and `renewals/`.
+
+### The -shm residual, enumerated and closed where it can be
+
+Every refusal path was traced to the first point where SQLite opens the path.
+All foreign-header, foreign-catalog, sidecar, journal, link, oversized and
+replaced refusals are decided from descriptors before that point, so they
+cannot touch any file. Three paths remained after ddc08175:
+
+| Class | ddc08175 | 34edaba7 |
+| --- | --- | --- |
+| Damaged table page with committed WAL frames (`integrity`) | integrity was checked on the writable connection: `recordings.db-shm` was created (32 KiB wal-index), main and WAL unchanged | closed: the reader returns the committed image (main pages with committed frames overlaid, journal bytes set to rollback mode). Catalog and `quick_check` run on a read-only `Database.deserialize` copy. No file changes |
+| Path removed between the inode recheck and SQLite's open | SQLite's default `SQLITE_OPEN_CREATE` could create an empty `recordings.db` | closed: the writable open passes `create: false`; a missing path is refused as `replaced` |
+| A live writer commits a catalog change between the descriptor inspection and the writable connection's first read (`foreign_catalog`) | main and WAL byte-identical; one byte of the live writer's `-shm` rewritten | unchanged, and not closable as long as the store checks the catalog on the connection it would use |
+
+Receipts:
+- The matrix (`sqlite-refusal-classes.ts`) now names each changed file.
+  `classes-ddc08175.json` shows `integrity-with-wal-frames: recordings.db-shm
+  created`; `classes-head.json` shows no change in any refusal class.
+- The domain test file, run inside a ddc08175 capture, fails exactly the new
+  case (`domain-unit-ddc08175.log`, 1 failed of 22). On head, all 22 pass.
+
+Why the race class cannot be closed. It needs a writer that is live and
+committing at that moment, so the `-shm` already exists: it is that writer's
+wal-index, and the writer rewrites it on every commit. Any read of a WAL
+database records a read mark in that index; this is how SQLite keeps a
+checkpoint from overwriting pages a reader may still use.
+`sqlite-refusal-race.ts` holds a real in-process writer and commits
+`ALTER TABLE events RENAME COLUMN` right after the preflight. The refused open
+then changes:
+- main: nothing;
+- WAL: nothing;
+- `-shm`: exactly byte 104, the low byte of `aReadMark[1]` in WalCkptInfo
+  (offsets 100–119 hold `aReadMark[0..4]`). The refused read stored the
+  writer's new last frame there.
+
+The bytes are the same on ddc08175 and head (`race-*.json`).
+
+Closing this race would mean making the final catalog check on a separate
+`readonly_shm` connection and then trusting the writable connection without
+rechecking. That trades a 4-byte read mark in a file another process owns for
+the chance to write into a store whose catalog changed after the check. I did
+not make that trade without a ruling.
+
+### Mapping renewals
+
+All three name one immutable product, P = 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c.
+P is the final product source; the later commits change only verification
+inputs and this report. No skill has a renewal script. Each procedure is: run
+the pre-renewal check, review the covered bodies, record the hashes, rerun in
+full. The hashes were recomputed by a script from P's git objects
+(`renew.py`, kept in evidence with its output), never typed. Covered bodies
+that changed, 5f46e7b3 → P, by declaration (`declaration-diff.txt`):
+
+- `store.ts`: `attempt` (`diagnosticSync('domain')` wrapper), `transaction`
+  (writer_lock_wait span before BEGIN), `record` and `appendSync` (database and
+  projection spans around unchanged statements), `historySync`
+  (history_decode span), `graph` (graph span around integ/server's read).
+  Everything else is byte-identical.
+- `auth.ts`: `credentialCheck` (authentication span; `startSeries`, `append`,
+  `requireCredential` and `mutate` are unchanged).
+- `projection.ts`: `readTasks` (store.read and task_materialization spans);
+  `applyEvent`, `changes`, `applyChanges`, `snapshot` and `createProjection`
+  are unchanged.
+- `task-filters.ts`: `filterTaskRecordsEffect` (outer span); `TaskFilters`,
+  `filterTaskRecords`, `filterTaskRecordSteps` and `runTaskRecordSteps` are
+  unchanged.
+- `server.ts` (`diagnosticsMiddleware`, `encodedRead`, `serverLayer`),
+  `main.ts` (`withStore` root, Diagnostics and recording commands),
+  `task-client.ts` (only the diagnostics branch's `{ query: {} }`), the API
+  index (Diagnostics detail query and the profiler group), and the generated
+  contract, OpenAPI and Swift client sources for contract 55c6d138.
+- `unchangedCore` (3 files) still equals its retained proof.
+
+| Mapping | What it certifies now | Procedure and exits |
+| --- | --- | --- |
+| verify-task-search-cache | The store-owned PreparedField memo, admission model, observer/erasure hygiene and compiled lifecycle at P. Its protected matcher, runner, admission, epoch, preparation, observer and erasure bodies are byte-identical; only Diagnostics spans and the recording commands and routes changed around them | Pre-renewal `check.mjs P`: exit 1 at the mapping gate, after 7/7 controls failed their witnesses and restored. `check-hygiene.mjs P`: exit 1 at the gate, after 3/3 observer controls failed and clean and restored runs passed. A first attempt of each exited 1 on a missing evidence directory and is kept. Hashes recomputed; candidate committed at 0bbf8dfc. `build-baseline.mjs P --uncached`: 0. `verify.mjs P`: 0, with all nine stages 0 (`perf-cache/verify-xdI29m`) |
+| verify-dag-formal | The finite DAG model plus production (36 controls) and public/read (53 controls) conformance at product P with contract 55c6d138. Graph, validation, write, replay and core algorithms are unchanged; `graph` now wraps integ/server's read in a span | Pins and both coverage files name P (0bbf8dfc). Default `check.mjs`: exit 0 (`dag-formal/check-YXRuIM`). Every production control behavior 1 / exact restore 0; every public control exit 1 / restored 0; guarded AtomicCAS passes |
+| verify-discovery-formal | Not renewed. Its coverage still names 7d947f91 | Only `task-client.ts` changed among its 20 production files, and only in the diagnostics branch; `directory`, `lookup` and `showTask` are byte-identical, and all Swift sources are unchanged. TypeScript side on P: `prepare-inputs.ts`: 0; `check-electron.ts`: 0 (7/7 mutants fail their named expectations, live source unchanged). Its formal command `check.ts` runs the Swift real-code stage after Electron, and its procedure advances hashes only after observing every control. It stops there and needs the Swift step |
+
+Setup failures on the way, none in the product (receipts kept):
+- dag-formal run 1 (exit 1): the sandbox forbids setuid `/bin/ps`, and the
+  compile-artifact guard lists processes with `ps -axo pid=,command=`. The
+  `ps` shim on PATH now answers that form for the caller's own processes
+  (`KERN_PROCARGS2`). It matched `/bin/ps` for my processes inside and outside
+  the sandbox.
+- dag-formal run 2 (exit 1): `production-check.mjs` needs the pinned TLA+ jar
+  under `docs/evidence/dag-formal/tools/`, while `check.mjs` had found it
+  under `fv01/tools/`. I copied the same jar after its pinned SHA-256 matched.
+- dag-formal run 3 (exit 1): the public stage needs the preserved immutable
+  e7170510 CLI. I copied it from another checkout's `.scratch/bin` (a read
+  there, no edit) after its SHA-256 matched its provenance (`dd1918fc…`).
+- verify-task-search-formal is not in this delta. Its pins all match P, but
+  discovery's procedure asks that TaskSearch name the same candidate when
+  discovery is renewed. That belongs to the Swift-side renewal.
+
+### Gates on the final head
+
+gates3 ran on 4914634f, whose product source equals P, inside the same
+sandbox:
+
+| Gate | Exit |
+| --- | ---: |
+| sqlite-initialization (compiled) | 0 |
+| sqlite-initialization-server | 0 |
+| sqlite-foreign-files | 0 |
+| sqlite-refusal-visibility | 0 |
+| sqlite-swap-witness (files unchanged since the swap, 16,512-byte WAL) | 0 |
+| verify-ui-profiler `verify.ts` | 0 |
+| disk guard (48.5 GB) | 0 |
+| root `lockf pnpm check` | 0 (domain 562, server 38, Electron 168 + 1 skipped, CLI 87) |
+
+Pin audit at the head: 76 pins and one mismatch. That mismatch is
+verify-discovery-formal's `task-client.ts`, unrenewed for the Swift reason
+above. Everything else certifies P or, for AtomicCAS, the same `store.ts`
+bytes.
