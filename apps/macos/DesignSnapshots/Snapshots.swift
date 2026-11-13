@@ -398,6 +398,20 @@ struct Snapshots {
                     }
                     try await render(name, WorkspaceSnapshot(model: handed), width: 1100, height: 720)
                 }
+                // This client: a stall with its attribution and what the sampler cost (S1-21 review;
+                // the seat's hands-on check 7 asks whether the "In …" line reads and wraps in two lines).
+                let stallClock = C7ReviewClock(); stallClock.now = 5000
+                let stallRecorder = ClientDiagnosticsRecorder(journalDirectory: directory.appendingPathComponent("c8-stall-recorder-\(mode)"), clock: { stallClock.now })
+                stallRecorder.authorizeOwnerSession(true)
+                var stall = ClientDiagnosticEvent(name: .stall, run: stallRecorder.run, now: 5000)
+                stall.durationMS = 412; stall.applicationActive = true
+                stall.stallAttribution = ClientStallAttribution(samples: 7, inLabel: "closure #1 in TodoModel.refreshAfterWrite(_:clearing:since:owner:) in TodoState.TodoModel.applyCatalogSnapshot(_:generation:)", agreeing: 6, frames: [], disabled: nil, suspendedMicroseconds: [38, 41, 35, 52, 40, 37, 44])
+                stallRecorder.record(stall)
+                let stalled = fixture(); stalled.signedIn = true
+                stalled.clientDiagnosticsUI.summary = await stallRecorder.snapshot()
+                try await render("c8-this-client-stall", ScrollView { ClientDiagnosticsView(model: stalled, compact: false, initiallyExpanded: ["Recent activity"]).padding(20) }, width: 1160, height: 900)
+                try await render("c8-compact-this-client-stall", ScrollView { ClientDiagnosticsView(model: stalled, compact: true, initiallyExpanded: ["Recent activity"]).padding(16) }, width: 393, height: 900)
+                stallRecorder.clear()
                 continue
             }
             if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" {
@@ -1134,7 +1148,7 @@ struct Snapshots {
         try JSONEncoder().encode(importLayouts).write(to: directory.appendingPathComponent("import-layout.json"))
         try JSONEncoder().encode(transferLayouts).write(to: directory.appendingPathComponent("transfer-layout.json"))
         try JSONSerialization.data(withJSONObject: compactLayouts, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("compact-layout.json"))
-        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 20 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
+        #expect(files.count == (ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C8_ONLY"] == "1" ? 24 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_C7_ONLY"] == "1" ? 22 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SEARCH_ONLY"] == "1" ? 60 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_QUICK_ONLY"] == "1" ? 2 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_PRIORITY_ONLY"] == "1" ? 18 : ProcessInfo.processInfo.environment["TODO_SNAPSHOT_BATCH_EDIT_ONLY"] == "1" ? 28 : 362))
         if !ProcessInfo.processInfo.environment.contains(where: { $0.key.hasPrefix("TODO_SNAPSHOT_") && $0.key.hasSuffix("_ONLY") && $0.value == "1" }) {
             let discovery = try await DiscoverySnapshots.render(directory: directory)
             let dependencies = try await DependencyMatrixSnapshots.render(directory: directory)
