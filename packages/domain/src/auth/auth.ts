@@ -1511,6 +1511,7 @@ export class Authentication<Read> {
             readonly read: AuthorizedRead<Readonly<S["Type"]>>;
           }
         | { readonly kind: "absent"; readonly selection: AbsentRead<S["Type"]> }
+        | { readonly kind: "reload"; readonly snapshot: AbsentRead["snapshot"] }
         | { readonly kind: "terminal"; readonly read: AuthorizedTerminalRead },
     ) => Effect.Effect<A, StoreError | AuthError>,
   ) =>
@@ -1574,28 +1575,31 @@ export class Authentication<Read> {
             !(error instanceof AuthError) ||
             error.detail !== "profile_deleted" ||
             info === undefined ||
-            info.profile !== null ||
-            cursor.generation !==
-              this.classifyProfile(request.profile).snapshot.generation
+            info.profile !== null
           )
             throw error;
-          const deletion = this.db
-            .query<{ seq: number }, [string]>(
-              "SELECT seq FROM op_log WHERE profile=? AND outcome='committed' AND json_extract(event,'$.kind')='ProfileDeleted' ORDER BY seq DESC LIMIT 1",
-            )
-            .get(request.profile);
-          if (!deletion || deletion.seq <= cursor.after) throw error;
-          result = {
-            kind: "terminal",
-            read: createAuthority(
-              "terminal",
-              this.db,
-              request.profile,
-              request.credential,
-              { ...cursor, through: deletion.seq },
-              info,
-            ),
-          };
+          const snapshot = this.classifyProfile(request.profile).snapshot;
+          if (cursor.generation !== snapshot.generation) {
+            result = { kind: "reload", snapshot };
+          } else {
+            const deletion = this.db
+              .query<{ seq: number }, [string]>(
+                "SELECT seq FROM op_log WHERE profile=? AND outcome='committed' AND json_extract(event,'$.kind')='ProfileDeleted' ORDER BY seq DESC LIMIT 1",
+              )
+              .get(request.profile);
+            if (!deletion || deletion.seq <= cursor.after) throw error;
+            result = {
+              kind: "terminal",
+              read: createAuthority(
+                "terminal",
+                this.db,
+                request.profile,
+                request.credential,
+                { ...cursor, through: deletion.seq },
+                info,
+              ),
+            };
+          }
         }
         const exit = Effect.runSyncExitWith(context)(operation(result));
         if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);

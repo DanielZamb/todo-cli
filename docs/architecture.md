@@ -281,6 +281,11 @@ The route rereads `op_log` every 250 ms and checks the credential on each pass.
 Each poll checks and materializes in one transaction and retains plain
 subscription selectors between polls. A never-created identifier is classified
 again on every poll, so a later CLI creation starts normal ordered delivery.
+For a still-valid credential, a changed restore generation is announced with
+`reload` before the restored Profile's outcome. This includes a restored
+tombstone: reload advances the cursor to the DatabaseRestored boundary, then a
+fresh pass sends the existing not_found failure and closes. The reload result
+contains generation metadata and grants no read authority.
 An already connected, still-valid unscoped credential (a Session or Access Token)
 has a private one-shot terminal permission through the committed `ProfileDeleted`
 sequence, followed by the existing failure and close sequence. Revoked or expired

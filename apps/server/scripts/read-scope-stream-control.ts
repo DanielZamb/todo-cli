@@ -162,6 +162,29 @@ async function* frames(response: Response): AsyncGenerator<Frame> {
     await reader.cancel().catch(() => {});
   }
 }
+const restoreStates = ["tombstoned", "active", "absent"] as const;
+const restoreSubjects = [
+  "owner",
+  "unscoped",
+  "scoped",
+  "revoked-token",
+  "revoked-session",
+  "expired-token",
+  "expired-session",
+] as const;
+const restoreCases = new Map<
+  string,
+  {
+    state: (typeof restoreStates)[number];
+    subject: (typeof restoreSubjects)[number];
+  }
+>(
+  restoreStates.flatMap((state) =>
+    restoreSubjects.map(
+      (subject) => [`restore-${state}-${subject}`, { state, subject }] as const,
+    ),
+  ),
+);
 const scenarios = [
   "never-created",
   "ordering-reconnect",
@@ -173,12 +196,15 @@ const scenarios = [
   "delete-owner",
   "delete-scoped",
   "delete-unscoped",
+  "delete-unscoped-read-write",
   "delete-revoked-token",
   "delete-revoked-session",
   "delete-expired-token",
   "delete-expired-session",
+  ...restoreCases.keys(),
 ];
 async function run(binary: string, cli: string, scenario: string) {
+  const restoration = restoreCases.get(scenario);
   const directory = mkdtempSync(join(tmpdir(), "todo-stream-scope-"));
   const path = join(directory, "scratch.db"),
     clock = join(directory, "clock"),
@@ -213,6 +239,7 @@ async function run(binary: string, cli: string, scenario: string) {
   const controllers: AbortController[] = [],
     received: Frame[] = [];
   let finalCredential: FinalCredential | null = null;
+  let revokedBeforeRestore = false;
   try {
     const deadline = performance.now() + 30000;
     while (!/Listening on http:\/\/127.0.0.1:\d+/.test(log)) {
@@ -241,14 +268,42 @@ async function run(binary: string, cli: string, scenario: string) {
       assert.equal(response.status, expected, `${route}: ${text}`);
       return text === "" ? null : JSON.parse(text);
     };
-    const metadata = new Database(path, { readonly: true });
-    const initialCursor =
-      metadata
-        .query<{ seq: number }, []>(
-          "SELECT coalesce(max(seq),0) AS seq FROM op_log",
-        )
-        .get()?.seq ?? 0;
-    metadata.close();
+    const credentialState = (credential: string): FinalCredential | null => {
+      const db = new Database(path, { readonly: true });
+      try {
+        const row = Schema.decodeUnknownSync(
+          Schema.NullOr(
+            Schema.Struct({
+              kind: Schema.Literals(["session", "token"]),
+              profile: Schema.NullOr(Schema.String),
+              scope: Schema.Literals(["read-only", "read-write"]),
+              expires_at: Schema.String,
+              revoked_at: Schema.NullOr(Schema.String),
+            }),
+          ),
+        )(
+          db
+            .query(
+              "SELECT kind,profile,scope,expires_at,revoked_at FROM credentials WHERE secret_hash=?",
+            )
+            .get(createHash("sha256").update(credential).digest("hex")),
+        );
+        return row === null
+          ? null
+          : {
+              kind: row.kind,
+              profile: row.profile,
+              revoked: row.revoked_at !== null,
+              expired:
+                Number(readFileSync(clock, "utf8")) >=
+                Date.parse(row.expires_at),
+              readAccess:
+                row.scope === "read-only" || row.scope === "read-write",
+            };
+      } finally {
+        db.close();
+      }
+    };
     const connect = async (
       credential: string,
       profile: string,
@@ -301,19 +356,192 @@ async function run(binary: string, cli: string, scenario: string) {
       assert.equal(result.status, 0, result.stdout + result.stderr);
       assert.ok(result.stdout.includes(id), result.stdout);
     };
-    const credential =
+    let credential =
       scenario.includes("expired-token") || scenario === "expire-token"
         ? fixture.shortToken
         : (scenario.includes("scoped") && !scenario.includes("unscoped")) ||
             scenario === "revoke-token"
           ? fixture.credentials.work
-          : scenario.includes("unscoped") || scenario === "delete-revoked-token"
+          : scenario.includes("unscoped") || scenario.includes("revoked-token")
             ? fixture.credentials.unscoped
             : fixture.credentials.owner;
-    const profile = scenario === "never-created" ? "never-created" : "work";
+    const profile =
+      scenario === "never-created"
+        ? "never-created"
+        : restoration?.state === "absent"
+          ? "never-restored"
+          : "work";
+    const initProfile = () => {
+      const initialized = spawnSync(
+        resolve(cli),
+        ["--db", path, "--profile", profile, "--format", "json", "init"],
+        {
+          env: { ...process.env, HOME: home },
+          encoding: "utf8",
+          timeout: 10000,
+        },
+      );
+      assert.equal(
+        initialized.status,
+        0,
+        initialized.stdout + initialized.stderr,
+      );
+    };
+    let saved: { id: string } | undefined;
+    if (scenario === "delete-unscoped-read-write") {
+      const issued = Schema.decodeUnknownSync(
+        Schema.Struct({
+          credential: Schema.String,
+          kind: Schema.Literal("token"),
+          profile: Schema.Null,
+          scope: Schema.Literal("read-write"),
+        }),
+      )(
+        await request("POST", "/auth/tokens", {
+          name: "unscoped-read-write",
+          profile: null,
+          scope: "read-write",
+        }),
+      );
+      credential = issued.credential;
+    }
+    if (restoration && restoration.state !== "tombstoned") {
+      saved = Schema.decodeUnknownSync(Schema.Struct({ id: Schema.String }))(
+        await request("POST", "/snapshots", {
+          reason: "stream restore matrix",
+        }),
+      );
+      if (restoration.state === "absent") {
+        initProfile();
+        cliWrite(profile, uuids[0], "Created after absent Snapshot");
+        if (restoration.subject === "scoped") {
+          const issued = Schema.decodeUnknownSync(
+            Schema.Struct({ credential: Schema.String }),
+          )(
+            await request("POST", "/auth/tokens", {
+              name: "restore-scoped",
+              profile,
+              scope: "read-only",
+            }),
+          );
+          credential = issued.credential;
+        }
+      }
+    }
+    const metadata = new Database(path, { readonly: true });
+    const initialCursor =
+      metadata
+        .query<{ seq: number }, []>(
+          "SELECT coalesce(max(seq),0) AS seq FROM op_log",
+        )
+        .get()?.seq ?? 0;
+    metadata.close();
     let reader = await connect(credential, profile, String(initialCursor));
     assert.equal((await next(reader)).raw, "event: ready\ndata: null\n\n");
-    if (scenario === "never-created") {
+    if (restoration) {
+      writeFileSync(gate, "closed");
+      await request(
+        "DELETE",
+        `/profiles/${profile}`,
+        { with_tasks: true, dry_run: false },
+        fixture.controller,
+      );
+      revokedBeforeRestore = credentialState(credential)?.revoked ?? false;
+      if (restoration.state === "tombstoned") {
+        saved = Schema.decodeUnknownSync(Schema.Struct({ id: Schema.String }))(
+          await request("POST", "/snapshots", {
+            reason: "stream tombstoned restore",
+          }),
+        );
+      }
+      assert.ok(saved);
+      await request("POST", `/snapshots/${saved.id}/restore`, {
+        dry_run: false,
+      });
+      if (restoration.subject === "revoked-token")
+        await request(
+          "DELETE",
+          "/auth/tokens/unscoped",
+          undefined,
+          fixture.controller,
+          204,
+        );
+      if (restoration.subject === "revoked-session")
+        await request(
+          "DELETE",
+          "/auth/session",
+          undefined,
+          fixture.credentials.owner,
+          204,
+        );
+      if (restoration.subject === "expired-token")
+        writeFileSync(clock, String(initialTime + 1000));
+      if (restoration.subject === "expired-session")
+        writeFileSync(clock, String(initialTime + 7 * 86400000));
+      finalCredential = credentialState(credential);
+      assert.deepEqual(
+        finalCredential,
+        restoration.state === "absent" && restoration.subject === "scoped"
+          ? null
+          : deletionStates.get(`delete-${restoration.subject}`),
+        `${scenario}: literal final credential state`,
+      );
+      assert.equal(
+        revokedBeforeRestore,
+        restoration.subject === "scoped",
+        `${scenario}: deletion revocation before restore`,
+      );
+      const invalid =
+        finalCredential === null ||
+        finalCredential.revoked ||
+        finalCredential.expired;
+      assert.equal(
+        invalid,
+        restoration.subject !== "owner" && restoration.subject !== "unscoped",
+        `${scenario}: final credential validity`,
+      );
+      writeFileSync(gate, "open");
+      const first = await next(reader);
+      if (first.event === "reload") {
+        if (restoration.state !== "tombstoned" && !invalid) {
+          if (restoration.state === "absent") initProfile();
+          cliWrite(profile, uuids[2], "After restored Profile state");
+          const operation = await next(reader);
+          assert.equal(operation.event, "operation");
+          assert.equal(operation.id, "19");
+          const data = Schema.decodeUnknownSync(
+            Schema.Struct({
+              profile: Schema.String,
+              event: Schema.Struct({
+                kind: Schema.String,
+                task: Schema.Struct({
+                  id: Schema.String,
+                  title: Schema.String,
+                }),
+              }),
+            }),
+          )(operation.data);
+          assert.deepEqual(
+            [
+              data.profile,
+              data.event.kind,
+              data.event.task.id,
+              data.event.task.title,
+            ],
+            [profile, "TaskCreated", uuids[2], "After restored Profile state"],
+          );
+        } else {
+          assert.equal(
+            (await next(reader)).event,
+            "effect/http-api/stream/failure",
+          );
+          assert.equal((await reader.next()).done, true);
+        }
+      } else {
+        assert.equal(first.event, "effect/http-api/stream/failure");
+        assert.equal((await reader.next()).done, true);
+      }
+    } else if (scenario === "never-created") {
       const initialized = spawnSync(
         resolve(cli),
         ["--db", path, "--profile", profile, "--format", "json", "init"],
@@ -439,7 +667,11 @@ async function run(binary: string, cli: string, scenario: string) {
           };
           assert.deepEqual(
             finalCredential,
-            deletionStates.get(scenario),
+            deletionStates.get(
+              scenario === "delete-unscoped-read-write"
+                ? "delete-unscoped"
+                : scenario,
+            ),
             `${scenario}: final-pass credential state`,
           );
         } finally {
@@ -454,7 +686,11 @@ async function run(binary: string, cli: string, scenario: string) {
       }
       assert.equal(received.at(-1)?.event, "effect/http-api/stream/failure");
     }
-    return { frames: received.map((frame) => frame.raw), finalCredential };
+    return {
+      frames: received.map((frame) => frame.raw),
+      finalCredential,
+      revokedBeforeRestore,
+    };
   } finally {
     for (const controller of controllers) controller.abort();
     if (child.exitCode === null && child.signalCode === null) {
@@ -473,8 +709,11 @@ const selected = Schema.decodeUnknownSync(
   Schema.Array(Schema.Literals(scenarios)),
 )(process.env.READ_STREAM_SCENARIOS?.split(",") ?? scenarios);
 for (const scenario of selected) {
-  const baseline = await run(before, cliBefore, scenario),
-    candidate = await run(after, cliAfter, scenario);
+  const baseline = await run(before, cliBefore, scenario);
+  const candidate: Awaited<ReturnType<typeof run>> =
+    process.env.READ_STREAM_CAPTURE_ONLY === "1"
+      ? baseline
+      : await run(after, cliAfter, scenario);
   const old = baseline.frames,
     current = candidate.frames;
   assert.deepEqual(
@@ -483,10 +722,15 @@ for (const scenario of selected) {
     scenario,
   );
   const state = candidate.finalCredential;
-  const approved = state !== null && (state.revoked || state.expired);
+  const restoration = restoreCases.get(scenario);
+  const approved =
+    state !== null
+      ? state.revoked || state.expired
+      : restoration !== undefined && candidate.revokedBeforeRestore;
   const result = {
     scenario,
     finalCredential: state,
+    revokedBeforeRestore: candidate.revokedBeforeRestore,
     approvedTerminalDifference: approved,
     before: old,
     after: current,
@@ -495,7 +739,39 @@ for (const scenario of selected) {
     join(output, `${scenario}.json`),
     JSON.stringify(result, null, 2),
   );
-  if (approved) {
+  if (restoration) {
+    assert.equal(old.length, 3, `${scenario}: literal base frame count`);
+    assert.equal(
+      old[1],
+      `event: reload\ndata: {"generation":"00000000-0000-4000-8000-000000000011","seq":${restoration.state === "tombstoned" ? 20 : 18}}\n\n`,
+      `${scenario}: literal reload frame`,
+    );
+    if (approved) {
+      const message =
+        state === null
+          ? "invalid_credential"
+          : state.revoked
+            ? "revoked"
+            : "expired";
+      assert.equal(
+        old[2],
+        `event: effect/http-api/stream/failure\ndata: [{"_tag":"Fail","error":{"_tag":"Unauthorized","message":"${message}","exit_code":3,"exit_meaning":"not found or auth missing"}}]\n\n`,
+        `${scenario}: literal credential refusal`,
+      );
+    } else if (restoration.state === "tombstoned") {
+      assert.equal(
+        old[2],
+        'event: effect/http-api/stream/failure\ndata: [{"_tag":"Fail","error":{"exit_code":3,"exit_meaning":"not found or auth missing","generated_at":"2026-11-11T18:00:00.000Z","code":"not_found","message":"Profile not found; choose a Profile from GET /profiles"}}]\n\n',
+        `${scenario}: literal tombstone refusal`,
+      );
+    }
+  }
+  if (process.env.READ_STREAM_CAPTURE_ONLY === "1") {
+    assert.ok(restoration);
+  } else if (approved && restoration) {
+    assert.equal(old[1]?.startsWith("event: reload\n"), true, scenario);
+    assert.deepEqual(current, [old[0], old.at(-1)], scenario);
+  } else if (approved) {
     assert.ok(
       old.some((raw) => raw.includes('"kind":"ProfileDeleted"')),
       scenario,
@@ -505,7 +781,9 @@ for (const scenario of selected) {
     assert.deepEqual(
       current,
       old,
-      `${scenario}: valid credentials must retain the base terminal batch`,
+      restoration
+        ? `${scenario}: valid credentials must retain reload before the restored Profile outcome`
+        : `${scenario}: valid credentials must retain the base terminal batch`,
     );
   results.push({
     scenario,

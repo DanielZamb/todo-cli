@@ -33,15 +33,25 @@ const result = await Bun.build({
                 : readFileSync(args.path, "utf8");
             if (
               variant === "after" &&
+              process.env.READ_STREAM_MUTANT === "drop-reload" &&
+              path === "apps/server/src/sse.ts"
+            ) {
+              const marker =
+                /events.push\(\{\s+event: "reload",\s+data: \{\s+generation: current.generation,\s+seq: current.restore_seq,\s+\},\s+\}\);/g;
+              assert.equal([...contents.matchAll(marker)].length, 1);
+              contents = contents.replace(marker, "");
+            }
+            if (
+              variant === "after" &&
               process.env.READ_TERMINAL_MUTANT === "session-only" &&
               path === "packages/domain/src/auth/auth.ts"
             ) {
               const marker =
-                "            info === undefined ||\n            info.profile !== null ||";
+                "            info === undefined ||\n            info.profile !== null";
               assert.equal(contents.split(marker).length, 2);
               contents = contents.replace(
                 marker,
-                '            info?.kind !== "session" ||',
+                '            info?.kind !== "session"',
               );
             }
             if (

@@ -147,11 +147,16 @@ export const changesLayer = (store: OperationStore) =>
                     (result) =>
                       Effect.gen(function* () {
                         const current =
-                          result.kind === "absent"
-                            ? result.selection.snapshot
-                            : yield* store.snapshots.generation();
+                          result.kind === "reload"
+                            ? result.snapshot
+                            : result.kind === "absent"
+                              ? result.selection.snapshot
+                              : yield* store.snapshots.generation();
                         const events: Array<typeof ChangeEvent.Type> = [];
-                        if (current.generation !== state.generation) {
+                        if (
+                          result.kind === "reload" ||
+                          current.generation !== state.generation
+                        ) {
                           events.push({
                             event: "reload",
                             data: {

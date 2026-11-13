@@ -142,6 +142,28 @@ headers using the existing Profile/seq index before JSON extraction. No historic
 Task payloads are decoded per tick. No launchd or installed server is needed for
 this cache proof; use only recorded scratch processes.
 
+## Checked read scopes and restore interactions
+
+`apps/server/scripts/read-scope-stream-control.ts` compares the immutable e69230f9
+base with the current checked-scope server and CLI on a scratch fixture produced
+by `apps/server/scripts/read-presence-fixture.ts`. Reuse source-hash compiled
+artifacts; the SSE servers use build-read-control.ts with
+READ_CONTROL_DETERMINISTIC_IDS=1 and the CLIs use build-read-cli.ts. Run:
+
+```sh
+bun apps/server/scripts/read-scope-stream-control.ts <base-server> <current-server> <base-cli> <current-cli> <scratch-fixture.json> <evidence-directory>
+```
+
+The 36 scenarios include the original fourteen, an explicit unscoped read-write
+Token deletion, and 21 restored-Profile/credential combinations. Every valid
+credential retains every base frame. Only credentials revoked or expired at the
+pass may omit the terminal batch or reload. A scoped Token removed by restore
+must first be proven revoked by deletion. Literal final credential states and
+reload/refusal frames supplement whole-frame comparison. The verification-only
+build modes READ_TERMINAL_MUTANT=session-only and READ_STREAM_MUTANT=drop-reload
+must each fail the relevant literal comparison. READ_STREAM_SCENARIOS selects
+named cases; READ_STREAM_CAPTURE_ONLY=1 captures the unchanged base first.
+
 ## Authorized discovery
 
 [verify-discovery](../verify-discovery/SKILL.md) owns the compiled Profile directory

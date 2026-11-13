@@ -1,5 +1,57 @@
 # Server projection reads
 
+## Seat corrections S1-C4, C5 and C6: qualification in progress
+
+The coordinator forwarded the complete 93-command seat review. This worker read it in full. C1, C2 and C3 and both formal mappings were accepted for 5a996ce5; only C4/C5/C6 require correction. The extra read-write Token scenario below supplements the original fourteen and the 21 restore cases. The original blanket control was also run unchanged against 66f15653: it exits 0 while incorrectly approving delete-unscoped. The corrected state-based control exits 1 against that same product for both unscoped Token scopes, then passes on the corrected source. This is C5's false-green reproduction, not an additional product exception.
+
+The seat reported a second stream discrepancy on 66f15653. A valid connected owner Session missed the base's reload when its Profile was deleted, a Snapshot of that tombstoned state was made, and that Snapshot was restored before the next poll. This worker reproduced the sequence independently in the existing scratch compiled control, without reading or copying the seat's probe. Before any product edit, the base sent ready, reload, not_found failure and close; 6174e3cf sent ready, the same failure and close. Both the initial comparison and the version with literal reload bytes exited 1 for this missing frame.
+
+The correction adds a plain reload result to withStreamRead for a changed generation encountered by a still-valid unscoped credential on the deleted-Profile path. The credential lookup still validates revocation, expiry and scope first. Before any deletion-sequence query or terminal permission is created, the generation mismatch returns only the frozen snapshot metadata. SSE emits reload and advances to the restore boundary. Its next fresh checked pass decides the restored Profile's outcome. For a tombstone that is the existing not_found refusal; the earlier deletion sequence is before the new cursor and grants no terminal batch. Active and absent states retain their existing path. The same live lease contains the check and generation decision; no authority crosses the poll boundary. No transaction mode, port guard, credential-check body, lease-finalization body or terminal bound changes.
+
+### Base capture, literals and the restore matrix
+
+Before the product edit, this worker captured three owner cases, then all 21 cases below on unchanged e69230f9. The stream stays paused during deletion, Snapshot creation and restore. The active Snapshot predates deletion; the never-created Snapshot predates a separate CLI init and Task write. Each restore therefore has the stated Profile state at its first poll. The absent cases recreate the Profile with the compiled CLI only after reload and verify the following TaskCreated in order. The active cases likewise write after reload. Every run uses a private database, Snapshot directory, HOME, clock and poll gate.
+
+All base cases have three frames. The literal ready frame is `event: ready\ndata: null\n\n`. The literal reload is `event: reload\ndata: {"generation":"00000000-0000-4000-8000-000000000011","seq":20}\n\n` for tombstoned state and the same bytes with seq 18 for active and never-created state. These are constants captured from the deterministic compiled baseline, not values taken from the candidate. The tombstone not_found failure and each revoked, expired or invalid_credential failure are literal full wire-string expectations. Successful TaskCreated cases assert id 19, the literal Task id and title, and the requested Profile, then compare the whole frame to the base. Raw payloads and terminators remain in the receipts.
+
+| Credential at final pass | Restored tombstone, base/head | Restored active Profile, base/head | Restored never-created state, base/head | Exception |
+| --- | --- | --- | --- | --- |
+| Valid owner Session, unscoped/unrevoked/unexpired | 3/3: ready, reload, not_found | 3/3: ready, reload, later TaskCreated | 3/3: ready, reload, CLI-created TaskCreated | Outside; every byte equal |
+| Valid unscoped Token, unrevoked/unexpired | 3/3: ready, reload, not_found | 3/3: ready, reload, later TaskCreated | 3/3: ready, reload, CLI-created TaskCreated | Outside; every byte equal |
+| Profile-scoped Token, deletion-revoked | 3/2: reload omitted, revoked failure unchanged | 3/2: reload omitted, revoked failure unchanged | 3/2: reload omitted, invalid_credential failure unchanged | Inside; credential already revoked by deletion |
+| Unscoped Token revoked after restore | 3/2: reload omitted, revoked failure unchanged | 3/2: reload omitted, revoked failure unchanged | 3/2: reload omitted, revoked failure unchanged | Inside; revoked |
+| Session revoked after restore | 3/2: reload omitted, revoked failure unchanged | 3/2: reload omitted, revoked failure unchanged | 3/2: reload omitted, revoked failure unchanged | Inside; revoked |
+| Unscoped Token expired at final pass | 3/2: reload omitted, expired failure unchanged | 3/2: reload omitted, expired failure unchanged | 3/2: reload omitted, expired failure unchanged | Inside; expired |
+| Session expired at final pass | 3/2: reload omitted, expired failure unchanged | 3/2: reload omitted, expired failure unchanged | 3/2: reload omitted, expired failure unchanged | Inside; expired |
+
+The scoped Token in the never-created case is first proven revoked by the live Profile deletion. Restore then removes its row because the restored database has no such Profile id, following the existing Snapshot credential-preservation rule. Both sides consequently refuse it as invalid_credential. This is the already deletion-revoked class, not a new exception for an otherwise valid credential. The control asserts literal final credential states on both sides and the pre-restore revocation; a missing row alone cannot grant its exception.
+
+The existing fourteen scenarios also pass, including the valid unscoped Token correction. An additional permanent delete-unscoped-read-write case issues and asserts a Token with kind token, Profile null and scope read-write, then compares its six frames in full. Across all 36 scenarios, 16 match in full and 20 omit only the already-approved frames for credentials that have lost their rights. A verification-only drop-reload transform removes the generation-frame push while retaining cursor advancement. The tombstoned-owner control then exits 1 with the literal message `restore-tombstoned-owner: valid credentials must retain reload before the restored Profile outcome`. The Session-only mutant exits 1 for both unscoped Token scopes. Neither mutation edits product source.
+
+### Commands and qualification held for the full report
+
+All receipts are local and ignored under `docs/evidence/ui-speed/server-reads/restore-profile/`. `commands.json` records complete commands and real exits. `provenance.json` hashes every product file and compiled artifact against parent 6174e3cf; only auth.ts and sse.ts differ. `product.diff` retains those exact changes. The five new artifact variants were each built once from the corrected product source. No mapping pin is renewed here.
+
+| Command/control | Real exit and result | Receipt |
+| --- | --- | --- |
+| Formatter, owner-only base capture | 0 / 0; 3 owner sequences | format-first.log; base-first.log |
+| Initial controller typecheck | 1; Map key and inferred candidate types, test wiring only | typecheck-control.log |
+| Controller type correction and recheck | 0 / 0 | format-second.log; typecheck-control-second.log |
+| Full base capture before product edit | 0; 21 sequences | base-all.log; base-all/ |
+| Initial red and literal red before product edit | 1 / 1; missing reload, 2 vs 3 frames | red.log; literal-red.log |
+| Literal and product formatting | 0 / 0 | format-literals.log; format-product.log |
+| Domain/server typechecks | 0 / 0 | typecheck-domain.log; typecheck-server.log |
+| SSE, CLI, plain-read, drop-reload and Session-only builds | 0 / 0 / 0 / 0 / 0 | build-*.log |
+| Full stream matrix, then added explicit read-write Token case | 0 / 0; 35 then 36 scenarios, including all 21 restore cases and the original fourteen | restore-stream-green.log; final-stream.log; final-stream/ |
+| Drop-reload and Session-only mutants | 1 / 1, expected literal frame assertions | restore-drop-mutant.log; restore-session-mutant.log |
+| Lifetime/scope suites, server SSE suite | 0 / 0; 42 + 4 tests | restore-scope.log; restore-sse-tests.log |
+| Refreshed 57-fixture differential | 0 / 0; 23,880 + 1,267 = 25,147 pairs, equal auth History/last-use | restore-parity-56.log; restore-parity-rich.log |
+| Final formatter | 0 | format-final.log |
+
+The complete report has now arrived. Root and formal-reference qualification follow on this frozen product source; their results will be appended before delivery. The broader timing and compiled-recipe receipts below describe the prior accepted captures and are not relabeled. The public contract and ADR text are unchanged; contract id remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`.
+
+At the coordinator's disk request, 91 superseded binaries (8,237,094,230 logical bytes), six old evidence binaries, and 299 bulk parity captures were retired or compacted. Every removed file has its original path, size and SHA-256 in retired-binaries.json or compacted-evidence.json. Bulk reply bodies now retain individual byte lengths and hashes, route/status, credential fingerprints and auth History/last-use hashes, with equality reasserted before replacement. Summary receipts, all stream frames, failures and reusable inputs remain. .scratch/bin fell from 8.2 GiB to 692 MiB, docs/evidence/ui-speed from 5.6 GiB to 373 MiB; measured free space rose from 41 to 46 GiB. These are disk observations during concurrent builds, not estimates of physical bytes reclaimed.
+
 ## Seat correction: valid unscoped Token terminal delivery (delivery held)
 
 The seat found that delivery 66f156539ddebbcf13842654df434258dc4b6597 withheld the terminal batch from a valid unscoped Access Token. The fourteen-scenario control had incorrectly treated every Token deletion case as an approved difference. The coordinator clarified that the exception depends on revocation or expiry at the final pass, not credential kind. This correction is committed on top of 66f15653 without amending it. It is not a new delivery: the remaining gates and any further mapping renewal wait for the seat's full report.
