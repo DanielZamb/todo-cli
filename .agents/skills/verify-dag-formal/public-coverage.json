@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "2558b23e407ab2b9f4ca139faaec767b42bde463",
+  "confirmedCommit": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58"
+      "sha256": "d514952a7c015b9bd8148ce933f0cc361e922ec1348e83982f2f42b292806e05"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -419,7 +419,7 @@
         "actual Delete review pair",
         "existing picker state and row/menu UI"
       ],
-      "sha256": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be"
+      "sha256": "0427495cb1b5ad1df0b32271c29ec6156c8c9d4e7d95e9ef374d57c3c6ae2e8e"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -572,56 +572,28 @@
     }
   },
   "macLineClientReview": {
-    "product": "2558b23e407ab2b9f4ca139faaec767b42bde463",
-    "previousConfirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+    "product": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
+    "previousConfirmedCommit": "2558b23e407ab2b9f4ca139faaec767b42bde463",
     "changed": [
       {
         "path": "apps/macos/Sources/Dependencies.swift",
-        "from": "a484f1aab49343f66d70076975d131490a9b935b2f278b1468bbe8192f140d8d",
-        "to": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58"
-      },
-      {
-        "path": "apps/macos/Sources/DependencyDelete.swift",
-        "from": "989ec095bafd94d255dffaa7f238a7474ead4c2c2b4c7c14d29617e102e42b03",
-        "to": "f8c702ccd0fcfaf9f06a8a1d3724bcc80b14960eb6812878a676704c9524b943"
-      },
-      {
-        "path": "apps/macos/Sources/DependencyGraphState.swift",
-        "from": "d92da0c040730e6035cd59627a19e1b626e705eed0e0548f00a33aae899980de",
-        "to": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71"
-      },
-      {
-        "path": "apps/macos/Sources/DependencyGraphView.swift",
-        "from": "d5287a6f734d3ffcf3e2e3fc88116f6620b58e6a3d2fb25ad518333dc9f0ae47",
-        "to": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d"
-      },
-      {
-        "path": "apps/macos/Sources/DependencyErrors.swift",
-        "from": "db9dbe5380df1d65da8073136e1e99f2fdf472cf88714db3495d5a195d2d8a97",
-        "to": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002"
+        "from": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58",
+        "to": "d514952a7c015b9bd8148ce933f0cc361e922ec1348e83982f2f42b292806e05"
       },
       {
         "path": "apps/macos/Sources/DependencyViews.swift",
-        "from": "ba046217fe547918839fa3c490357dc05442f881fef98ff35ba5210171b9e87f",
-        "to": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be"
+        "from": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be",
+        "to": "0427495cb1b5ad1df0b32271c29ec6156c8c9d4e7d95e9ef374d57c3c6ae2e8e"
       }
     ],
     "review": {
-      "summary": "The six Swift client fences were stale on the Mac line since the fenced bytes of 6e599b7b (2026-11-10), which the mapping's confirmed commit 0bd8476d (2026-11-13) carried. Review of each mapped function against its 0bd8476d version (delivery note mac-c9-delivery-2558b23e.md, section 7). Dependencies.swift differs in ways the model allows: a superseded link's occ_conflict no longer sets requiresReload (the server still refuses a stale Version); a committed edge's catalog read-back is no longer skipped when the picker closes (ownership is credential and Profile, S1-19); a closed picker's newest link failure is handed to the main window; a 401 is authorized first; pendingDependents is released only under the same credential epoch. DependencyGraphState.swift differs in a way the model allows: its background refresh calls refreshDependencyPicker, clears no message, and stops if the credential or the Dependency generation changed. DependencyDelete, DependencyGraphView, DependencyErrors and DependencyViews keep the mapped behaviour (message ownership, post-await guards, authorization first, diagnostics, heights). No change in a class the model does not allow.",
+      "summary": "Candidate 10 changes two fenced Swift files. Dependencies.swift: DependencyState's graph, batch, picker and deletion gain didSets that, from nil to shown only, call the model's presented() closure (a person-action count for the forced Profile switch, MAC-C1-S1-32), and toggleDependency's first line notes a person's action, before and independent of its guards. Neither reads or changes Dependency data, messages, tickets, the credential epoch or the order of authorization, data and presentation. DependencyViews.swift: InitialDependencySelection's heading reads \"Depends on N Tasks\" (\"1 Task\") when Compact Quick Add's chip region cuts chips off (an environment value from AppViews), with the same text as its accessibility label and a bounds id for the captures; the initial Dependency chips, their removal and the Add button are unchanged. No change in a class the model does not allow.",
       "reviewer": "MAC-PERF (Claude Opus 5.5)",
-      "rulingBy": "coordinator, candidate 9 (choice 1)",
-      "pendingSeat": false,
-      "seatAcceptance": {
-        "seat": "MAC-C1-S1",
-        "review": "delta c334462b",
-        "date": "2026-11-13",
-        "verdict": "Renewal ACCEPTED (hashes and conclusion correct)",
-        "report": "reports/mac-c1-seat1/candidate-9-review.md, section Delta c334462b",
-        "wordingCorrections": "applied here: Dependencies.swift's other allowed changes and DependencyGraphState.swift's change named; 0bd8476d is dated 2026-11-13, the fenced Swift bytes date from 6e599b7b (2026-11-10)"
-      }
+      "rulingBy": "coordinator, candidate 9 (choice 1); brief MAC-C10",
+      "pendingSeat": true
     },
     "checkEvidence": [
-      "docs/evidence/dag-formal/public-M128ka"
+      "docs/evidence/dag-formal/public-mWseiY"
     ]
   }
 }
