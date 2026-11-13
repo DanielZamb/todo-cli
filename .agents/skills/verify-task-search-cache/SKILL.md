@@ -193,3 +193,16 @@ The full immutable 219749f2 command exited 0; its receipt is
 `docs/evidence/perf-cache/verify-Xh1k3D/result.json`. This includes the finite
 admission model and real-code controls, compiled lifecycle, erasure and CLI
 defect/refusal drives. It makes no new native or unbounded-safety claim.
+
+## Diagnostics merge candidate, 2026-11-13
+
+Candidate product 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c. No matcher, runner, admission, epoch, preparation,
+observer or erasure body changed: task-search-cache.ts, task-search.ts,
+commands.ts, store/snapshots.ts and store/search-cache-events.ts are
+byte-identical to 5f46e7b3. task-filters.ts gains an outer span on
+filterTaskRecordsEffect; store.ts gains caller-side spans; the CLI and server
+hygiene files gain the Diagnostics commands and routes. Pre-renewal, the seven
+cache controls and three observer controls failed and restored, and both
+commands stopped only on those hashes. The uncached oracle was built for the
+product, and the full `verify.mjs 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c` passed all nine stages. Candidate until
+the seat accepts it.

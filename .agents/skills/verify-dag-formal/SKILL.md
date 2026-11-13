@@ -3,6 +3,23 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Diagnostics merge candidate, 2026-11-13
+
+Candidate product 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c (feat/diag-core with integ/server merged), contract
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8. The only
+covered bodies that changed from 5f46e7b3 are caller-side Diagnostics spans:
+OperationStore.transaction, appendSync and graph (graph keeps integ/server's
+read inside the span), and Authentication.credentialCheck. The public changes
+add the Diagnostics detail query and the profiler group. unchangedCore still
+equals its retained proof. The full default run passed at that product:
+model stages, 36 production controls and 53 public controls, each failing its
+behavior and restoring exactly, with guarded AtomicCAS. The run needed the
+preserved e7170510 CLI (hash-checked copy) and the pinned TLA+ jar under
+docs/evidence/dag-formal/tools. No model, invariant or bound changed. This is
+a candidate until the seat accepts it; docs/decisions/ui-speed/diag-recordings-report.md
+records the receipts.
+
+
 ## Server and Snapshot integration renewal
 
 Immutable merged product 5f46e7b3c36afaffe8f2328df6453b8546be27a5 combines the independently reviewed strict read scopes and Snapshot/Purge/CLI corrections. docs/decisions/ui-speed/server-integration.md records the per-function review, exact diffs, three-way constructor trace, current command exits and exclusions. No model, invariant or bound changed. The full fresh qualification remains separate from historical results below. The owed native Swift stage remains explicit.
