@@ -1,5 +1,20 @@
 # CLI routing slice 1
 
+> **Owed: Task search cache mapping renewal.** Do it once, on the final source,
+> after this branch takes in the durable-denial fix and the stream wake (one wake
+> object instead of two), as the coordinator ruled on 2026-11-13. Until then these
+> whole-file entries in `.agents/skills/verify-task-search-cache/coverage.json`
+> drift or may drift:
+>
+> - `apps/server/src/server.ts`: drifts now. Pinned `f6dccce6…` (renewed at
+>   9e058e64); `15eaea01` has `cf12bf00…` after the R1 start-up window comment
+>   and the start-up error mapping.
+> - `apps/cli/src/main.ts`: matches its pin `6bb56265…` at 15eaea01; recheck
+>   it if the merges move it.
+>
+> Renew by the skill's procedure (body review, pre-renewal controls, full
+> `verify.mjs` on the committed product), never by hand.
+
 Delivered for correctness review on `feat/cli-through-server`, 2026-11-12.
 Implementation commit `06beca883223d376f7b598631c12c2bb418d8d6d`, verification
 correction `eaefd80380f86ef3fadd91ca8b35e49198cefb62`, and transport-status correction
