@@ -9,11 +9,15 @@ import { Effect, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
 
-export const changesLayer = (store: OperationStore) =>
+export const changesLayer = (
+  store: OperationStore,
+  makeWait = () => Effect.sleep("250 millis"),
+) =>
   HttpApiBuilder.group(TodoApi, "changes", (handlers) =>
     handlers.handleAll({
       stream: ({ params, headers }) =>
         Effect.gen(function* () {
+          const wait = makeWait();
           const credential = yield* BearerCredential;
           const header = headers["last-event-id"];
           const after = header === undefined ? 0 : Number(header);
@@ -42,7 +46,7 @@ export const changesLayer = (store: OperationStore) =>
             },
             (state) =>
               Effect.gen(function* () {
-                yield* Effect.sleep("250 millis");
+                yield* wait;
                 const current = yield* translate(store.snapshots.generation());
                 const events: Array<typeof ChangeEvent.Type> = [];
                 if (current.generation !== state.generation) {

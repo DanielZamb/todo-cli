@@ -59,6 +59,7 @@ import { Effect, Layer, Option, Redacted, Schema } from "effect";
 import {
   HttpEffect,
   HttpRouter,
+  HttpServer,
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/http";
@@ -68,7 +69,10 @@ import {
   HttpApiSchema,
   OpenApi,
 } from "effect/http-api";
+import { databaseEndpoint } from "./database-endpoint.ts";
 import { translate } from "./errors.ts";
+import { localRoutes } from "./local-routes.ts";
+import { OutsideCommit } from "./outside-commit.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
 import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
@@ -284,9 +288,15 @@ export const serverLayer = (options: {
   readonly path: string;
   readonly port: number;
   readonly allowedHosts?: ReadonlySet<string>;
+  readonly outsideCommit?: OutsideCommit;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
+      const endpoint = yield* Effect.acquireRelease(
+        Effect.try(() => databaseEndpoint(options.path)),
+        (endpoint) => Effect.sync(() => endpoint?.close()),
+      );
+      const outside = options.outsideCommit ?? new OutsideCommit();
       const store = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
@@ -992,7 +1002,10 @@ export const serverLayer = (options: {
           SystemLive,
           DiagnosticsLive,
           SnapshotsLive,
-          changesLayer(store).pipe(Layer.provide(AuthorizationLive)),
+          localRoutes(store, endpoint, outside),
+          changesLayer(store, outside.waiter).pipe(
+            Layer.provide(AuthorizationLive),
+          ),
         ]),
         Layer.provide(
           HttpApiMiddleware.layerSchemaErrorTransform(
@@ -1021,6 +1034,14 @@ export const serverLayer = (options: {
             idleTimeout: 0,
             maxRequestBodySize: 28 * 1024 * 1024,
           }),
+        ),
+        Layer.tap((context) =>
+          Effect.gen(function* () {
+            const server = yield* HttpServer.HttpServer;
+            const address = server.address;
+            if ("port" in address)
+              yield* Effect.try(() => endpoint?.publish(address.port));
+          }).pipe(Effect.provideContext(context)),
         ),
       );
     }),

@@ -11,7 +11,9 @@
     "./attachment-input": "./src/attachment-input.ts",
     "./attachments": "./src/attachment-commands.ts",
     "./attachment-store": "./src/attachment-store.ts",
-    "./presentation": "./src/presentation.ts"
+    "./presentation": "./src/presentation.ts",
+    "./backend-command": "./src/backend-command.ts",
+    "./database-route": "./src/database-route.ts"
   },
   "scripts": {
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",

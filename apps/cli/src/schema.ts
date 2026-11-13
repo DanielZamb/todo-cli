@@ -17,6 +17,7 @@ import {
 } from "@todo/domain/presentation";
 import { Schema } from "effect";
 import { credentialSelectionDescription } from "./credential-profile.ts";
+import { routingDescription, WriteMode } from "./database-selection.ts";
 
 const registry = new Map<
   string,
@@ -70,7 +71,10 @@ export const TextResponse = Schema.Struct({
 export type ConfigResponse = typeof ConfigResponse.Type;
 export const ConfigResponse = Schema.Struct({
   generated_at: Schema.String,
-  config: Schema.Struct({ db_path: Schema.NullOr(Schema.String) }),
+  config: Schema.Struct({
+    db_path: Schema.NullOr(Schema.String),
+    write_mode: Schema.optionalKey(WriteMode),
+  }),
 });
 export type SchemaListResponse = typeof SchemaListResponse.Type;
 export const SchemaListResponse = Schema.Struct({
@@ -101,7 +105,7 @@ export function commandSchema(name: string) {
     ? {
         generated_at: new Date().toISOString(),
         $schema: "https://json-schema.org/draft/2020-12/schema",
-        $comment: credentialSelectionDescription,
+        $comment: `${credentialSelectionDescription} ${routingDescription}`,
         ...document.schema,
         ...(Object.keys(document.definitions).length
           ? { $defs: document.definitions }

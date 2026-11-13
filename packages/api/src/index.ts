@@ -61,6 +61,8 @@ import {
   UndependRequest,
   UploadAttachment,
 } from "@todo/domain";
+import { BackendCommand, BackendReply } from "@todo/domain/backend-command";
+import { ProofRequest, ProofResponse } from "@todo/domain/database-route";
 import { ExternalIdConflictDetails } from "@todo/domain/presentation";
 import { Context, Schema } from "effect";
 import {
@@ -599,6 +601,31 @@ const Snapshots = HttpApiGroup.make("snapshots")
     }),
   )
   .middleware(Authorization);
+const localHeaders = {
+  "x-todo-incarnation": Schema.String,
+  "x-todo-proof": Schema.String,
+};
+const Local = HttpApiGroup.make("local").add(
+  HttpApiEndpoint.post("databaseProof", "/local/database-proof", {
+    payload: ProofRequest,
+    success: ProofResponse,
+    error: [BadRequest],
+  }),
+  HttpApiEndpoint.post("nudge", "/local/nudge", {
+    headers: localHeaders,
+    success: Schema.Null,
+    error: [BadRequest],
+  }),
+  HttpApiEndpoint.post("runCommand", "/local/commands", {
+    headers: {
+      ...localHeaders,
+      authorization: Schema.optionalKey(Schema.String),
+    },
+    payload: BackendCommand,
+    success: BackendReply,
+    error: [BadRequest],
+  }),
+);
 export class TodoApi extends HttpApi.make("todo-api")
   .add(
     System,
@@ -609,6 +636,7 @@ export class TodoApi extends HttpApi.make("todo-api")
     Reads,
     Diagnostics,
     Snapshots,
+    Local,
   )
   .middleware(RequestDecoding)
   .annotateMerge(

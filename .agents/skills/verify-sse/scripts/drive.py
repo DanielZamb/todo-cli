@@ -93,7 +93,7 @@ with (evidence / 'server.log').open('w') as log:
             return [frame for frame in read_frames(path) if frame['event'] == 'operation']
 
         def cli(*args, stdin=None):
-            cmd = [str(scratch / 'todo'), '--db', str(scratch / 'scratch.db'), '--profile', 'work', '--format', 'json', *args]
+            cmd = [str(scratch / 'todo'), '--direct', '--db', str(scratch / 'scratch.db'), '--profile', 'work', '--format', 'json', *args]
             started = time.monotonic()
             result = subprocess.run(cmd, env=env, input=stdin, capture_output=True, text=True, timeout=10)
             value = json.loads(result.stdout) if result.stdout.strip().startswith('{') else result.stdout

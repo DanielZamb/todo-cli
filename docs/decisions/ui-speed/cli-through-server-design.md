@@ -7,6 +7,91 @@ Source baseline: `6b167266fc34c3304e30ed220bb652b4d17c05ab`, branch
 below refer to that baseline. Paths and line numbers are repository-relative.
 The draft decision is [ADR-0023](../../adr/0023-cli-writes-through-the-running-server.md).
 
+## Decided, 2026-11-12
+
+This section records the owner's O44 answers and the coordinator's slice-1 order.
+It governs implementation. The original proposal below remains an alternative
+considered wherever it differs.
+
+- Keep CLI input and printing. Add one typed run-command operation in TodoApi,
+  carrying a discriminated union of prepared commands, starting with add. Both
+  adapters execute the same shared command function and receive the same result.
+  There are no per-family endpoints, argv execution, or rendered output strings.
+- Discovery uses only a private record beside the canonical selected database.
+  Independently compare device, inode, birth time and storage context, verify a
+  fresh-nonce HMAC, then attach credentials only to that proved connection.
+- When proof fails or no compatible server is proven, automatic mode writes
+  directly as today. Direct writers take no ownership lock. No enrollment,
+  legacy activation, hard-link refusal, staged input, or fail-closed automatic
+  fallback is retained. Hard links, copied/stale records, busy, older or starting
+  servers use direct mode. Only require-server or the lasting server setting refuses an unproven server.
+- Retain a server-only coordination SQLite lock before opening its store, held
+  through store close, to prevent a second participating server for one database.
+  Use a UID-private device/inode-keyed lock registry so hard-link aliases share
+  that guard. CLI direct writers never acquire this lock.
+- Once any command byte may have reached the server, never fall back or retry.
+  Unknown outcome is write_outcome_unknown, exit 1. A message above the HTTP body
+  limit chooses direct mode before sending anything.
+- Reads stay direct and the CLI never starts the server. Global --direct and
+  --require-server are mutually exclusive. init and reset-passphrase remain
+  direct exceptions. There is no HTTP provisioning capability.
+- After a committing direct write, send a best-effort data-free nudge to a proven
+  server. Discovery has a 50 ms budget and the post-commit nudge a separate 50 ms
+  budget, excluding direct command execution. A nudge failure never changes output or exit status. No proven
+  server means no nudge. Ordinary pre-write discovery is bounded by 1,000 ms for
+  require-server, and by the nudge budget for automatic/direct mode.
+- Fix durable repeated-denial handling first, in a separately reviewed integrated
+  Authentication.record change. This unit does not edit that function. No
+  production command routes until that prerequisite lands.
+- Slice 1 publishes/removes records, implements proof, the server singleton
+  guard, the nudge hook and CLI plumbing, and declares/tests the typed add
+  operation. All routable production CLI execution stays disabled. Server mode and
+  --require-server refuse writing commands; direct exceptions and reads remain
+  local. Help states this transitional behavior. The typed operation is exercised by verification only.
+- The nudge hook has one integration point for perf/stream-wake. Until integration,
+  an in-process notification wakes the existing SSE polling wait so its next
+  normal database/auth pass runs immediately; the 250 ms timer remains as fallback.
+  The hook carries no Task data and conveys no authorization.
+- Differential proof compares both modes on scratch clones restored to the same
+  pathname, with byte comparisons and negative controls. Ordinary independent
+  randomness must be distinguished from deterministic companion-build evidence.
+  Preserve existing CLI goldens and response schemas. New schema comments may
+  document mode flags without changing success/error payloads.
+- Contract generation updates OpenAPI and its contract id. A Swift worker must
+  regenerate and verify its client later. This worker runs no Swift, native app,
+  Keychain, signing, launchd, or managed-server operation.
+
+### Lasting write mode, decided 2026-11-12
+
+The owner's O44/Q5 answer adds the local config key `write-mode`, exposed through
+`todo config get write-mode` and `todo config set write-mode <value>`.
+Command flags override the setting; the setting overrides the default automatic
+mode. --direct and --require-server remain mutually exclusive. Unknown configured
+values fail with usage exit 2 before prompts, authentication, or writes and name
+automatic, direct and server.
+
+| Mode | Who it is for | Behavior and cost |
+| --- | --- | --- |
+| automatic, default | People using CLI and apps together | Use a proven server when that command is routable; otherwise direct. Discovery adds a bounded check. |
+| direct | People who prefer the CLI writing SQLite | Always direct, including when a server exists. A proven server still receives a bounded best-effort nudge after commit. |
+| server | People requiring server execution | Refuse if no server is proven or the command is not routable. It requires the server and a supported command. |
+
+Slice 1 accepts and persists the setting now. It refuses every writing command in
+server mode because none is production-routable yet, even if the server proves
+itself. This avoids surprising someone who explicitly requires server execution.
+--require-server has the same refusal behavior. A --direct flag can override a
+lasting server setting. Reads, init and reset-passphrase remain direct in every
+mode. There is no implicit activation later without a reviewed routed command.
+Configuration output adds optional write_mode; other response payload schemas and
+all export/review golden files remain unchanged. Schema comments document flags.
+Automatic/direct discovery is bounded by 50 ms and the post-commit nudge by a
+separate 50 ms, excluding command execution time. Require-server discovery is
+bounded by 1,000 ms before refusal.
+
+The remaining text is the original design reviewed at 0ad107b6. Its ownership,
+enrollment, provisioning and staged-upload recommendations are alternatives,
+not current implementation instructions.
+
 ## 1. Prove the database before sending a credential
 
 The invariant is physical file identity: a routed command must use the same SQLite

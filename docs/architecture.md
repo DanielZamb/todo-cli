@@ -230,8 +230,12 @@ SSE id. Only that Profile's committed operations appear, so gaps in ids are
 normal: rejected attempts and other Profiles are skipped.
 
 The route rereads `op_log` every 250 ms and checks the credential on each pass.
-That is how a `todo edit` from the CLI process reaches an open desktop app.
-There is no file watcher and no IPC between the two processes. Reconnect with
+After a committing direct CLI command, a data-free best-effort local nudge can
+wake each stream's next normal pass immediately. The CLI discovers only a private
+record beside its selected canonical database, compares physical file identity and
+contract, and verifies a nonce HMAC before using the same connection. Discovery and
+nudge have separate 50 ms budgets. Failure leaves the direct command's result alone.
+There is no file watcher. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.
 After a Snapshot restore the generation changes, and the stream sends `reload`
 with the generation and `restore_seq`.
@@ -240,6 +244,16 @@ The scheduler lives in the server process. It fires reminders for due instants,
 wakes snoozed Tasks, and deletes expired credentials. Each pass rereads SQLite,
 so a restart does not lose work. ReminderFired operations do not advance Task
 Version. Date-only planning values do not fire reminders.
+
+CLI `config write-mode` stores automatic, direct or server. Command flags
+`--direct` and `--require-server` override that setting and are mutually exclusive.
+In CLI routing slice 1, production commands still execute directly. Server mode
+refuses writing commands because none is production-routable until durable auth
+rejection handling is reviewed. Reads, init and reset-passphrase remain direct in
+every mode. The typed add backend operation exists in TodoApi for verification
+only. [ADR-0023](adr/0023-cli-writes-through-the-running-server.md) retains the
+owner's decisions and the original alternatives. The server-only singleton guard
+does not lock out CLI writers. Other clients retain their current HTTP contract.
 
 Creation and import accept Attachment reference arrays. Creation validates every
 reference before committing the Task. Import can adopt an existing Task by id
