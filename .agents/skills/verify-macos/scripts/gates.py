@@ -2,6 +2,8 @@
 """The Mac gate cycle: HOLD and the 18 gates, in order, on the checked-out head.
 
 Usage: python3 .agents/skills/verify-macos/scripts/gates.py
+       (verify-dag-formal's public check needs its preserved before-binary,
+       .scratch/bin/dag-f-todo-1aa1db7f…, with its provenance; the check verifies its digest)
        (GATE_DISCOVERY_SWIFT_REUSE=<docs/evidence/discovery-formal/swift-*> reuses a discovery build)
 
 Inputs: .scratch/bin/build.json from `bun .agents/skills/verify-cli/scripts/cache-binaries.ts`; the
@@ -135,6 +137,10 @@ try:
             audit = state_package.guard(made / 'swift-build'); state_package.write(audit, evidence / f'discovery-{made.name}-keychain-guard.json')
             assert not audit['keychainLinked'], ('discovery Swift products link the Keychain', audit['keychainSymbols'])
     run('task-search-formal', ['bun', '.agents/skills/verify-task-search-formal/check.ts'])
+    # The DAG mapping fences the Dependency client's Swift files (public-coverage.json): a Swift change
+    # must never leave them stale again (coordinator, candidate 9). Model, production and public checks.
+    (root / 'docs/evidence/dag-formal').mkdir(parents=True, exist_ok=True)
+    run('dag-formal', ['bun', '.agents/skills/verify-dag-formal/check.mjs'])
     run('root', ['scripts/swift-slot.sh', '/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', 'pnpm', 'check'])
     run('doc-links', ['node', 'scripts/check-doc-links.mjs', 'HEAD'])
     keychain = keychain_summary()
