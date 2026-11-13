@@ -50,7 +50,8 @@ import Testing
         let (window, host) = scene(mode)
         try await settle { content(window) == NSSize(width: 393, height: 640) }
         #expect(content(window) == NSSize(width: 393, height: 640), "opens at the remembered height: \(content(window))")
-        #expect(window.contentMinSize == NSSize(width: 393, height: 426), "at least 393 by 426 (the width's maximum comes from RootView: WindowLayoutTests)")
+        // The minimum and the width limit come from RootView's content; WindowLayoutTests asserts them
+        // on the real RootView. This bare root has no size, so SwiftUI may report its own minimum here.
         // The person drags it to 700 pt.
         window.setContentSize(NSSize(width: 393, height: 700))
         try await settle { (defaults.object(forKey: CompactWindowHeight.key) as? Double) == 700 }
