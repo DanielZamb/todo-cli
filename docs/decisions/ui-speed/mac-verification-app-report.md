@@ -1,5 +1,95 @@
 # Mac verification app V01 safety correction
 
+Current status: blocked on production-suite confinement compatibility, not
+qualified. The runtime artifacts and frozen controls belong to
+`99f6ec69f098aa22964adf9df6deacbea99e641b`. Subsequent audit/launcher corrections
+are diagnostic changes and must qualify from a new clean head. All seven
+findings remain open for final closure. completeRecipe is false. The owner-use
+hold was honored: no visible preflight or visible launch occurred, and V02 is held.
+
+The corrected development launcher reached the original state suite. Its
+command exited 1, with Package.resolved unchanged. All 26 XCTest contract tests
+passed; Swift Testing ran 238 tests in 45 suites and reported 17 issues. The
+issues include file-type classification, offscreen bitmap rendering, two
+private named-pasteboard paths, the process-resource sampler and a search
+timeout. This is not a passing production preservation receipt. The subsequent
+diagnostics commands and offscreen recipe did not run because the state command
+failed. Evidence: production-development-99f6ec69-queue-budget, including its
+state/state-tests.log, expanded-commands.json and result.json. Its scratch
+server exited and the enclosing root was removed only after lsof returned 1
+with empty stdout and stderr.
+
+Own-PID kernel evidence identifies denied LaunchServices map/modify queries,
+CARenderServer, Metal compiler, window manager, pasteboard and /dev/fd access,
+among other framework requests. File-type classification uses Foundation
+contentType values; the copy tests use UUID-named NSPasteboards; the sampler
+opens /dev/fd. These observations identify the compatibility classes, but do
+not isolate each rendering failure to one broker. The filtered kernel query
+exited 0 and is retained in production-99f6ec69-filtered-suite-denials*.json.
+The preceding unfiltered capture exhausted its buffer and is explicitly partial,
+not a complete denial inventory.
+
+No broker or file permission was added. ADR-0021 requires the app and server
+to keep LaunchServices/TCC denied, and the coordinator's ruling permits only
+literal system-file reads supported by kernel evidence. A broad broker grant
+cannot demonstrate that delegated work stays in scratch, particularly a
+LaunchServices modify query. The coordinator must decide the separate
+production-test boundary before further qualification. A possible direction
+is a test-only service boundary for fixed offscreen rendering, system type
+queries and UUID-named pasteboards, with credential services still denied and
+no general pasteboard or owner-file capability. Its safety and compatibility
+are unproved; it is not implemented or selected as an app-profile exception.
+
+Still owed: that decision and the production-suite pass, one clean frozen-head
+full headless recipe using the corrected audit/launcher, and its final root
+check. The helper now places the root check after production reruns, using one
+disk guard followed by the standing-order lock command. The earlier root exit
+0 belongs to 99f6ec69 and is not restamped. The visible recipe, skill promotion
+and coordinator-arranged reviews also remain pending.
+
+The failed state build tree was retired after supported lsof +D returned 1
+with empty stdout and stderr. Hashes for 6,996 entries were retained, totaling
+1,075,609,221 logical file bytes. Free space sampled immediately before/after
+was 67,230,113,792 / 68,354,613,248 bytes, or 62.61 / 63.66 GiB. Concurrent
+workers can change the shared volume, so the observed increase is not claimed
+as this worker's exclusive physical reclamation. Receipt:
+production-development-99f6ec69-queue-budget/retire-build.json and its hashes.
+No Swift job remains running. The latest built verification app and its pinned
+runtime cache remain available for artifact review; closed temporary server
+roots and superseded build trees have been removed.
+
+The frozen 99f6ec69 attempt passed the 102 native cases, 15 class reds, all
+63 predicate inversions, the 1,637 trap/removal pairs and the separate analytics
+binding/result controls. Predicate 18 ran and no predicate was excluded. Its
+fresh app built, sealed ad hoc and accepted its manifest at exit 0. The locked
+root check also exited 0. The attempt remains FAIL because the production
+recipe could not start its scratch server. No visible phase was attempted.
+Receipts: frozen-99f6ec69. These results retain their original head attribution.
+
+The artifact audit then exposed a false-pass risk in the audit itself. Darwin's
+nm emitted bare undefined names; the parser expected a U column and counted
+zero library imports. That count is withdrawn. A literal parser test failed
+first, and the corrected audit explicitly requests names-only output, rejects
+unexpected columns and requires every generated binding to appear. Independent
+enumeration found 1,638 Security imports in the trap library, all accounted for,
+and none in the app executable. The corrected development audit passed on the
+same built app. Receipts: frozen-99f6ec69/import-parser-red-and-independent-check.json
+and import-audit-green-development-99f6ec69. A scratch empty-parser mutation
+fails its matching test. This tooling correction still needs a new frozen run.
+
+The production adapter's server exec allowance named a symlink, while Seatbelt
+checked its resolved target. Resolving the owned binary before constructing
+the literal allowance removed exit 71. The next server failed on a denied
+read of the checkout working directory. Running it in its scratch database
+directory restored readiness without adding a permission. Own-PID kernel
+evidence is in production-canonical-exec-denials.json. Both failed development
+attempts are retained. The state recipe then exhausted its ten-minute budget
+after waiting for the shared Swift slot; the adapter now adds the prescribed
+twenty-minute queue allowance. A source-hashed stable isolation-library path
+avoids rebuilding Swift sources solely because a temporary link path changed.
+Development libraries must be rebuilt from a clean committed head before
+qualification. The production sources and their recipes are unchanged.
+
 Latest correction before refreezing: 8806ba09 passed 102 native cases, 15 class
 reds, all 63 predicate inversions with no exclusions, all 1,638 fail-fast
 bindings and all 1,638 removals. The fresh app built and passed its artifact

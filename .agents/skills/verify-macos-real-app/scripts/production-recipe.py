@@ -53,9 +53,15 @@ class ExplicitProcess(Original):
         if swift:
             if any(Path(settings[key]).exists() for key in ['hold', 'parentHold']): raise RuntimeError('Coordinator holds new Swift jobs')
             argv = ['/bin/sh', str(root / 'scripts/swift-slot.sh'), *argv]
+        self._swift_job = swift
+        self._queue_budget_added = False
         if Path(argv[0]).name == 'server' and env.get('TODO_DB'):
-            executable = Path(argv[0])
+            executable = Path(argv[0]).resolve(strict=True)
             if not executable.is_relative_to(proof): raise RuntimeError('Production server escaped scratch')
+            argv[0] = str(executable)
+            database = Path(env['TODO_DB']).resolve()
+            if not database.is_relative_to(proof): raise RuntimeError('Production database escaped scratch')
+            options['cwd'] = str(database.parent)
             profile = '(version 1)(allow default)(deny file-read*)(deny file-write*)(allow file-read-data (literal "/"))(allow file-read* (subpath "/System") (subpath "/usr/lib") (subpath "/usr/share") (subpath "/Library/Apple") (subpath "/Library/Fonts"))(allow file-read* (literal "/dev/null" "/dev/random" "/dev/urandom"))(allow file-read* file-write* (subpath ' + json.dumps(str(proof)) + '))(deny network-outbound)(deny mach-lookup)(deny process-exec)(allow process-exec (literal ' + json.dumps(str(executable)) + '))'
             env = {key: env[key] for key in ['HOME', 'CFFIXED_USER_HOME', 'TMPDIR', 'TODO_DB', 'TODO_PORT', 'LANG', 'LC_ALL']}
             argv = ['/usr/bin/sandbox-exec', '-p', profile, *argv]
@@ -68,6 +74,12 @@ class ExplicitProcess(Original):
             if row['pid'] == self.pid: row['exit'] = self.returncode
         (Path(settings['evidence']) / 'expanded-commands.json').write_text(json.dumps(records, indent=2))
     def wait(self, *args, **kwargs):
+        if self._swift_job and not self._queue_budget_added:
+            timeout = args[0] if args else kwargs.get('timeout')
+            if timeout is not None and timeout >= 60:
+                self._queue_budget_added = True
+                if args: args = (timeout + 1200, *args[1:])
+                else: kwargs['timeout'] = timeout + 1200
         value = super().wait(*args, **kwargs); self._record_exit(); return value
     def communicate(self, *args, **kwargs):
         value = super().communicate(*args, **kwargs); self._record_exit(); return value

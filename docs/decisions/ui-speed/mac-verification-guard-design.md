@@ -89,6 +89,7 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Generated client | Default shared session is reached through another factory | Existing nonnil clientFactory always supplies verification transport; source/import audit; built-client runtime coverage pending |
 | Streaming HTTP | SSE silently constructs an ordinary default session | Verification stream session uses the same ephemeral policy and preserves per-stream cancellation; runtime qualification pending |
 | Credential symbols | A handwritten list omits a linked entry point | SDK export/runtime census plus built-binary import enumeration; every present binding pointer-tested and individually removed |
+| Import enumeration | A platform-specific nm output format silently produces an empty import list | Request names-only output, reject unexpected columns and require every generated binding in the library's imports; literal Darwin-output test and empty-parser mutation |
 | Networking analytics | CFNetwork attempts Security telemetry, or a denial silently forwards it to a service | A local false-return binding ignores arguments and never calls the original; inspect the compiled body before the pointer/result probe; binding removal and result inversion fail |
 | Pointer test | Removing a trap calls the real credential API | Compare expected unique handler before invocation; missing binding exits 1 without calling original |
 | Framework credentials | A framework bypasses direct Sec imports via a broker | Deny all unlisted Mach lookup, Keychain paths; safe policy queries include securityd.xpc, autofill, Passkeys, CloudKit and ubiquity |
@@ -109,6 +110,8 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Error reporting | An unrelated conservative API trap is called the intended denial | Numeric domain/code normalization; server-exec control requires its message and exit 78; the old exit-79 row is excluded |
 | Partial receipt | guards-only or a failed run still says complete; headless completion implies visible proof | Complete requires a successful run and every stage for its explicit scope; guards-only never completes, headless lists its four visible stages owed and completeVisibleRecipe stays false; each-missing-stage and completion/removal controls |
 | Frozen provenance | Dirty sources are compiled but stamped with an older head | Dirty qualification refused, source/binary/bindings hashes and head recheck; development receipts remain diagnostic |
+| Production recipe exec | A permitted symlink names an executable whose resolved path is denied, or the server needs its inherited checkout cwd | Resolve the owned executable before its literal rule and set cwd to the scratch database directory; retain the two failed runs and own-PID kernel denials, then require the original suites to pass |
+| Shared Swift queue | A suite is killed while waiting for the shared slot and reported as a code regression | Add twenty minutes to each substantive Swift wait, retain its real exit, and use a stable source-hashed isolation-library path; no successful receipt on timeout |
 | Cleanup | A child survives while its scratch data is removed | Track owned child handles and kernel identity; active-child/uncertain cleanup retains scratch and fails |
 
 Predicate inversions establish that a positive check is exercised; malicious
@@ -163,8 +166,13 @@ The production-proof replacement explicitly links its isolation library and
 runs the original recipes through a launcher adapter. It uses memory defaults,
 scratch temporary storage, credential traps and sandboxed scratch servers.
 The adapter substitutes the verified local resource copier for the original
-resource command. Its C component passed; the actual Swift suites remain
-unqualified until their frozen-head receipts exist.
+resource command. Its C component passed. The original state suite subsequently
+ran under the linked test profile and failed at file-type, offscreen-render,
+private-pasteboard and process-resource checks, plus a search timeout. The
+offscreen recipe has not run. Own-PID kernel evidence shows denied framework
+brokers and /dev/fd. No new allowance was added. A production-test service
+boundary needs a coordinator decision before those suites can qualify; the
+app/server LaunchServices and credential-broker denials remain binding.
 
 The widened-root controls replace the literal rule with subpath "/" or widen
 file-read-data to file-read*. The same expected-zero boundary test must fail.

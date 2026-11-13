@@ -18,8 +18,12 @@ the supervisor proposal. Do not widen that rule. The same protected-path and
 network controls must pass inside both the app and its inherited server child.
 Read the [report](../../../docs/decisions/ui-speed/mac-verification-app-report.md)
 and [guard design](../../../docs/decisions/ui-speed/mac-verification-guard-design.md)
-for the current evidence. No full or visible helper run is qualified for this
-correction.
+for the current evidence. The frozen 99f6ec69 headless run passed the compiled
+guards, trap/removal sweep and built-app manifest check, but failed in the
+production recipe. The corrected development launcher reaches the state tests,
+which fail under the test profile's broker denials. The import audit also needs
+its corrected names-only parser qualified from a clean head. No full or visible
+helper run is qualified for this correction.
 
 ## Launch
 
@@ -86,8 +90,10 @@ establish that every screen works under the stricter policy.
 ## Doctor
 
 Read result.json, commands.json, binary-provenance.json, guard-matrix.json,
-guard-reds.json, class-reds.json, node-reds.json, traps.json, trap-reds.json and
-credential-import-audit.json. Every command records real exits and its explicit
+guard-reds.json, class-reds.json, node-reds.json, credentials/result.json,
+credentials/commands.json, networking-analytics/result.json and
+credential-import-audit.json. The credential result contains the actual traps
+and removals arrays. Every command records real exits and its explicit
 environment. Refusals are 78, credential traps 79 and owner-input stops 80.
 Matching positive assertions must fail at exit 1 for each scratch mutation.
 An absent receipt or missing stage is unproved, never implicitly passed.
@@ -151,7 +157,10 @@ before/after. Keep at least the 30 GiB soft floor.
 The production-proofs replacement explicitly links the isolation library,
 clears inherited configuration and runs the original state/offscreen recipes
 through a launcher adapter. Its C memory-defaults and temporary-directory
-component has passed; the Swift suites have not yet run on this correction.
+component has passed; the Swift state suite ran and failed on this correction.
+The offscreen recipe remains unrun. See the report's broker/file denial evidence
+and pending production-test boundary decision; do not add app broker permissions
+to make these tests pass.
 The adapter substitutes the verified local resource copier for the recipe's
 resource command and records the expanded arguments, environment and exits.
 Historical receipts retain their original source-head attribution.

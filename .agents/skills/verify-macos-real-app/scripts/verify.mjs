@@ -83,7 +83,7 @@ function record(argv, name, env, value, secret = false) {
 }
 function execute(argv, name, env = base, input, secret = false) {
   argv = job(argv);
-  const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: 1200000 });
+  const value = run(argv, { cwd: root, env, input, encoding: 'utf8', maxBuffer: 128 * 1024 * 1024, timeout: name === 'production-suites' ? 7200000 : 1200000 });
   return record(argv, name, env, value, secret);
 }
 function must(argv, name, env = base, input, secret = false) {
@@ -239,13 +239,13 @@ try {
     } finally { f.dispose(); }
     retireBuildTree(root + '/.scratch/mac-verification/DerivedData', 'retire-app-build');
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-source-preservation.mjs', evidence + '/production-source', path.join(root, 'docs/evidence/mac-verification-app/symbols-ab989410')], 'production-source-preservation'); stages.productionPreservation = true;
-    must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
-    diskStage('root-check', 0.5);
-    must(['/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', executable('pnpm'), 'check'], 'root-check'); stages.rootCheck = true;
     assert(!fs.existsSync(evidence + '/swift-hold'), 'Coordinator holds new Swift jobs; production reruns remain held');
     diskStage('production-suites', 1.5);
     must(['node', '.agents/skills/verify-macos-real-app/scripts/production-proofs.mjs', evidence + '/production', evidence], 'production-suites'); stages.productionSuites = true;
     retireBuildTree(root + '/apps/macos/DerivedData/V01Proof', 'retire-production-build');
+    must(['sh', 'scripts/disk-guard.sh'], 'disk-before-root-check');
+    diskStage('root-check', 0.5);
+    must(['/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', executable('pnpm'), 'check'], 'root-check'); stages.rootCheck = true;
     if (!process.argv.includes('--headless')) {
       const readerBindings = tools + '/ReaderBindings.swift';
       fs.writeFileSync(readerBindings, 'enum VerificationReaderBuild { static let appBundlePath = ' + JSON.stringify(app) + ' }\n');
