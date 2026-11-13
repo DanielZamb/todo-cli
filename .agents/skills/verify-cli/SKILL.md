@@ -224,3 +224,9 @@ attach and label-attachment. The same compiled test preserves all table bytes
 and the external file, covers early md/JSON refusals, and checks label values.
 The flag contract also records the intentional --force compatibility change
 for edit/done/cancel/reopen, including before and after behavior.
+
+For the strict-read/Snapshot integration, also run
+`bun .agents/skills/verify-cli/scripts/check-integrated-early-flags.mjs <compiled-cli> <completed-cli-evidence> <fresh-evidence>`.
+It drives all 65 refused pairs in both md and JSON, with no credential or
+database present. It pre-seeds only the first-run disclaimer and requires the
+scratch tree and that file's bytes to remain unchanged after each refusal.

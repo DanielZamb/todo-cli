@@ -1,3 +1,7 @@
+## Server and Snapshot integration renewal
+
+Immutable merged product 5f46e7b3c36afaffe8f2328df6453b8546be27a5 combines the independently reviewed strict read scopes and Snapshot/Purge/CLI corrections. docs/decisions/ui-speed/server-integration.md records the per-function review, exact diffs, three-way constructor trace, current command exits and exclusions. No model, invariant or bound changed. The full fresh qualification remains separate from historical results below. The owed native Swift stage remains explicit.
+
 ## Server read mapping renewal
 
 Reviewed immutable product eca430bf1f3b5b9aeeb69a82c0086e3dab364249. The per-function byte/hash table, exact diffs including the Clock context fix, model-step review and exclusions are in docs/decisions/ui-speed/server-reads-formal-renewal.md. Graph algorithms, authoritative validation/write/replay bodies and client publication guards are unchanged. Profile-selected projection reads and checked synchronous materialization replace global decoding; matcher yields occur after lease exit. Auth/clock/lease mechanics and multi-command import are concrete boundaries outside the finite models. No model, invariant or bound changes. Fresh full recipe and sensitivity exits are recorded in that report; pending results are not prior qualification. This section supersedes earlier active-source descriptions below.

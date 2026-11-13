@@ -185,3 +185,13 @@ explicit scratch directory and the unchanged 5a85de1a or 6b167266 CLI in purge
 mode. Both old binaries must fail the tree equality assertion while leaving
 the live rows unchanged. The fixed CLI must pass matrix mode. No installed CLI
 or real HOME is used.
+
+## Checked-read integration
+
+`bun .agents/skills/verify-snapshots/scripts/checked-read-integration.ts` creates
+its own checkout-local scratch database. It holds a live checked read while a
+forked preview opens a separate lease, requires each cross-origin authority to
+fail with StoreError before SQL, and checks that closing the preview leaves the
+live authority usable. It also requires owner admission to have returned outside
+a transaction before restore starts. Use a fresh .scratch/integ-server/interactions
+path or retire the completed prior fixture before repeating it.

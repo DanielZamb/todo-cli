@@ -174,3 +174,15 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+Expiry scenarios retain only their selected credential row with a scratch-only
+DELETE guard, installed after any restore and before advancing the injected
+Clock. This keeps expiry assertions independent of scheduler row cleanup. The
+direct restore-removal scenario still removes the row and asserts missing,
+which remains distinct from not-observed. No production query is replaced.
+
+For the integration with Snapshot/Purge, run
+`bun .agents/skills/verify-sse/scripts/restore-purge-integration.mjs <base-server> <current-server> <base-cli> <current-cli> <fixture.json> <evidence>`.
+It adds a pre-Purge Snapshot to the existing restore scenario, Purges through
+the compiled CLI, restores over HTTP, and requires redacted saved History, no
+resurrected Task and identical reload/following-operation frames on both builds.

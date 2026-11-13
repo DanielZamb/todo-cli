@@ -392,6 +392,20 @@ async function run(
         : restoration?.state === "absent"
           ? "never-restored"
           : "work";
+    const retainExpiryFixture = () => {
+      const db = new Database(path);
+      try {
+        const hash = createHash("sha256").update(credential).digest("hex");
+        db.exec(
+          "CREATE TRIGGER IF NOT EXISTS read_control_keep_expired BEFORE DELETE ON credentials " +
+            "WHEN OLD.secret_hash='" +
+            hash +
+            "' BEGIN SELECT RAISE(IGNORE); END",
+        );
+      } finally {
+        db.close();
+      }
+    };
     const observeCredential = () => {
       finalCredential = credentialState(credential);
       passCheck =
@@ -527,10 +541,14 @@ async function run(
           fixture.credentials.owner,
           204,
         );
-      if (restoration.subject === "expired-token")
+      if (restoration.subject === "expired-token") {
+        retainExpiryFixture();
         writeFileSync(clock, String(initialTime + 1000));
-      if (restoration.subject === "expired-session")
+      }
+      if (restoration.subject === "expired-session") {
+        retainExpiryFixture();
         writeFileSync(clock, String(initialTime + 7 * 86400000));
+      }
       finalCredential = observeCredential();
       assert.deepEqual(
         finalCredential,
@@ -683,10 +701,17 @@ async function run(
           fixture.credentials.owner,
           204,
         );
-      if (scenario.includes("expired-token") || scenario === "expire-token")
+      if (scenario.includes("expired-token") || scenario === "expire-token") {
+        retainExpiryFixture();
         writeFileSync(clock, String(initialTime + 1000));
-      if (scenario.includes("expired-session") || scenario === "expire-session")
+      }
+      if (
+        scenario.includes("expired-session") ||
+        scenario === "expire-session"
+      ) {
+        retainExpiryFixture();
         writeFileSync(clock, String(initialTime + 7 * 86400000));
+      }
       if (scenario.startsWith("delete-"))
         await request(
           "DELETE",
