@@ -3097,7 +3097,7 @@ cannot touch any file. Three paths remained after ddc08175:
 | --- | --- | --- |
 | Damaged table page with committed WAL frames (`integrity`) | integrity was checked on the writable connection: `recordings.db-shm` was created (32 KiB wal-index), main and WAL unchanged | closed: the reader returns the committed image (main pages with committed frames overlaid, journal bytes set to rollback mode). Catalog and `quick_check` run on a read-only `Database.deserialize` copy. No file changes |
 | Path removed between the inode recheck and SQLite's open | SQLite's default `SQLITE_OPEN_CREATE` could create an empty `recordings.db` | closed: the writable open passes `create: false`; a missing path is refused as `replaced` |
-| A live writer commits a catalog change between the descriptor inspection and the writable connection's first read (`foreign_catalog`) | main and WAL byte-identical; one byte of the live writer's `-shm` rewritten | unchanged, and not closable as long as the store checks the catalog on the connection it would use |
+| A live writer commits a catalog change between the descriptor inspection and the writable connection's first read (`foreign_catalog`) | main and WAL byte-identical; one 32-bit read mark in the live writer's `-shm` set to the current frame count (1 to 4 bytes) | unchanged, and not closable as long as the store checks the catalog on the connection it would use |
 
 Receipts:
 - The matrix (`sqlite-refusal-classes.ts`) now names each changed file.
@@ -3116,9 +3116,11 @@ checkpoint from overwriting pages a reader may still use.
 then changes:
 - main: nothing;
 - WAL: nothing;
-- `-shm`: exactly byte 104, the low byte of `aReadMark[1]` in WalCkptInfo
-  (offsets 100–119 hold `aReadMark[0..4]`). The refused read stored the
-  writer's new last frame there.
+- `-shm`: one 32-bit WAL read mark. SQLite sets one of `aReadMark[1..4]`
+  (offsets 104–119 of WalCkptInfo; observed: slot 1, offsets 104–107) to the
+  current frame count, so 1 to 4 bytes change. This correction comes from
+  review 5 (R5-5): the seat saw bytes 104–105 change at the 511 → 512 carry.
+  My first run saw only byte 104, which was a sample, not the rule.
 
 The bytes are the same on ddc08175 and head (`race-*.json`).
 

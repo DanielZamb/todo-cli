@@ -232,8 +232,10 @@ true`. `bun .agents/skills/verify-ui-profiler/scripts/sqlite-refusal-race.ts <ch
 covers the two refusals that happen after SQLite has opened the path. A path
 removed after the preflight must create nothing. A live in-process writer that
 commits a catalog change right after the preflight must leave main and WAL
-byte-identical; the only change allowed is the read mark the refused read
-records in that writer's `-shm`.
+byte-identical. The only change allowed is one 32-bit WAL read mark in that
+writer's `-shm`: SQLite sets one of `aReadMark[1..4]` (offsets 104–119;
+observed slot 1, offsets 104–107) to the current frame count, so 1 to 4 bytes
+change. The script asserts that rule.
 The seat's review-4 witnesses (`wal-refusal2.ts`, `swap-task.ts`) stay
 archived in the run store and run unchanged from
 `.scratch/recordings-sqlite4-s1/claude/`.

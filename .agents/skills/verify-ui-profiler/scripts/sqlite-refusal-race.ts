@@ -98,11 +98,33 @@ for (const scenario of ["live-writer-catalog", "path-removed"] as const) {
     }
     Reflect.set(Database.prototype, "close", close);
     assert.equal(hooked, true);
+    const changes = diff(baseline, files(dir));
+    const slots = new Set(
+      changes.flatMap((change) =>
+        "ranges" in change && change.ranges
+          ? (change.ranges as Array<[number, number]>).flatMap(([from, to]) => {
+              const all: number[] = [];
+              for (let byte = from; byte <= to; byte++)
+                all.push(byte >= 104 && byte <= 119 ? (byte - 100) >> 2 : -1);
+              return all;
+            })
+          : [-1],
+      ),
+    );
+    const readMarkOnly =
+      changes.every((change) => change.name === "recordings.db-shm") &&
+      !slots.has(-1) &&
+      slots.size <= 1;
+    if (scenario === "live-writer-catalog")
+      assert.equal(readMarkOnly, true, JSON.stringify(changes));
+    else assert.deepEqual(changes, []);
     rows.push({
       scenario,
       reason,
+      read_mark_slots: [...slots],
+      read_mark_only: readMarkOnly,
       after_baseline: [...baseline.keys()],
-      changes: diff(baseline, files(dir)),
+      changes,
       main_exists: existsSync(path),
     });
   } finally {
