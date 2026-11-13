@@ -1,7 +1,7 @@
 {
   "confirmedCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
-  "source": "immutable git objects; current worktree product files are not candidates",
-  "scope": "Current immutable integrated graph/storage source. All16 files remain byte-identical; current conformance is recorded separately from historical campaigns.",
+  "source": "The accepted SERVER-READS renewal changed three whole files (auth.ts, graph-queries.ts and store/store.ts); the other 13 were byte-identical. Covered functions, exact diffs and model-step review are in docs/decisions/ui-speed/server-reads-formal-renewal.md. The current integration requires a fresh merged-source renewal.",
+  "scope": "Reviewed SERVER-READS source: three whole files changed, 13 were byte-identical at its accepted renewal. This merged source is undergoing its own function-by-function review and full conformance stages.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
   "modelRefinement": "Revert expected Versions come from the original resolved event, not a fresh observation",
   "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",

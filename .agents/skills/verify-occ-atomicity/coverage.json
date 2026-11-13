@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "97eb40021812cba9fdae76471328b890db239349",
+  "confirmedCommit": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71",
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -107,14 +107,15 @@
       ]
     }
   ],
-  "reviewedCandidate": false,
-  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
+  "reviewedCandidate": true,
+  "review": "Merged-source review: all covered store bodies match both parents except the combined constructor, whose identical three-way statement trace preserves Init. Actual-source behavioral sensitivity precedes renewal. No model or bound changes. See docs/decisions/ui-speed/server-integration.md.",
   "integrationReview": {
-    "status": "PROVISIONAL common-base map, deliberately unrenewed for pre-renewal gates",
+    "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "parents": [
       "150a8c33d63b73d61fca2849c1455c52d2298366",
       "8292b067d43dca17c0919673785464b0831645b2"
     ],
-    "base": "6b167266fc34c3304e30ed220bb652b4d17c05ab"
+    "evidence": "docs/evidence/ui-speed/integ-server",
+    "constructor": "Combined Diagnostics checked-read callback and Snapshots attachmentRoot; identical constructor statements/bindings on the same seed."
   }
 }
