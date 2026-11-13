@@ -11,12 +11,15 @@ function launch(argv) {
  const done = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', (exit, signal) => { const r = { argv: command(argv), environment: env, exit, signal, stdout, stderr }; records.push(r); resolve(r); }); });
  return { child, done, output: () => stdout + stderr };
 }
-const first = launch([boundary, kind === 'root' ? 'hold' : 'machine-lock']);
+const release = root + '/continue-instance-test'; fs.rmSync(release, { force: true });
+const first = launch([boundary, kind === 'root' ? 'hold' : 'machine-lock', root]);
 const marker = kind === 'root' ? 'manifest accepted' : 'machine lock accepted';
-for (let n = 0; n < 1000 && !first.output().includes(marker); n++) { assert.equal(first.child.exitCode, null, first.output()); await new Promise(r => setTimeout(r, 10)); }
-assert(first.output().includes(marker), first.output());
-const other = kind === 'root' ? [guard] : [boundary, 'machine-lock'];
-const second = run(other, { env, encoding: 'utf8' }); records.push({ argv: command(other), environment: env, exit: second.status, signal: second.signal, stdout: second.stdout, stderr: second.stderr });
-assert.equal(second.status, 78, second.stderr); assert.equal((await first.done).exit, 0);
+try {
+ for (let n = 0; n < 6000 && !first.output().includes(marker); n++) { assert.equal(first.child.exitCode, null, first.output()); await new Promise(r => setTimeout(r, 10)); }
+ assert(first.output().includes(marker), first.output());
+ const other = kind === 'root' ? [guard] : [boundary, 'machine-lock', root];
+ const second = run(other, { env, encoding: 'utf8' }); records.push({ argv: command(other), environment: env, exit: second.status, signal: second.signal, stdout: second.stdout, stderr: second.stderr });
+ assert.equal(second.status, 78, second.stderr);
+} finally { fs.writeFileSync(release, 'continue'); assert.equal((await first.done).exit, 0); fs.rmSync(release); }
 if (kind === 'root') { const reused = run([guard], { env, encoding: 'utf8' }); records.push({ argv: command([guard]), environment: env, exit: reused.status, signal: reused.signal, stdout: reused.stdout, stderr: reused.stderr }); assert.equal(reused.status, 78); }
 console.log(JSON.stringify({ kind, records }));

@@ -11,7 +11,7 @@ import Foundation
             if CommandLine.arguments.contains("--protect") { try root.protectDirectories() }
             print("descriptor opened"); fflush(stdout)
             if CommandLine.arguments.contains("--wait") {
-                for _ in 0..<500 where !FileManager.default.fileExists(atPath: root.root.path + "/continue-file-test") { Thread.sleep(forTimeInterval: 0.01) }
+                for _ in 0..<6000 where !FileManager.default.fileExists(atPath: root.root.path + "/continue-file-test") { Thread.sleep(forTimeInterval: 0.01) }
             }
             try root.verify()
             print("descriptor accepted")

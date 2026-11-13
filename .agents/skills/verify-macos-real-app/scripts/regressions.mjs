@@ -80,25 +80,15 @@ export async function runRegressions(c) {
       const target = f.directory + '/' + name;
       const directory = ['home', 'tmp'].includes(name);
       if (!fs.existsSync(target)) fs.writeFileSync(target, 'owned');
-      const child = await asynchronous([native + '/files', f.directory, target, '--wait', '--protect', ...(directory ? ['--directory'] : []), ...(['manifest.json', 'todo', 'todo-server', 'boundary.dylib', 'owner-preflight', 'libCredentialTrap.dylib'].includes(name) ? ['--immutable'] : [])], 'swap-protected-' + name, f.env);
-      for (let n = 0; n < 500 && !child.output().includes('descriptor opened'); n++) { assert.equal(child.child.exitCode, null); await pause(10); }
-      assert(child.output().includes('descriptor opened'));
-      let denied = false;
-      try { fs.renameSync(target, target + '.replacement'); } catch (error) { denied = ['EPERM', 'EACCES'].includes(error.code); }
-      assert(denied, 'A pinned path could be replaced: ' + name);
-      fs.writeFileSync(f.directory + '/continue-file-test', 'continue');
-      const value = await child.done; assert.equal(value.status, 0, value.stderr);
-      rows.push({ name: 'swap-after-check-' + name, swapDeniedByKernel: true, exit: value.status });
+      const value = execute(['/bin/sh', c.slot, process.execPath, '.agents/skills/verify-macos-real-app/scripts/interactive-guard-probes.mjs', 'file-protected', f.directory, native + '/files', evidence + '/swap-group-' + name + '.json', name, ...(directory ? ['--directory'] : []), ...(['manifest.json', 'todo', 'todo-server', 'boundary.dylib', 'owner-preflight', 'libCredentialTrap.dylib'].includes(name) ? ['--immutable'] : [])], 'swap-protected-' + name, f.env);
+      assert.equal(value.status, 0, value.stderr);
+      rows.push({ name: 'swap-after-check-' + name, ...JSON.parse(value.stdout) });
     } finally { f.dispose(); }
   }
   {
     const f = await fixture(); try {
-      const child = await asynchronous([native + '/files', f.directory, f.manifest.database, '--wait'], 'unprotected-swap-detector', f.env);
-      for (let n = 0; n < 500 && !child.output().includes('descriptor opened'); n++) { assert.equal(child.child.exitCode, null); await pause(10); }
-      assert(child.output().includes('descriptor opened'));
-      fs.renameSync(f.manifest.database, f.manifest.database + '.old'); fs.writeFileSync(f.manifest.database, 'replaced');
-      fs.writeFileSync(f.directory + '/continue-file-test', 'continue');
-      const value = await child.done; assert.equal(value.status, 78); rows.push({ name: 'open-descriptor-replacement-detected-independently', exit: 78 });
+      const value = execute(['/bin/sh', c.slot, process.execPath, '.agents/skills/verify-macos-real-app/scripts/interactive-guard-probes.mjs', 'file-replaced', f.directory, native + '/files', evidence + '/unprotected-swap-group.json', 'scratch.db'], 'unprotected-swap-detector', f.env);
+      assert.equal(value.status, 0, value.stderr); rows.push({ name: 'open-descriptor-replacement-detected-independently', ...JSON.parse(value.stdout) });
     } finally { f.dispose(); }
   }
   await check('symlink-run-root', f => {
@@ -165,18 +155,13 @@ export async function runRegressions(c) {
       f.manifest.serverPID = foreignChild.child.pid; f.write();
       const value = execute([native + '/guard'], 'forged-markers-' + place, f.env); assert.equal(value.status, 78, value.stderr);
       rows.push({ name: 'forged-markers-' + place, foreignPID: foreignChild.child.pid, actualHOME: env.HOME, actualDatabase: env.TODO_DB, markerLocation: place, exit: value.status });
-    } finally { if (foreignChild && foreignChild.child.exitCode === null) { foreignChild.child.kill('SIGTERM'); await foreignChild.done; } f.dispose(); }
+    } finally { if (foreignChild) { if (foreignChild.child.exitCode === null) foreignChild.child.kill('SIGTERM'); await foreignChild.done; } f.dispose(); }
   }
-  const replaced = await fixture(); let replacement;
+  const replaced = await fixture();
   try {
-    const child = await asynchronous([native + '/boundary', 'replaced-server'], 'server-replaced', replaced.env);
-    for (let n = 0; n < 1000 && !child.output().includes('owned server stopped'); n++) { assert.equal(child.child.exitCode, null); await pause(10); }
-    assert(child.output().includes('owned server stopped'));
-    let requests = 0; replacement = http.createServer((request, response) => { requests++; response.end(JSON.stringify({ service: 'todo-server', contract: replaced.manifest.contract, build: replaced.manifest.build })); });
-    await new Promise(resolve => replacement.listen(new URL(replaced.manifest.serverURL).port, '127.0.0.1', resolve));
-    fs.writeFileSync(replaced.directory + '/continue-test', 'continue');
-    const value = await child.done; assert.equal(value.status, 78); assert.equal(requests, 0); rows.push({ name: 'server-replaced-before-request', exit: value.status, requests });
-  } finally { if (replacement) await new Promise(resolve => replacement.close(resolve)); replaced.dispose(); }
+    const value = execute(['/bin/sh', c.slot, process.execPath, '.agents/skills/verify-macos-real-app/scripts/interactive-guard-probes.mjs', 'server-replaced', replaced.directory, native + '/boundary', evidence + '/server-replacement-group.json'], 'server-replaced', replaced.env);
+    assert.equal(value.status, 0, value.stderr); rows.push({ name: 'server-replaced-before-request', ...JSON.parse(value.stdout) });
+  } finally { replaced.dispose(); }
   for (const [name, mode] of [['defaults', 'defaults'], ['http-config', 'config'], ['all-input-types', 'input-mask']]) { must([native + '/boundary', mode], name); rows.push({ name, exit: 0 }); }
   const busy = execute([native + '/boundary', 'busy-main'], 'busy-main'); assert.equal(busy.status, 80); rows.push({ name: 'busy-main-HID-signal', exit: busy.status });
   const inputDriver = path.join(tools, 'InputCoverageProbe.swift');

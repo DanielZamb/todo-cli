@@ -38,7 +38,9 @@ private func trueExecution(_ directory: UnsafePointer<CChar>) -> Int32
             if mode == "machine-lock" {
                 let claim = try VerificationClaim.machine()
                 print("machine lock accepted"); fflush(stdout)
-                withExtendedLifetime(claim) { Thread.sleep(forTimeInterval: 2) }; return
+                withExtendedLifetime(claim) {
+                    for _ in 0..<6000 where !FileManager.default.fileExists(atPath: CommandLine.arguments[2] + "/continue-instance-test") { Thread.sleep(forTimeInterval: 0.01) }
+                }; return
             }
             defer { LaunchGuard.stop() }
             let metadataOnly = ["owned-metadata", "stale-metadata"].contains(mode)
@@ -69,7 +71,10 @@ private func trueExecution(_ directory: UnsafePointer<CChar>) -> Int32
                 try verificationRequire(connected == -1 && errno == EPERM, "An unrelated loopback listener was reachable.")
                 print("scratch file access accepted; outside file, network and execution denied")
             }
-            if mode == "hold" { print("manifest accepted"); fflush(stdout); Thread.sleep(forTimeInterval: 2) }
+            if mode == "hold" {
+                print("manifest accepted"); fflush(stdout)
+                for _ in 0..<6000 where !FileManager.default.fileExists(atPath: manifest.root + "/continue-instance-test") { Thread.sleep(forTimeInterval: 0.01) }
+            }
             if mode == "policy" {
                 try ScratchSandbox.install(manifest)
                 let names = ["com.apple.securityd", "com.apple.securityd.xpc", "com.apple.secd", "com.apple.akd", "com.apple.ctkd", "com.apple.accountsd", "com.apple.AuthenticationServicesCore.AuthenticationServicesAgent", "com.apple.AuthenticationServices.CredentialProvider", "com.apple.LocalAuthentication.RemoteService", "com.apple.CoreAuthentication.daemon", "com.apple.cloudd", "com.apple.CloudKit", "com.apple.bird", "com.apple.kvs", "com.apple.ubiquity", "com.apple.cfprefsd.agent", "com.apple.lsd.open", "com.apple.lsd.mapdb", "local.todo.unlisted-credential-service"]
@@ -90,7 +95,7 @@ private func trueExecution(_ directory: UnsafePointer<CChar>) -> Int32
             if mode == "replaced-server" {
                 LaunchGuard.child!.terminate(); LaunchGuard.child!.waitUntilExit()
                 print("owned server stopped"); fflush(stdout)
-                for _ in 0..<500 where !FileManager.default.fileExists(atPath: manifest.root + "/continue-test") { Thread.sleep(forTimeInterval: 0.01) }
+                for _ in 0..<6000 where !FileManager.default.fileExists(atPath: manifest.root + "/continue-test") { Thread.sleep(forTimeInterval: 0.01) }
                 try LaunchGuard.verifyOwnedChild()
                 _ = try VerificationHTTP.health(URL(string: manifest.serverURL + "/health")!)
                 print("replacement accepted")

@@ -18,7 +18,11 @@ the supervisor proposal. Do not widen that rule. The same protected-path and
 network controls must pass inside both the app and its inherited server child.
 Read the [report](../../../docs/decisions/ui-speed/mac-verification-app-report.md)
 and [guard design](../../../docs/decisions/ui-speed/mac-verification-guard-design.md)
-for the current evidence. The frozen 99f6ec69 headless run passed the compiled
+for the current evidence. The frozen 00a16176 attempt stopped at a queue-sensitive
+interactive-control cleanup failure before an app build. File/server controls
+now hold one Swift slot around both participants and await closure before
+deleting scratch; the development controls passed, and a new frozen run is owed.
+The frozen 99f6ec69 headless run passed the compiled
 guards, trap/removal sweep and built-app manifest check, but failed in the
 production recipe. The coordinator then separated production preservation
 from the app's strict profile. The new alternating comparison and corrected
@@ -150,7 +154,11 @@ Never retry automatically after owner input.
 The guard retains only its own child's identity and cleans that child and its
 registered kernel flags on normal/trap exit. The helper tracks its own children;
 an uncertain live child or cleanup retains scratch and fails. Never delete
-existing evidence. Before retiring superseded build outputs, require lsof to
+existing evidence. Interactive native controls acquire one Swift slot around both participants;
+readiness starts after acquisition. Release and await the child before disposal.
+Before deleting a fixture or its outside sentinel, require supported lsof +D
+to return 1 with empty stdout and stderr for both.
+Before retiring superseded build outputs, require lsof to
 show no open file, preserve required symbol inputs by hash and record free disk
 before/after. Keep at least the 30 GiB soft floor.
 

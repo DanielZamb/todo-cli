@@ -1,5 +1,33 @@
 # Mac verification app V01 safety correction
 
+The frozen 00a16176125e872d36a10590a58ffc0466fdaa86 attempt failed before
+completing the guard matrix. Its interactive server-replacement readiness timer
+included the shared Swift-slot queue. Cleanup then removed the synthetic
+outside sentinel while that native job was starting. The child refused because
+the sentinel was absent; this is a test-driver failure, not a sandbox escape.
+The receipt remains FAIL with completeRecipe=false. No app was built and no
+production comparison or final root check ran in that attempt.
+
+Interactive file/replacement controls now acquire the slot once around both
+participants. Readiness starts after acquisition, and the driver releases and
+awaits the native child before cleanup. Instance controls use an explicit
+release file instead of a two-second hold. Disposal requires a supported lsof
++D result of exit 1 with empty stdout and stderr before removing either the
+fixture or its outside sentinel. Asynchronous records settle on close, so a
+late child cannot append evidence after the final receipt.
+
+Development controls reused the probes compiled from 00a16176. The protected
+file swap passed at 0, the unprotected replacement was detected at 78, and the
+corrected server replacement was refused at 78 with zero replacement requests.
+The first server-driver attempt used the wrong mode name and failed its
+readiness assertion; that receipt is retained too. These are development
+controls, not a new frozen qualification. Receipts are interaction-recovery-
+00a16176 and interaction-recovery-00a16176-server-fixed. Closed recovery trees
+and superseded 00a binaries were hashed and retired, totaling 734,209,248
+logical bytes. Immediate free space rose from 36.04 to 36.48 GiB. Receipt:
+frozen-00a16176/closed-recovery-retirement.json. Shared-volume changes affect
+the physical difference. The visible recipe and V02 remain held.
+
 Resumed under the coordinator's 6892b2a1 ruling: no startup loader setting and
 no production-test API-entry attestation. The production audit now links only
 the descriptor sampler. Its C startup, late-load and synthetic-descriptor

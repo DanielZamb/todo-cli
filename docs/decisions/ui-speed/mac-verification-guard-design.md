@@ -81,6 +81,8 @@ reusable input/control, not evidence of execution unless its receipt exists.
 | Listener | Owned PID has no listener, binds wildcard or another process owns the port | Own-child socket FD requires one IPv4 loopback listener at chosen port; occupied listener control |
 | PID reuse | An unrelated process acquires the former PID | Retained Process plus kernel parent, UID and microsecond start time |
 | Between requests | Server dies after initial validation and another answers | Recheck before/after health and before API send; replacement-before-first-request control |
+| Interactive control readiness | The native child spends the readiness budget waiting for the shared Swift slot, and cleanup removes a fixture it is about to use | Acquire one slot around both participants; start readiness inside it, await child closure and require empty lsof +D before fixture deletion; frozen 00a failure and corrected development file/server controls |
+| Instance control overlap | A fixed holder sleep expires under load before the second instance starts | Explicit release file after the second result, with a bounded hold and closure before disposal |
 | Health identity | Another server repeats static service/build/contract | Static identity is supplemental; child/database/socket proof is required independently; no nonce claim |
 | Health network | curl reads .curlrc/.netrc or proxy configuration | No curl; in-process ephemeral GET under sandbox; unchanged exfil probe before fix and poisoned-environment regression |
 | Literal origin | URL userinfo, implicit port, path or redirect changes destination | Strict manifest components and per-request origin check; URL and redirect cases |

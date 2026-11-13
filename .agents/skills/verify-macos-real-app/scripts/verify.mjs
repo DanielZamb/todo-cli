@@ -54,6 +54,12 @@ function job(argv) {
  return ['/bin/sh', root + '/scripts/swift-slot.sh', ...expanded];
 }
 const hash = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+function requireClosedDirectory(directory, label) {
+ const physical = fs.realpathSync(directory);
+ assert(physical === directory || physical === directory + '.owned', 'Unexpected cleanup alias: ' + directory);
+ const closed = execute(['/usr/sbin/lsof', '-Fpcn', '+D', physical], label);
+ assert(closed.status === 1 && !closed.stdout.trim() && !closed.stderr.trim(), 'A scratch directory remains open or closure is unproved: ' + directory);
+}
 function retireBuildTree(directory, label) {
  assert([root + '/.scratch/mac-verification/DerivedData', root + '/apps/macos/DerivedData/V01Proof', root + '/.scratch/production-base-8b9be429/apps/macos/DerivedData/V01Proof'].includes(directory));
  if (!fs.existsSync(directory)) return;
@@ -99,7 +105,9 @@ async function asynchronous(argv, name, env = base, adversarial = false, placeme
   activeChildren.add(child);
   let stdout = '', stderr = '';
   child.stdout.on('data', data => stdout += data); child.stderr.on('data', data => stderr += data);
-  const done = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', (status, signal) => (() => { activeChildren.delete(child); try { resolve(record(argv, name, env, { status, signal, stdout, stderr })); } catch (error) { reject(error); } })()); });
+  let startError;
+  const done = new Promise((resolve, reject) => { child.on('error', error => { startError = error; }); child.on('close', (status, signal) => (() => { activeChildren.delete(child); try { const result = record(argv, name, env, { status, signal, stdout, stderr, error: startError }); if (startError) reject(startError); else resolve(result); } catch (error) { reject(error); } })()); });
+  done.catch(() => {});
   return { child, done, output: () => stdout + stderr };
 }
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -128,7 +136,7 @@ async function fixture() {
   const manifest = { preflightPath: directory + '/owner-preflight', preflightLibraryPath: directory + '/libCredentialTrap.dylib', preflightSHA256: binaryProvenance.sha256.preflight, ownerHome: os.userInfo().homedir, boundaryPath: directory + '/boundary.dylib', boundarySHA256: binaryProvenance.sha256.boundary, outsideSentinel: outside + '/sentinel', probePort: ports.otherPort, root: directory, home: directory + '/home', serverURL: 'http://127.0.0.1:' + chosen, serverPath: directory + '/todo-server', cliPath: directory + '/todo', serverSHA256: binaryProvenance.sha256.server, cliSHA256: binaryProvenance.sha256.cli, serverPID: 0, database: directory + '/scratch.db', contract: binaryProvenance.contract, build: sourceHead.slice(0, 8), profile: 'verify', session: fs.readFileSync(tools + '/session', 'utf8').trim() };
   const file = directory + '/manifest.json'; fs.writeFileSync(file, JSON.stringify(manifest), { mode: 0o600 });
   const env = environment(directory + '/home', directory + '/tmp', { TODO_VERIFICATION_MANIFEST: file });
-  return { directory, manifest, file, env, write: () => fs.writeFileSync(file, JSON.stringify(manifest), { mode: 0o600 }), dispose: () => { ports.close(); fs.rmSync(outside, { recursive: true }); fs.rmSync(directory, { recursive: true }); fixtures.delete(directory); } };
+  return { directory, manifest, file, env, write: () => fs.writeFileSync(file, JSON.stringify(manifest), { mode: 0o600 }), dispose: () => { requireClosedDirectory(directory, 'fixture-closed-' + path.basename(directory)); requireClosedDirectory(outside, 'sentinel-closed-' + path.basename(outside)); ports.close(); fs.rmSync(outside, { recursive: true }); fs.rmSync(directory, { recursive: true }); fixtures.delete(directory); } };
 }
 try {
   must(['sh', 'scripts/disk-guard.sh'], 'disk'); assert(fs.statfsSync(root).bavail * fs.statfsSync(root).bsize >= 30 * 1024 ** 3);
@@ -276,6 +284,7 @@ try {
 finally {
   try {
     assert.equal(activeChildren.size, 0, 'An owned child is still running; retain scratch for explicit recovery');
+    for (const directory of [...fixtures, tools]) requireClosedDirectory(directory, 'final-closed-' + path.basename(directory));
     for (const directory of fixtures) fs.rmSync(directory, { recursive: true }); fs.rmSync(tools, { recursive: true }); stages.cleanup = true;
   }
   catch (error) { result.cleanupError = error.message; result.retainedTools = tools; result.status = 'FAIL'; process.exitCode = 1; }
