@@ -1573,7 +1573,8 @@ export class Authentication<Read> {
           if (
             !(error instanceof AuthError) ||
             error.detail !== "profile_deleted" ||
-            info?.kind !== "session" ||
+            info === undefined ||
+            info.profile !== null ||
             cursor.generation !==
               this.classifyProfile(request.profile).snapshot.generation
           )

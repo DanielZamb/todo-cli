@@ -1,6 +1,53 @@
 # Server projection reads
 
-## Final delivery: native-COMMIT lifetime repair first
+## Seat correction: valid unscoped Token terminal delivery (delivery held)
+
+The seat found that delivery 66f156539ddebbcf13842654df434258dc4b6597 withheld the terminal batch from a valid unscoped Access Token. The fourteen-scenario control had incorrectly treated every Token deletion case as an approved difference. The coordinator clarified that the exception depends on revocation or expiry at the final pass, not credential kind. This correction is committed on top of 66f15653 without amending it. It is not a new delivery: the remaining gates and any further mapping renewal wait for the seat's full report.
+
+Only the terminal eligibility predicate in auth.ts changes in product source: replace Session-only eligibility with a defined credential whose Profile scope is null. The existing credential check rejects invalid, revoked, expired and wrongly scoped credentials before classifying the deleted Profile. Both permitted Access scopes grant reads. The terminal path still requires profile_deleted, the same restore generation, a deletion after the delivered cursor, the live lease, and the existing one-shot cap and subscription binding. It adds no credential lookup and changes no other terminal permission limit. No ADR, public contract, mapped store/cache body or mapping pin changes.
+
+### Failing controls, correction and final credential states
+
+Before the product edit, the new terminal lifetime cases passed for the Session and failed for both unscoped Token scopes with AuthError profile_deleted (exit 1). The corrected frame comparator failed delete-unscoped with two head frames against six base frames (exit 1), with the literal message `delete-unscoped: valid credentials must retain the base terminal batch`. After the edit, all three bounded, one-shot, counterfeit, wrong-kind and post-scope cases pass (exit 0).
+
+The frame control pauses polling, commits deletion, reads the scratch credential row and fixed clock, asserts the literal state below on both sides, then releases the final poll. The clock stays fixed through that poll. It allows a difference only when that observed credential is revoked or expired; a scenario name or Token kind cannot grant the exception. All seven credentials have read access.
+
+| Deletion scenario | Credential at final pass | Base frames | Corrected frames | Approved exception? |
+| --- | --- | --- | --- | --- |
+| delete-owner | Session; unscoped, unrevoked, unexpired | 6 | 6, byte-identical | Outside |
+| delete-unscoped | Token; unscoped, unrevoked, unexpired | 6 | 6, byte-identical | Outside |
+| delete-scoped | Token scoped to work; deletion-revoked, unexpired | 6 | 2, unchanged ready and revoked failure | Inside: revoked |
+| delete-revoked-token | Token; unscoped, already revoked, unexpired | 6 | 2, unchanged ready and revoked failure | Inside: revoked |
+| delete-revoked-session | Session; unscoped, already revoked, unexpired | 6 | 2, unchanged ready and revoked failure | Inside: revoked |
+| delete-expired-token | Token; unscoped, unrevoked, expired | 6 | 2, unchanged ready and expired failure | Inside: expired |
+| delete-expired-session | Session; unscoped, unrevoked, expired | 6 | 2, unchanged ready and expired failure | Inside: expired |
+
+The six frames are ready, TaskCreated, two TaskDeleted operations, ProfileDeleted, and the existing failure, followed by connection close. Full payloads, sequence ids, order, failure bytes and terminators are compared, not only counted. The other seven scenarios (never-created, ordering/reconnect, restore, independent revocation and independent expiry) remain byte-identical. All fourteen pass. A verification-only Bun transform restores the Session-only predicate without editing product source; delete-unscoped fails with the same literal six-versus-two expectation, exit 1. The two unit cases cover unscoped read-only and read-write Tokens separately.
+
+### Requested reruns and receipts
+
+Evidence is local and ignored under `docs/evidence/ui-speed/server-reads/unscoped-terminal/`. `provenance.json` records every product source and binary hash. It verifies that the baseline head 66f15653 has byte-identical product source to its immutable capture 5a996ce5, used by the cached pre-correction binaries, and that auth.ts is the only changed product file. Its SHA-256 moves from `60c26b8799b18852df4dbc48c37fe6012b371773f79e4bb82db902e68edde3e4` to `19b78c557565035a905317b10697dd578c3948f92a6d400ab1684b5c1c76611c`. `product.diff` preserves the exact predicate diff. The four new binaries were built once per variant from that corrected source; the mutant has its own binary.
+
+| Command/control | Real exit and result | Receipt |
+| --- | --- | --- |
+| Initial formatter plus conditional unit run | 1, test wiring parse error; unit run did not execute | format.log |
+| Initial selected stream run | 1, test wiring Schema.Literals argument error; no product result claimed | Recorded separately in commands.json |
+| Formatter after correcting wiring | 0 | format-second.log |
+| Focused valid-unscoped unit control before product edit | 1; two Tokens fail, Session passes | domain-red.log |
+| Selected delete-unscoped comparator before product edit | 1; literal six-versus-two mismatch | stream-red.log; stream-red/delete-unscoped.json |
+| Formatter after product edit | 0 | format-green.log |
+| Focused valid-unscoped unit control after product edit | 0; 3 pass | domain-green.log |
+| Plain read, deterministic SSE, CLI and Session-only mutant builds | 0 / 0 / 0 / 0 | build-reads.log, build-sse.log, build-cli.log, build-mutant.log |
+| Four scope/lifetime suites | 0; 42 pass | scope.log |
+| Fourteen stream scenarios | 0; 9 exact, 5 approved terminal omissions | stream-green.log; stream-green/result.json |
+| Session-only withholding mutant, delete-unscoped | 1; literal frame mismatch, as required | stream-mutant.log; stream-mutant/delete-unscoped.json |
+| Domain and server typechecks | 0 / 0 | typecheck-domain.log; typecheck-server.log |
+| 56 checkpoints plus rich lifecycle | 0 / 0; 23,880 + 1,267 = 25,147 byte-identical reply pairs on 57 fixtures; equal auth History and last-use | parity-56.log; parity-rich.log |
+| Final formatter check | 0 | format-final.log |
+
+`commands.json` retains the actual command strings and real exits, including the two wiring failures. The corrected sources pass the requested fourteen stream scenarios, lifetime and scope controls, and all 57 differential fixtures. No broader gate is claimed for this correction yet: the coordinator explicitly held those for the seat's full report. Contract id remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`; no contract or schema file changes.
+
+## Prior delivery 66f15653: native-COMMIT lifetime repair first
 
 This gap was found by this worker's own final control after review checkpoint 1c9bf4d4659b2379403bc1e8196db43187ef0661, before delivery. The root lease stayed live until OperationStore.transaction returned, including its post-COMMIT work. A hook opening a fresh native transaction in that window could use the old authority and return task-1. The first literal StoreError/no-row control exited 1 with that Task. The approved correction in auth.ts closes the root lease in the checked callback's finally, before native COMMIT and post-commit work. Final cleanup still handles failed admission.
 
@@ -80,7 +127,7 @@ All 840 replies match the captured base, under ten credential classes and six id
 
 The never-created-to-present stream still receives the separate CLI init/add write in order, exactly as the base. Present/deleted/reused transitions retain one snapshot per read. No new presence disclosure appears for the unauthorized credential classes in this fixture. The choice of 200 versus 404 for never-created names remains the owner's later question.
 
-The corrected-source stream's fourteen scenarios compare with the base frame for frame. The exact frame difference table and three complete failure-frame wire strings below remain current; the raw corrected frames are under `docs/evidence/ui-speed/server-reads/native-final/stream/`. Only a still-valid connected owner Session gets the one-shot terminal batch. Revoked/expired credentials and Tokens get no terminal batch and retain their respective existing failure/close sequence. No additional frame difference was introduced by early lease closure. Root values and terminal permissions are consumed inside their live callbacks; only plain state and materialized events cross a poll boundary.
+The native-COMMIT capture's fourteen-scenario control incorrectly allowed a terminal difference for every Token. The seat found this discrepancy on 66f15653; the correction and replacement receipts are recorded above. A still-valid connected Session or unscoped Token gets the one-shot terminal batch. Only revoked/expired credentials get no terminal batch and retain their respective existing failure/close sequence. No additional frame difference was introduced by early lease closure. Root values and terminal permissions are consumed inside their live callbacks; only plain state and materialized events cross a poll boundary.
 
 ### Corrected-source paired Diagnostics and locks
 
@@ -408,15 +455,15 @@ Fourteen statement probes each execute only credential lookup and the classifier
 
 ### Stream frames and the approved terminal difference
 
-Fourteen compiled base/head scenarios pass: ordered delivery with other-Profile gaps, reconnect, restore/reload, revocation, expiry, absent-to-present creation and seven deletion credential cases. Only an already connected, still-valid owner Session receives the private one-shot terminal permission. It binds connection, Profile, generation, delivered cursor and deletion cap, dies with the connection, cannot grant any other query, and cannot be consumed twice. One transaction checks the credential once and selects the active, absent or terminal result.
+Fourteen compiled base/head scenarios cover ordered delivery with other-Profile gaps, reconnect, restore/reload, revocation, expiry, absent-to-present creation and seven deletion credential cases. An already connected, still-valid unscoped Session or Token receives the private one-shot terminal permission. It binds connection, Profile, generation, delivered cursor and deletion cap, dies with the connection, cannot grant any other query, and cannot be consumed twice. One transaction checks the credential once and selects the active, absent or terminal result. The seat's correction replaces the earlier Session-only interpretation and overly broad Token exception.
 
-The table abbreviates only unchanged operation payloads as seq plus event.kind. Each operation's full data bytes, SSE id, event line and double-newline terminator are preserved and compared in `docs/evidence/ui-speed/server-reads/final-stream-control-2/<scenario>.json`. Every row ends with the same failure and connection close; the stream emits no extra close frame.
+The table abbreviates only unchanged operation payloads as seq plus event.kind. Each operation's full data bytes, SSE id, event line and double-newline terminator are preserved and compared in `docs/evidence/ui-speed/server-reads/unscoped-terminal/stream-green/<scenario>.json`. Every row ends with the same failure and connection close; the stream emits no extra close frame.
 
 | Connected credential | Base frames | Head frames |
 | --- | --- | --- |
 | delete-owner | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure Profile not found; choose a Profile from GET /profiles | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure Profile not found; choose a Profile from GET /profiles |
 | delete-scoped | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure revoked | ready; failure revoked |
-| delete-unscoped | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure Profile not found; choose a Profile from GET /profiles | ready; failure Profile not found; choose a Profile from GET /profiles |
+| delete-unscoped | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure Profile not found; choose a Profile from GET /profiles | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure Profile not found; choose a Profile from GET /profiles |
 | delete-revoked-token | ready; 18 TaskCreated; 20 TaskDeleted; 21 TaskDeleted; 22 ProfileDeleted; failure revoked | ready; failure revoked |
 | delete-revoked-session | ready; 18 TaskCreated; 20 TaskDeleted; 21 TaskDeleted; 22 ProfileDeleted; failure revoked | ready; failure revoked |
 | delete-expired-token | ready; 18 TaskCreated; 19 TaskDeleted; 20 TaskDeleted; 21 ProfileDeleted; failure expired | ready; failure expired |
@@ -441,7 +488,7 @@ data: [{"_tag":"Fail","error":{"exit_code":3,"exit_meaning":"not found or auth m
 
 ~~~
 
-The removed terminal batch for revoked/expired credentials and for Tokens is the owner-approved difference. ADR-0010's owner Session guarantee and its text are unchanged. Ordinary revocation/expiry without deletion is frame-identical to the base.
+The removed terminal batch for revoked/expired credentials is the owner-approved difference. A valid unscoped Token retains the base's batch. ADR-0010's owner Session guarantee and its text are unchanged. Ordinary revocation/expiry without deletion is frame-identical to the base.
 
 ### Diagnostics and the accepted IMMEDIATE cost
 

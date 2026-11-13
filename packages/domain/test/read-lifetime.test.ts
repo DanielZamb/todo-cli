@@ -766,76 +766,93 @@ it.effect(
     ),
 );
 
-it.effect(
-  "a terminal query is bounded, one-shot, kind-checked and dead after its scope",
-  () =>
-    fixture((store, credential) =>
-      Effect.gen(function* () {
-        const deleted = yield* store.auth.deleteProfile({
-          credential,
-          profile: work.id,
-          options: { with_tasks: true, dry_run: false },
-        });
-        expect(deleted.outcome).toBe("deleted");
-        const personal = Schema.decodeUnknownSync(ProfileId)("personal");
-        expect(
-          (yield* new TaskCommands(store).create(
-            { credential, profile: personal },
-            { title: "Later unrelated write" },
-            { task_id: Schema.decodeUnknownSync(TaskId)("ab-later") },
-          )).outcome,
-        ).toBe("committed");
-        const retained = yield* store.auth.withStreamRead(
-          { credential, profile: work.id },
-          Schema.Struct({}),
-          {},
-          { after: 0, generation: "initial" },
-          (result) =>
-            Effect.gen(function* () {
-              if (result.kind !== "terminal")
-                return yield* Effect.die("Expected terminal permission");
-              for (const mode of authorityModes) {
-                try {
-                  const value = counterfeitAuthority(result.read, mode);
-                  const operation: Effect.Effect<unknown, unknown> =
-                    Reflect.apply(store.terminalChangesRead, store, [value]);
-                  yield* refused(operation);
-                } catch (error) {
-                  expect(
-                    error instanceof TypeError ||
-                      Reflect.get(Object(error), "_tag") === "StoreError",
-                  ).toBe(true);
+for (const terminalCredential of [
+  "session",
+  "read-only",
+  "read-write",
+] as const) {
+  it.effect(
+    `a terminal query for a valid unscoped ${terminalCredential} is bounded, one-shot, kind-checked and dead after its scope`,
+    () =>
+      fixture((store, credential) =>
+        Effect.gen(function* () {
+          const streamCredential =
+            terminalCredential === "session"
+              ? credential
+              : (yield* store.auth.issueToken({
+                  credential,
+                  token: {
+                    name: "unscoped terminal",
+                    profile: null,
+                    scope: terminalCredential,
+                  },
+                })).credential;
+          const deleted = yield* store.auth.deleteProfile({
+            credential,
+            profile: work.id,
+            options: { with_tasks: true, dry_run: false },
+          });
+          expect(deleted.outcome).toBe("deleted");
+          const personal = Schema.decodeUnknownSync(ProfileId)("personal");
+          expect(
+            (yield* new TaskCommands(store).create(
+              { credential, profile: personal },
+              { title: "Later unrelated write" },
+              { task_id: Schema.decodeUnknownSync(TaskId)("ab-later") },
+            )).outcome,
+          ).toBe("committed");
+          const retained = yield* store.auth.withStreamRead(
+            { credential: streamCredential, profile: work.id },
+            Schema.Struct({}),
+            {},
+            { after: 0, generation: "initial" },
+            (result) =>
+              Effect.gen(function* () {
+                if (result.kind !== "terminal")
+                  return yield* Effect.die("Expected terminal permission");
+                for (const mode of authorityModes) {
+                  try {
+                    const value = counterfeitAuthority(result.read, mode);
+                    const operation: Effect.Effect<unknown, unknown> =
+                      Reflect.apply(store.terminalChangesRead, store, [value]);
+                    yield* refused(operation);
+                  } catch (error) {
+                    expect(
+                      error instanceof TypeError ||
+                        Reflect.get(Object(error), "_tag") === "StoreError",
+                    ).toBe(true);
+                  }
                 }
-              }
-              const batch = yield* store.terminalChangesRead(result.read);
-              expect(batch.entries.map((entry) => entry.event.kind)).toEqual([
-                "TaskCreated",
-                "AuthChanged",
-                "TaskDeleted",
-                "ProfileDeleted",
-              ]);
-              expect(batch.entries.at(-1)?.seq).toBe(batch.cursor);
-              yield* refused(store.terminalChangesRead(result.read));
-              return result.read;
-            }),
-        );
-        yield* refused(store.terminalChangesRead(retained));
-        yield* store.auth.withRead(
-          { credential, profile: personal },
-          target,
-          { task_id },
-          (read) => {
-            const operation: Effect.Effect<unknown, unknown> = Reflect.apply(
-              store.terminalChangesRead,
-              store,
-              [read],
-            );
-            return refused(operation);
-          },
-        );
-      }),
-    ),
-);
+                const batch = yield* store.terminalChangesRead(result.read);
+                expect(batch.entries.map((entry) => entry.event.kind)).toEqual([
+                  "TaskCreated",
+                  "AuthChanged",
+                  "TaskDeleted",
+                  "ProfileDeleted",
+                ]);
+                expect(batch.entries.at(-1)?.seq).toBe(batch.cursor);
+                yield* refused(store.terminalChangesRead(result.read));
+                return result.read;
+              }),
+          );
+          yield* refused(store.terminalChangesRead(retained));
+          yield* store.auth.withRead(
+            { credential, profile: personal },
+            target,
+            { task_id },
+            (read) => {
+              const operation: Effect.Effect<unknown, unknown> = Reflect.apply(
+                store.terminalChangesRead,
+                store,
+                [read],
+              );
+              return refused(operation);
+            },
+          );
+        }),
+      ),
+  );
+}
 
 it.effect(
   "writes and expiry inside a live checked callback invalidate every earlier port",

@@ -33,6 +33,19 @@ const result = await Bun.build({
                 : readFileSync(args.path, "utf8");
             if (
               variant === "after" &&
+              process.env.READ_TERMINAL_MUTANT === "session-only" &&
+              path === "packages/domain/src/auth/auth.ts"
+            ) {
+              const marker =
+                "            info === undefined ||\n            info.profile !== null ||";
+              assert.equal(contents.split(marker).length, 2);
+              contents = contents.replace(
+                marker,
+                '            info?.kind !== "session" ||',
+              );
+            }
+            if (
+              variant === "after" &&
               process.env.READ_SCOPE_OBSERVER === "1"
             ) {
               if (path === "packages/domain/src/auth/auth.ts") {

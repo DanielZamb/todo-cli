@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   copyFileSync,
   mkdirSync,
@@ -36,7 +37,86 @@ const uuids = [
   "00000000-0000-4000-8000-000000000011",
   "00000000-0000-4000-8000-000000000012",
   "00000000-0000-4000-8000-000000000013",
-];
+] as const;
+type FinalCredential = {
+  kind: "session" | "token";
+  profile: string | null;
+  revoked: boolean;
+  expired: boolean;
+  readAccess: boolean;
+};
+const deletionStates = new Map<string, FinalCredential>([
+  [
+    "delete-owner",
+    {
+      kind: "session",
+      profile: null,
+      revoked: false,
+      expired: false,
+      readAccess: true,
+    },
+  ],
+  [
+    "delete-unscoped",
+    {
+      kind: "token",
+      profile: null,
+      revoked: false,
+      expired: false,
+      readAccess: true,
+    },
+  ],
+  [
+    "delete-scoped",
+    {
+      kind: "token",
+      profile: "work",
+      revoked: true,
+      expired: false,
+      readAccess: true,
+    },
+  ],
+  [
+    "delete-revoked-token",
+    {
+      kind: "token",
+      profile: null,
+      revoked: true,
+      expired: false,
+      readAccess: true,
+    },
+  ],
+  [
+    "delete-revoked-session",
+    {
+      kind: "session",
+      profile: null,
+      revoked: true,
+      expired: false,
+      readAccess: true,
+    },
+  ],
+  [
+    "delete-expired-token",
+    {
+      kind: "token",
+      profile: null,
+      revoked: false,
+      expired: true,
+      readAccess: true,
+    },
+  ],
+  [
+    "delete-expired-session",
+    {
+      kind: "session",
+      profile: null,
+      revoked: false,
+      expired: true,
+      readAccess: true,
+    },
+  ],
+]);
 type Frame = {
   raw: string;
   event: string;
@@ -132,6 +212,7 @@ async function run(binary: string, cli: string, scenario: string) {
   });
   const controllers: AbortController[] = [],
     received: Frame[] = [];
+  let finalCredential: FinalCredential | null = null;
   try {
     const deadline = performance.now() + 30000;
     while (!/Listening on http:\/\/127.0.0.1:\d+/.test(log)) {
@@ -330,6 +411,41 @@ async function run(binary: string, cli: string, scenario: string) {
           { with_tasks: true, dry_run: false },
           fixture.controller,
         );
+      if (scenario.startsWith("delete-")) {
+        const db = new Database(path, { readonly: true });
+        try {
+          const row = Schema.decodeUnknownSync(
+            Schema.Struct({
+              kind: Schema.Literals(["session", "token"]),
+              profile: Schema.NullOr(Schema.String),
+              scope: Schema.Literals(["read-only", "read-write"]),
+              expires_at: Schema.String,
+              revoked_at: Schema.NullOr(Schema.String),
+            }),
+          )(
+            db
+              .query(
+                "SELECT kind,profile,scope,expires_at,revoked_at FROM credentials WHERE secret_hash=?",
+              )
+              .get(createHash("sha256").update(credential).digest("hex")),
+          );
+          finalCredential = {
+            kind: row.kind,
+            profile: row.profile,
+            revoked: row.revoked_at !== null,
+            expired:
+              Number(readFileSync(clock, "utf8")) >= Date.parse(row.expires_at),
+            readAccess: row.scope === "read-only" || row.scope === "read-write",
+          };
+          assert.deepEqual(
+            finalCredential,
+            deletionStates.get(scenario),
+            `${scenario}: final-pass credential state`,
+          );
+        } finally {
+          db.close();
+        }
+      }
       writeFileSync(gate, "open");
       while (true) {
         const row = await reader.next();
@@ -338,7 +454,7 @@ async function run(binary: string, cli: string, scenario: string) {
       }
       assert.equal(received.at(-1)?.event, "effect/http-api/stream/failure");
     }
-    return received.map((frame) => frame.raw);
+    return { frames: received.map((frame) => frame.raw), finalCredential };
   } finally {
     for (const controller of controllers) controller.abort();
     if (child.exitCode === null && child.signalCode === null) {
@@ -353,20 +469,24 @@ async function run(binary: string, cli: string, scenario: string) {
 }
 mkdirSync(output, { recursive: true });
 const results = [];
-for (const scenario of scenarios) {
-  const old = await run(before, cliBefore, scenario),
-    current = await run(after, cliAfter, scenario);
-  const approved =
-    scenario.startsWith("delete-") && scenario !== "delete-owner";
-  if (approved) {
-    assert.ok(
-      old.some((raw) => raw.includes('"kind":"ProfileDeleted"')),
-      scenario,
-    );
-    assert.deepEqual(current, [old[0], old.at(-1)], scenario);
-  } else assert.deepEqual(current, old, scenario);
+const selected = Schema.decodeUnknownSync(
+  Schema.Array(Schema.Literals(scenarios)),
+)(process.env.READ_STREAM_SCENARIOS?.split(",") ?? scenarios);
+for (const scenario of selected) {
+  const baseline = await run(before, cliBefore, scenario),
+    candidate = await run(after, cliAfter, scenario);
+  const old = baseline.frames,
+    current = candidate.frames;
+  assert.deepEqual(
+    candidate.finalCredential,
+    baseline.finalCredential,
+    scenario,
+  );
+  const state = candidate.finalCredential;
+  const approved = state !== null && (state.revoked || state.expired);
   const result = {
     scenario,
+    finalCredential: state,
     approvedTerminalDifference: approved,
     before: old,
     after: current,
@@ -375,8 +495,21 @@ for (const scenario of scenarios) {
     join(output, `${scenario}.json`),
     JSON.stringify(result, null, 2),
   );
+  if (approved) {
+    assert.ok(
+      old.some((raw) => raw.includes('"kind":"ProfileDeleted"')),
+      scenario,
+    );
+    assert.deepEqual(current, [old[0], old.at(-1)], scenario);
+  } else
+    assert.deepEqual(
+      current,
+      old,
+      `${scenario}: valid credentials must retain the base terminal batch`,
+    );
   results.push({
     scenario,
+    finalCredential: state,
     approvedTerminalDifference: approved,
     beforeFrames: old.length,
     afterFrames: current.length,

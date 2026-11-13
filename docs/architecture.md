@@ -281,19 +281,19 @@ The route rereads `op_log` every 250 ms and checks the credential on each pass.
 Each poll checks and materializes in one transaction and retains plain
 subscription selectors between polls. A never-created identifier is classified
 again on every poll, so a later CLI creation starts normal ordered delivery.
-An already connected, still-valid owner Session has a private one-shot terminal
-permission through the committed `ProfileDeleted` sequence, followed by the
-existing failure and close sequence. Revoked or expired credentials receive no
-terminal batch. A deletion-revoked scoped Token closes as revoked; a still-valid
-unscoped Token closes on Profile deletion without that batch. The base's terminal
-batch for these credentials is intentionally removed under the owner's ruling.
+An already connected, still-valid unscoped credential (a Session or Access Token)
+has a private one-shot terminal permission through the committed `ProfileDeleted`
+sequence, followed by the existing failure and close sequence. Revoked or expired
+credentials receive no terminal batch. A deletion-revoked scoped Token closes as
+revoked. The base's
+terminal batch for revoked or expired credentials is intentionally removed under
+the owner's ruling.
 The compiled frame comparison covers ordering, gaps, reconnect, restore,
-revocation, expiry and deletion. An owner Session keeps the same final
-TaskCreated, two TaskDeleted and ProfileDeleted frames, then the same not_found
-failure and close. For an unscoped Token those four operation frames disappear;
-its not_found failure and close are unchanged. A deletion-revoked scoped Token,
-an already revoked Session or Token, and an expired Session or Token receive
-only ready followed by their unchanged Unauthorized revoked or expired failure
+revocation, expiry and deletion. A valid Session or unscoped Token keeps the same
+final TaskCreated, two TaskDeleted and ProfileDeleted frames, then the same
+not_found failure and close. A deletion-revoked scoped Token, an already revoked
+Session or Token, and an expired Session or Token receive only ready followed by
+their unchanged Unauthorized revoked or expired failure
 and close. The base also sent the terminal operation batch to these credentials.
 The exact raw frames and sequence ids are recorded in the server-reads report.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
