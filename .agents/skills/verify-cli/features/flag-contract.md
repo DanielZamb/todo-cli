@@ -8,10 +8,10 @@ not CLI flag registrations. Their normalized hashes remain unchanged.
 
 Every command inherits these shared and framework flags:
 
-`--completions`, `--credential-profile`, `--db`, `--format`, `--help`, `--help-human-flag`, `--log-level`, `--no-color`, `--profile`, `--version`, `--wizard`, `-h`, `-v`.
+`--completions`, `--credential-profile`, `--db`, `--direct`, `--format`, `--help`, `--help-human-flag`, `--log-level`, `--no-color`, `--profile`, `--require-server`, `--version`, `--wizard`, `-h`, `-v`.
 
 Their consumers are database selection, output/error rendering, Profile and
-credential selection, top color control, human onboarding, and Effect CLI
+credential selection, write-mode selection (`--direct`, `--require-server`), top color control, human onboarding, and Effect CLI
 help/version/wizard/completion/logging handlers. Database and authentication
 settings apply when a command uses them; pure help/schema commands stay auth-free.
 

@@ -290,7 +290,7 @@ SSE id. Only that Profile's committed operations appear, so gaps in ids are
 normal: rejected attempts and other Profiles are skipped.
 
 The route rereads `op_log` every 250 ms and checks the credential on each pass.
-After every writing CLI command that reaches the store, a data-free best-effort local nudge can
+After every writing CLI command that opened the store, once the store closes, a data-free best-effort local nudge can
 wake each stream's next normal pass immediately, including after refusal or dry run. The CLI discovers only a private
 record beside its selected canonical database, compares physical file identity and
 contract, and verifies a nonce HMAC before using the same connection. Discovery and

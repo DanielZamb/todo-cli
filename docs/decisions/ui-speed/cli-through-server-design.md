@@ -14,7 +14,9 @@ The draft decision is [ADR-0023](../../adr/0023-cli-writes-through-the-running-s
   It uses the same writing classification as server mode. There is no commit
   observation, History/generation comparison, file-only special case, TEMP trigger
   or extra connection. Early refusals and all reads send none, including a read
-  that records a refusal. No proved server means no nudge. The cost is one empty
+  that records a refusal. No proved server means no nudge. "Reaches the store"
+  means the store opened: the nudge runs in the store's release, after the
+  connection closes, so a command whose store never opened sends none. The cost is one empty
   stream pass when a writing command changed nothing. Discovery and nudge each
   retain their separate nominal 50 ms timer budgets, subject to host scheduling.
 - Identity is fstat of the kept database descriptor. Before publication, the
@@ -40,6 +42,10 @@ The draft decision is [ADR-0023](../../adr/0023-cli-writes-through-the-running-s
   operation. The first production build routing a command must carry protocol 2
   and route only to a server that proved 2, after the reviewed integrated durable
   repeated-denial fix. Schema contract identity alone cannot attest that fix.
+  The CLI states this rule in code as `ROUTING_PROTOCOL` and `routable()` in
+  apps/cli/src/server-connection.ts, named at the server-mode gate in
+  apps/cli/src/main.ts `withStore`; the proof check also requires the proved
+  protocol to equal the record's.
 - Preserve the merged strict read leases, early flag refusals, in-place Snapshot
   restore admission, preview isolation, configured Attachment root and durable
   cleanup. Shared add create and subsequent read remain separate checked phases.

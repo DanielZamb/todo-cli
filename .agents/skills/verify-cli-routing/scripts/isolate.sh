@@ -16,4 +16,4 @@ cat > "$route_scratch/isolate.sb" <<'PROFILE'
 (deny network-inbound network-outbound (local tcp "*:14310") (remote tcp "*:14310") (local udp "*:14310") (remote udp "*:14310"))
 PROFILE
 cd "$route_root"
-/usr/bin/sandbox-exec -D "PROTECTED=$route_home/.todo-cli" -f "$route_scratch/isolate.sb" /usr/bin/env HOME="$route_scratch/home" TMPDIR="$route_scratch/tmp" TODO_DB="$route_scratch/home/no-default.db" TODO_PORT=0 TODO_ROUTING_ISOLATED=1 "$@"
+/usr/bin/sandbox-exec -D "PROTECTED=$route_home/.todo-cli" -f "$route_scratch/isolate.sb" /usr/bin/env HOME="$route_scratch/home" TMPDIR="$route_scratch/tmp/" TODO_DB="$route_scratch/home/no-default.db" TODO_PORT=0 TODO_ROUTING_ISOLATED=1 "$@"

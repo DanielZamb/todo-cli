@@ -1,11 +1,14 @@
 import { Effect } from "effect";
 import type { ProvenServer } from "./server-connection.ts";
 
-export const nudgeAfterWrite = <A, E, R>(
-  command: Effect.Effect<A, E, R>,
+// Runs as the store's release: a writing command that opened the store nudges
+// its proven server exactly once after the connection closes, whatever the
+// outcome. A command that never opened a store sends nothing.
+export const closeThenNudge = (
+  close: Effect.Effect<void>,
   server: ProvenServer | undefined,
 ) =>
-  command.pipe(
+  close.pipe(
     Effect.ensuring(
       Effect.promise(async () => {
         if (server) await server.nudge();

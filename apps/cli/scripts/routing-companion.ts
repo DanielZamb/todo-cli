@@ -1,10 +1,15 @@
 import { readFileSync } from "node:fs";
 import {
   BackendCommand,
+  type BackendReply,
   executeBackendCommand,
 } from "@todo/domain/backend-command";
-import { nowInstant } from "@todo/domain/commands";
-import { renderError, renderTask } from "@todo/domain/presentation";
+import { CommandError, nowInstant } from "@todo/domain/commands";
+import {
+  ErrorResponse,
+  renderError,
+  renderTask,
+} from "@todo/domain/presentation";
 import { openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { withAttachmentStatus } from "../src/attachments.ts";
@@ -56,7 +61,31 @@ if (mode === "server") {
           } finally {
             server.close();
           }
-        })();
+        })().catch(
+          (
+            error: unknown,
+          ): Extract<typeof BackendReply.Type, { outcome: "failure" }> => {
+            if (
+              !(error instanceof CommandError) ||
+              error.code !== "server_command_not_run"
+            )
+              throw error;
+            return {
+              outcome: "failure",
+              error: Schema.decodeUnknownSync(ErrorResponse)(
+                JSON.parse(
+                  renderError(
+                    error.exit,
+                    error.code,
+                    error.message,
+                    "json",
+                    nowInstant(),
+                  ),
+                ),
+              ),
+            };
+          },
+        );
   if (reply.outcome === "success") {
     if (format !== "md" && format !== "json" && format !== "table")
       throw new Error("Invalid format");

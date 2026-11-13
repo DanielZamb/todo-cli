@@ -123,7 +123,7 @@ import {
   writeMode,
 } from "./database-selection.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
-import { nudgeAfterWrite } from "./direct-write.ts";
+import { closeThenNudge } from "./direct-write.ts";
 import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
@@ -148,7 +148,7 @@ import {
   StatusResponse,
   TextResponse,
 } from "./schema.ts";
-import { discoverServer } from "./server-connection.ts";
+import { discoverServer, routable } from "./server-connection.ts";
 import { isTerminalUnsafe, runTop } from "./top.ts";
 import { TransferResponse, type TransferResult } from "./transfer-schema.ts";
 
@@ -267,8 +267,10 @@ const withStore = <A, E, R>(
           discoverServer(path, mode === "server" && !provisioning ? 1000 : 50),
         )
       : undefined;
-    // The first routed command must require MAC-proved protocol 2 after the
-    // reviewed durable-denial fix. Protocol 1 stays discovery/proof/nudge only.
+    // ADR-0023: route a writing command only when routable(server), a
+    // MAC-proved ROUTING_PROTOCOL (2) that ships with the reviewed durable
+    // repeated-denial fix. Protocol 1 is discovery, proof and nudge only, so
+    // this slice routes nothing and server mode refuses every writing command.
     if (writing && !provisioning && mode === "server") {
       server?.close();
       return yield* Effect.fail(
@@ -276,7 +278,9 @@ const withStore = <A, E, R>(
           1,
           server ? "server_command_unsupported" : "server_required",
           server
-            ? "Protocol 1 supports proof and nudge only. Production routing requires protocol 2 and reviewed durable auth-denial handling. Use --direct or config write-mode automatic."
+            ? routable(server)
+              ? "This build routes no production command. Use --direct or config write-mode automatic."
+              : "Protocol 1 supports proof and nudge only. Production routing requires protocol 2 and reviewed durable auth-denial handling. Use --direct or config write-mode automatic."
             : "A proven server is required for this database. Use --direct or config write-mode automatic.",
         ),
       );
@@ -284,42 +288,39 @@ const withStore = <A, E, R>(
     yield* io(() =>
       mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 }),
     );
-    return yield* nudgeAfterWrite(
-      Effect.acquireUseRelease(
-        openStore({ path }),
-        (store) =>
-          use(store).pipe(
-            Effect.catch((error) =>
-              Effect.gen(function* () {
-                if (
-                  !(error instanceof CommandError) ||
-                  error.code !== "not_found" ||
-                  error.task_id === undefined
-                )
-                  return yield* Effect.fail(error);
-                const request = yield* selectProfile(store, cfg, action);
-                const context = yield* cliLookupError(
-                  store,
-                  cfg,
-                  request,
-                  error.task_id,
-                  action,
-                );
-                return yield* Effect.fail(
-                  new CommandError(
-                    error.exit,
-                    error.code,
-                    context.message,
-                    error.latest,
-                    context.details,
-                  ),
-                );
-              }),
-            ),
+    return yield* Effect.acquireUseRelease(
+      openStore({ path }),
+      (store) =>
+        use(store).pipe(
+          Effect.catch((error) =>
+            Effect.gen(function* () {
+              if (
+                !(error instanceof CommandError) ||
+                error.code !== "not_found" ||
+                error.task_id === undefined
+              )
+                return yield* Effect.fail(error);
+              const request = yield* selectProfile(store, cfg, action);
+              const context = yield* cliLookupError(
+                store,
+                cfg,
+                request,
+                error.task_id,
+                action,
+              );
+              return yield* Effect.fail(
+                new CommandError(
+                  error.exit,
+                  error.code,
+                  context.message,
+                  error.latest,
+                  context.details,
+                ),
+              );
+            }),
           ),
-        (store) => Effect.orDie(store.close()),
-      ),
-      server,
+        ),
+      (store) => closeThenNudge(Effect.orDie(store.close()), server),
     ).pipe(Effect.ensuring(Effect.sync(() => server?.close())));
   });
 const access = (cfg: Settings) =>

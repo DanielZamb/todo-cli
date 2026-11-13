@@ -32,6 +32,14 @@ export class CommandTransportError extends CommandError {
   }
 }
 
+// ADR-0023: the MAC-covered protocol is the routing capability. Protocol 1 is
+// discovery, proof and nudge only. The first build that routes a production
+// command publishes and proves ROUTING_PROTOCOL, and the CLI routes a writing
+// command only to a server for which routable() holds.
+export const ROUTING_PROTOCOL = 2;
+export const routable = (server: ProvenServer | undefined) =>
+  server !== undefined && server.protocol >= ROUTING_PROTOCOL;
+
 export class ProvenServer {
   private readonly agent = new Agent({ keepAlive: true, maxSockets: 1 });
   private socket: Socket | undefined;
@@ -39,6 +47,10 @@ export class ProvenServer {
     private readonly path: string,
     private readonly record: typeof EndpointRecord.Type,
   ) {}
+
+  get protocol(): number {
+    return this.record.protocol;
+  }
 
   private exchange(
     endpoint: string,
@@ -147,6 +159,7 @@ export class ProvenServer {
     const { mac, ...value } = response;
     if (
       nonce !== response.nonce ||
+      response.protocol !== this.record.protocol ||
       response.contract !== CONTRACT_ID ||
       this.record.incarnation !== response.incarnation ||
       !sameBinding(this.record.binding, response.binding) ||

@@ -4,9 +4,10 @@ import { type ChildProcess, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import { Agent, createServer, request } from "node:http";
 import { loadavg, tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { endpointPath } from "@todo/domain/database-route";
+import { endpointPath, routeMac } from "@todo/domain/database-route";
+import { Schema } from "effect";
 import { discoverServer } from "../src/server-connection.ts";
 
 const [outArg, cli, server, barrier, resetCli, baselineBarrier] =
@@ -15,6 +16,7 @@ if (!outArg || !cli || !server || !barrier || !resetCli)
   throw Error(
     "Pass evidence, CLI, server, barrier, reset CLI, optional baseline barrier",
   );
+const binaries = { cli, server, barrier, resetCli };
 const out = resolve(outArg);
 fs.mkdirSync(out, { recursive: true });
 const scratch = fs.mkdtempSync(join(tmpdir(), "todo-routing-corrections-"));
@@ -112,10 +114,21 @@ async function ready(
 ) {
   const s = start(binary, path, extra);
   const file = endpointPath(fs.realpathSync(path));
-  await until(
-    () => fs.existsSync(file) && s.log().includes("Listening on"),
-    s.child,
-  );
+  await until(() => {
+    try {
+      const port = Number(
+        s
+          .log()
+          .split("Listening on http://127.0.0.1:")[1]
+          ?.match(/^[0-9]+/)?.[0],
+      );
+      return (
+        port > 0 && JSON.parse(fs.readFileSync(file, "utf8")).port === port
+      );
+    } catch {
+      return false;
+    }
+  }, s.child);
   return { ...s, file, record: JSON.parse(fs.readFileSync(file, "utf8")) };
 }
 function count(path: string) {
@@ -152,6 +165,8 @@ try {
         b = join(d, "b.db");
       const source = new Database(db, { readonly: true });
       const bytes = source.serialize();
+      bytes[18] = 1;
+      bytes[19] = 1;
       source.close();
       fs.writeFileSync(a, bytes);
       fs.writeFileSync(b, bytes);
@@ -176,8 +191,13 @@ try {
         if (red) {
           await until(() => s.log().includes("Listening on"), s.child);
           const file = endpointPath(a);
+          if (mode === "swap-back")
+            await until(() => fs.existsSync(file), s.child);
+          else await delay(100);
           const published = fs.existsSync(file);
           let proved = false;
+          let routedIntoB = false;
+          let ordinarySecondLive = false;
           if (published) {
             const record = JSON.parse(fs.readFileSync(file, "utf8"));
             const response = await fetch(
@@ -189,6 +209,43 @@ try {
               },
             );
             proved = response.status === 200;
+            if (mode === "swap-back") {
+              const credential = JSON.parse(
+                fs.readFileSync(
+                  join(home, ".todo-cli/session_default.json"),
+                  "utf8",
+                ),
+              ).token;
+              const add = await fetch(
+                `http://127.0.0.1:${record.port}/local/commands`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${credential}`,
+                    "x-todo-incarnation": record.incarnation,
+                    "x-todo-proof": routeMac(
+                      record.secret,
+                      "command",
+                      record.incarnation,
+                    ),
+                  },
+                  body: JSON.stringify({
+                    kind: "add",
+                    profile: "default",
+                    flags: { title: "Baseline wrote into B" },
+                  }),
+                },
+              );
+              const result = await add.json();
+              assert.equal(result.outcome, "success");
+              routedIntoB = true;
+            }
+          }
+          if (mode === "ordinary") {
+            const second = await ready(binaries.server, b);
+            ordinarySecondLive = s.child.exitCode === null;
+            await stop(second.child);
           }
           await stop(s.child);
           if (mode === "ordinary") {
@@ -201,6 +258,8 @@ try {
               expected_startup_refusal: false,
               published,
               proved,
+              routedIntoB,
+              ordinarySecondLive,
               log: s.log(),
             }),
           );
@@ -209,7 +268,13 @@ try {
             true,
             "The immutable baseline must expose the startup defect",
           );
-          return { red_exit: 1, published, proved };
+          return {
+            red_safety_assertion_fails: true,
+            published,
+            proved,
+            routedIntoB,
+            ordinarySecondLive,
+          };
         }
         await until(() => s.child.exitCode !== null);
         owned.delete(s.child);
@@ -236,11 +301,16 @@ try {
         : undefined;
       const green = await race(barrier, false);
       assert.equal(green.tasksA, 0);
-      assert.equal(green.tasksB, 1);
+      assert.equal(
+        green.tasksB,
+        baselineBarrier && mode === "swap-back" ? 2 : 1,
+      );
       return { red, green };
     });
   }
-  const live = await ready(server, db);
+  const selected = join(home, "selected.db");
+  fs.symlinkSync(db, selected);
+  const live = await ready(server, selected);
   const events: { path: string; credential: boolean; body: string }[] = [];
   let slow = false,
     swap = false;
@@ -261,8 +331,8 @@ try {
       });
       if (slow && incoming.url === "/local/nudge") return;
       if (swap && incoming.url === "/local/commands") {
-        fs.renameSync(db, db + ".held");
-        fs.writeFileSync(db, fs.readFileSync(db + ".held"));
+        fs.unlinkSync(selected);
+        fs.symlinkSync(join(scratch, "replacement.db"), selected);
         swap = false;
       }
       const next = request(
@@ -316,7 +386,9 @@ try {
     return json(r);
   }
   await check("S3 help-derived writing inventory", async () => {
-    const help = (await command(["--help"])).stdout;
+    const help = Schema.decodeUnknownSync(
+      Schema.Struct({ text: Schema.String }),
+    )(json(await command(["--help"]))).text;
     const names = help
       .split("SUBCOMMANDS\n")[1]
       ?.trim()
@@ -326,7 +398,7 @@ try {
     const menus = [];
     for (const name of names) {
       const r = await command([name ?? "", "--help"]);
-      menus.push({ name, help: r.stdout });
+      menus.push({ name, help: json(r).text });
     }
     fs.writeFileSync(
       join(out, "help-inventory.json"),
@@ -475,7 +547,12 @@ try {
       JSON.stringify([{ external_id: "route-proof", title: "Imported" }]),
     );
     await mutation(["import", input]);
-    const snapshot = await mutation(["snapshot", "create"]);
+    const snapshot = await mutation([
+      "snapshot",
+      "create",
+      "--reason",
+      "pre-restore",
+    ]);
     await mutation(["snapshot", "prune"]);
     await mutation(["snapshot", "restore", snapshot.snapshot.id]);
     task = json(await command(["show", task.id])).task;
@@ -525,7 +602,31 @@ try {
     };
   });
   await check("S3 reads and early refusals send zero nudges", async () => {
+    const readerDb = new Database(db, { readonly: true });
+    const readerTask = readerDb
+      .query<{ id: string }, []>("SELECT id FROM tasks WHERE title='Imported'")
+      .get();
+    readerDb.close();
+    assert(readerTask);
+    const snapshots = json(await command(["snapshot", "list"]));
+    const vault = join(scratch, "vault");
+    fs.mkdirSync(vault);
     for (const args of [
+      ["show", readerTask.id],
+      ["history", readerTask.id],
+      ["graph", readerTask.id],
+      ["review", "daily"],
+      ["review", "weekly"],
+      ["export"],
+      ["sync", "obsidian", "--vault", vault],
+      ["profile", "list", "--projects"],
+      ["snapshot", "show", snapshots.snapshots[0].id],
+      ["parse", "Tomorrow work"],
+      ["config", "show"],
+      ["schema", "--list"],
+      ["man", "list"],
+      ["diagnostics", "--server", `http://127.0.0.1:${live.record.port}`],
+      ["top", "--server", `http://127.0.0.1:${live.record.port}`],
       ["list"],
       ["whoami"],
       ["profile", "list"],
@@ -550,7 +651,7 @@ try {
         )
         .get()?.n;
     const prior = seq();
-    await command(["list"], 5);
+    await command(["list"], 3);
     assert.equal(events.length, n);
     assert.equal(seq(), (prior ?? 0) + 1);
     before.close();
@@ -601,6 +702,13 @@ try {
     return { successful_pairs: 5 };
   });
   await check("S4 typed refusal before execution", async () => {
+    const held = new Database(db, { readonly: true });
+    const replacement = held.serialize();
+    replacement[18] = 1;
+    replacement[19] = 1;
+    fs.writeFileSync(join(scratch, "replacement.db"), replacement);
+    const heldCount = () =>
+      held.query<{ n: number }, []>("SELECT count(*) n FROM tasks").get()?.n;
     const proven = await discoverServer(db, 1000);
     assert(proven);
     const token = JSON.parse(
@@ -609,40 +717,48 @@ try {
     const n = events.filter((e) => e.path === "/local/commands").length,
       prior = count(db);
     swap = true;
-    let failure: unknown;
-    try {
-      await proven.run(
-        {
-          kind: "add",
-          profile: "default",
-          flags: { title: "Must not execute" },
-        },
-        token,
-      );
-    } catch (e) {
-      failure = e;
-    } finally {
-      proven.close();
-    }
-    assert(
-      failure &&
-        typeof failure === "object" &&
-        "code" in failure &&
-        "exit" in failure,
+    const commandFile = join(scratch, "refused-command.json");
+    fs.writeFileSync(
+      commandFile,
+      JSON.stringify({
+        kind: "add",
+        profile: "default",
+        flags: { title: "Must not execute" },
+      }),
     );
+    const refused = await processResult(
+      join(dirname(binaries.cli), "routing-companion"),
+      ["server-command", db, commandFile, token, "json"],
+      environment,
+    );
+    proven.close();
+    assert.equal(refused.code, 2, refused.stdout + refused.stderr);
+    const failure = json(refused);
     assert.equal(failure.code, "server_command_not_run");
-    assert.equal(failure.exit, 2);
+    assert.equal(failure.exit_code, 2);
+    assert.equal(refused.stderr, "");
     assert.equal(
       events.filter((e) => e.path === "/local/commands").length - n,
       1,
     );
-    assert.equal(count(db + ".held"), prior);
-    assert.equal(count(db), prior);
-    fs.unlinkSync(db);
-    fs.renameSync(db + ".held", db);
+    assert.equal(count(join(scratch, "replacement.db")), prior);
+    const noNudge = nudges();
+    await command(
+      ["add", "Direct write into replacement"],
+      0,
+      "",
+      cli,
+      selected,
+    );
+    assert.equal(count(join(scratch, "replacement.db")), prior + 1);
+    assert.equal(nudges(), noNudge);
+    fs.unlinkSync(selected);
+    fs.symlinkSync(db, selected);
+    assert.equal(heldCount(), prior);
+    held.close();
     return {
       code: failure.code,
-      exit: failure.exit,
+      exit: failure.exit_code,
       requests: 1,
       tasks_added: 0,
     };
@@ -662,6 +778,9 @@ try {
       fs.mkdirSync(alternateHome);
       fs.mkdirSync(alternateTmp);
       const recordBefore = fs.readFileSync(first.file, "utf8");
+      const duplicates: string[] = [];
+      const local = (log: string, route: string) =>
+        log.split(`"http.url": "/local/${route}"`).length - 1;
       for (const spelling of [
         join(alias, "tasks.db"),
         ...(process.platform === "darwin" ? [join(home, "TASKS.DB")] : []),
@@ -672,8 +791,19 @@ try {
           TMPDIR: alternateTmp,
           TODO_DB: spelling,
         });
-        assert.notEqual(duplicate.code, 0);
+        assert.equal(duplicate.code, 1, duplicate.stdout + duplicate.stderr);
+        assert(
+          (duplicate.stdout + duplicate.stderr).includes(
+            "Server database binding or singleton guard unavailable",
+          ),
+          duplicate.stdout + duplicate.stderr,
+        );
         assert.equal(fs.readFileSync(first.file, "utf8"), recordBefore);
+        duplicates.push(
+          spelling === join(alias, "tasks.db")
+            ? "symlinked directory"
+            : "different case",
+        );
       }
       const id = first.record.binding.identity;
       const guard = join(
@@ -695,9 +825,62 @@ try {
       );
       assert.equal(proof.status, 400);
       assert.equal(fs.readFileSync(second.file, "utf8"), secondRecord);
+      const mac = (purpose: string) => ({
+        "x-todo-incarnation": first.record.incarnation,
+        "x-todo-proof": routeMac(
+          first.record.secret,
+          purpose,
+          first.record.incarnation,
+        ),
+      });
+      const oldNudge = await fetch(
+        `http://127.0.0.1:${first.record.port}/local/nudge`,
+        { method: "POST", headers: mac("nudge") },
+      );
+      assert.equal(oldNudge.status, 400);
+      const oldCommand = await fetch(
+        `http://127.0.0.1:${first.record.port}/local/commands`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...mac("command") },
+          body: JSON.stringify({
+            kind: "add",
+            profile: "default",
+            flags: { title: "Withdrawn incarnation must not run" },
+          }),
+        },
+      );
+      assert.equal(oldCommand.status, 200);
+      assert.equal((await oldCommand.json()).outcome, "not_run");
+      const tasksBefore = count(db);
+      const firstLocal = {
+        proof: local(first.log(), "database-proof"),
+        nudge: local(first.log(), "nudge"),
+        commands: local(first.log(), "commands"),
+      };
+      const secondLocal = {
+        proof: local(second.log(), "database-proof"),
+        nudge: local(second.log(), "nudge"),
+      };
+      await command(["add", "After guard unlink"]);
+      await command(["--direct", "add", "After guard unlink, direct"]);
+      assert.equal(count(db), tasksBefore + 2);
+      await until(() => local(second.log(), "nudge") === secondLocal.nudge + 2);
+      assert.equal(
+        local(second.log(), "database-proof"),
+        secondLocal.proof + 2,
+      );
+      assert.equal(local(first.log(), "database-proof"), firstLocal.proof);
+      assert.equal(local(first.log(), "nudge"), firstLocal.nudge);
+      assert.equal(local(first.log(), "commands"), firstLocal.commands);
+      assert(!first.log().includes("Authorization"));
+      assert.equal(
+        first.log().split('"event":"local_routing_disabled"').length - 1,
+        1,
+        first.log(),
+      );
       const p = await discoverServer(db, 1000);
       assert(p);
-      await p.nudge();
       p.close();
       await stop(first.child);
       assert.equal(fs.readFileSync(second.file, "utf8"), secondRecord);
@@ -705,9 +888,19 @@ try {
       const third = await ready(server, db);
       await stop(third.child);
       return {
+        duplicates_refused: duplicates,
+        first_record_untouched: true,
         old_proof_status: 400,
+        old_nudge_status: 400,
+        old_command_outcome: "not_run",
+        cli_writes_after_unlink: 2,
+        old_cli_proofs: 0,
+        old_cli_nudges: 0,
         old_cli_commands: 0,
         old_cli_credentials: 0,
+        new_cli_proofs: 2,
+        new_cli_nudges: 2,
+        withdrawal_logs: 1,
         replacement_proven: true,
         killed_holder_released: true,
       };

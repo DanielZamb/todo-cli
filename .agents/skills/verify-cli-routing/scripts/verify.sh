@@ -1,6 +1,9 @@
 #!/bin/sh
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../../../.." && pwd)
+if [ "${TODO_ROUTING_ISOLATED:-}" != 1 ]; then
+  exec "$root/.agents/skills/verify-cli-routing/scripts/isolate.sh" "$0" "$@"
+fi
 evidence=${1:?Pass a new absolute evidence directory}
 case "$evidence" in /*) ;; *) exit 2 ;; esac
 [ ! -e "$evidence" ] || { echo 'Choose a new evidence directory' >&2; exit 2; }
@@ -13,9 +16,12 @@ cd "$root"
   cli=$(bun -e 'process.stdout.write(require("./.scratch/bin/build.json").cli)')
   server=$(bun -e 'process.stdout.write(require("./.scratch/bin/build.json").server)')
   cache=$(dirname "$cli")
-  bun scripts/compile.ts apps/cli/scripts/routing-companion.ts "$cache/routing-companion"
-  bun scripts/compile.ts apps/cli/scripts/verify-routing.ts "$cache/verify-routing"
-  bun apps/cli/scripts/build-routing-guard.ts "$cache/guarded-todo"
+  [ -x "$cache/routing-companion" ] || bun scripts/compile.ts apps/cli/scripts/routing-companion.ts "$cache/routing-companion"
+  [ -x "$cache/verify-routing" ] || bun scripts/compile.ts apps/cli/scripts/verify-routing.ts "$cache/verify-routing"
+  [ -x "$cache/verify-corrections" ] || bun scripts/compile.ts apps/cli/scripts/verify-routing-corrections.ts "$cache/verify-corrections"
+  [ -x "$cache/guarded-todo" ] || bun apps/cli/scripts/build-routing-guard.ts "$cache/guarded-todo"
+  bun apps/cli/scripts/build-routing-probes.ts "$cache/probes"
+  bun apps/cli/scripts/build-routing-probes.ts "$cache/baseline" 8d85f5e2fb97b2d47330271b20aa8af80c8308c6
   TODO_ROUTING_CACHE="$cache" bun -e '
     const fs = require("node:fs");
     const path = require("node:path");
@@ -30,6 +36,7 @@ cd "$root"
     console.log(JSON.stringify({closed_compiler_temporaries_removed:count}));
   '
   "$cache/verify-routing" "$evidence" "$cli" "$server" "$cache/routing-companion" "$cache/guarded-todo"
+  "$cache/verify-corrections" "$evidence/corrections" "$cli" "$server" "$cache/probes/barrier-server" "$cache/probes/reset-cli" "$cache/baseline/barrier-server"
 } > "$evidence/commands.log" 2>&1
 test -s "$evidence/result.json"
 printf 'PASS; evidence survived cleanup: %s\n' "$evidence"

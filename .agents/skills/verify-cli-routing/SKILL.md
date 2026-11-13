@@ -88,3 +88,38 @@ apps/cli/scripts/routing-companion.ts. Preserve the relative checkout-local
 .claude/skills/verify-cli-routing symlink. Fresh Claude discovery remains a
 separate coordinator check; do not claim it from directory creation alone.
 Use maintain-verification-skill when this feature map changes.
+
+## Correction controls, 2026-11-13
+
+Launch enters scripts/isolate.sh automatically on macOS. Every child inherits OS
+denial of the real Todo directory and TCP/UDP 4310 and 14310, with loopback-only
+networking. The compile-time default-port shim is a test control, not the network
+boundary. Other verification recipes must also run through isolate.sh.
+
+The correction driver independently seeds scratch databases and owns a barrier
+build of the real server. It reproduces rename-over and swap-back on immutable
+8d85f5e2 and requires current startup to fail with the literal file mismatch.
+The builder adds only two waits and a store-opened marker. The driver also tests
+persistent guard unlink, aliases, different HOME/TMPDIR, killed holders, typed
+pre-execution refusal, replacement direct fallback and help-derived nudge counts.
+After the guard unlink it counts, from each server's own access log, the proofs,
+nudges and commands that two CLI writes deliver: zero reach the withdrawn first
+incarnation, two proofs and two nudges reach the second, and the first logs its
+withdrawal exactly once. Duplicate starts through a symlinked directory and a
+differently cased path, each with another HOME and TMPDIR, exit 1 with the literal
+guard message and leave the first record byte-identical.
+Reset uses a compiled native-presence-only bypass. No native password is checked.
+
+Every writing store attempt nudges once, including dry run, refusal and a batch
+with a committed prefix. All reads, including recorded auth refusals, and early
+flag refusals nudge zero times. No sequence, generation, table or file-change
+observer exists. The nudge runs in the store's release after close, so a
+writing command whose store never opened sends none. A needless nudge costs one
+empty pass. Protocol remains 1. The
+first production routing requires MAC-proved 2 and the reviewed durable-denial fix.
+
+The endpoint independently fstats newly opened descriptors across synchronous
+store acquisition on macOS and Linux. Missing platform evidence disables all
+local routing with one log; differing evidence aborts startup. The persistent
+guard outlives store close. Multiply linked server startup is refused to prevent
+independent beside-file registries. CLI writes still fall back directly.
