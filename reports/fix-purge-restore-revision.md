@@ -1,5 +1,11 @@
 # Preview Attachment isolation and final verification
 
+Review 4 accepted this delivery, including its second mapping renewal.
+[The later CLI flag report](fix-purge-restore-cli-flags.md) records the separate
+R4-C1 correction and audit. Named main rejects public rm --dry-run; the guard
+there applies to library previews, as the fourth review clarifies.
+The candidate status below describes the earlier submission before acceptance.
+
 B-PREVIEW is corrected on top of `5a85de1adcee2627def2aa5b1ff524a7382d670a`.
 The exact approved guard and reusable proofs are commit
 `e52f19e4f3bbd60ba5694d6f827f37ac29ec095f`.
