@@ -86,7 +86,7 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     state_package.swap_vault(sources)
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift', 'ProfileRestoreWakeTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     # A failing-first run replaces a copied test with its red variant (SIGN_OUT_STREAM_TEST_OVERRIDE:
     # a directory of test files); the committed fixtures are never edited for it. Recorded below.
@@ -143,6 +143,9 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     # An empty Profile for the deleted-Profile read-back control (S1-19).
     if run([cache['cli'], 'init', '--profile', 'deletable', '--credential-profile', 'work', '--format', 'json'], 'init-deletable.log', dict(env, TODO_SERVER_URL=url)):
         raise RuntimeError('CLI init deletable failed')
+    # The Profile a deletion and a Snapshot restore race over (ProfileRestoreWakeTests, candidate 9 merge).
+    if run([cache['cli'], 'init', '--profile', 'wakerestore', '--credential-profile', 'work', '--format', 'json'], 'init-wakerestore.log', dict(env, TODO_SERVER_URL=url)):
+        raise RuntimeError('CLI init wakerestore failed')
 
     lock = threading.Lock()
     fault = {'mode': None, 'held': False, 'release': threading.Event()}
@@ -310,7 +313,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     threading.Thread(target=proxy.serve_forever, daemon=True).start()
     proxy_url = f'http://127.0.0.1:{proxy.server_port}'
     (evidence / 'endpoints.json').write_text(json.dumps({'server': url, 'proxy': proxy_url, 'database': str(scratch / 'scratch.db')}) + '\n')
-    test_env = dict(env, TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url, STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
+    test_env = dict(env, SEAT_CLI=str(cache['cli']), TODO_SIGN_OUT_STREAM='1', TODO_SIGN_OUT_PROXY=proxy_url, TODO_SIGN_OUT_SERVER=url, TODO_SIGN_OUT_EVIDENCE=str(evidence), SEAT_SERVER=url, SEAT_EVIDENCE=str(evidence), SEAT_PROXY=proxy_url, STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
     # SIGN_OUT_STREAM_ONLY=<swift test filter> runs only those suites against the same server and
     # proxy: a short, targeted run while the shared Swift slot is scarce. Its status is TARGETED-*,
     # never PASS; the full proof is the run without it.

@@ -294,10 +294,10 @@ final class TodoModel {
     /// A closed sheet or dialog ends the message it raised.
     func endMessage(raisedBy surface: MessageSurface) { if message != nil, messageSurface == surface { message = nil } }
     var taskLoadError: String?
-    var quickAdd = false { didSet { if quickAdd && !oldValue { quickAddInstance = UUID(); parseGeneration += 1; quickAddMessages = .init() } } }
+    var quickAdd = false { didSet { if quickAdd && !oldValue { quickAddInstance = UUID(); parseGeneration += 1; quickAddMessages = .init(); notePersonActed() } } }
     /// Identity of the current quick-add; renewed each time it opens.
     @ObservationIgnored private(set) var quickAddInstance = UUID()
-    var newTitle = ""
+    var newTitle = "" { didSet { if newTitle != oldValue, !newTitle.isEmpty { notePersonActed() } } }
     enum QuickAddMessageKind: Hashable { case create, parse }
     /// The quick-add instance's messages under the one message rule (SurfaceMessages): the create
     /// error and the parse caption share one sequence, so the newest of them shows.
@@ -322,6 +322,10 @@ final class TodoModel {
     /// deletion) under the one message rule: each notice has a sequence, and its timer ends only
     /// the notice that existed when it started, never a newer one that replaced it.
     var noticeMessages = SurfaceMessages<NoticeKind, String>()
+    /// The Profile the client left because it was deleted, while nothing has ended that leave (see
+    /// ProfileReturn.swift), and the restored Profile the current notice offers to go to.
+    var forcedLeave: ForcedProfileLeave?
+    var restoredProfileOffer: ForcedProfileLeave?
     var deletionNotice: String? {
         get { noticeMessages.value }
         set { if let newValue { noticeMessages.publish(newValue, kind: .notice) } else { noticeMessages.end() } }
@@ -330,7 +334,7 @@ final class TodoModel {
     func expireNotice(since mark: Int) { noticeMessages.clear([.notice], since: mark) }
     var focusEditorTitle = false
     /// The open editor. A different opening starts a new message surface.
-    var editor: TaskDraft? { didSet { if editor?.opening != oldValue?.opening { editorMessages = .init(); attachmentInputMessages = .init() } } }
+    var editor: TaskDraft? { didSet { if editor?.opening != oldValue?.opening { editorMessages = .init(); attachmentInputMessages = .init(); if editor != nil { notePersonActed() } } } }
     enum AttachmentInputKind: Hashable { case open, paste, drop }
     /// The Attachments section's own caption (opening, pasting or dropping something the section
     /// itself refuses) under the one message rule, one instance per editor opening.
@@ -365,6 +369,8 @@ final class TodoModel {
     private var credential = ""
     @ObservationIgnored private var clientSession: TodoClientSession?
     func replaceCredential(_ value: String) {
+        // A return to a restored Profile never crosses a credential change or a sign-out (S1-20, S1-24).
+        forcedLeave = nil; restoredProfileOffer = nil
         clientSession?.invalidate()
         clientSession = nil
         clientDiagnosticsUI.stop()
@@ -703,11 +709,14 @@ final class TodoModel {
         guard profile == deleted, generation == run, !Task.isCancelled else { return }
         profiles = latest
         guard !latest.contains(where: { $0.id == deleted }), let next = latest.first else { return }
+        let left = ProfileViewState(self)
         editor = nil
         conflict = nil
         history = []
         activateProfile(next.id)
-        deletionNotice = "\"\(deletedName)\" was deleted. Switched to \(next.name)."
+        let notice = "\"\(deletedName)\" was deleted. Switched to \(next.name)."
+        recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice)
+        deletionNotice = notice
     }
 
     /// Whether choosing `value` starts a Profile switch.
@@ -721,6 +730,7 @@ final class TodoModel {
     func changeProfile(_ value: String) {
         let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, editor == nil, !busy else { return }
+        notePersonActed()
         transferResult = nil
         activateProfile(value)
     }
@@ -932,6 +942,7 @@ final class TodoModel {
 
     func setSearchText(_ text: String) {
         guard searchText != text else { return }
+        notePersonActed()
         searchText = text
         scheduleSearch()
     }
@@ -1016,6 +1027,9 @@ final class TodoModel {
                             attempt = 0
                         } else if event.name == "reload" {
                             let reload = try JSONDecoder().decode(SnapshotReload.self, from: Data(event.data.utf8))
+                            // Whether the person has acted since a forced Profile switch is read before the
+                            // reload resets the view (ruling on the candidate 9 restore finding).
+                            let leaveBeforeReload = forcedLeave.map { ($0, personActedSinceLeave($0)) }
                             // A Snapshot reload replaces the whole scope, so no message of the old one survives it.
                             endMessage()
                             UserDefaults.standard.set(String(reload.seq), forKey: restoreCursorKey)
@@ -1047,6 +1061,10 @@ final class TodoModel {
                             refreshGeneration += 1; historyGeneration += 1; seriesGeneration += 1
                             let previousProfile = profile
                             try await discoverProfiles()
+                            if let (leave, acted) = leaveBeforeReload, resolveForcedLeave(leave, acted: acted) {
+                                UserDefaults.standard.set(String(reload.seq), forKey: cursorKey)
+                                return
+                            }
                             if profile != previousProfile {
                                 UserDefaults.standard.set(String(reload.seq), forKey: cursorKey)
                                 connect()
@@ -1782,8 +1800,22 @@ final class TodoModel {
         let credentialEpoch = discovery.credentialEpoch
         let value = try await client.reads_period_profiles().ok.body.json
         guard isCurrentCredential(credentialEpoch) else { return }
+        let shownName = profiles.first { $0.id == profile }?.name ?? profile
+        let wasListed = profiles.contains { $0.id == profile }
+        let view = ProfileViewState(self)
         profiles = try decode([DiscoveryEntry].self, value)
-        if !profiles.contains(where: { $0.id == profile }), let first = profiles.first { profile = first.id }
+        if !profiles.contains(where: { $0.id == profile }), let first = profiles.first {
+            let missing = profile
+            profile = first.id
+            // Never on another Profile untold (ruling on the candidate 9 restore finding): a Profile
+            // that was shown and is gone after a rediscovery (a restore of an older Snapshot) is said,
+            // and remembered like a deletion in case it comes back.
+            if signedIn, wasListed {
+                let notice = "\"\(shownName)\" is not in this database any more. Switched to \(first.name)."
+                recordForcedLeave(profile: missing, name: shownName, view: view, switchedTo: first.id, notice: notice)
+                deletionNotice = notice
+            }
+        }
     }
 
     /// `kind` and `writeMark` name the write whose success this read-back confirms: its
@@ -2122,5 +2154,102 @@ private enum DraftError: LocalizedError {
         case .unavailable: "This Task is no longer available."
         case .missingSeries: "The Series definition could not be recovered from History. Your Task and recurrence draft are preserved."
         }
+    }
+}
+
+/// What the person had on a Profile: its view, Project, Tag, filters and search text.
+struct ProfileViewState: Equatable {
+    var selectedView: String
+    var selectedProject: String?
+    var selectedTag: String?
+    var filters: TaskListFilters
+    var searchText: String
+    @MainActor init(_ model: TodoModel) {
+        selectedView = model.selectedView; selectedProject = model.selectedProject; selectedTag = model.selectedTag
+        filters = model.requestedTaskFilters; searchText = model.searchText
+    }
+}
+
+/// A switch the client made because the shown Profile was deleted (ruling on the candidate 9
+/// restore finding). It records where the person was, where the client moved them and under which
+/// credential. When a restore's reload finds the Profile again, the client returns to it if the
+/// person has done nothing since; otherwise it stays and offers to go there. It never crosses a
+/// credential change or a sign-out, and the person is never left on another Profile untold.
+struct ForcedProfileLeave: Equatable {
+    let profile: String
+    let name: String
+    let view: ProfileViewState
+    let switchedTo: String
+    var baseline: ProfileViewState
+    let credentialEpoch: Int
+    let notice: String
+    var acted = false
+}
+
+extension TodoModel {
+    /// "\"Work\" was restored. Switched back to it." and the offer "\"Work\" was restored."
+    static func restoredProfileNotice(_ name: String, returned: Bool) -> String {
+        returned ? "\"\(name)\" was restored. Switched back to it." : "\"\(name)\" was restored."
+    }
+
+    /// The person did something (selected, typed, opened an editor or Quick Add, changed Profile)
+    /// after a forced switch, so a later restore must not move them.
+    func notePersonActed() { if forcedLeave != nil { forcedLeave?.acted = true } }
+
+    func personActedSinceLeave(_ leave: ForcedProfileLeave) -> Bool {
+        leave.acted || profile != leave.switchedTo || ProfileViewState(self) != leave.baseline || editor != nil || quickAdd || !newTitle.isEmpty
+    }
+
+    /// Called after the client switched away from a deleted Profile. A second forced switch while
+    /// the person has still done nothing keeps the first Profile and view as the place to return to.
+    func recordForcedLeave(profile deleted: String, name: String, view: ProfileViewState, switchedTo: String, notice: String) {
+        let epoch = discovery.credentialEpoch
+        if let earlier = forcedLeave, earlier.credentialEpoch == epoch, !earlier.acted, earlier.switchedTo == deleted {
+            forcedLeave = ForcedProfileLeave(profile: earlier.profile, name: earlier.name, view: earlier.view, switchedTo: switchedTo,
+                                             baseline: ProfileViewState(self), credentialEpoch: epoch, notice: notice)
+        } else {
+            forcedLeave = ForcedProfileLeave(profile: deleted, name: name, view: view, switchedTo: switchedTo,
+                                             baseline: ProfileViewState(self), credentialEpoch: epoch, notice: notice)
+        }
+        restoredProfileOffer = nil
+    }
+
+    /// After a reload's rediscovery. Returns true when the client switched back (the stream is
+    /// reconnecting into that Profile); false when it stays where it is.
+    func resolveForcedLeave(_ leave: ForcedProfileLeave, acted: Bool) -> Bool {
+        guard signedIn, isCurrentEpoch(leave.credentialEpoch) else { forcedLeave = nil; return false }
+        guard let back = profiles.first(where: { $0.id == leave.profile }) else {
+            // The deletion still holds: stay where the client switched to, and keep saying why.
+            if profile == leave.switchedTo { deletionNotice = leave.notice }
+            return false
+        }
+        forcedLeave = nil
+        if acted {
+            restoredProfileOffer = leave
+            deletionNotice = Self.restoredProfileNotice(back.name, returned: false)
+            return false
+        }
+        returnToProfile(leave)
+        deletionNotice = Self.restoredProfileNotice(back.name, returned: true)
+        return true
+    }
+
+    /// The notice's offer: go to the restored Profile, with the view it had. Like any Profile
+    /// change, not while an editor is open or a write is running.
+    func goToRestoredProfile() {
+        guard let offer = restoredProfileOffer, signedIn, isCurrentEpoch(offer.credentialEpoch), editor == nil, !busy,
+              profiles.contains(where: { $0.id == offer.profile }) else { return }
+        restoredProfileOffer = nil
+        deletionNotice = nil
+        returnToProfile(offer)
+    }
+
+    private func returnToProfile(_ leave: ForcedProfileLeave) {
+        activateProfile(leave.profile)
+        selectedView = leave.view.selectedView
+        selectedProject = leave.view.selectedProject
+        selectedTag = leave.view.selectedTag
+        if leave.view.filters != requestedTaskFilters { applyTaskFilters(leave.view.filters) }
+        if leave.view.searchText != searchText { searchText = leave.view.searchText; scheduleSearch() }
     }
 }

@@ -41,7 +41,7 @@ struct Snapshots {
         if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT1"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT2"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SC1_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
         /// Candidate 9's images, both appearances (verify-design.py's C9_IMAGES).
-        let c9Images = 8
+        let c9Images = 24
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         #expect(NSColor(named: "primary", bundle: TodoColors.bundle) != nil)
@@ -162,6 +162,12 @@ struct Snapshots {
                         }
                         #expect(parsedChips.keys.contains("priority") && parsedChips.keys.contains("project"), "\(name): parsed chips were drawn: \(parsedChips.keys.sorted())")
                         try JSONSerialization.data(withJSONObject: ["window_height": Double(height), "parsed_chips": parsedChips, "region": [region.minX, region.minY, region.width, region.height].map(Double.init), "search_bottom": Double(search.maxY), "sheet_top": Double(sheet.minY), "actions_bottom": Double(actions.maxY), "empty_below_actions": Double(top + height - actions.maxY)], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("\(name)-\(mode)-quick-add.json"))
+                    }
+                    if name.contains("notice-profile-") {
+                        // The notice is drawn inside the window; only the offer has its Switch button.
+                        let notice = try #require(compactMeasurements.frames["task-notice"], "\(name): the notice is shown")
+                        #expect(notice.minX >= -0.5 && notice.maxX <= width + 0.5 && notice.maxY <= top + height + 0.5, "\(name): the notice is inside the window: \(notice)")
+                        #expect((compactMeasurements.frames["restored-profile-switch"] != nil) == name.hasSuffix("-offer"), "\(name): a Switch button only on the offer")
                     }
                     if name.hasSuffix("banner-reopen-refused") {
                         // Mac UI review 2, item 3: the notice with its button, and no exit-code line.
@@ -428,6 +434,21 @@ struct Snapshots {
                     adding.parsedTask = .init(title: "Ship", due_at: .init(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
                     adding.dependencies.initial = (0..<13).map { DependencySnapshots.task("initial-\($0)", title: "Launch review \($0)") }
                     try await render("c9-compact-screen-quick-add-many-\(Int(height))", TaskListView(model: adding, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: height)
+                }
+                // Candidate 9 restore ruling: each notice a Profile switch can show, full and Compact.
+                for (name, setup) in [
+                    ("deleted", { (m: TodoModel) in m.deletionNotice = "\"Launch\" was deleted. Switched to Work." }),
+                    ("returned", { (m: TodoModel) in m.deletionNotice = TodoModel.restoredProfileNotice("Launch", returned: true) }),
+                    ("offer", { (m: TodoModel) in
+                        m.profiles = m.profiles + [DiscoveryEntry(id: "launch", name: "Launch", open_task_count: 3, inbox_task_count: 0)]
+                        m.restoredProfileOffer = ForcedProfileLeave(profile: "launch", name: "Launch", view: ProfileViewState(m), switchedTo: m.profile,
+                                                                    baseline: ProfileViewState(m), credentialEpoch: m.discovery.credentialEpoch, notice: "\"Launch\" was deleted. Switched to Work.")
+                        m.deletionNotice = TodoModel.restoredProfileNotice("Launch", returned: false) }),
+                    ("missing", { (m: TodoModel) in m.deletionNotice = "\"Launch\" is not in this database any more. Switched to Work." }),
+                ] as [(String, (TodoModel) -> Void)] {
+                    let noticed = fixture(); noticed.signedIn = true; setup(noticed)
+                    try await render("c9-notice-profile-\(name)", WorkspaceSnapshot(model: noticed), width: 1100, height: 720)
+                    try await render("c9-compact-notice-profile-\(name)", TaskListView(model: noticed, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 640)
                 }
                 if c9Only { continue }
             }

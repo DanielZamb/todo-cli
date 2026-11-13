@@ -721,7 +721,7 @@ struct TaskListView: View {
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
                     .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
-                        if let id { model.clientDiagnosticsUI.selected(id) }
+                        if let id { model.clientDiagnosticsUI.selected(id); model.notePersonActed() }
                         if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
                             Task {
                                 await ClientDiagnosticContext.$actionID.withValue(model.clientDiagnosticsUI.selectionAction) {
@@ -758,8 +758,16 @@ struct TaskListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay(alignment: .bottom) {
             if let notice = model.deletionNotice {
-                Text(notice).padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule()).padding(16).accessibilityIdentifier("task-notice")
+                HStack(spacing: 12) {
+                    Text(notice)
+                    // A restored Profile the person has moved on from: offered, never forced (ruling on
+                    // the candidate 9 restore finding).
+                    if let offer = model.restoredProfileOffer, notice == TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) {
+                        Button("Switch to \(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name)") { model.goToRestoredProfile() }
+                            .buttonStyle(.borderless).disabled(model.editor != nil || model.busy).accessibilityIdentifier("restored-profile-switch").compactBounds("restored-profile-switch")
+                    }
+                }.padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule()).padding(16).accessibilityIdentifier("task-notice").compactBounds("task-notice")
             }
         }
         // Each confirmation gets its own three seconds: the timer is keyed by the notice's sequence,
@@ -767,7 +775,8 @@ struct TaskListView: View {
         .task(id: model.noticeMessages.sequence) {
             guard model.deletionNotice != nil else { return }
             let mark = model.noticeMessages.mark
-            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            // An offer to go to a restored Profile stays longer than a confirmation: it asks for an action.
+            do { try await Task.sleep(for: .seconds(model.restoredProfileOffer != nil ? 10 : 3)) } catch { return }
             model.expireNotice(since: mark)
         }
     }
