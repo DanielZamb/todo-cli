@@ -115,11 +115,38 @@ it.effect(
           "entry",
           "graph",
           "handler",
-          "history_decode",
           "response_handoff",
           "task_materialization",
           "writer_lock_wait",
         ]);
+        const created = yield* Effect.promise(() =>
+          fetch(`${base}/profiles/work/tasks`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.credential}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ title: "History span" }),
+          }).then((r) => r.json()),
+        );
+        const historyRequest = "44444444-4444-4444-8444-444444444444";
+        const history = yield* Effect.promise(() =>
+          fetch(`${base}/profiles/work/tasks/${created.id}/history`, {
+            headers: {
+              "X-Todo-Request": historyRequest,
+              Authorization: `Bearer ${session.credential}`,
+            },
+          }),
+        );
+        expect(history.status).toBe(200);
+        expect((yield* Effect.promise(() => history.json())).length).toBe(1);
+        expect(
+          profiler
+            .details()
+            .recent.filter((x) => x.request_id === historyRequest)
+            .map((x) => x.stage)
+            .filter((stage) => stage === "history_decode"),
+        ).toEqual(["history_decode"]);
         expect(
           joined.every(
             (x) =>

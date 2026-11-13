@@ -6,6 +6,7 @@ import {
   readAuthority,
 } from "../auth/authorized-read.ts";
 import { ProfileSummary, ProjectSummary, TagSummary } from "../client-reads.ts";
+import { diagnosticSync } from "../diagnostic-context.ts";
 import { Project, Tag, Task } from "../entities.ts";
 import type { ProfileId } from "../ids.ts";
 
@@ -25,13 +26,23 @@ export class ClientProjection {
     ),
   });
 
-  readonly tasksForMutation = (profile: ProfileId) =>
-    this.db
-      .query<{ payload: string }, [string]>(
-        "SELECT payload FROM tasks WHERE profile_id=? ORDER BY id",
-      )
-      .all(profile)
-      .map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload)));
+  readonly tasksForMutation = (profile: ProfileId) => {
+    const rows = diagnosticSync(
+      "database",
+      () =>
+        this.db
+          .query<{ payload: string }, [string]>(
+            "SELECT payload FROM tasks WHERE profile_id=? ORDER BY id",
+          )
+          .all(profile),
+      { statement: "store.read" },
+    );
+    return diagnosticSync("task_materialization", () =>
+      rows.map((row) =>
+        Schema.decodeUnknownSync(Task)(JSON.parse(row.payload)),
+      ),
+    );
+  };
 
   readonly metadata = (read: AuthorizedRead) =>
     this.metadataAt(readAuthority(read, "read", this.db).profile);

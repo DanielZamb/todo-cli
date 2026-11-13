@@ -34,7 +34,8 @@ try {
   const second=randomUUID();const b={...batch,batch_id:randomUUID(),run:{...run,run_id:second,build_id:"f".repeat(40)},events:batch.events.map(e=>({...e,run_id:second,build_id:"f".repeat(40)}))};
   assert.equal((await http("/diagnostics/profiler/ingest",b)).status,200);assert.equal(cli(["compare","--before",id,"--after",second]).comparable,true);
   const third=randomUUID();const c={...batch,batch_id:randomUUID(),run:{...run,run_id:third,comparison:{...run.comparison,environment_hash:"f".repeat(64)}},events:batch.events.map(e=>({...e,run_id:third}))};await http("/diagnostics/profiler/ingest",c);assert.equal((await http(`/diagnostics/profiler/compare?before=${id}&after=${third}`)).status,400);
-  const tasks=await http("/profiles/work/tasks");assert.equal(tasks.status,200);assert.equal((await tasks.json()).length,1);assert.match(tasks.headers.get("server-timing") ?? "",/todo-encode;dur=/u);
+  const tasks=await http("/profiles/work/tasks");assert.equal(tasks.status,200);const listed=await tasks.json();assert.equal(listed.length,1);assert.match(tasks.headers.get("server-timing") ?? "",/todo-encode;dur=/u);
+  const history=await http(`/profiles/work/tasks/${listed[0].id}/history`);assert.equal(history.status,200);assert.equal((await history.json()).length,1);
   const snapshot=await (await http("/diagnostics?detail=true")).json();assert.ok(snapshot.profiler.detail.recent.some((s:{stage:string})=>s.stage==="history_decode"));assert.ok(snapshot.profiler.detail.recent.some((s:{stage:string})=>s.stage==="task_materialization"));
   assert.ok(!fixture.log().includes("PRIVATE_CONTENT"));
   const multi={...batch,batch_id:randomUUID(),events:[{...base,sequence:4,name:"ui.action.ended",duration_ms:20,outcome:"cancelled",action_id:batch.events[2]?.action_id}]};
