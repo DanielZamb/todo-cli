@@ -109,6 +109,11 @@ const program = Effect.acquireUseRelease(
           return;
         }
         if (mode === "race-worker") {
+          // Each worker reads its own clock; a later clock may commit first.
+          time += Number(process.argv[5] ?? "0");
+          const target = Schema.decodeUnknownSync(ProfileId)(
+            process.argv[6] ?? "race",
+          );
           process.send?.("ready");
           yield* Effect.promise(
             () =>
@@ -116,7 +121,7 @@ const program = Effect.acquireUseRelease(
                 process.once("message", () => resolve()),
               ),
           );
-          yield* refuse(store, Schema.decodeUnknownSync(ProfileId)("race"));
+          yield* refuse(store, target);
           process.send?.("done");
           process.disconnect?.();
           return;
@@ -129,10 +134,12 @@ const program = Effect.acquireUseRelease(
             created_at: stamp(),
             updated_at: stamp(),
           });
-          const children = [0, 1].map(() =>
-            spawn(process.execPath, ["race-worker", directory, evidence], {
-              stdio: ["ignore", "ignore", "inherit", "ipc"],
-            }),
+          const children = [0, 50].map((offset) =>
+            spawn(
+              process.execPath,
+              ["race-worker", directory, evidence, String(offset)],
+              { stdio: ["ignore", "ignore", "inherit", "ipc"] },
+            ),
           );
           const ready = children.map(
             (child) => new Promise((resolve) => child.once("message", resolve)),
@@ -164,8 +171,53 @@ const program = Effect.acquireUseRelease(
               "SELECT count(*) n FROM op_log WHERE profile='race' AND json_extract(event,'$.kind')='AuthAttemptRejected'",
             )
             .get()?.n;
-          mark("race", { rows, expected: 1, time: stamp(), exits: 2 });
+          mark("race", {
+            rows,
+            expected: 1,
+            clocks: [stamp(), new Date(time + 50).toISOString()],
+            exits: 2,
+          });
           assert.equal(rows, 1);
+          // Deterministic order: a process whose clock reads 50 ms later
+          // commits first; this process, with the earlier clock, must still
+          // find that refusal in the same minute.
+          const skew = Schema.decodeUnknownSync(ProfileId)("skew");
+          yield* store.putProfile({
+            id: skew,
+            name: "skew",
+            created_at: stamp(),
+            updated_at: stamp(),
+          });
+          const later = spawn(
+            process.execPath,
+            ["race-worker", directory, evidence, "50", "skew"],
+            { stdio: ["ignore", "ignore", "inherit", "ipc"] },
+          );
+          const laterReady = new Promise((resolve) =>
+            later.once("message", resolve),
+          );
+          assert.equal(yield* Effect.promise(() => laterReady), "ready");
+          const laterDone = new Promise((resolve) =>
+            later.once("message", resolve),
+          );
+          const laterExit = new Promise((resolve) =>
+            later.once("exit", (code, signal) => resolve({ code, signal })),
+          );
+          later.send("release");
+          assert.equal(yield* Effect.promise(() => laterDone), "done");
+          assert.deepEqual(yield* Effect.promise(() => laterExit), {
+            code: 0,
+            signal: null,
+          });
+          yield* refuse(store, skew);
+          const skewRows = count(db, skew);
+          mark("clock-skew", {
+            rows: skewRows,
+            expected: 1,
+            committedFirst: new Date(time + 50).toISOString(),
+            attempt: stamp(),
+          });
+          assert.equal(skewRows, 1);
         }
         if (mode === "proof") {
           const observations: unknown[] = [];

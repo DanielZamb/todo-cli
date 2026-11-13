@@ -60,10 +60,15 @@ export const repeatedAuthRejection = (
       "SELECT actor,outcome,reason,json_extract(event,'$.kind') kind,json_extract(event,'$.action') action,json_extract(event,'$.detail') detail,json_extract(event,'$.occurred_at') occurred_at FROM op_log WHERE profile IS ? ORDER BY seq DESC",
     )
     .iterate(attempt.profile);
+  // One pass from the newest row: the first match or the first recording-clock
+  // row before the horizon decides. A match is any refusal in the attempt's
+  // minute, even one stamped after this attempt: another process may have read
+  // its clock later and committed first. A stamp after the attempt is never
+  // before the horizon, so it cannot end the walk.
   for (const row of rows) {
     if (typeof row.occurred_at !== "string") continue;
     const time = Date.parse(row.occurred_at);
-    if (!Number.isFinite(time) || time > attempt.time) continue;
+    if (!Number.isFinite(time)) continue;
     if (
       row.outcome === "rejected" &&
       row.reason === "auth" &&

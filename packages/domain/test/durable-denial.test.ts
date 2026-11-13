@@ -151,3 +151,21 @@ for (const [kind, actor] of skippedKinds)
       ),
     ),
   );
+
+// A process can read its clock first and commit second: the other process's
+// refusal in the same minute then carries a later stamp than this attempt.
+// It is still the same minute's refusal, so nothing more is appended.
+it.effect("merges a same-minute refusal stamped after the attempt", () =>
+  withDatabase((path) =>
+    Effect.gen(function* () {
+      yield* TestClock.setTime(time + 50);
+      yield* refuse(path);
+      yield* TestClock.setTime(time);
+      yield* refuse(path);
+      expect(count(path)).toBe(1);
+      yield* TestClock.setTime(time - 60_000);
+      yield* refuse(path);
+      expect(count(path)).toBe(2);
+    }),
+  ),
+);
