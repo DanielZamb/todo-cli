@@ -22,6 +22,7 @@ import {
   type AuthAction,
   batchDepend,
   batchEditTasks,
+  boundDiagnostics,
   ClientReads,
   DependencyCommands,
   type DependencyError,
@@ -60,6 +61,7 @@ import {
 } from "@todo/domain/commands";
 import { DiagnosticRecordings } from "@todo/domain/diagnostic-recordings";
 import { importTasks } from "@todo/domain/import";
+import { RecordingService } from "@todo/domain/recording-service";
 import {
   type OperationStore,
   openStore,
@@ -438,10 +440,13 @@ export const serverLayer = (options: {
         (store) => Effect.orDie(store.close()),
       );
       const recordings = yield* Effect.acquireRelease(
-        Effect.sync(() =>
-          DiagnosticRecordings.start(
-            join(dirname(resolve(options.path)), "diagnostic-recordings"),
-          ),
+        Effect.sync(
+          () =>
+            new RecordingService(() =>
+              DiagnosticRecordings.start(
+                join(dirname(resolve(options.path)), "diagnostic-recordings"),
+              ),
+            ),
         ),
         (value) => Effect.promise(() => value.close()),
       );
@@ -617,9 +622,33 @@ export const serverLayer = (options: {
                     detail: query.detail === "true",
                   }),
                 );
+                const health = recordings.health();
                 return HttpApiSchema.withHeaders({
                   headers: { "cache-control": "no-store" },
-                  body,
+                  body:
+                    health.condition !== "available" || health.failures > 0
+                      ? boundDiagnostics({
+                          ...body,
+                          errors: [
+                            ...(health.condition !== "available" ||
+                            health.failures > 0
+                              ? [
+                                  {
+                                    id: Number.MAX_SAFE_INTEGER,
+                                    time: body.generated_at,
+                                    code:
+                                      recordings.health().condition ===
+                                      "held_reader"
+                                        ? `Recording storage held open by another reader; dropped batches: ${health.droppedBatches}; dropped events: ${health.droppedEvents}`
+                                        : `Recordings ${health.condition}; failures: ${health.failures}; dropped batches: ${health.droppedBatches}; dropped events: ${health.droppedEvents}`,
+                                    route: "Recording storage",
+                                  },
+                                ]
+                              : []),
+                            ...body.errors,
+                          ],
+                        })
+                      : body,
                 });
               }),
           }),

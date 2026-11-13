@@ -13,7 +13,7 @@ import {
   recordingRefusals,
   validateRecordingBatch,
 } from "@todo/domain";
-import type { DiagnosticRecordings } from "@todo/domain/diagnostic-recordings";
+import type { RecordingService } from "@todo/domain/recording-service";
 import type { OperationStore } from "@todo/domain/store";
 import { Effect, Option, Stream } from "effect";
 import { HttpServerRequest, HttpServerResponse } from "effect/http";
@@ -100,7 +100,7 @@ const admissionFailure = () =>
   new InternalError({ message: recordingRefusals.admission_storage_failure });
 
 export const recordingRoutes = (
-  recordings: DiagnosticRecordings,
+  recordings: RecordingService,
   store: OperationStore,
 ) =>
   HttpApiBuilder.group(TodoApi, "profiler", (handlers) => {
@@ -134,7 +134,6 @@ export const recordingRoutes = (
       .handleRaw("ingest", ({ request, query }) =>
         Effect.gen(function* () {
           yield* owner;
-          yield* Effect.promise(() => recordings.whenReady());
           const parts: Uint8Array[] = [];
           let bytes = 0;
           yield* request.stream.pipe(

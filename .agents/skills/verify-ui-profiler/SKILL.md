@@ -40,7 +40,8 @@ bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-crash.ts --
 The real SQL controls cover C1 through C10's behavioral rules: whole refusal
 marks, null fractions, retry after failure, two-run reducers, cross-run association
 constraints, alias-safe public cursors, counted expiry/eviction, every transaction
-boundary and continuous admission under its unchanged five-second timeout.
+boundary and continuous admission under its authorized 30-second worker-fixture
+hang guard. The native engine fixture retains its existing five-second guard.
 The compiled child is SIGKILLed before/after BEGIN and COMMIT for ingestion,
 marked import, refusal, expiry and eviction. Reopening must see the last committed transaction;
 retry and duplicate retry must converge without losing or doubling facts.
@@ -63,12 +64,45 @@ bun .agents/skills/verify-ui-profiler/scripts/sqlite-auth.ts "$PWD/docs/evidence
 bun .agents/skills/verify-ui-profiler/scripts/sqlite-auth.ts "$PWD/docs/evidence/ui-speed/recordings-revoked-read-new" read
 ```
 
-The original continuous fixture has one event per admission and its unchanged
-5000 ms timeout. The compiled stronger control admits three events per batch
+The original worker fixture has one event per admission and a 30000 ms heavy-
+fixture timeout. The compiled stronger control admits three events per batch
 1001 times and retrieves all 3003 facts. The full-volume helper creates only an
 owned 10 MiB scratch HFS+ volume and removes it after the real ENOSPC / Task /
 scheduler assertions. The expiry helper takes about 65 seconds to prove the
 minute retry floor with a persistently failing SQL trigger.
+
+## Worker and reader failure recovery
+
+Run the real controls after building the cached binaries:
+
+```sh
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-watchdog.ts --outfile .scratch/bin/sqlite-watchdog
+.scratch/bin/sqlite-watchdog "$PWD/docs/evidence/ui-speed/worker-watchdog-new"
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-factory-server.ts --outfile .scratch/bin/sqlite-factory-server
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-factory.ts "$PWD/docs/evidence/ui-speed/worker-factory-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-reader.ts "$PWD/docs/evidence/ui-speed/reader-recovery-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-reader-http.ts "$PWD/docs/evidence/ui-speed/reader-http-new"
+bun .agents/skills/verify-ui-profiler/scripts/sqlite-worker-missing.ts "$PWD/docs/evidence/ui-speed/worker-native-new"
+bun build --compile .agents/skills/verify-ui-profiler/scripts/sqlite-byte-bound.ts --outfile .scratch/bin/sqlite-byte-bound
+.scratch/bin/sqlite-byte-bound "$PWD/docs/evidence/ui-speed/worker-bytes-new"
+pnpm --filter @todo/domain test recordings-sql-review.test.ts
+```
+
+Each recovery control takes about 65 seconds. The watchdog holds the actual
+worker, offers 1101 calls, asserts the common byte/count bound and settlement,
+then recovers automatically. The factory control drives Task HTTP and the owner
+Diagnostics note during a throwing factory and recovers on the minute backoff.
+The reader HTTP control fills the default cap behind an independent read
+transaction, asserts nine further batch refusals / 1152 events and the literal
+owner explanation, then proves recovery. Earlier quota evictions remain in the
+global counters; the refusal assertion uses their prior values as its baseline.
+The native control removes an owned bundled worker module and restores it.
+The pinned reader is an independent SQLite connection. It is released normally;
+automatic expiry progresses with no further recording RPC. Capacity drops are
+counted while storage_failures remains zero. Show/compare/export materialization
+must run outside snapshots. SQL6 checks unchanged bytes plus 0640/0750 modes.
+The original continuous-admission fixture now uses its authorized 30000 ms heavy
+fixture guard; performance is asserted only through the paired benchmark.
 
 ## Cost
 

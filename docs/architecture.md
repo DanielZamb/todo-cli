@@ -401,3 +401,16 @@ sums enforce the fixed app/total caps and oldest-first deletion. Fixed-cadence
 bounded DELETE sweeps replace file expiry/repair/index machinery. No manifest,
 checkpoint, segment file or independent event index remains. See the current
 section of [the report](decisions/ui-speed/diag-recordings-report.md).
+
+The recording client bounds all worker RPCs, including reads, to 1024 calls /
+1 MiB of encoded requests with an envelope allowance. Readiness and calls expire
+after five seconds; three consecutive deadlines retire the worker. Recording
+creation and unavailable workers retry after one minute while Task service stays
+available. Owner Diagnostics includes content-free recording status and failure
+counts in its existing error list. Export captures 129 rows per read step; Show
+uses 128-row steps, and Compare does not enclose them in a long snapshot. A
+concurrent external change makes the read refuse for retry. A pinned external
+reader can delay physical expiry within the disk cap; logical retention still
+hides old facts. Capacity refusals are counted, maintenance backs off and
+recovers automatically. The main file retains its high-water size; no vacuuming
+is scheduled. Existing foreign files are validated before modes are changed.

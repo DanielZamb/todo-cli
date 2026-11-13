@@ -1,6 +1,9 @@
 import { Schema } from "effect";
 
 export const recordingRefusals = {
+  rpc_deadline: "Recording worker deadline exceeded; retry later.",
+  rpc_capacity: "Recording worker request capacity reached; retry later.",
+  recording_changed: "Recording changed during the read; retry the request.",
   admission_action_conflict:
     "Recording action phases conflict. Whole batch refused; no events were admitted. The run is incomplete. Retry non-conflicting events unchanged with a new batch id and a new action id for each interaction.",
   admission_sequence_conflict:

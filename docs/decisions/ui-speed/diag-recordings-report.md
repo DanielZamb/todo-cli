@@ -1,6 +1,9 @@
 # Private Diagnostics recordings
 
-The current implementation replaces the unshipped file journal with a separate
+The current delivery corrects SQL1 through SQL6 of the SQLite review. See
+"SQLite review corrections" below for its decisions and red/green receipts.
+
+The SQLite implementation replaces the unshipped file journal with a separate
 SQLite database in a worker thread. The SQLite replacement section at the end
 of this report contains the current design and receipts. Earlier sections and
 the manifest lifecycle table are historical, including their PASS claims for
@@ -1723,3 +1726,288 @@ Final df records 127.3 GB free; concurrent units also changed disk use, so that
 volume delta is not attributed to this cleanup. Reusable sources and every
 cited red/green receipt remain. All owned fixture processes and the temporary
 full-volume mount are stopped/removed.
+
+## SQLite review corrections
+
+Base: 475d6a2b94cb3c9a21398eae45705c7d6e6746d7. The review is read in full;
+its original sources are archived locally in .scratch/recordings-sqlite-s1.
+C1 through C10 remain closed under the SQLite design. This correction changes
+worker availability, counter accounting and read/permission boundaries. It does
+not change the Task store, projection, recording schemas or HTTP contract.
+Evidence for this section is docs/evidence/ui-speed/recordings-sql-corrections.
+
+### Decisions and red/green controls
+
+| Finding | Red on 475d6a2b | Correction and green |
+| --- | --- | --- |
+| SQL1 | Original compiled client-hang witness exits 1, retaining 1101 RPCs while only ingestion charged the queue. | All calls reserve count and bytes synchronously. At most 1024 requests / 1 MiB of full encoded envelopes plus 256 bytes per call are held. The real held-worker control settles in about five seconds, clears pending calls and recovers after backoff. Original witness exits 0. |
+| SQL2 | Original compiled factory-failure server exits before Listening; start-fault.ts exits 1. | RecordingService catches the factory itself, serves Tasks immediately and retries it. Original witness exits 0. Factory/repaired controls prove Task HTTP, the owner Diagnostics note and automatic recovery. Removing an owned bundled worker module exercises a real native worker loading failure and recovery, without resource exhaustion. |
+| SQL3 | Literal native run-capacity control sees dropped_batches=0 and dropped_events=0 instead of 1 and 3 after the 5120th mark-only run. | Native refusal accounting counts that valid batch without registering run 5121. Counters are 1 and 3; capacity_events is 3. Conflicts and other valid-batch refusal paths are audited below. |
+| SQL4 | Literal pinned-reader control sees storage failures and unclassified drops. Materialization control sees active snapshots during JSON parsing. Both fail. | Capacity refusals carry counted batches/events. A reader-held store reports that reason in Diagnostics. Maintenance retries on its minute backoff without adding storage failures. Releasing the independent reader permits automatic expiry with no further recording RPC; the control observes 178 dropped batches / 534 events, zero storage failures and recovery in 60961.514 ms. Materialization is outside read snapshots. |
+| SQL5 | Source guard rejects the dead auto_vacuum=INCREMENTAL setting. | Setting removed; no vacuuming added. A native control verifies zero retained event charge after expiry, positive freelist_count and unchanged main file size after a TRUNCATE checkpoint. The seat's full three-app fixture retained about 32.6 MB at high water; that is expected. |
+| SQL6 | Literal foreign-file control sees 0600 / 0700 instead of unchanged 0640 / 0750. | Existing nonempty files pass a read-only ownership/integrity check before chmod or WAL setup. Refused foreign/unreadable files keep their bytes and modes. The real scratch Task database and its copy pass the archived boundary witness; unknown read-only validation failures are refused safely. |
+
+The original held-client and startup-factory witnesses are retained unchanged.
+The new native tests have literal expected values; they are red before edits and
+green after. The additional high-water control documents accepted physical
+behavior rather than claiming the file shrinks. Preparation failures, the first
+boundary attempt's read-only copy error and the first factory-label assertion
+are preserved in their logs; none is relabeled green.
+
+### Availability policy
+
+Readiness and each RPC have a 5000 ms deadline, including time queued behind
+startup. This is over 250 times the worker's measured 19.7 ms transaction and
+still over 57 times the seat's 86.6 ms maximum under load. Readiness is one shared
+bounded startup barrier, not an unbounded queue of read calls. HTTP ingestion
+no longer waits outside RPC admission for that barrier.
+
+Every ingestion, run list, Show, export, compare, flush and close reserves the
+same 1024-call / 1 MiB queue. Byte charging includes the complete JSON request
+and a fixed 256-byte envelope allowance; it does not claim to measure heap use.
+The 1024-marker fixture omits optional comparison metadata so that its count
+bound, rather than the newly charged wrapper bytes, is the limiting constraint.
+The independent byte-bound control uses large read arguments and a held worker.
+
+A deadline fails the call with an allowlisted, content-free reason. Three
+consecutive deadlines retire the worker, reject its other pending calls and
+enter unavailable. A successful response resets the streak; late replies cannot
+reset it or complete a timed-out call. Startup, worker error/exit and malformed
+reply failures use the same unavailable state. A 60000 ms unreferenced backoff
+starts a fresh worker. Closing cancels recovery and cannot wait indefinitely on
+an RPC. There is no Task request, stream or scheduler dependency on those waits.
+
+The server also catches an exception from DiagnosticRecordings.start itself.
+Its factory retry uses the same minute policy. Health is sampled from memory by
+Diagnostics; no worker RPC is needed to show unavailable. One operational note
+uses the existing error list and its byte budget. Its strings contain state and
+numeric failure/drop counts only, with fixed route "Recording storage". Regular
+HTTP operation, route, latency and error totals are unchanged. The note's reserved
+id gives current operational state priority over older request error samples.
+
+The real watchdog observes 1024 pending calls and settles the 1101 offered calls
+in 5008.671 ms, including capacity refusals, deadlines and worker retirement.
+The one valid ingestion is counted once as a dropped batch with three events.
+The automatic restart admits/retrieves exactly those three events. The factory
+control serves the literal Task and creates a second Task during the failure,
+then admits a recording after the repair/backoff. The native missing-module
+control recovers with one counted worker failure. No OS resource exhaustion was
+attempted.
+
+### Refusal counter audit
+
+Counters below count submission attempts and facts in those attempts, not an
+estimate that a distinct event was lost permanently. Producer retries remain
+idempotent in storage. Some failed-attempt counters are process-local; durable
+admission qualifiers and successful truth remain in SQLite.
+
+| Path | Counter and qualifier |
+| --- | --- |
+| Valid sequence, batch, run or action-phase conflict | Real ingestion commits dropped_batches +1 and dropped_events +N with its whole-batch run mark. No submitted fact is admitted. |
+| Same conflict in dry run | Process-local dropped_batches +1 and dropped_events +N; no run mark or facts are persisted by preview. |
+| Run capacity | dropped_batches +1, dropped_events +N, capacity_events +N; no new run and no storage failure. |
+| App/total/transaction/physical capacity | dropped_batches +1, dropped_events +N, capacity_events +N. |
+| Pinned-reader capacity | The same capacity counters; held-reader reason, no repeated storage failure per maintenance retry. |
+| SQL/I/O or failed qualifier commit | dropped_batches +1, dropped_events +N, storage_failures +1; producer retains the whole batch. |
+| Parent RPC queue, deadline or unavailable worker | Parent dropped_batches +1 and dropped_events +N for a valid ingestion, plus counted worker/control refusals. Read refusals count worker/control failures without inventing event losses. |
+| Synchronous factory unavailable | Service-local dropped_batches +1 and dropped_events +N for a valid ingestion; factory failures remain visible in Diagnostics. |
+| Identical retained retry | duplicate_batches +1; no event loss or refusal. |
+| Invalid metadata, excess fields, invalid counters, auth or network refusal | No valid recording batch has been admitted/decoded at that boundary; existing content-free refusal and privacy policy stand. |
+
+### Retention and owned readers
+
+The accepted external-reader exception keeps logical seven-day hiding and the
+physical cap while a reader prevents checkpoint/deletion progress. It never
+breaks another process's transaction. Explicit valid offers can attempt bounded
+recovery; automatic maintenance has a 60000 ms retry floor. Failed maintenance
+while reader-held does not count a new storage failure. Worker maintenance posts
+health updates so Diagnostics learns recovery even without a new recording RPC.
+The compiled recovery control inspects SQLite directly after release and waits
+for automatic physical deletion and the parent's available state.
+
+Export captures at most 129 row strings, run state and status in a short read
+transaction, commits, then formats/adopts at most 128 events outside it. Show
+reads at most 128 row strings per transaction, commits, then materializes and
+reduces. Compare has no outer snapshot. A data_version token checked from before
+metadata capture through the steps refuses a concurrently changed read with an
+allowlisted retry reason. The single worker cannot interleave its own writes
+inside a synchronous read; external commits are detected. The run list reads at
+most 101 descriptors per page. No formatting/reducer or step boundary holds a
+snapshot. Queries are bounded by the existing store caps as well as row limits.
+
+The main SQLite file remains at its high-water allocation inside the physical
+cap. Expiry reduces charged usage and makes pages reusable; it does not promise
+OS space reclamation. No auto_vacuum setting or incremental_vacuum call remains.
+
+### Admission fixture and limits
+
+Only the original continuous-admission fixture now has the authorized 30000 ms
+heavy-fixture hang guard. Its 1001 admissions, payload, quota and literal bounds
+are unchanged. No other pre-existing deadline or assertion is relaxed. The new
+worker deadlines are part of the requested production policy. Performance claims
+remain in the alternating benchmark, not the test wall-clock guard.
+
+
+### Final compiled controls
+
+The byte-only guard offers ten large read calls behind a held ingestion. Exactly
+three reads refuse capacity; eight calls remain held and charge 922468 bytes,
+below 1048576. Close settles the held calls. The separate count control admits
+at most 1024 calls. Neither control claims those encoded charges measure heap.
+Both use the real worker.
+
+The unchanged archived hang-task-stream.ts control passes against the new
+compiled server. A held recorder still permits the literal Task creation,
+scheduler row_version 2, two TaskCreated and one ReminderFired stream entries;
+the three sequence numbers are unique and ordered. The controlled factory
+failure and native missing-module controls recover after the minute backoff.
+
+The additional default-cap real-HTTP reader control passes. Nine valid refused
+batches add exactly 1152 dropped events. Diagnostics contains the literal
+reader-held explanation with the final counts, and ingestion recovers after the
+independent reader releases. Its initial assertion wrongly treated the global
+counters as zero: prior quota evictions already counted 140 batches / 17920
+events in that run. The first two prepared executions therefore exit 1, with
+the actual note preserved in reader-http3/diagnostics.json. The corrected control
+asserts nine / 1152 increments over the last accepted receipt and exits 0.
+The original archived HTTP witness remains unchanged. The earlier attempt to
+create this helper via Bun stdin without its run command also exits 1 before
+execution and is not a product failure. The later helper type check also caught a
+mutable optional baseline captured in a closure; binding its expected label
+before the closure fixes that preparation error. helper-types-final3 exits 0.
+
+### Frozen cost comparison after corrections
+
+Ingestion has observable cost. The strongest association is the synthetic
+32-producer flood: Task write p50 changes from median 3.037 to 38.000 ms;
+paired differences are 35.339 ms [29.241, 39.489]. All 2000 measured reads and
+2000 writes satisfy literal response and state assertions. Of 6400 flood
+batches, 2519 are accepted and 3881 refused. Correctness and prompt failure
+containment do not promise latency isolation under a flood.
+
+For the 16-event, 128-event and eviction cells all ten write differences are
+positive, but their magnitudes lie inside the pair-to-pair spread. Treat the
+size of those effects as inconclusive on this busy host; do not read that as
+no overhead. All read differences and the expiry write difference are also
+inconclusive. Raw boundaries record one-minute loads from 7.722 to 18.269.
+No imposed CPU pressure or extra verification run overlapped this comparison.
+
+The same compiled server/CLI pair is used on both sides, with ingestion absent
+or present, ten alternating pairs per scenario and twenty checked reads and
+writes per cell. The frozen recipe and its assertions are unchanged. Its
+source manifest is source-frozen.json, hash
+057a2b81f7d026986b175ba165d6cc67d06f1bf8ab8da9550890102a90c21781.
+HEAD in that precommit manifest is the base; the source hash identifies the
+corrected working tree. Earlier build manifests and failed preparations remain
+separate receipts. raw.json records every duration, producer outcome, load
+boundary and CPU value; summary.json, tables.md and comparison.html reduce
+those same 100 cells.
+
+There is no synchronous recordings SQLite call on the Task request thread.
+The native seed transaction maximum observed here is 175.048 ms, beyond the
+2 ms criterion, so SQLite remains in the worker. The 5000 ms watchdog still
+has over 28 times that observed maximum as margin. Request decoding, metadata
+validation, request encoding and bounded queue admission still execute on the
+server thread. Under the flood, server CPU across threads is median 9945 ms
+per cell against 250 ms without ingestion; driver CPU with ingestion is
+806 ms. This locates substantial work in the server process, not merely the
+load generator. It does not distinguish HTTP schema/encoding work, SQLite,
+fsync or scheduling contention: the exact limiter is not profiled, so these
+are end-to-end observations rather than a causal component estimate.
+No allocation count is claimed. A quiet-machine confirmation under the
+unchanged ceiling is owed at integration.
+
+| Challenge | Read p50 without / with | Write p50 without / with | Accepted / dropped batches |
+| --- | --- | --- | --- |
+| 16 events | 2.414 [2.025, 3.062] / 2.547 [1.958, 2.861] | 2.392 [1.968, 2.700] / 3.842 [3.072, 4.126] | 200 / 0 |
+| 128 events | 2.598 [2.406, 3.384] / 2.619 [1.808, 3.749] | 2.542 [2.232, 3.886] / 5.354 [3.756, 7.867] | 200 / 0 |
+| 32 producers | 3.062 [2.403, 3.384] / 2.768 [2.564, 3.231] | 3.037 [2.529, 3.280] / 38.000 [32.287, 42.504] | 2519 / 3881 |
+| Expiry | 2.197 [1.389, 2.823] / 2.382 [1.421, 3.394] | 2.268 [1.470, 2.845] / 2.842 [1.926, 3.982] | 0 / 0 |
+| Eviction | 1.590 [1.284, 3.681] / 2.002 [1.261, 3.735] | 1.657 [1.298, 3.889] / 4.174 [2.841, 9.372] | 200 / 0 |
+
+| Challenge | Read paired differences, pairs 1 through 10, ms | Write paired differences, ms |
+| --- | --- | --- |
+| 16 events | -0.628, 0.579, 0.257, -0.632, 0.493, -0.126, 0.111, 0.179, 0.051, 0.338 | 0.663, 2.004, 1.247, 0.494, 1.432, 1.457, 1.010, 1.539, 1.760, 1.485 |
+| 128 events | -0.277, -0.658, 0.069, -0.093, -0.914, 0.330, -0.200, 0.671, 0.456, 0.426 | 2.982, 1.518, 3.159, 3.299, 0.508, 1.536, 0.933, 4.770, 5.004, 4.079 |
+| 32 producers | -0.174, -0.777, 0.500, -0.085, -0.574, 0.328, -0.481, -0.010, 0.057, -0.405 | 35.034, 32.305, 29.241, 39.489, 30.192, 35.645, 32.133, 38.745, 38.188, 36.729 |
+| Expiry | 0.887, 0.274, 0.385, -0.572, 0.520, 0.032, 0.134, -0.696, 0.026, 0.570 | 1.548, 0.930, 0.831, -0.077, 0.654, 0.456, 0.713, -0.181, 0.671, 1.141 |
+| Eviction | -0.658, 0.649, 0.882, 0.905, -0.900, 0.304, 0.367, 0.661, 0.112, -0.016 | 0.974, 2.730, 3.520, 2.725, 0.851, 2.008, 2.135, 2.685, 4.803, 5.483 |
+
+| Challenge | Server CPU without / with, ms | Driver CPU with, ms | Boundary one-minute load range |
+| --- | --- | --- | --- |
+| 16 events | 220.000 [200.000, 230.000] / 400.000 [340.000, 420.000] | 28.715 [19.517, 58.658] | 7.846 to 8.339 |
+| 128 events | 235.000 [210.000, 290.000] / 730.000 [670.000, 880.000] | 45.861 [32.315, 84.659] | 7.722 to 9.767 |
+| 32 producers | 250.000 [220.000, 260.000] / 9945.000 [9700.000, 10420.000] | 805.712 [776.301, 862.504] | 10.097 to 14.618 |
+| Expiry | 210.000 [160.000, 240.000] / 420.000 [330.000, 490.000] | 16.099 [11.382, 20.311] | 9.157 to 12.377 |
+| Eviction | 180.000 [140.000, 320.000] / 900.000 [720.000, 1330.000] | 37.620 [30.772, 60.621] | 8.452 to 18.269 |
+
+
+### Commands, exits and integration debt
+
+Evidence root is docs/evidence/ui-speed/recordings-sql-corrections (E below).
+All receipts, scratch data, binaries and visuals are ignored. Reusable controls
+are in the verification skill. The original reds were run before product edits
+at 475d6a2b and retained with their unchanged sources.
+
+| Command / control | Real exit and receipt |
+| --- | --- |
+| pnpm --filter @todo/domain test recordings-sql-review.test.ts, before corrections | 1; red-native.log, five failing controls |
+| Original compiled client-hang.ts | 1 before / 0 after; red-hang and green-hang |
+| Original start-fault.ts with compiled start-failure-server | 1 before / 0 after; red-start and green-start |
+| pnpm --filter @todo/domain test recordings-sql-review.test.ts, corrected | 0; green-native-final.log, six controls |
+| Original compiled boundary.ts against scratch Task DB and copy | 0; green-boundary2.log; prior copy validation attempt 1 is retained |
+| .scratch/bin/sqlite-watchdog E/watchdog | 0; watchdog.exit |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-factory.ts E/factory-green | 0; factory-green.exit |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-worker-missing.ts E/native-worker | 0; native-worker.exit |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-reader.ts E/reader | 0; reader.exit |
+| .scratch/bin/sqlite-byte-bound E/bytes | 0; bytes.exit |
+| Original hang-task-stream.ts and compiled worker-fault-server | 0; isolation.exit, isolation.json |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-reader-http.ts E/reader-http-final | 0; reader-http-final.exit |
+| pnpm --filter @todo/domain test | 0; domain.exit; 450 tests |
+| pnpm --filter @todo/server test | 0; server.exit; 38 tests |
+| bun --bun node_modules/typescript/bin/tsc -p .agents/skills/verify-ui-profiler/tsconfig.json | 0; helper-types-final3.exit |
+| bun apps/server/scripts/scratch-diagnostics.ts build | 0; build-frozen.exit and source-frozen.json |
+| TODO_PROFILER_STRESS=1 bun .agents/skills/verify-ui-profiler/scripts/verify.ts E/producer | 0; producer.exit, 700-batch pressure plus HTTP/CLI/privacy assertions |
+| bun .agents/skills/verify-ui-profiler/scripts/completeness.ts E/completeness | 0; completeness.exit |
+| bun .agents/skills/verify-ui-profiler/scripts/corrections.ts E/identities | 0; identities.exit |
+| bun .agents/skills/verify-ui-profiler/scripts/admission-fault.ts E/admission-fault | 0; admission-fault.exit |
+| .scratch/bin/sqlite-crash E/crash | 0; crash.exit, 20 real kills around SQL transaction boundaries |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-wire.ts E/wire | 0; wire.exit, 95-event paging and restart |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-writers.ts E/writers | 0; writers.exit, two real servers |
+| .agents/skills/verify-ui-profiler/scripts/sqlite-full.sh E/full | 0; full.exit, real ENOSPC with Task/scheduler controls |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-expiry.ts E/expiry | 0; expiry.exit, retry floor |
+| TODO_DIAGNOSTICS_NO_SWIFT=1 .agents/skills/verify-diagnostics/scripts/verify.sh E/diagnostics | 0; diagnostics.exit, terminal_pngs HOLD |
+| .agents/skills/verify-server-api/scripts/verify.sh E/api | 0; api.exit |
+| .agents/skills/verify-auth/scripts/verify.sh E/auth | 0; auth.exit |
+| Compiled apps/server/scripts/verify-diagnostic-faults.ts driver | 0; recorder-faults.exit, 47 fault controls |
+| Compiled apps/server/scripts/verify-diagnostic-payload-budget.ts | 0; payload.exit, 10000 requests / 200 clients |
+| TODO_RECORDING_COST_REQUESTS=20 /usr/bin/lockf -k /tmp/todo-ui-profiler-benchmark.lock bun .agents/skills/verify-ui-profiler/scripts/sqlite-cost.ts E/cost | 0; cost.exit, 100 cells |
+| bun .agents/skills/verify-ui-profiler/scripts/sqlite-report.ts E/cost | 0; cost-report.exit |
+| bun packages/api/scripts/openapi.ts --check | 0; contract.exit, also in root check |
+| sh scripts/disk-guard.sh, then /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check, first run | guard 0 / check 1; disk-root and root receipts |
+| Same disk guard and exact locked root command, second run | 0 / 0; disk-root2 and root2 receipts |
+
+The first root run fails only the unchanged CLI auth-history assertion
+"records one selected-Profile rejection for expired http show": expected
+expired, observed invalid_credential. Its boundary one-minute loads are
+8.50 and 8.37. The exact rerun passes 450 domain, 38 server, 80 CLI and 168
+Electron tests, with the existing one skip; loads are 8.08 and 6.47. No worker
+cap, timeout override or tracked recipe change was used for either root run.
+The sole authorized fixture timeout change is the 1001-admission worker
+fixture's heavy-fixture guard, already stated above. The first guard reports
+61.0 GB free; the second 56.6 GB, both above the 30 GB soft floor.
+
+Old and new contract id are both
+55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+The HTTP schema and existing JSON keys are unchanged. No pins, OpenAPI goldens
+or Swift sources change. Task store.ts and projection.ts are byte-identical
+to 475d6a2b; neither formal source mapping is touched.
+
+Cleanup removes 64 closed owned Bun compile temporaries after lsof checks:
+5674295296 logical bytes / 5674369024 allocated bytes, zero open-file skips.
+The final guard reports 51.3 GB free. APFS sharing and other units' activity mean
+these file charges are not an attributed global free-space delta. Cited evidence
+and binaries remain. The actual app cadence with two and three producers remains
+owed at integration, as does quiet-machine confirmation. Terminal PNG rendering
+remains owed to a unit holding the Swift slot. No Swift, native app, signing,
+Keychain, real user data or push was used.

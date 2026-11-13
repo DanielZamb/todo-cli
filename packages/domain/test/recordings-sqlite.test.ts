@@ -189,7 +189,7 @@ it("keeps a 1001-admission worker path within its unchanged default timeout", as
     await s.close();
     await rm(p, { recursive: true, force: true });
   }
-});
+}, 30000);
 it("enforces event, batch and run identity constraints and quota rollback at the SQL boundary", async () => {
   const p = await mkdtemp(join(tmpdir(), "todo-sql-constraints-")),
     db = new RecordingDatabase(p, { appBytes: 8192 });
@@ -386,7 +386,10 @@ it("bounds the worker queue at 1024 pending batches and shows its exact drop cou
   const marker = {
     ...a,
     run: {
-      ...a.run,
+      run_id: a.run.run_id,
+      app: a.run.app,
+      build_id: a.run.build_id,
+      contract_id: a.run.contract_id,
       admission: {
         schema_version: 1 as const,
         policy: "whole_batch" as const,

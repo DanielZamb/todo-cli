@@ -93,6 +93,12 @@ if (
     if (performance.now() >= nextSweep) {
       nextSweep = performance.now() + 60000;
       maintain(Date.now() + offset);
+      if (engine)
+        port.postMessage({
+          update: true,
+          status: engine.status(),
+          held: engine.heldReader,
+        });
     }
   }, 1000);
   timer.unref();
@@ -148,7 +154,12 @@ if (
           port.close();
           return;
       }
-      port.postMessage({ id: r.id, value, status: engine.status() });
+      port.postMessage({
+        id: r.id,
+        value,
+        status: engine.status(),
+        held: engine.heldReader,
+      });
     } catch (error) {
       let status = blank();
       try {
@@ -161,109 +172,213 @@ if (
             ? error.reason
             : "metadata_unavailable",
         status,
+        held: engine?.heldReader ?? false,
       });
     }
   });
-  port.postMessage({ ready: true, status: engine?.status() ?? blank() });
+  port.postMessage({
+    ready: true,
+    available: !!engine,
+    status: engine?.status() ?? blank(),
+  });
   await new Promise(() => {});
 }
 const Response = Schema.Struct({
   id: Schema.optionalKey(Schema.Int),
   ready: Schema.optionalKey(Schema.Boolean),
+  update: Schema.optionalKey(Schema.Boolean),
   value: Schema.optionalKey(Schema.Unknown),
   error: Schema.optionalKey(Schema.String),
   status: RecordingStatus,
+  available: Schema.optionalKey(Schema.Boolean),
+  held: Schema.optionalKey(Schema.Boolean),
 });
+export const recordingWorkerPolicy = {
+  deadlineMs: 5000,
+  consecutiveDeadlines: 3,
+  restartMs: 60000,
+} as const;
+type Connection =
+  | {
+      kind: "starting";
+      worker: Worker;
+      ready: Promise<void>;
+      resolve: () => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  | { kind: "ready"; worker: Worker }
+  | { kind: "unavailable"; timer: ReturnType<typeof setTimeout> }
+  | { kind: "closed" };
 export class DiagnosticRecordings {
-  private worker: Worker;
+  private connection: Connection = { kind: "closed" };
   private cache = blank();
   private serial = 0;
-  private closed = false;
   private queued = 0;
-  private jobs = 0;
+  private deadlines = 0;
+  private failures = 0;
   private droppedBatches = 0;
   private droppedEvents = 0;
+  private condition: "available" | "unavailable" | "held_reader" =
+    "unavailable";
   private pending = new Map<
     number,
     {
-      resolve: (value: unknown) => void;
-      reject: (error: Error) => void;
+      resolve: (v: unknown) => void;
+      reject: (e: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+      cost: number;
+      request: typeof Request.Type;
     }
   >();
-  private ready: Promise<void>;
   private constructor(
-    directory: string,
+    private readonly directory: string,
     private readonly options: {
       appBytes?: number;
       totalBytes?: number;
       now?: () => number;
     } = {},
   ) {
-    this.worker = new Worker(new URL(import.meta.url), {
-      workerData: {
-        todoRecordings: 1,
-        directory,
-        ...(options.appBytes === undefined
-          ? {}
-          : { appBytes: options.appBytes }),
-        ...(options.totalBytes === undefined
-          ? {}
-          : { totalBytes: options.totalBytes }),
-      },
-    });
-    this.ready = new Promise((resolve) => {
-      this.worker.on("message", (input: unknown) => {
+    this.spawn();
+  }
+  private get worker() {
+    return this.connection.kind === "starting" ||
+      this.connection.kind === "ready"
+      ? this.connection.worker
+      : undefined;
+  }
+  private spawn() {
+    try {
+      const worker = new Worker(new URL(import.meta.url), {
+        workerData: {
+          todoRecordings: 1,
+          directory: this.directory,
+          ...(this.options.appBytes === undefined
+            ? {}
+            : { appBytes: this.options.appBytes }),
+          ...(this.options.totalBytes === undefined
+            ? {}
+            : { totalBytes: this.options.totalBytes }),
+        },
+      });
+      let resolveReady = () => {};
+      const ready = new Promise<void>((r) => {
+        resolveReady = r;
+      });
+      const timer = setTimeout(() => {
+        if (this.worker === worker) {
+          this.failures++;
+          this.unavailable();
+        }
+      }, recordingWorkerPolicy.deadlineMs);
+      this.connection = {
+        kind: "starting",
+        worker,
+        ready,
+        resolve: resolveReady,
+        timer,
+      };
+      worker.on("message", (input: unknown) => {
+        if (this.worker !== worker) return;
         const decoded = Schema.decodeUnknownOption(Response)(input);
         if (decoded._tag === "None") {
-          for (const p of this.pending.values())
-            p.reject(new RecordingRefusal("metadata_unavailable"));
-          this.pending.clear();
-          this.closed = true;
-          resolve();
-          void this.worker.terminate();
+          this.failures++;
+          this.unavailable();
           return;
         }
         const r = decoded.value;
-        this.cache = { ...r.status };
-        if (r.ready) {
-          resolve();
-          if (!this.pending.size) this.worker.unref();
+        if (r.update) {
+          this.cache = { ...r.status };
+          this.condition = r.held ? "held_reader" : "available";
           return;
         }
-        const p = this.pending.get(r.id ?? -1);
-        if (!p) return;
-        this.pending.delete(r.id ?? -1);
-
-        if (r.error) {
+        if (r.ready) {
+          if (this.connection.kind !== "starting") return;
+          clearTimeout(this.connection.timer);
+          this.connection.resolve();
+          if (r.available === false) {
+            this.failures++;
+            this.unavailable();
+            return;
+          }
+          this.connection = { kind: "ready", worker };
+          this.condition = "available";
+          this.cache = { ...r.status };
+          this.deadlines = 0;
+          for (const p of this.pending.values()) this.send(p.request);
+        } else {
+          const id = r.id ?? -1;
+          if (!this.pending.has(id)) return;
+          this.cache = { ...r.status };
+          this.condition = r.held ? "held_reader" : "available";
+          this.deadlines = 0;
           const reason = Object.keys(recordingRefusals).find(
             (k) => k === r.error,
           );
-          p.reject(
-            new RecordingRefusal(
-              Schema.decodeUnknownSync(
-                Schema.Literals(
-                  Object.keys(
-                    recordingRefusals,
-                  ) as (keyof typeof recordingRefusals)[],
-                ),
-              )(reason ?? "metadata_unavailable"),
-            ),
-          );
-        } else p.resolve(r.value);
-        if (!this.pending.size) this.worker.unref();
+          const error = r.error
+            ? new RecordingRefusal(
+                Schema.decodeUnknownSync(
+                  Schema.Literals(
+                    Object.keys(
+                      recordingRefusals,
+                    ) as (keyof typeof recordingRefusals)[],
+                  ),
+                )(reason ?? "metadata_unavailable"),
+              )
+            : undefined;
+          this.settle(id, r.value, error);
+        }
+        if (!this.pending.size) worker.unref();
       });
       const failed = () => {
-        resolve();
-        for (const p of this.pending.values())
-          p.reject(new RecordingRefusal("metadata_unavailable"));
-        this.pending.clear();
-        this.closed = true;
+        if (this.worker === worker) {
+          this.failures++;
+          this.unavailable();
+        }
       };
-      this.worker.on("error", failed);
-      this.worker.on("exit", () => {
-        if (!this.closed) failed();
-      });
-    });
+      worker.on("error", failed);
+      worker.on("exit", failed);
+    } catch {
+      this.failures++;
+      this.unavailable();
+    }
+  }
+  private unavailable() {
+    const old = this.connection;
+    this.condition = "unavailable";
+    if (old.kind === "starting") {
+      clearTimeout(old.timer);
+      old.resolve();
+    }
+    if (old.kind === "unavailable") clearTimeout(old.timer);
+    const timer = setTimeout(
+      () => this.spawn(),
+      recordingWorkerPolicy.restartMs,
+    );
+    timer.unref();
+    this.connection = { kind: "unavailable", timer };
+    if (old.kind === "starting" || old.kind === "ready")
+      void old.worker.terminate().catch(() => {});
+    for (const id of this.pending.keys()) {
+      this.failures++;
+      this.settle(id, undefined, new RecordingRefusal("metadata_unavailable"));
+    }
+  }
+  private settle(id: number, value: unknown, error?: Error) {
+    const p = this.pending.get(id);
+    if (!p) return;
+    this.pending.delete(id);
+    clearTimeout(p.timer);
+    this.queued -= p.cost;
+    if (error) p.reject(error);
+    else p.resolve(value);
+  }
+  private send(request: typeof Request.Type) {
+    try {
+      this.worker?.postMessage(request);
+    } catch {
+      this.failures++;
+      this.unavailable();
+    }
   }
   static start(
     directory: string,
@@ -291,7 +406,15 @@ export class DiagnosticRecordings {
     return (this.options.now ?? Date.now)();
   }
   whenReady() {
-    return this.ready;
+    return this.connection.kind === "starting"
+      ? this.connection.ready
+      : Promise.resolve();
+  }
+  health() {
+    return {
+      condition: this.condition,
+      failures: this.failures + this.cache.loss.storage_failures,
+    };
   }
   status() {
     return {
@@ -299,67 +422,71 @@ export class DiagnosticRecordings {
       queued_bytes: this.queued,
       loss: {
         ...this.cache.loss,
+        storage_failures: this.cache.loss.storage_failures + this.failures,
         dropped_batches: this.cache.loss.dropped_batches + this.droppedBatches,
         dropped_events: this.cache.loss.dropped_events + this.droppedEvents,
       },
     };
   }
-  private async call(method: (typeof methods)[number], args: unknown) {
-    await this.ready;
-    if (this.closed) throw new RecordingRefusal("metadata_unavailable");
-    const id = ++this.serial;
-    this.worker.ref();
-
+  private call(method: (typeof methods)[number], args: unknown) {
+    if (
+      this.connection.kind === "unavailable" ||
+      this.connection.kind === "closed"
+    ) {
+      this.failures++;
+      return Promise.reject(new RecordingRefusal("metadata_unavailable"));
+    }
+    const id = ++this.serial,
+      request = { id, method, args, now: this.time() },
+      cost = Buffer.byteLength(JSON.stringify(request)) + 256;
+    if (
+      this.pending.size >= recordingLimits.pendingBatches ||
+      this.queued + cost > recordingLimits.queueBytes
+    ) {
+      this.failures++;
+      return Promise.reject(new RecordingRefusal("rpc_capacity"));
+    }
+    this.queued += cost;
+    this.worker?.ref();
     return new Promise<unknown>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      this.worker.postMessage({ id, method, args, now: this.time() });
+      const timer = setTimeout(() => {
+        this.failures++;
+        this.settle(id, undefined, new RecordingRefusal("rpc_deadline"));
+        if (++this.deadlines >= recordingWorkerPolicy.consecutiveDeadlines)
+          this.unavailable();
+      }, recordingWorkerPolicy.deadlineMs);
+      this.pending.set(id, { resolve, reject, cost, timer, request });
+      if (this.connection.kind === "ready") this.send(request);
     });
   }
   async ingest(batch: RecordingBatch, dry = false) {
-    const cost = Buffer.byteLength(JSON.stringify(batch));
-    const dropped = () => ({
-      generated_at: new Date().toISOString(),
-      accepted: false,
-      durability: "dropped" as const,
-      duplicate: false,
-      dry_run: dry,
-      events: batch.events.length,
-      admission: batch.run.admission ?? emptyRecordingAdmission(),
-      status: this.status(),
-    });
-    if (
-      this.queued + cost > recordingLimits.queueBytes ||
-      this.jobs >= recordingLimits.pendingBatches
-    ) {
-      this.droppedBatches++;
-      this.droppedEvents += batch.events.length;
-      return dropped();
-    }
-    this.queued += cost;
-    this.jobs++;
     try {
       const result = Schema.decodeUnknownSync(RecordingReceipt)(
         await this.call("ingest", { batch, dry }),
       );
-      return {
-        ...result,
-        status: { ...this.status(), queued_bytes: this.queued - cost },
-      };
+      return { ...result, status: this.status() };
     } catch (error) {
       if (
         error instanceof RecordingRefusal &&
-        error.reason !== "metadata_unavailable"
+        !["metadata_unavailable", "rpc_deadline", "rpc_capacity"].includes(
+          error.reason,
+        )
       )
         throw error;
       this.droppedBatches++;
       this.droppedEvents += batch.events.length;
-      return dropped();
-    } finally {
-      this.queued -= cost;
-      this.jobs--;
+      return {
+        generated_at: new Date().toISOString(),
+        accepted: false,
+        durability: "dropped" as const,
+        duplicate: false,
+        dry_run: dry,
+        events: batch.events.length,
+        admission: batch.run.admission ?? emptyRecordingAdmission(),
+        status: this.status(),
+      };
     }
   }
-
   async runs(cursor = 0) {
     const r = Schema.decodeUnknownSync(RecordingRunList)(
       await this.call("runs", cursor),
@@ -373,35 +500,49 @@ export class DiagnosticRecordings {
     return { ...r, status: this.status() };
   }
   async export(id: string, cursor?: string) {
-    const result = Schema.decodeUnknownSync(RecordingExport)(
+    const r = Schema.decodeUnknownSync(RecordingExport)(
       await this.call("export", {
         id,
         ...(cursor === undefined ? {} : { cursor }),
       }),
     );
-    return { ...result, status: this.status() };
+    return { ...r, status: this.status() };
   }
   async compare(before: string, after: string) {
-    const result = Schema.decodeUnknownSync(RecordingCompare)(
+    const r = Schema.decodeUnknownSync(RecordingCompare)(
       await this.call("compare", { before, after }),
     );
     return {
-      ...result,
-      before: { ...result.before, status: this.status() },
-      after: { ...result.after, status: this.status() },
+      ...r,
+      before: { ...r.before, status: this.status() },
+      after: { ...r.after, status: this.status() },
     };
   }
   async flush() {
     await this.call("flush", null);
   }
   async close() {
-    if (this.closed) return;
+    if (this.connection.kind === "closed") return;
     try {
-      await this.call("close", null);
+      if (this.worker) await this.call("close", null);
     } catch {
     } finally {
-      this.closed = true;
-      await this.worker.terminate();
+      const old = this.connection;
+      this.connection = { kind: "closed" };
+      this.condition = "unavailable";
+      if (old.kind === "starting") {
+        clearTimeout(old.timer);
+        old.resolve();
+      }
+      if (old.kind === "unavailable") clearTimeout(old.timer);
+      for (const id of this.pending.keys())
+        this.settle(
+          id,
+          undefined,
+          new RecordingRefusal("metadata_unavailable"),
+        );
+      if (old.kind === "ready" || old.kind === "starting")
+        void old.worker.terminate().catch(() => {});
     }
   }
 }

@@ -235,6 +235,17 @@ are removed before duplicate admission, even if the general sweep has not
 reached them. An expired cursor is refused before physical cleanup.
 There are at most 4096 retained producer batches and 5120 runs. Compatibility
 status.segments counts those retained batches; there are no file segments.
+The main database file remains at its high-water allocation inside the cap;
+expiry frees reusable pages rather than shrinking the file. No vacuuming is
+configured or scheduled.
+
+An external reader can pin the WAL and postpone physical expiry. Logical
+seven-day hiding and the disk cap still hold. Refused valid batches count as
+capacity drops. Diagnostics names the reader-held condition and its drop counts.
+Maintenance retries after a minute without recording each retry as another
+storage failure; it recovers automatically after the external reader releases.
+Other processes' readers are never interrupted.
+
 Maintenance runs on demand and at a fixed minute cadence, drains bounded chunks,
 and retries failed automatic work no sooner than a minute, independently of
 wall-clock jumps. Expired facts are excluded from reads even if deletion fails;
@@ -243,14 +254,28 @@ any retained run missing such facts is shown incomplete.
 Export uses ordered event-range reads in a WAL snapshot. Its opaque cursor is
 independent of producer batch identity. Each page carries the run's current
 admission state, preserves event order and stays within 131072 bytes, including
-the transfer envelope. Retained exact retries add no events. Read snapshots keep
-run state and event rows consistent across concurrent writers.
+the transfer envelope. Retained exact retries add no events. Export captures at
+most 129 row strings in one short snapshot and formats them
+after COMMIT. Show reads 128 row strings per snapshot and materializes/reduces
+outside it. Compare has no enclosing snapshot. SQLite data_version checks across
+steps refuse a changed read instead of combining different committed states.
+No owned reader keeps a snapshot across steps.
 
 The earlier manifest/checkpoint/blob protocol is superseded, including its
 verification machinery. The current SQL controls, crash boundaries and finite
 limits are in the DIAG-CORE recordings report. Process-kill controls do not claim
 power-loss or hardware-failure durability. Task readiness never awaits database
 opening; authenticated recording requests await their worker instead.
+
+All worker calls, including reads, reserve both count and encoded bytes before
+posting: at most 1024 calls and 1 MiB, including an envelope allowance. Readiness
+and every RPC have a 5000 ms deadline. Three consecutive RPC deadlines terminate
+the worker and refuse its remaining calls. Creation, startup, error and exit
+failures enter an unavailable state and retry after 60000 ms. Closing settles
+within the same deadline and cancels recovery. Failure labels and counts contain
+no content, route parameters, ids or filesystem paths. The Task server catches
+even a synchronous recording factory failure, serves Tasks immediately and shows
+the condition in the existing owner Diagnostics error list.
 
 ## Still proposed
 

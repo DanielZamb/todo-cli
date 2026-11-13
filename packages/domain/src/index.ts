@@ -7,6 +7,7 @@ export * from "./dependencies.ts";
 export * from "./dependency-commands.ts";
 export * from "./dependency-contract.ts";
 export * from "./dependency-rules.ts";
+export { boundDiagnostics } from "./diagnostic-budget.ts";
 export * from "./diagnostic-context.ts";
 export * from "./diagnostic-guard.ts";
 export * from "./diagnostic-recordings.ts";

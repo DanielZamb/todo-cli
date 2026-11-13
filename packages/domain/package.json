@@ -13,7 +13,8 @@
     "./attachments": "./src/attachment-commands.ts",
     "./attachment-store": "./src/attachment-store.ts",
     "./presentation": "./src/presentation.ts",
-    "./diagnostic-recordings": "./src/recordings.ts"
+    "./diagnostic-recordings": "./src/recordings.ts",
+    "./recording-service": "./src/recording-service.ts"
   },
   "scripts": {
     "typecheck": "bun --bun ../../node_modules/typescript/bin/tsc --noEmit",

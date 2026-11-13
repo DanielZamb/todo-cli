@@ -14,7 +14,7 @@ export function openRecordingDatabase(directory: string, totalBytes: number) {
   const d = lstatSync(directory);
   if (!d.isDirectory() || d.isSymbolicLink())
     throw new Error("Private directory required");
-  chmodSync(directory, 0o700);
+
   const path = join(directory, "recordings.db");
   const fd = openSync(
     path,
@@ -24,19 +24,42 @@ export function openRecordingDatabase(directory: string, totalBytes: number) {
   closeSync(fd);
   if (lstatSync(path).isSymbolicLink() || lstatSync(path).nlink !== 1)
     throw new Error("Private database required");
-  chmodSync(path, 0o600);
+
+  if (lstatSync(path).size > 0) {
+    try {
+      const existing = new Database(path, { readonly: true, strict: true });
+      try {
+        if (
+          existing
+            .query(
+              "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT IN('runs','batches','events','counters','sqlite_sequence') LIMIT 1",
+            )
+            .get()
+        )
+          throw new Error("Foreign database refused");
+
+        if (
+          existing
+            .query<{ quick_check: string }, []>("PRAGMA quick_check")
+            .get()?.quick_check !== "ok" ||
+          existing.query("PRAGMA foreign_key_check").get()
+        )
+          throw new Error("Recording integrity");
+      } finally {
+        existing.close();
+      }
+    } catch (error) {
+      if (error instanceof Error && /locked|busy/iu.test(error.message))
+        throw error;
+      throw new Error("Foreign database refused");
+    }
+  }
   const db = new Database(path, { strict: true });
   try {
-    if (
-      db
-        .query(
-          "SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT IN('runs','batches','events','counters','sqlite_sequence') LIMIT 1",
-        )
-        .get()
-    )
-      throw new Error("Foreign database refused");
+    chmodSync(directory, 0o700);
+    chmodSync(path, 0o600);
     db.exec(
-      `PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1; PRAGMA auto_vacuum=INCREMENTAL; PRAGMA wal_autocheckpoint=64; PRAGMA cache_size=-8192; PRAGMA cache_spill=OFF; PRAGMA journal_size_limit=1048576;`,
+      `PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1; PRAGMA wal_autocheckpoint=64; PRAGMA cache_size=-8192; PRAGMA cache_spill=OFF; PRAGMA journal_size_limit=1048576;`,
     );
     db.exec(`CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,app TEXT NOT NULL,definition TEXT NOT NULL CHECK(json_extract(definition,'$.run_id')=id AND json_extract(definition,'$.app')=app),admission TEXT NOT NULL,updated INTEGER NOT NULL,CHECK(length(CAST(definition AS BLOB))+length(CAST(admission AS BLOB))<=4096));
    CREATE TABLE IF NOT EXISTS batches(run TEXT NOT NULL,batch TEXT NOT NULL,fingerprint TEXT NOT NULL,received INTEGER NOT NULL,PRIMARY KEY(run,batch),FOREIGN KEY(run) REFERENCES runs(id) ON DELETE CASCADE);

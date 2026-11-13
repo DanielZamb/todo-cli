@@ -85,6 +85,21 @@ export class RecordingDatabase {
   readonly db: Database;
   private readonly recoveredThrough: number;
   private failures = zero();
+  heldReader = false;
+  private retryReaderAt = 0;
+  private recoverReader(force = false) {
+    if (!this.heldReader) return true;
+    if (!force && performance.now() < this.retryReaderAt) return false;
+    const row = this.db
+      .query<{ busy: number }, []>("PRAGMA wal_checkpoint(TRUNCATE)")
+      .get();
+    if (row?.busy === 0) {
+      this.heldReader = false;
+      return true;
+    }
+    this.retryReaderAt = performance.now() + 60000;
+    return false;
+  }
   private now = Date.now();
   at(now: number) {
     this.now = now;
@@ -132,7 +147,13 @@ export class RecordingDatabase {
       if (this.db.inTransaction) this.db.exec("ROLLBACK");
       if (e instanceof Error && e.message === "Recording physical capacity")
         try {
-          this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+          const result = this.db
+            .query<{ busy: number }, []>("PRAGMA wal_checkpoint(TRUNCATE)")
+            .get();
+          if (result?.busy) {
+            this.heldReader = true;
+            this.retryReaderAt = performance.now() + 60000;
+          }
         } catch {}
       throw e;
     } finally {
@@ -265,9 +286,16 @@ export class RecordingDatabase {
   maintenance(now: number) {
     this.now = now;
     try {
+      if (!this.recoverReader()) return -1;
       return this.transaction(() => this.prune(now));
-    } catch {
-      this.failures.storage_failures++;
+    } catch (error) {
+      if (
+        !(
+          error instanceof Error &&
+          error.message === "Recording physical capacity"
+        )
+      )
+        this.failures.storage_failures++;
       return -1;
     }
   }
@@ -335,6 +363,12 @@ export class RecordingDatabase {
   ingest(input: unknown, now: number, dry = false) {
     this.now = now;
     const b = validateRecordingBatch(input);
+    if (!this.recoverReader(true)) {
+      this.failures.dropped_batches++;
+      this.failures.dropped_events += b.events.length;
+      this.failures.capacity_events += b.events.length;
+      return this.receipt(b, false, false, dry);
+    }
     let duplicate = false,
       reason:
         | "admission_action_conflict"
@@ -458,12 +492,23 @@ export class RecordingDatabase {
         }
       }, dry);
     } catch (error) {
-      if (error instanceof RecordingRefusal) throw error;
-      if (error instanceof Error && error.message === "run_capacity")
-        throw new RecordingRefusal("run_capacity");
-      this.failures.storage_failures++;
       this.failures.dropped_batches++;
       this.failures.dropped_events += b.events.length;
+      if (error instanceof RecordingRefusal) throw error;
+      if (error instanceof Error && error.message === "run_capacity") {
+        this.failures.capacity_events += b.events.length;
+        throw new RecordingRefusal("run_capacity");
+      }
+      if (
+        error instanceof Error &&
+        [
+          "Recording physical capacity",
+          "Recording capacity",
+          "Transaction capacity",
+        ].includes(error.message)
+      )
+        this.failures.capacity_events += b.events.length;
+      else this.failures.storage_failures++;
       return this.receipt(b, false, false, dry);
     }
     if (reason) throw new RecordingRefusal(reason);
@@ -508,23 +553,24 @@ export class RecordingDatabase {
     return this.snapshot(() => this.list(cursor));
   }
   show(id: string) {
-    return this.snapshot(() => this.view(id));
+    return this.view(id);
   }
   export(id: string, cursor?: string) {
-    return this.snapshot(() => this.page(id, cursor));
+    return this.page(id, cursor);
   }
   private list(cursor = 0) {
     const rows = this.db
-      .query<RunRow, [number, number]>(
-        "SELECT * FROM runs WHERE updated>=? OR EXISTS(SELECT 1 FROM events WHERE run=runs.id AND received>=?) ORDER BY updated,id",
+      .query<RunRow, [number, number, number]>(
+        "SELECT * FROM runs WHERE updated>=? OR EXISTS(SELECT 1 FROM events WHERE run=runs.id AND received>=?) ORDER BY updated,id LIMIT 101 OFFSET ?",
       )
       .all(
         this.now - recordingLimits.retentionMs,
         this.now - recordingLimits.retentionMs,
+        cursor,
       );
     return {
       generated_at: new Date().toISOString(),
-      runs: rows.slice(cursor, cursor + 100).map((r) => ({
+      runs: rows.slice(0, 100).map((r) => ({
         run: this.run(r),
         events:
           this.db
@@ -545,11 +591,14 @@ export class RecordingDatabase {
             )
             .get(r.id)?.n ?? 0,
       })),
-      next_cursor: cursor + 100 < rows.length ? cursor + 100 : null,
+      next_cursor: rows.length > 100 ? cursor + 100 : null,
       status: this.status(),
     };
   }
   private view(id: string) {
+    const version = this.db
+      .query<{ data_version: number }, []>("PRAGMA data_version")
+      .get()?.data_version;
     const r = this.row(id);
     if (
       !r ||
@@ -560,12 +609,30 @@ export class RecordingDatabase {
     )
       throw new RecordingRefusal("missing_run");
     const run = this.run(r);
-    const events = this.db
-      .query<{ content: string }, [string, number]>(
-        "SELECT content FROM events WHERE run=? AND received>=? ORDER BY ordinal",
-      )
-      .all(id, this.now - recordingLimits.retentionMs)
-      .map((e) => JSON.parse(e.content));
+    const events: RecordingBatch["events"][number][] = [];
+    let after = 0;
+    for (;;) {
+      const rows = this.snapshot(() =>
+        this.db
+          .query<
+            { content: string; ordinal: number },
+            [string, number, number]
+          >(
+            "SELECT content,ordinal FROM events WHERE run=? AND received>=? AND ordinal>? ORDER BY ordinal LIMIT 128",
+          )
+          .all(id, this.now - recordingLimits.retentionMs, after),
+      );
+      for (const row of rows) {
+        events.push(JSON.parse(row.content));
+        after = row.ordinal;
+      }
+      if (rows.length < 128) break;
+    }
+    if (
+      this.db.query<{ data_version: number }, []>("PRAGMA data_version").get()
+        ?.data_version !== version
+    )
+      throw new RecordingRefusal("recording_changed");
     const analysis = analyzeRecording(
       events,
       !!this.db
@@ -586,32 +653,36 @@ export class RecordingDatabase {
     };
   }
   private page(id: string, cursor?: string) {
-    const row = this.row(id);
-    if (
-      !row ||
-      (row.updated < this.now - recordingLimits.retentionMs &&
-        !this.db
-          .query("SELECT 1 FROM events WHERE run=? AND received>=?")
-          .get(id, this.now - recordingLimits.retentionMs))
-    )
-      throw new RecordingRefusal("missing_run");
-    const run = this.run(row);
-    let from = 0;
-    if (cursor) {
-      const entry = this.db
-        .query<{ ordinal: number }, [string, string, number]>(
-          "SELECT ordinal FROM events WHERE run=? AND cursor=? AND received>=?",
-        )
-        .get(id, cursor, this.now - recordingLimits.retentionMs);
-      if (!entry) throw new RecordingRefusal("expired_cursor");
-      from = entry.ordinal;
-    }
-    const rows = this.db
+    const captured = this.snapshot(() => {
+      const row = this.row(id);
+      if (
+        !row ||
+        (row.updated < this.now - recordingLimits.retentionMs &&
+          !this.db
+            .query("SELECT 1 FROM events WHERE run=? AND received>=?")
+            .get(id, this.now - recordingLimits.retentionMs))
+      )
+        throw new RecordingRefusal("missing_run");
+      const run = this.run(row);
+      let from = 0;
+      if (cursor) {
+        const entry = this.db
+          .query<{ ordinal: number }, [string, string, number]>(
+            "SELECT ordinal FROM events WHERE run=? AND cursor=? AND received>=?",
+          )
+          .get(id, cursor, this.now - recordingLimits.retentionMs);
+        if (!entry) throw new RecordingRefusal("expired_cursor");
+        from = entry.ordinal;
+      }
+      const rows = this.db
         .query<EventRow, [string, number, number]>(
           "SELECT * FROM events WHERE run=? AND ordinal>=? AND received>=? ORDER BY ordinal LIMIT 129",
         )
-        .all(id, from, this.now - recordingLimits.retentionMs),
-      events: RecordingBatch["events"][number][] = [];
+        .all(id, from, this.now - recordingLimits.retentionMs);
+      return { run, rows, status: this.status() };
+    });
+    const { run, rows } = captured;
+    const events: RecordingBatch["events"][number][] = [];
     let end = 0;
     for (const r of rows) {
       if (events.length >= 128 || r.origin !== rows[0]?.origin) break;
@@ -633,11 +704,7 @@ export class RecordingDatabase {
       run,
       events,
     });
-    const next = this.db
-      .query<{ cursor: string }, [string, number, number]>(
-        "SELECT cursor FROM events WHERE run=? AND ordinal>? AND received>=? ORDER BY ordinal LIMIT 1",
-      )
-      .get(id, end, this.now - recordingLimits.retentionMs);
+    const next = rows.find((r) => r.ordinal > end);
     return {
       generated_at: new Date().toISOString(),
       batches: [batch],
@@ -646,18 +713,24 @@ export class RecordingDatabase {
     };
   }
   compare(before: string, after: string) {
-    return this.snapshot(() => {
-      const a = this.view(before),
-        b = this.view(after),
-        reason = recordingComparisonRefusal(a.run, b.run);
-      if (reason) throw new RecordingRefusal(reason);
-      return {
-        generated_at: new Date().toISOString(),
-        before: a,
-        after: b,
-        comparable: true as const,
-      };
-    });
+    const version = this.db
+      .query<{ data_version: number }, []>("PRAGMA data_version")
+      .get()?.data_version;
+    const a = this.view(before),
+      b = this.view(after),
+      reason = recordingComparisonRefusal(a.run, b.run);
+    if (
+      this.db.query<{ data_version: number }, []>("PRAGMA data_version").get()
+        ?.data_version !== version
+    )
+      throw new RecordingRefusal("recording_changed");
+    if (reason) throw new RecordingRefusal(reason);
+    return {
+      generated_at: new Date().toISOString(),
+      before: a,
+      after: b,
+      comparable: true as const,
+    };
   }
 
   close() {
