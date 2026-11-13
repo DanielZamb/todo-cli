@@ -146,6 +146,9 @@ Publication to layout was 132 ms with three rows, so for selection the list's si
 
 ## Result: the cost of stall attribution on selection (approved run b, 2026-11-12)
 
+Accepted by the coordinator as measured: stall attribution costs a selection
+nothing this run can resolve.
+
 The candidate 8 head e484efc6 against the same head with the stall
 attribution, observed events and both link-register commits reverted
 (`measure/c8-observation-off`, 0ed0c30d, measurement only). Command:
@@ -167,8 +170,8 @@ source it ran).
 
 - **Press to layout.** Median of the pair differences: −0.8 ms. Pooled warm
   clicks without pair 0: 92.2 ms on, 91.5 ms off (+0.7 ms, n = 80 each). Both
-  are under the 2 ms limit. A single pair moves by ±3 to 7 ms, so this run
-  resolves the cost to within a few milliseconds, not to a fraction of one.
+  are under the 2 ms limit. Single pairs move by −6.9 to +3.2 ms, so the run
+  resolves the cost to a few ms, not below 1.
 - **Body counts.** List bodies were 2 per click in every session. Row bodies
   had a median of 26–30 per click in both arms; pair 0's on cell had 36, under
   the load spike.
