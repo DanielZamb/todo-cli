@@ -3831,3 +3831,21 @@ Every value is present at 2a840b55, 6cbbb953 and 675aab82.
 - `verify-occ-atomicity/PURGE-RESTORE-MAPPING.md:130` `8dbb9b9ba322c1cb29d41732072792f4c929cea185770f1597d25a393e5787e1`
 
 Total: 81.
+
+#### The same audit with the script's fix (0e4f9e79)
+
+The script's author has since changed it to read change records from key words
+(0e4f9e79). Rerun on the final head 4dda5304, and on 9e468799 for comparison,
+both give the same result: exit 1, 290 occurrences.
+- Compared: 135, with 134 match and 1 drift. The drift is
+  `verify-discovery-formal/coverage.json:69` `apps/electron/src/task-client.ts`,
+  the known entry deferred to the Swift step.
+- Historical: 79.
+- Unknown: 76.
+
+Six rows moved, and each is now a change record:
+- `verify-occ-atomicity/coverage.json:137` `previousStoreSha256` (was compared, drift);
+- `HISTORICAL-INPUTS.json:270, 271` (group B);
+- `HISTORICAL-INPUTS.json:288, 292, 296` (group A).
+
+The other 76 unknowns are unchanged from the list above.
