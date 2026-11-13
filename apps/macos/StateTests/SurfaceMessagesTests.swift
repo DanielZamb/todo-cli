@@ -137,6 +137,29 @@ import Testing
         #expect(!single.contains { expected.contains($0) }, "\(code): not the single-Task sentence")
     }
 
+    /// The banner's merged hand-offs (seat, 2026-11-12): one verb and one shared Task read as the
+    /// single hand-off does, in both directions; otherwise the picker's form.
+    @Test func theBannersMergedHeadNamesASharedTaskAndUsesThePickersVerb() {
+        func link(_ verb: String, _ dependent: String, _ blocker: String) -> LinkAttempt { .init(verb: verb, dependentID: dependent, dependent: dependent, blockerID: blocker, blocker: blocker) }
+        func head(_ attempts: [LinkAttempt?], _ subjects: [String]) -> String { MergedFailureWording.linkHead(attempts, subjects: subjects) }
+        // Depends on: the dependent R is shared.
+        #expect(head([link("add", "R", "A"), link("add", "R", "B")], ["A", "B"]) == "Couldn't make \u{201C}R\u{201D} depend on \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+        #expect(head([link("remove", "R", "A"), link("remove", "R", "B")], ["A", "B"]) == "Couldn't stop \u{201C}R\u{201D} depending on \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+        // Blocks: the blocker R is shared.
+        #expect(head([link("add", "A", "R"), link("add", "B", "R")], ["A", "B"]) == "Couldn't make \u{201C}A\u{201D} and \u{201C}B\u{201D} depend on \u{201C}R\u{201D}.")
+        #expect(head([link("remove", "A", "R"), link("remove", "B", "R")], ["A", "B"]) == "Couldn't stop \u{201C}A\u{201D} and \u{201C}B\u{201D} depending on \u{201C}R\u{201D}.")
+        // Mixed verbs, shared Task: the picker's form with "change".
+        #expect(head([link("add", "A", "R"), link("remove", "B", "R")], ["A", "B"]) == "Couldn't change 2 Dependencies: \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+        // No shared Task: the picker's form with the one verb, or "change".
+        #expect(head([link("add", "A", "X"), link("add", "B", "Y")], ["A", "B"]) == "Couldn't add 2 Dependencies: \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+        #expect(head([link("remove", "A", "X"), link("remove", "B", "Y")], ["A", "B"]) == "Couldn't remove 2 Dependencies: \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+        #expect(head([link("add", "A", "X"), link("remove", "B", "Y")], ["A", "B"]) == "Couldn't change 2 Dependencies: \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+        // Four Tasks sharing one: up to three named, then the count.
+        #expect(head(["A", "B", "C", "D"].map { link("add", "R", $0) }, ["A", "B", "C", "D"]) == "Couldn't make \u{201C}R\u{201D} depend on \u{201C}A\u{201D}, \u{201C}B\u{201D}, \u{201C}C\u{201D} and 1 more.")
+        // A part without its attempt: nothing is guessed.
+        #expect(head([link("add", "R", "A"), nil], ["A", "B"]) == "Couldn't change 2 Dependencies: \u{201C}A\u{201D} and \u{201C}B\u{201D}.")
+    }
+
     /// The limit the messages state is the contract's: every `too_many_dependencies` limit in the
     /// OpenAPI contract is an enum of exactly `DependencyContract.directDependencies`.
     @Test func theStatedDependencyLimitIsTheContracts() throws {

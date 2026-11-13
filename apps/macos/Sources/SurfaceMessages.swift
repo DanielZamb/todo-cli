@@ -33,6 +33,8 @@ struct SurfaceMessages<Kind: Hashable, Value> {
         /// compared by code, not by sentence).
         var reasonCode: String? = nil
         var reasonText: String? = nil
+        /// A Dependency change's verb and both Tasks, so merged hand-offs can name a shared Task.
+        var attempt: LinkAttempt? = nil
     }
     private(set) var parts: [Part] = []
     private(set) var kind: Kind?
@@ -132,9 +134,9 @@ struct SurfaceMessages<Kind: Hashable, Value> {
 
     /// Publishes a message. A same-kind message for another target merges with the one showing
     /// when this surface merges that kind; otherwise the newest replaces it.
-    mutating func publish(_ value: Value, kind: Kind, target: AnyHashable? = nil, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil) {
+    mutating func publish(_ value: Value, kind: Kind, target: AnyHashable? = nil, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil, attempt: LinkAttempt? = nil) {
         sequence += 1
-        let part = Part(target: target, subject: subject, value: value, sequence: sequence, reasonCode: reasonCode, reasonText: reasonText)
+        let part = Part(target: target, subject: subject, value: value, sequence: sequence, reasonCode: reasonCode, reasonText: reasonText, attempt: attempt)
         let merges = kind == self.kind && target != nil && parts.allSatisfy { $0.target != nil }
             && merge?(kind, [part, part]) != nil
         if merges {
@@ -167,6 +169,13 @@ struct SurfaceMessages<Kind: Hashable, Value> {
 /// Any surface's ticket, as the read-back owner and the hand-off ask it (S1-17, D1).
 protocol SurfaceTicket { var isNewest: Bool { get }; var target: AnyHashable? { get } }
 
+/// A Dependency change as a hand-off names it: its verb ("add" or "remove") and both Tasks.
+struct LinkAttempt: Hashable {
+    let verb: String
+    let dependentID: String, dependent: String
+    let blockerID: String, blocker: String
+}
+
 /// The contract's limits that messages state. `directDependencies` is `too_many_dependencies`'s
 /// `details.limit` (an enum of one value in the OpenAPI contract); a state test reads the contract
 /// and fails if they differ.
@@ -192,6 +201,25 @@ enum MergedFailureWording {
         "connection": "The server couldn't be reached. Try again.",
         "unavailable": "The server couldn't be reached. Try again.",
     ]
+    /// The banner's head sentence for merged Dependency hand-offs. One verb and one shared Task:
+    /// said as the single hand-off says it ("Couldn't make “R” depend on “A” and “B”.", and the
+    /// mirrored forms). Otherwise the picker's form, "change" when the verbs differ.
+    static func linkHead(_ attempts: [LinkAttempt?], subjects: [String?]) -> String {
+        let known = attempts.compactMap { $0 }
+        let verbs = Set(attempts.map { $0?.verb ?? "change" })
+        if known.count == attempts.count, verbs.count == 1, let verb = verbs.first, verb == "add" || verb == "remove" {
+            if Set(known.map(\.dependentID)).count == 1, let shared = known.first?.dependent {
+                let others = names(known.map(\.blocker))
+                return verb == "add" ? "Couldn't make \u{201C}\(shared)\u{201D} depend on \(others)." : "Couldn't stop \u{201C}\(shared)\u{201D} depending on \(others)."
+            }
+            if Set(known.map(\.blockerID)).count == 1, let shared = known.first?.blocker {
+                let others = names(known.map(\.dependent))
+                return verb == "add" ? "Couldn't make \(others) depend on \u{201C}\(shared)\u{201D}." : "Couldn't stop \(others) depending on \u{201C}\(shared)\u{201D}."
+            }
+        }
+        let verb = verbs.count == 1 ? verbs.first! : "change"
+        return "Couldn't \(verb) \(attempts.count) Dependencies: \(names(subjects))."
+    }
     /// The closing sentence: when every part was refused with the same code (compared by code, not
     /// by sentence) and that code has a plural sentence, that sentence; otherwise `differing`.
     static func reason(codes: [String?], differing: String) -> String {

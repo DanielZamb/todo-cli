@@ -316,7 +316,8 @@ extension TodoModel {
                 // failure is not silent. A superseded link hands off nothing (S1-16). Both Tasks, the
                 // dependent first, whatever the picker's direction (candidate 8 ruling 2).
                 let attempt = remove ? "stop “\(dependent.title)” depending on “\(blocker.title)”" : "make “\(dependent.title)” depend on “\(blocker.title)”"
-                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title, reasonCode: notice.failure?.code ?? (error is URLError ? "connection" : nil), reasonText: notice.message)
+                handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title, reasonCode: notice.failure?.code ?? (error is URLError ? "connection" : nil), reasonText: notice.message,
+                        attempt: LinkAttempt(verb: remove ? "remove" : "add", dependentID: dependent.id, dependent: dependent.title, blockerID: blocker.id, blocker: blocker.title))
                 return
             }
             // A transport failure has no server code; it is labelled "connection" so two can merge (D2).

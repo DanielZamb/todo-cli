@@ -393,7 +393,8 @@ struct Snapshots {
                     for (index, task) in handed.tasks.dropFirst().prefix(2).enumerated() {
                         let ticket = tickets.begin(.link, target: "row-\(index)")
                         let reason = codes[index] == "dependency_cycle" ? "This Dependency would create a loop. Choose another Task." : "The Task changed. Reload its Dependencies before trying again."
-                        handed.handOff("Couldn't make “\(task.title)” depend on “\(handed.tasks[0].title)”. " + reason, kind: .dependencyLink, from: ticket, subject: task.title, reasonCode: codes[index], reasonText: reason)
+                        handed.handOff("Couldn't make “\(task.title)” depend on “\(handed.tasks[0].title)”. " + reason, kind: .dependencyLink, from: ticket, subject: task.title, reasonCode: codes[index], reasonText: reason,
+                                       attempt: LinkAttempt(verb: "add", dependentID: task.id, dependent: task.title, blockerID: handed.tasks[0].id, blocker: handed.tasks[0].title))
                     }
                     try await render(name, WorkspaceSnapshot(model: handed), width: 1100, height: 720)
                 }

@@ -203,7 +203,7 @@ final class TodoModel {
     /// Same-kind hand-offs for different Tasks merge into one message (D2); other kinds replace.
     private var mainMessages = SurfaceMessages<MessageKind, String>(merge: { kind, parts in
         switch kind {
-        case .dependencyLink: "Couldn't change \(parts.count) Dependencies: \(MergedFailureWording.names(parts.map(\.subject))). " + MergedFailureWording.reason(codes: parts.map(\.reasonCode), differing: "Open each Task's Dependencies to see why.")
+        case .dependencyLink: MergedFailureWording.linkHead(parts.map(\.attempt), subjects: parts.map(\.subject)) + " " + MergedFailureWording.reason(codes: parts.map(\.reasonCode), differing: "Open each Task's Dependencies to see why.")
         case .quickAdd: "Couldn't add \(parts.count) Tasks: \(MergedFailureWording.names(parts.map(\.subject)))."
         default: nil
         }
@@ -259,11 +259,11 @@ final class TodoModel {
     /// (MAC-C1-S1-16): it hands off only if the action is still the newest of its kind in its
     /// instance. A superseded action presents nothing anywhere. Returns whether it handed off.
     @discardableResult
-    func handOff<Kind, Value>(_ text: String, kind: MessageKind, from ticket: SurfaceMessages<Kind, Value>.Ticket, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil) -> Bool {
+    func handOff<Kind, Value>(_ text: String, kind: MessageKind, from ticket: SurfaceMessages<Kind, Value>.Ticket, subject: String? = nil, reasonCode: String? = nil, reasonText: String? = nil, attempt: LinkAttempt? = nil) -> Bool {
         guard ticket.isNewest else { return false }
         // Carries the action's target, subject and refusal so same-kind hand-offs for different
         // Tasks merge, saying a shared reason once (D2).
-        mainMessages.publish(text, kind: kind, target: ticket.target, subject: subject, reasonCode: reasonCode, reasonText: reasonText)
+        mainMessages.publish(text, kind: kind, target: ticket.target, subject: subject, reasonCode: reasonCode, reasonText: reasonText, attempt: attempt)
         messageSurface = nil
         return true
     }

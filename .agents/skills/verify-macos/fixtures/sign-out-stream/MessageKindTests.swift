@@ -1243,7 +1243,8 @@ private actor ScriptGate: ClientTransport {
         if !olderFails {
             #expect(model.message == afterNewer, "\(label): an older success clears only its own row: \(model.message ?? "nil")")
         } else if newerFails && closeFirst {
-            #expect(model.message?.hasPrefix("Couldn't change 2 Dependencies:") == true && model.message?.contains(older.title) == true && model.message?.contains(newerTask.title) == true,
+            // An add and a removal: mixed verbs, so the picker's form with "change" (seat, 2026-11-12).
+            #expect(model.message?.hasPrefix("Couldn't change 2 Dependencies: \u{201C}\(newerTask.title)\u{201D} and \u{201C}\(older.title)\u{201D}.") == true,
                     "\(label): both hand-offs merge: \(model.message ?? "nil")")
         } else {
             #expect(model.message?.contains(older.title) == true && model.messageKind == .dependencyLink, "\(label): the older row hands off its own failure: \(model.message ?? "nil")")
