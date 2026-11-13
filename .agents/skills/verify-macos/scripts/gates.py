@@ -45,9 +45,17 @@ def wait_for_disk(name):
         if free >= 35 * 1024 ** 3: return
         if not said: print(f'WAITING-DISK before {name}: {free / 1024 ** 3:.1f} GiB free, under 35 GiB', flush=True); said = True
         time.sleep(30)
+def quarantine_leftovers(name):
+    # A gate's own Bun compile (the CLI tests' `bun build --compile`) can leave a `.*.bun-build`
+    # file in the tree; it is moved to the ignored quarantine before the next clean-tree check
+    # instead of stopping the run (MAC-C1-S1-28). Anything else uncommitted still stops it.
+    moved = subprocess.run(['sh', '.agents/skills/verify-macos/scripts/quarantine-bun-build.sh'], capture_output=True, text=True)
+    (evidence / f'quarantine-before-{name}.log').write_text(moved.stdout + moved.stderr)
+    assert moved.returncode == 0, ('a Bun leftover is still held by a process', name, moved.stdout)
 def run(name, args, timeout=7200, extra=None):
     wait_for_disk(name)
     assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == head
+    quarantine_leftovers(name)
     dirty = set(subprocess.check_output(['git', 'status', '--porcelain'], text=True).splitlines())
     assert dirty <= allowed_dirty, ('Gate head is dirty', sorted(dirty - allowed_dirty))
     stat = os.statvfs(root)
@@ -59,11 +67,31 @@ def run(name, args, timeout=7200, extra=None):
     (evidence / 'commands.json').write_text(json.dumps(commands, indent=2))
     print(name, result.returncode, flush=True)
     assert result.returncode == 0, name
+# The guard receipt each gate that builds Swift must write (the discovery audit is added when it runs).
+expected_guards = {'hold': 'hold/keychain-guard.json', 'sign-out-stream': 'sign-out-stream/keychain-guard.json',
+                   'stress': 'stress/keychain-guard.json', 'race': 'race/keychain-guard.json',
+                   'connections': 'connections/keychain-guard.json', 'sockets': 'sockets/keychain-guard.json',
+                   'restart': 'restart/keychain-guard.json', 'design': 'design/keychain-guard.json',
+                   'state': 'state-keychain-guard.json', 'diagnostics': 'diagnostics/keychain-guard.json',
+                   'idle': 'idle/keychain-guard.json', 'subscribers': 'subscribers/keychain-guard.json'}
 def keychain_summary():
-    # From every guard receipt the gates wrote, never a constant; None if a gate wrote none.
-    receipts = sorted(evidence.rglob('*keychain-guard*.json'))
-    values = {str(r.relative_to(evidence)): json.loads(r.read_text())['keychainLinked'] for r in receipts if r.read_text().strip() != 'null'}
-    return dict(anyLinked=any(values.values()) if values else None, receipts=values)
+    # From the guard receipts, never a constant. A gate that ran but whose guard did not (no receipt,
+    # or a null one) is unknown, and one unknown makes the whole answer unknown (MAC-C1-S1-28).
+    ran = {c['name'] for c in commands}
+    values = {}
+    for gate, receipt in expected_guards.items():
+        if gate not in ran: continue
+        path = evidence / receipt
+        content = json.loads(path.read_text()) if path.exists() and path.read_text().strip() else None
+        values[receipt] = content.get('keychainLinked') if isinstance(content, dict) else None
+    for extra in sorted(evidence.glob('discovery-*-keychain-guard.json')):
+        content = json.loads(extra.read_text()) if extra.read_text().strip() else None
+        values[extra.name] = content.get('keychainLinked') if isinstance(content, dict) else None
+    if 'discovery-formal' in ran and not any(k.startswith('discovery-') for k in values):
+        values['discovery-formal: no new swift-build to audit'] = None
+    unknown = sorted(k for k, v in values.items() if v is None)
+    answer = None if unknown or not values else any(values.values())
+    return dict(anyLinked=answer, unknown=unknown, receipts=values)
 try:
     helper = '.agents/skills/verify-client-diagnostics/scripts/verify.py'
     # HOLD (the live state tests against the scratch server) is a gate from now on, so a ruling
@@ -88,14 +116,17 @@ try:
     run('discovery-formal', ['bun', '.agents/skills/verify-discovery-formal/check.ts', head])
     # check-swift.ts is pinned by the Discovery mapping, so its guard is outside and after the run:
     # an audit of the products it built, not a stop before they ran.
-    for made in sorted(set((root / 'docs/evidence/discovery-formal').glob('swift-*')) - before):
+    reused = {Path(os.environ['GATE_DISCOVERY_SWIFT_REUSE'])} if os.environ.get('GATE_DISCOVERY_SWIFT_REUSE') else set()
+    for made in sorted((set((root / 'docs/evidence/discovery-formal').glob('swift-*')) - before) | reused):
         if (made / 'swift-build').exists():
             audit = state_package.guard(made / 'swift-build'); state_package.write(audit, evidence / f'discovery-{made.name}-keychain-guard.json')
             assert not audit['keychainLinked'], ('discovery Swift products link the Keychain', audit['keychainSymbols'])
     run('task-search-formal', ['bun', '.agents/skills/verify-task-search-formal/check.ts'])
     run('root', ['scripts/swift-slot.sh', '/usr/bin/lockf', '-k', '/tmp/todo-pnpm-check.lock', 'pnpm', 'check'])
     run('doc-links', ['node', 'scripts/check-doc-links.mjs', 'HEAD'])
-    result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain_summary(), pushed=False)
+    keychain = keychain_summary()
+    assert keychain['anyLinked'] is False, ('Keychain answer is not a clean no', keychain)
+    result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain, pushed=False)
 except BaseException as error:
     result = dict(result='FAIL', errors=1, head=head, gates_finished=len(commands), reason=repr(error), carried=carried)
     raise

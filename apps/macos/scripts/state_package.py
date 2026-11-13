@@ -15,7 +15,8 @@ Coordinator ruling, 2026-11-13: no test run links or calls the Keychain.
 CLI:
   state_package.py swift <swift args...>    the args may say --package-path apps/macos; a test run is
                                             split into build, guard, then test with --skip-build
-  state_package.py guard <path> [receipt]   exit 3 if a keychain call is linked
+  state_package.py guard <path> [receipt]   exit 3 if a keychain call is linked, 4 if no product was
+                                            found, 2 if the path is empty or not a build product
   state_package.py prepare [--production-vault <dir>]   the mirror path; the production vault is
                                             only for the guard's own control
 
@@ -72,8 +73,34 @@ def products(path: Path) -> list:
     return sorted(found)
 
 
+BUILD_DIRECTORIES = {'.build', 'DerivedData', 'swift-build', 'build'}
+
+
+class GuardRefused(SystemExit):
+    pass
+
+
+def checked_path(path) -> Path:
+    """The guard reads only built products: a Mach-O file, or a directory inside a build directory.
+    An empty argument, the checkout or any directory outside a build tree is refused (MAC-C1-S1-28)."""
+    if path is None or str(path).strip() == '':
+        raise GuardRefused('guard: no path given')
+    path = Path(path).resolve()
+    if not path.exists():
+        raise GuardRefused(f'guard: {path} does not exist')
+    if path.is_file():
+        with path.open('rb') as handle:
+            if handle.read(4) not in MACHO:
+                raise GuardRefused(f'guard: {path} is not a built product')
+        return path
+    if not BUILD_DIRECTORIES & set(path.parts) or path == ROOT or path in ROOT.parents:
+        raise GuardRefused(f'guard: {path} is not inside a build directory')
+    return path
+
+
 def guard(path: Path) -> dict:
     """What the built products link from Security; `keychainLinked` stops a run."""
+    path = checked_path(path)
     keychain, other, frameworks = {}, {}, {}
     built = products(path)
     for product in built:
@@ -146,8 +173,14 @@ if __name__ == '__main__':
     if command == 'swift':
         sys.exit(swift(rest))
     if command == 'guard':
-        result = guard(Path(rest[0])); write(result, rest[1] if len(rest) > 1 else None)
-        print(json.dumps(result, sort_keys=True)); sys.exit(3 if result['keychainLinked'] else 0)
+        try:
+            result = guard(rest[0] if rest else None)
+        except GuardRefused as refused:
+            print(refused, file=sys.stderr); sys.exit(2)
+        write(result, rest[1] if len(rest) > 1 else None)
+        print(json.dumps(result, sort_keys=True))
+        # 3: a Keychain call is linked; 4: nothing built to check, so nothing is known.
+        sys.exit(3 if result['keychainLinked'] else 4 if result['products'] == 0 else 0)
     if command == 'prepare':
         production = '--production-vault' in rest
         mirror = Path(rest[rest.index('--production-vault') + 1]) if production else MIRROR
