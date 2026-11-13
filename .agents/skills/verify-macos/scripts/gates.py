@@ -6,7 +6,8 @@ Usage: python3 .agents/skills/verify-macos/scripts/gates.py
 
 Inputs: .scratch/bin/build.json from `bun .agents/skills/verify-cli/scripts/cache-binaries.ts`; the
 run stops if apps/server, apps/cli or packages changed since that build's head. Every command asserts
-the same head and a clean tree, waits while free disk is under 35 GiB (one WAITING-DISK line), and
+the same head and a clean tree, waits while free disk is under 40 GiB (one WAITING-DISK line) and
+until neither Todo app is frontmost with no input for a minute (one WAITING-OWNER line), and
 stops on the first non-zero exit. Evidence: docs/evidence/mac-perf/c4/controls-final-<head>, with
 result.json, commands.json and one log per gate. Keychain: every runner builds through
 apps/macos/scripts/state_package.py, and result.json copies keychain_linked from the guard receipts.
@@ -38,12 +39,12 @@ carried = {
 }
 commands = []
 def wait_for_disk(name):
-    # Coordinator, 2026-11-13: under 35 GiB free a stage does not start; say so and wait.
+    # Coordinator (candidate 9): under 40 GiB free a stage does not start; say so and wait.
     said = False
     while True:
         stat = os.statvfs('/System/Volumes/Data'); free = stat.f_bavail * stat.f_frsize
-        if free >= 35 * 1024 ** 3: return
-        if not said: print(f'WAITING-DISK before {name}: {free / 1024 ** 3:.1f} GiB free, under 35 GiB', flush=True); said = True
+        if free >= 40 * 1024 ** 3: return
+        if not said: print(f'WAITING-DISK before {name}: {free / 1024 ** 3:.1f} GiB free, under 40 GiB', flush=True); said = True
         time.sleep(30)
 def quarantine_leftovers(name):
     # A gate's own Bun compile (the CLI tests' `bun build --compile`) can leave a `.*.bun-build`
@@ -52,8 +53,20 @@ def quarantine_leftovers(name):
     moved = subprocess.run(['sh', '.agents/skills/verify-macos/scripts/quarantine-bun-build.sh'], capture_output=True, text=True)
     (evidence / f'quarantine-before-{name}.log').write_text(moved.stdout + moved.stderr)
     assert moved.returncode == 0, ('a Bun leftover is still held by a process', name, moved.stdout)
+def wait_for_quiet(name):
+    # The owner may be at the Mac: a gate loads the CPU (and a few show offscreen work), so it starts
+    # only when neither Todo app is frontmost and there has been no input for a minute.
+    said = False
+    while True:
+        front = subprocess.run(['lsappinfo', 'front'], capture_output=True, text=True).stdout.strip()
+        bundle = subprocess.run(['lsappinfo', 'info', '-only', 'bundleid', front], capture_output=True, text=True).stdout.split('=')[-1].strip().strip('"')
+        idle = next((int(line.split('=')[-1]) / 1e9 for line in subprocess.run(['ioreg', '-c', 'IOHIDSystem'], capture_output=True, text=True).stdout.splitlines() if 'HIDIdleTime' in line), 0)
+        if bundle not in ('local.todo.Todo', 'dev.todo.electron') and idle >= 60: return
+        if not said: print(f'WAITING-OWNER before {name}: {bundle} in front, idle {idle:.0f} s', flush=True); said = True
+        time.sleep(30)
 def run(name, args, timeout=7200, extra=None):
     wait_for_disk(name)
+    wait_for_quiet(name)
     assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip() == head
     quarantine_leftovers(name)
     dirty = set(subprocess.check_output(['git', 'status', '--porcelain'], text=True).splitlines())
