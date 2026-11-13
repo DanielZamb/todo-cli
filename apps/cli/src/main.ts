@@ -123,7 +123,7 @@ import {
   writeMode,
 } from "./database-selection.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
-import { observeDirectWrite } from "./direct-write.ts";
+import { nudgeAfterWrite } from "./direct-write.ts";
 import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
@@ -254,7 +254,7 @@ const withStore = <A, E, R>(
   cfg: Settings,
   action: AuthAction,
   use: (store: OperationStore) => Effect.Effect<A, E, R>,
-  options: { readonly writing?: boolean; readonly changesFiles?: boolean } = {},
+  options: { readonly writing?: boolean } = {},
 ) =>
   Effect.gen(function* () {
     const path = yield* io(() => selectDatabase(cfg.db));
@@ -267,6 +267,8 @@ const withStore = <A, E, R>(
           discoverServer(path, mode === "server" && !provisioning ? 1000 : 50),
         )
       : undefined;
+    // The first routed command must require MAC-proved protocol 2 after the
+    // reviewed durable-denial fix. Protocol 1 stays discovery/proof/nudge only.
     if (writing && !provisioning && mode === "server") {
       server?.close();
       return yield* Effect.fail(
@@ -274,7 +276,7 @@ const withStore = <A, E, R>(
           1,
           server ? "server_command_unsupported" : "server_required",
           server
-            ? "No production command is routable until durable auth-denial handling is reviewed. Use --direct or config write-mode automatic."
+            ? "Protocol 1 supports proof and nudge only. Production routing requires protocol 2 and reviewed durable auth-denial handling. Use --direct or config write-mode automatic."
             : "A proven server is required for this database. Use --direct or config write-mode automatic.",
         ),
       );
@@ -282,11 +284,10 @@ const withStore = <A, E, R>(
     yield* io(() =>
       mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 }),
     );
-    return yield* Effect.acquireUseRelease(
-      openStore({ path }),
-      (store) =>
-        observeDirectWrite(
-          store,
+    return yield* nudgeAfterWrite(
+      Effect.acquireUseRelease(
+        openStore({ path }),
+        (store) =>
           use(store).pipe(
             Effect.catch((error) =>
               Effect.gen(function* () {
@@ -316,10 +317,9 @@ const withStore = <A, E, R>(
               }),
             ),
           ),
-          server,
-          options.changesFiles ?? false,
-        ),
-      (store) => Effect.orDie(store.close()),
+        (store) => Effect.orDie(store.close()),
+      ),
+      server,
     ).pipe(Effect.ensuring(Effect.sync(() => server?.close())));
   });
 const access = (cfg: Settings) =>
@@ -2254,13 +2254,10 @@ const snapshotCommand = Command.make("snapshot").pipe(
       "create",
       { reason: string("reason", "manual") },
       ({ reason }) =>
-        snapshotUse(
-          SnapshotResponse,
-          (store, generated_at) =>
-            store.snapshots
-              .create(reason)
-              .pipe(Effect.map((snapshot) => ({ generated_at, snapshot }))),
-          true,
+        snapshotUse(SnapshotResponse, (store, generated_at) =>
+          store.snapshots
+            .create(reason)
+            .pipe(Effect.map((snapshot) => ({ generated_at, snapshot }))),
         ),
     ).pipe(withGuide("snapshot create")),
     Command.make("list", {}, () =>
@@ -2289,25 +2286,17 @@ const snapshotCommand = Command.make("snapshot").pipe(
       "restore",
       { id: Argument.String("snapshot-id"), dryRun: bool("dry-run") },
       ({ id, dryRun }) =>
-        snapshotUse(
-          SnapshotRestoreResponse,
-          (store, generated_at) =>
-            store.snapshots
-              .restore(id, { dryRun })
-              .pipe(Effect.map((restore) => ({ generated_at, restore }))),
-          !dryRun,
-          true,
+        snapshotUse(SnapshotRestoreResponse, (store, generated_at) =>
+          store.snapshots
+            .restore(id, { dryRun })
+            .pipe(Effect.map((restore) => ({ generated_at, restore }))),
         ),
     ).pipe(withGuide("snapshot restore")),
     Command.make("prune", { dryRun: bool("dry-run") }, ({ dryRun }) =>
-      snapshotUse(
-        SnapshotPruneResponse,
-        (store, generated_at) =>
-          store.snapshots
-            .prune({ dryRun })
-            .pipe(Effect.map((prune) => ({ generated_at, prune }))),
-        !dryRun,
-        true,
+      snapshotUse(SnapshotPruneResponse, (store, generated_at) =>
+        store.snapshots
+          .prune({ dryRun })
+          .pipe(Effect.map((prune) => ({ generated_at, prune }))),
       ),
     ).pipe(withGuide("snapshot prune")),
   ]),
@@ -2328,22 +2317,26 @@ function snapshotReadUse<
 ) {
   return Effect.gen(function* () {
     const cfg = yield* root;
-    yield* withStore(cfg, "authenticate", (store) =>
-      Effect.gen(function* () {
-        const credential = yield* io(() => loadCredential(cfg));
-        const result = yield* store.auth.withOwnerRead(
-          { credential },
-          fieldsSchema,
-          fields,
-          (read) => use(store, read, iso(nowInstant())),
-        );
-        yield* response(
-          cfg.format,
-          schema,
-          result,
-          `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
-        );
-      }),
+    yield* withStore(
+      cfg,
+      "authenticate",
+      (store) =>
+        Effect.gen(function* () {
+          const credential = yield* io(() => loadCredential(cfg));
+          const result = yield* store.auth.withOwnerRead(
+            { credential },
+            fieldsSchema,
+            fields,
+            (read) => use(store, read, iso(nowInstant())),
+          );
+          yield* response(
+            cfg.format,
+            schema,
+            result,
+            `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
+          );
+        }),
+      { writing: false },
     );
   });
 }
@@ -2353,8 +2346,6 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
     store: OperationStore,
     generatedAt: string,
   ) => Effect.Effect<S["Type"], StoreError>,
-  changesFiles = false,
-  writing = changesFiles,
 ) {
   return Effect.gen(function* () {
     const cfg = yield* root;
@@ -2374,7 +2365,7 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
             `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
           );
         }),
-      { writing, changesFiles },
+      { writing: true },
     );
   });
 }

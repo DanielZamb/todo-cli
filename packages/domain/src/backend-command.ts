@@ -36,7 +36,16 @@ export const AddBackendResult = Schema.Struct({
   view: TaskViewSchema,
   dependency_warnings: Schema.optionalKey(Schema.Array(DependencyWarning)),
 });
+export const CommandNotRun = Schema.Struct({
+  outcome: Schema.Literal("not_run"),
+  code: Schema.Literal("local_proof_required"),
+  message: Schema.Literal(
+    "The local database proof is no longer valid. The command was not run and nothing was written.",
+  ),
+  exit_code: Schema.Literal(2),
+});
 export const BackendReply = Schema.Union([
+  CommandNotRun,
   Schema.Struct({
     outcome: Schema.Literal("success"),
     kind: Schema.Literal("add"),

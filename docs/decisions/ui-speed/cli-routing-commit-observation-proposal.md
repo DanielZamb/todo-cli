@@ -1,4 +1,7 @@
-# Connection commit observation proposal
+# Connection commit observation proposal, not taken
+
+The coordinator rejected this proposal on 2026-11-13. No observer or TEMP trigger
+was applied. Writing commands nudge unconditionally after reaching the store.
 
 2026-11-13. Paused before changing pinned source, as required by the coordinator.
 The reviewed server integration is merged at

@@ -95,7 +95,17 @@ with (evidence / 'server.log').open('w') as log:
         def cli(*args, stdin=None):
             cmd = [str(scratch / 'todo'), '--direct', '--db', str(scratch / 'scratch.db'), '--profile', 'work', '--format', 'json', *args]
             started = time.monotonic()
-            result = subprocess.run(cmd, env=env, input=stdin, capture_output=True, text=True, timeout=10)
+            database = (scratch / 'scratch.db').resolve()
+            record = database.parent / '.todo-routing' / database.name.encode().hex() / 'endpoint.json'
+            hidden = record.with_name('endpoint.timer-proof.json')
+            had_record = record.exists()
+            if had_record:
+                record.rename(hidden)
+            try:
+                result = subprocess.run(cmd, env=env, input=stdin, capture_output=True, text=True, timeout=10)
+            finally:
+                if had_record:
+                    hidden.rename(record)
             value = json.loads(result.stdout) if result.stdout.strip().startswith('{') else result.stdout
             actions.append({'action': 'compiled-cli', 'args': list(args), 'home': str(home), 'exit': result.returncode, 'output': redacted(value), 'stderr': result.stderr, 'duration_ms': round((time.monotonic() - started) * 1000, 3)})
             assert result.returncode == 0, (args, result.stdout, result.stderr)

@@ -178,8 +178,16 @@ export class ProvenServer {
       credential,
     );
     try {
-      return Schema.decodeUnknownSync(BackendReply)(value);
-    } catch {
+      const reply = Schema.decodeUnknownSync(BackendReply)(value);
+      if (reply.outcome === "not_run")
+        throw new CommandError(2, "server_command_not_run", reply.message);
+      return reply;
+    } catch (error) {
+      if (
+        error instanceof CommandError &&
+        error.code === "server_command_not_run"
+      )
+        throw error;
       throw new CommandTransportError(true);
     }
   }

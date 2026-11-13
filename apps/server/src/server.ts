@@ -299,10 +299,12 @@ export const serverLayer = (options: {
         (endpoint) => Effect.sync(() => endpoint?.close()),
       );
       const outside = options.outsideCommit ?? new OutsideCommit();
+      const beforeStore = endpoint?.beforeStore();
       const store = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
+      yield* Effect.sync(() => endpoint?.verifyStore(beforeStore));
       const cacheHygiene = yield* taskSearchCacheHygiene(store);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
       yield* scheduler(store).pipe(Effect.forkScoped);

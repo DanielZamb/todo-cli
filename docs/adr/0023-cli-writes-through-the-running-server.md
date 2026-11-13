@@ -9,6 +9,46 @@ the local server when it runs. This record awaits coordinator review and owner
 acceptance. It does not authorize implementation or change accepted records yet.
 ADR-0022 is reserved for another decision.
 
+## Decided, 2026-11-13 corrections
+
+- The CLI sends one data-free, bounded, best-effort nudge after every writing
+  command that reaches the store, on success, refusal, dry run or partial failure.
+  It uses the same writing classification as server mode. There is no commit
+  observation, History/generation comparison, file-only special case, TEMP trigger
+  or extra connection. Early refusals and all reads send none, including a read
+  that records a refusal. No proved server means no nudge. The cost is one empty
+  stream pass when a writing command changed nothing. Discovery and nudge each
+  retain their separate nominal 50 ms timer budgets, subject to host scheduling.
+- Identity is fstat of the kept database descriptor. Before publication, the
+  synchronous store acquisition must open an independent matching main-file
+  descriptor. macOS uses /dev/fd and Linux uses /proc/self/fd. Missing platform
+  evidence disables publication, proof and local authorization, with one log.
+  Evidence of a different store file stops startup with a cause-specific error.
+  No pinned constructor or transaction changes implement this check.
+- The SQLite singleton guard lives in the private .todo-routing directory beside
+  the canonical database, named by device, inode and birth time. It outlives store
+  close and is independent of HOME/TMPDIR. Server startup refuses multiply linked
+  database files because different hard-link directories have no common beside-file
+  registry. The CLI still writes directly to hard-linked databases. At publication,
+  proof and authorization, losing the guard inode or database binding permanently
+  withdraws that incarnation and removes only its own record. It never recreates
+  a missing guard while serving. No production guard is created under /tmp.
+- A validated typed not_run reply on the proved connection means the command did
+  not execute or write, exit 2, server_command_not_run. It never triggers fallback
+  or retry. Every other post-send failure remains write_outcome_unknown, exit 1,
+  with the History warning and no automatic retry.
+- The MAC-covered protocol is the capability. Protocol 1 is discovery, proof and
+  nudge only for production CLI use. The test companion may exercise the prepared
+  operation. The first production build routing a command must carry protocol 2
+  and route only to a server that proved 2, after the reviewed integrated durable
+  repeated-denial fix. Schema contract identity alone cannot attest that fix.
+- Preserve the merged strict read leases, early flag refusals, in-place Snapshot
+  restore admission, preview isolation, configured Attachment root and durable
+  cleanup. Shared add create and subsequent read remain separate checked phases.
+
+The earlier Decided text below is retained as decision history; this correction
+supersedes its commit observation and temporary/global guard wording.
+
 ## Decided, 2026-11-12
 
 This section records the owner's O44 answers and the coordinator's slice-1 order.

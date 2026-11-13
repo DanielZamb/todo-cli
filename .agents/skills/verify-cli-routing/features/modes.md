@@ -3,7 +3,7 @@
 ## Sub-features
 
 automatic/direct/server local configuration, command flag precedence, usage errors,
-direct provisioning/read exceptions and bounded post-commit nudges.
+direct provisioning/read exceptions and bounded post-command nudges.
 
 ## How to get to it (user POV)
 
@@ -20,4 +20,8 @@ successful direct writes with a proven, stale or unresponsive endpoint.
 ## Gotchas
 
 A nudge carries no Task data or credential. It is best effort and cannot turn a
-committed write into failure. Its wait is bounded separately from direct work.
+writing command into failure. Its wait is bounded separately from direct work.
+
+Every writing command that reaches the store nudges once, including refusal, dry
+run, init Profile creation and partial batch failure. Reads and early refusals
+never nudge. The only extra cost for a no-op writing command is an empty pass.

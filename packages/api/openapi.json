@@ -51073,6 +51073,31 @@
                       "properties": {
                         "outcome": {
                           "type": "string",
+                          "enum": ["not_run"]
+                        },
+                        "code": {
+                          "type": "string",
+                          "enum": ["local_proof_required"]
+                        },
+                        "message": {
+                          "type": "string",
+                          "enum": [
+                            "The local database proof is no longer valid. The command was not run and nothing was written."
+                          ]
+                        },
+                        "exit_code": {
+                          "type": "number",
+                          "enum": [2]
+                        }
+                      },
+                      "required": ["outcome", "code", "message", "exit_code"],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "type": "string",
                           "enum": ["success"]
                         },
                         "kind": {

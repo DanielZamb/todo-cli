@@ -1,7 +1,10 @@
 import { BadRequest, TodoApi } from "@todo/api";
-import { executeBackendCommand } from "@todo/domain/backend-command";
+import {
+  CommandNotRun,
+  executeBackendCommand,
+} from "@todo/domain/backend-command";
 import type { OperationStore } from "@todo/domain/store";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 import { HttpApiBuilder } from "effect/http-api";
 import type { databaseEndpoint } from "./database-endpoint.ts";
 import type { OutsideCommit } from "./outside-commit.ts";
@@ -44,7 +47,13 @@ export const localRoutes = (
               "command",
             )
           )
-            return yield* new BadRequest({ message: "Local proof required" });
+            return Schema.decodeUnknownSync(CommandNotRun)({
+              outcome: "not_run",
+              code: "local_proof_required",
+              exit_code: 2,
+              message:
+                "The local database proof is no longer valid. The command was not run and nothing was written.",
+            });
           const authorization = headers.authorization ?? "";
           const credential = authorization.startsWith("Bearer ")
             ? authorization.slice(7)

@@ -71,7 +71,7 @@ if (mode === "server") {
         reply.result.dependency_warnings,
       ),
     );
-  } else {
+  } else if (reply.outcome === "failure") {
     if (format !== "md" && format !== "json" && format !== "table")
       throw new Error("Invalid format");
     const failure = reply.error;
