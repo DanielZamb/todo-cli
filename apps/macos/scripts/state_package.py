@@ -129,6 +129,8 @@ def swift(args: list) -> int:
             for index, arg in enumerate(args):
                 if arg in keep and index + 1 < len(args): build += [arg, args[index + 1]]
                 elif arg in ('--disable-automatic-resolution', '--skip-update'): build.append(arg)
+            # `swift test` makes release modules testable itself; a separate release build must ask.
+            if (_option(args, '--configuration', '-c') or 'debug') == 'release': build += ['-Xswiftc', '-enable-testing']
             code = subprocess.run(['swift'] + build).returncode
             if code: return code
             args.append('--skip-build')
