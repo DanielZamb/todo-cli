@@ -2,6 +2,10 @@ import type { Database } from "bun:sqlite";
 import { lstatSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Effect, Schema } from "effect";
+import {
+  type AuthorizedOwnerRead,
+  checkedRead,
+} from "../auth/authorized-read.ts";
 import type { AuthError } from "../auth/model.ts";
 import { CredentialInfo } from "../auth/model.ts";
 import { boundDiagnostics } from "../diagnostic-budget.ts";
@@ -113,9 +117,12 @@ export class Diagnostics {
   constructor(
     private readonly db: Database,
     private readonly path: string,
-    private readonly owner: (input: {
-      credential: string;
-    }) => Effect.Effect<CredentialInfo, AuthError | StoreError>,
+    private readonly withOwner: <A>(
+      input: { credential: string },
+      use: (
+        read: AuthorizedOwnerRead,
+      ) => Effect.Effect<A, AuthError | StoreError>,
+    ) => Effect.Effect<A, AuthError | StoreError>,
     private readonly snapshots: Snapshots,
     private readonly scheduled: ScheduledWork,
     private readonly attachmentRoot: string,
@@ -194,14 +201,19 @@ export class Diagnostics {
     this.previousSeq = seq;
   }
   read(input: { credential: string; detail?: boolean }) {
+    return this.withOwner(input, (read) =>
+      this.readWithin(read, input.detail ?? false),
+    );
+  }
+  private readWithin(read: AuthorizedOwnerRead, detail: boolean) {
     return Effect.gen({ self: this }, function* () {
-      yield* this.owner(input);
+      yield* checkedRead(read, "owner", this.db);
       const generation = yield* this.snapshots.generation();
       this.generation(generation.generation);
       const snapshots = yield* this.snapshots.list();
       const pending = yield* this.scheduled.pendingReminders();
       return yield* Effect.try({
-        try: () => this.snapshot(snapshots, pending, input.detail ?? false),
+        try: () => this.snapshot(snapshots, pending, detail),
         catch: (cause) => new StoreError(cause),
       });
     });

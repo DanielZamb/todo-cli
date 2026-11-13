@@ -24,3 +24,7 @@ completed status, per-Task Conflict reports, source isolation, and both schemas.
 Version guardrails are covered in [agent-contract](<agent-contract.md>).
 
 [Edit several Tasks](batch-edit.md) covers per-Task expected Versions, preview, independent apply results and Conflict reload.
+
+[Compiled flags](flag-contract.md) records all command registrations, their
+consumers and explicit exceptions. The recipe checks usage refusals before
+authentication or writes and keeps help and schemas at their reviewed goldens.

@@ -5,6 +5,19 @@ description: Formally check the operation store's Task compare-and-swap and atom
 
 # Verify Task compare-and-swap atomicity
 
+## Server projection read mapping
+
+Product `7a90388d246e6c03f975d82c164c3e589cf15c7d` adds Profile-filtered graph
+SELECTs and a committed Profile History query outside the mapped store methods.
+The constructor, transaction, historySync, validation, append, rejection,
+checkpoint and replay bodies are byte-identical to the pinned base. Their lines
+moved. All other covered files, model, config, fixtures and invariants are unchanged.
+The source comparison is retained under `docs/evidence/ui-speed/server-reads/`.
+Both real-code sensitivity variants fail their behavioral enumeration with exit 1,
+restore exact source bytes, and the restored one-command check exits 0. The receipt
+is `docs/evidence/fv01/sensitivity-yGZ6Q3/result.json`. The pin renewal records only
+this mapping and line movement; it does not extend AtomicCAS to graph reads.
+
 Property: A Task change commits only against the current Task at the next Version, and its History entry and new value become durable together.
 
 Harm: A break can overwrite another client's work or make replay recover a different Task than the owner saw.
@@ -280,6 +293,25 @@ hashes renewed. The final clean command runs on the actual worktree separately.
 The reviewed product is `36f9c56e200048aa2ca16186aaf713bea8d5454e`, after the final SEC base merge. Only `attachments.ts` differs from the covered SEC source at `f709549c`. It imports `TaskLookupDetails` and adds the exit pair and authorized Task context to `AttachManyRow.error`. The stored `Attachment`, `validAttachmentLocation`, Task events, transaction, validation, projection, Version, rejection recording, and replay functions are unchanged. These report fields do not change the modeled Task content or a transaction boundary.
 
 The one command passed on the merged source. Both real store mutations then failed their intended enumeration assertions, and the byte-restored source passed the same command. The model, invariants, fixtures, bounds, and exclusions are unchanged. [REPORT.md](REPORT.md) records the renewal receipts.
+
+Authorization product `219749f2ab4ed40fdf7f257c991385a2057bf215` adds nominal
+read wrappers outside every mapped function. The same mapped bodies remain
+byte-identical to 98511eff; the range/hash receipt is in the SERVER-READS
+`boundary-revision/atomicity-body-review.json`. No model or writer body changed.
+## Constructor statement trace
+
+`constructor-trace.mjs <checkout> <owned-todo-constructor-directory> <output.json>`
+creates one scratch Init seed, then resets that same database from the seed on
+each invocation. It records executed public SQLite exec/prepared statements,
+bindings and immediate transaction entry/commit boundaries during construction.
+Run before and after a constructor wiring change and compare the seed hash and
+trace arrays exactly. It does not claim native SQLite internal tracing.
+The seed contains a committed Version-1 Task and no Purge, matching Init.
+
+[Purge restore source mapping](PURGE-RESTORE-MAPPING.md) records the accepted
+constructor renewal and its statement trace. A later preview cleanup guard
+changes only an uncovered method; all 45 covered declarations remain byte-identical.
+Its new whole-file renewal remains a candidate until the seat re-checks it.
 
 ## U06 attribution mapping review, 2026-11-12
 

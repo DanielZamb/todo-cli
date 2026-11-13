@@ -5,6 +5,60 @@ description: Verify the Todo local authenticated HttpApi through curl against a 
 
 # Verify the server API
 
+## Projection read differential control
+
+`apps/server/scripts/read-control-server.ts` is a verification-only server with
+fixed Date and Effect wall clocks. Compile it before a read-path change and keep
+that binary only in ignored scratch storage. Compile the candidate separately.
+`read-control.ts <before> <after> <fixture-manifest> <evidence-directory>` compares
+raw statuses and base64-encoded body bytes over Task lists, Show, graph, all planning views,
+Projects, Tags, Task History, Profile discovery, lookup, credential lists,
+health, OpenAPI, Snapshot list/Show, quick-add parsing, managed image bytes and
+SSE catch-up. It also
+compares auth History fields and credential last-use values. SQLite's physical
+recording timestamps naturally differ between processes; event timestamps are fixed.
+It uses real
+HTTP and private copies of every manifest checkpoint. It preserves one scratch
+Snapshot directory across each pair so file identities and paths match.
+Diagnostics' process measurements require their own recipe and cannot have
+byte-identical memory, uptime and latency values across processes.
+
+`bun apps/server/scripts/read-fixture.ts <new-checkout-scratch-directory>` creates
+the reusable lifecycle fixture with Series, Occurrences, Dependencies, metadata,
+Attachments, scoped/unscoped Tokens, Profile deletion, Move, Copy, Delete, Purge,
+Revert and older v1 events. Its private fixtures.json feeds the differential.
+Keep manifests and credentials ignored. The domain regression
+`pnpm --filter @todo/domain test client-projection.test.ts` requires literal
+responses without decoding History and one decode per returned History row.
+
+`build-read-control.ts before|after <output>` builds a verification-only timing
+observer over exact baseline or candidate source. It adds handler timing,
+request correlation and decoded-operation count headers without modifying the
+API schema or product source. `prepare-read-benchmark.ts <cold-path-checkout>`
+copies the cold-path report's scratch checkpoints and creates an ignored paired
+ambient adapter of its driver. It retains response/count assertions, alternates
+before/after per pair and requires zero unneeded operation decodes after the fix.
+It omits newer Diagnostics stage assertions unavailable in the unchanged contract.
+
+The strict-scope controls also capture every never-created Profile read before
+classification changes. `read-presence-control.ts` compares those fixtures and
+requires exactly credential lookup plus classification and zero operation decodes.
+Its blanket-404 and present-query mutants must fail their literal assertions.
+`read-scope-stream-control.ts` compares compiled CLI/server frames, including the
+approved owner-only terminal exception and a separate CLI creating an absent
+Profile between polls.
+
+`scripts/read-caller-audit.mjs` emits the production read-port selector inventory
+for review; runtime leases enforce retention. `read-mapping-review.mjs <SHA>`
+compares the reviewed cache/matcher/runner/integration bodies against the earlier
+authority product and writes each before/after hash. It never renews a pin.
+`build-read-lock-observer.mjs before|after <binary>` instruments physical SQLite
+transactions only in proof binaries. `paired-read-locks.mjs <before> <after>
+<fixture-manifest> <evidence>` measures five alternating pairs per route, marking
+deferred reader scopes separately from writer holds. Its Snapshot comparisons
+normalize separate scratch ids/paths; strict reply parity uses read-control.ts
+with shared file identities. Absolute timing values are evidence, not test gates.
+
 Created with `create-verification-skill`.
 Read the [feature map](features/README.md) before choosing coverage.
 
@@ -179,6 +233,34 @@ and Task search behavior retain their current recipes.
 Set TODO_SEED_BINARY to the matching source-hash cached provisioning executable
 alongside TODO_SERVER_BINARY to reuse both artifacts. The helper links the seed
 inside its owned scratch directory and does not recompile that source hash.
+
+## Mutation after authorization
+
+`build-read-boundary.ts <scratch-binary>` builds the real server with verification
+hooks. It wraps decoded handler arguments, invokes mutations from the real
+credential-use callback or immediately after a checked value is constructed, and
+can yield at the graph port. Product sources and the HTTP contract are unchanged
+by this instrumentation. Both wall clocks use the parity fixture's fixed instant.
+
+Run `read-control.ts` with a normal candidate binary first and this instrumented
+binary second, the lifecycle fixture and a new evidence directory. Set
+`READ_BOUNDARY_MODE=credential` or `port`, and set `READ_BOUNDARY_BINARY` to the
+instrumented binary's absolute path. The comparator requires its emitted hook
+receipt and actual changes to Profile, Task, Attachment and Snapshot ids, prefix
+and quick-add text. It compares all statuses, raw reply bytes and auth evidence.
+The receipt lists every mutated field and handler shape; no credential is logged.
+
+`bun apps/server/scripts/read-boundary-concurrency.ts <scratch-binary>
+<fixture-manifest> <new-evidence-directory>` creates two literal Tasks and scoped
+Tokens in a fresh scratch database. It runs ten pairs of overlapping requests per
+mode on one server. Every pair must return only `aa-work` and `aa-personal` in
+its respective Profile. Hook counters must prove actual overlap and mutation.
+The driver stops its owned server and removes its scratch database and HOME.
+
+`READ_BOUNDARY_MODE=authority` substitutes a cloned authority at the graph query
+port. A valid scoped Task read must return the existing generic storage error
+(HTTP 500), without Task rows. This mode tests runtime refusal; use the two
+mutation modes above for byte parity of valid requests.
 
 ## Private recording API
 

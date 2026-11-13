@@ -1,6 +1,7 @@
 import { Effect, Option, Schema } from "effect";
 import { AttachmentCommands } from "./attachment-commands.ts";
 import { validateAttachmentInputs } from "./attachment-input.ts";
+import { readRequest } from "./auth/authorized-read.ts";
 import type { AccessRequest } from "./auth/model.ts";
 import { type TaskCommandResult, TaskCommands } from "./commands.ts";
 import { DependencyCommands } from "./dependency-commands.ts";
@@ -9,7 +10,7 @@ import { exitStatus } from "./exit-status.ts";
 import {
   ImportItem,
   type ImportReport,
-  type ImportRequest,
+  ImportRequest,
   type ImportRow,
 } from "./import.ts";
 import { planImportDependencies } from "./import-dependencies.ts";
@@ -38,12 +39,26 @@ const expectedVersionInput = Schema.Struct({
 
 const executeImport = Effect.fn(function* (
   store: OperationStore,
-  request: AccessRequest,
-  input: ImportRequest,
+  source: AccessRequest,
+  options: ImportRequest,
 ) {
   const commands = new TaskCommands(store);
-  yield* store.auth.read(request);
-  const graph = yield* store.graph(request.profile);
+  const { authority, graph } = yield* store.auth.withRead(
+    source,
+    Schema.Struct({ input: ImportRequest }),
+    { input: options },
+    (read) =>
+      Effect.gen(function* () {
+        const authority = yield* store.auth.checkRead(read, "read");
+        const graph = yield* store.graphRead(read);
+        return { authority, graph };
+      }),
+    "read",
+    (authority) =>
+      Effect.succeed({ authority, graph: { tasks: [], edges: [] } }),
+  );
+  const request = readRequest(authority),
+    input = authority.fields.input;
   const initial = graph.tasks;
   const dependencyPlan = planImportDependencies(
     graph,
@@ -324,7 +339,14 @@ const executeImport = Effect.fn(function* (
               );
               changed_fields.push("status");
             }
-            const currentBlockers = (yield* store.graph(request.profile)).edges
+            const currentBlockers = (yield* store.auth.withRead(
+              request,
+              Schema.Struct({}),
+              {},
+              (read) => store.graphRead(read),
+              "read",
+              () => Effect.succeed({ tasks: [], edges: [] }),
+            )).edges
               .filter((edge) => edge.dependent_id === task.id)
               .map((edge) => edge.blocker_id);
             const removed = currentBlockers.filter(
@@ -581,10 +603,15 @@ const executeImport = Effect.fn(function* (
 
 export const importTasks = (
   store: OperationStore,
-  request: AccessRequest,
-  input: ImportRequest,
-) =>
-  input.dry_run
+  source: AccessRequest,
+  options: ImportRequest,
+) => {
+  const request = Object.freeze({
+    credential: source.credential,
+    profile: source.profile,
+  });
+  const input = structuredClone(options);
+  return input.dry_run
     ? // Authenticate before forking: a fork serializes the whole database.
       Effect.andThen(
         store.auth.authenticate({ ...request, access: "write" }),
@@ -601,3 +628,4 @@ export const importTasks = (
         );
         return yield* executeImport(store, request, input);
       });
+};

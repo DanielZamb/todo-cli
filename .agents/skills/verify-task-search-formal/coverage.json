@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "f25fbfc4b458a814c589ea9c42f49142c05bd9f0",
-  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow. Reviewed 2026-11-12: pre-existing 2c147ad9 Diagnostics snapshot call supplies the required empty query object. Its emitted URL and all modeled Task list/search branches are unchanged.",
+  "sourceCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "69f21856b32d60483a9e22fa83144e950e4dbe47524a3680bb0744225f365617"
+      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -199,8 +199,8 @@
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
   "previousSourceCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
-  "productCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
-  "integrationCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "integrationCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
   "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
   "integrationComponents": {
     "refresh": "f1c5f22115c361ff0dda48c2e277b9547a2208a5",
@@ -271,5 +271,11 @@
     "scope": "Only filterTaskRecordsEffect gains an outer diagnosticSpan. The original suspended generator driver and its ensuring cleanup stay intact; clauses, preparation, matching, meter, checkpoint positions, result values and client request/publication rules are unchanged. Diagnostic finalization is synchronous, outside the original driver finalizer, and contains recorder failures. No matcher-candidate or model change.",
     "proof": "The complete pre-renewal model/control run passed all expected outcomes then stopped only on this whole-file hash. Root behavior tests and same-source compiled HTTP/CLI checks pass. Real Effect interruption and throwing-recorder tests pass.",
     "report": "docs/decisions/ui-speed/diag-core-report.md"
+  },
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
   }
 }

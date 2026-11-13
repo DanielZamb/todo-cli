@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "3ef9e674307378dde914059cb7581d6bdccb05d0",
+  "confirmedCommit": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "1ae2bba8d5e0b00f561af2e87b8ed5af068cff0cd080fd9228fbe836c91488cf",
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -107,22 +107,16 @@
       ]
     }
   ],
-  "reviewedCandidate": false,
-  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
+  "reviewedCandidate": true,
+  "review": "Merged-source review: all covered store bodies match both parents except the combined constructor, whose identical three-way statement trace preserves Init. Actual-source behavioral sensitivity precedes renewal. No model or bound changes. See docs/decisions/ui-speed/server-integration.md.",
   "integrationReview": {
-    "base": "8ef210ff08532419123653757313c5ef97201e98",
-    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
-    "changed": [
-      "packages/domain/src/store/store.ts",
-      "packages/domain/src/store/projection.ts",
-      "packages/domain/src/attachments.ts",
-      "packages/domain/src/dependency-rules.ts",
-      "packages/domain/src/dependencies.ts"
+    "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "parents": [
+      "150a8c33d63b73d61fca2849c1455c52d2298366",
+      "8292b067d43dca17c0919673785464b0831645b2"
     ],
-    "controls": "docs/evidence/fv01/sensitivity-KdAFKt/result.json",
-    "scope": "Reviewed cache lifecycle hooks, Tag set projection, exit/report fields and stored witness compatibility. Both intended actual-source enumeration failures1, exact restoration before hash renewal. Full clean command follows.",
-    "renewedSensitivity": "docs/evidence/fv01/sensitivity-WnZxRk/result.json",
-    "result": "Both intended enumeration failures1, exact source restoration, restored complete command0 after reviewed hash renewal"
+    "evidence": "docs/evidence/ui-speed/integ-server",
+    "constructor": "Combined Diagnostics checked-read callback and Snapshots attachmentRoot; identical constructor statements/bindings on the same seed."
   },
   "diagnosticsReview": {
     "product": "a2dea2d6328298671796cc856738fd0e4e68469d",

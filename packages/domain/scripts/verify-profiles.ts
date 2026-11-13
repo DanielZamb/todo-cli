@@ -100,7 +100,7 @@ try {
       upgradeLock
         .query<{ user_version: number }, []>("PRAGMA user_version")
         .get()?.user_version,
-      6,
+      7,
     );
   } finally {
     for (const child of children) if (child.exitCode === null) child.kill();
