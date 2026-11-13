@@ -10,6 +10,7 @@ import {
   SnapshotManifest,
   SnapshotRestoreReport,
 } from "../src/snapshots.ts";
+import { provePreviewCli } from "./preview-preservation-proof.ts";
 import { proveSnapshotPurgeCli } from "./snapshot-purge-cli-proof.ts";
 
 const [scratch, evidence] = Schema.decodeUnknownSync(
@@ -158,4 +159,13 @@ proveSnapshotPurgeCli(
   join(scratch, "purge-cases"),
   evidence,
   join(scratch, "todo"),
+);
+
+const previewEvidence = join(evidence, "previews");
+mkdirSync(previewEvidence, { recursive: true });
+await provePreviewCli(
+  join(scratch, "preview-cases"),
+  previewEvidence,
+  join(scratch, "todo"),
+  "matrix",
 );

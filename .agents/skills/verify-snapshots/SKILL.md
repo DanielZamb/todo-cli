@@ -149,15 +149,39 @@ literal option-root and environment-root controls, preserving a PNG under the
 default root. It also covers failed erasure with a successful restore and
 retained job, dry run, refused/rolled-back restore, guarded queue deletion,
 durable-Purge membership rechecking and applied in-memory preview isolation.
-The preview fixture forks before the crash so existing constructor cleanup
-cannot erase the test image. It supplies scratch Snapshot publication for that
-in-memory fixture and neutralizes only its unrelated Purge cleanup, then tests
-the real restore pass with the real Attachment root.
+The preview fixture forks before the crash, simulates a Purge and supplies
+scratch Snapshot publication for the in-memory restore. It uses the real
+Attachment root without disabling cleanup. A second fixture forks with a
+pending live job, requires both PNGs to remain, then opens a persistent store
+and requires that store to drain its own job while preserving the other PNG.
 
 The post-commit pass runs only on an applied persistent restore after the
 transaction has committed. Every job is checked against the durable Purge
 union again, erased with eraseTaskAttachments, and deleted through the supplied
 guarded transaction. Failed erasure retains the job and the successful restore
-report, with no added response field. Pending jobs have no dedicated owner
-CLI, HTTP or desktop view today. Their rows remain in attachment_cleanup for
-SQLite inspection and the existing startup/Purge retry paths.
+report, with no added response field. Diagnostics exposes the attachment_cleanup
+table count through CLI JSON/terminal Storage and HTTP GET /diagnostics. There
+is no dedicated job id, reason, attempt or warning view. Individual rows remain
+available through SQLite inspection; startup/Purge retries still apply. A job
+can remain after a crash following erasure, so its presence alone does not prove
+bytes remain. A fresh CLI can fail at startup if that erasure still fails.
+
+## Dry-run Attachment isolation
+
+The CLI drive imports preview-preservation-proof.ts and compares all logical
+SQLite rows, including raw History and sqlite_sequence, and the whole Attachment
+tree before and after every preview. The tree hash includes file bytes, paths,
+empty directories, symlink targets, modes, modification and change times.
+Seventeen cases cover parse, Delete, Dependency Delete preview, Purge, Move,
+Copy, batch-edit, attach-many, batch depend/undepend, import creation/adoption/
+close-missing, Profile deletion, Snapshot restore/prune and detach. Each must
+leave rows and tree exactly equal. Purge specifically keeps the Deleted Task at
+Version 2, its PNG, empty live queue and empty durable Purge union; a subsequent
+real Purge must erase that PNG. previews/preview-actions.json and
+previews/preview-observations.json retain process exits and comparisons.
+
+For the regression control, compile the standalone driver and run it with an
+explicit scratch directory and the unchanged 5a85de1a or 6b167266 CLI in purge
+mode. Both old binaries must fail the tree equality assertion while leaving
+the live rows unchanged. The fixed CLI must pass matrix mode. No installed CLI
+or real HOME is used.

@@ -54,3 +54,12 @@ with the output, and compares raw checkpoint payloads. It skips equal writes and
 immutable triggers. Copies with no changes or migration skip compaction and
 manifest replacement, so reapplying a Purge union keeps actual bytes and
 checksums stable. Repair still scans references when the Task row is absent.
+
+Preview stores share the managed Attachment root but have independent SQLite
+state. Their simulated Purge ids never authorize erasure of that shared tree.
+cleanupAttachmentsSync returns before reading jobs when isPreview is true,
+covering both constructor cleanup and the transaction tail. The compiled CLI
+matrix checks every dry-run surface against whole-tree hashes and every table's
+logical rows. A fork containing live pending jobs also preserves the PNGs;
+opening a persistent store then drains its own queue normally. No reference
+kind or table shape changes in this correction.

@@ -357,6 +357,7 @@ export const cleanupGuards = [
   "dry-run",
   "refused",
   "preview",
+  "pending-preview",
   "membership",
   "rollback",
   "guarded-write",
@@ -472,14 +473,30 @@ export async function proveSnapshotCleanupGuard(
       await Effect.runPromise(store.snapshots.restore(saved.id));
       assert.equal(existsSync(targetImage), false);
       assert.deepEqual(queue(path), []);
+    } else if (mode === "pending-preview") {
+      const preview = await Effect.runPromise(store.fork());
+      try {
+        assert.equal(preview.isPreview, true);
+        assert.equal(existsSync(targetImage), true);
+        assert.equal(existsSync(keeperImage), true);
+        assert.deepEqual(queue(path), [pendingJob]);
+      } finally {
+        await Effect.runPromise(preview.close());
+      }
+      const live = new OperationStore({ path, attachmentRoot });
+      try {
+        assert.equal(existsSync(targetImage), false);
+        assert.equal(existsSync(keeperImage), true);
+        assert.deepEqual(queue(path), []);
+      } finally {
+        await Effect.runPromise(live.close());
+      }
     } else if (mode === "preview") {
       const preview = previewStore;
       assert.ok(preview);
       try {
-        Object.defineProperty(preview, "cleanupAttachmentsSync", {
-          value: () => undefined,
-        });
         await Effect.runPromise(remove(preview, "queue-target", true));
+        assert.equal(existsSync(targetImage), true);
         assert.equal(preview.isPreview, true);
         assert.equal(preview.snapshots.persistent, false);
         Object.defineProperty(preview.snapshots, "directory", {
