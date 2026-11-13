@@ -1,5 +1,5 @@
 {
-  "productCommit": "5a996ce55a15cd6145f88c83a220ae2d4b54a956",
+  "productCommit": "b4b289066cca9f8c5e527c177abc4a3d759a7558",
   "scope": "Reviewed runtime read-authority guards; immutable product ade8f941; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [

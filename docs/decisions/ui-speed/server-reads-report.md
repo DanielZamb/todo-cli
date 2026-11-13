@@ -1,6 +1,58 @@
 # Server projection reads
 
-## Seat corrections S1-C4, C5 and C6: qualification in progress
+## Delivery after the seat's full review: C4, C5 and C6 corrected
+
+Qualified immutable source: b4b289066cca9f8c5e527c177abc4a3d759a7558, following the C4/C5 correction at 6174e3cf08fc812d513e952dc7debf72e7a55a46. The final delivery adds only this report and the two mapping reference fields. No product file changes after this capture. The complete strict-review.md was read; its three P2 findings are the entire correction scope. The seat must re-check the changed stream/control and both reference moves before acceptance or installation.
+
+C4 is red on 66f15653 for both unscoped Token scopes and green here, with all six frames equal. C5's original blanket control is demonstrably false-green on 66; the corrected control judges the seven original deletion cases separately by their checked final state, and the added read-write case also requires full equality. C6 is red directly on the unchanged 66 product at its literal missing reload, then green here for both valid credential kinds. Source-capture equivalence and archived binary hashes identify every old artifact even after the coordinator-authorized retirement.
+
+| Final qualification command | Real exit/result | Evidence relative to restore-profile/ |
+| --- | --- | --- |
+| Original control on unchanged 66 | 0, false green; delete-unscoped incorrectly approved | old-gate-66.log; old-gate-66/delete-unscoped.json |
+| Corrected control on unchanged 66, read-only/read-write deletion | 1 / 1, intended full-frame mismatch | ../unscoped-terminal/stream-red.log; read-write-red-66-second.log |
+| Corrected literal restored-tombstone control on unchanged 66 | 1, missing reload | red-66.log; red-66/restore-tombstoned-owner.json |
+| Complete extended stream comparison | 0; original fourteen plus read-write deletion and 21 restores, 36 total | final-stream.log; final-stream/; stream-summary.json |
+| Withhold valid Token batch, read-only/read-write mutants | 1 / 1, literal frame mismatch | restore-session-mutant.log; read-write-mutant.log |
+| Drop generation reload mutant | 1, literal missing reload | restore-drop-mutant.log |
+| Lifetime/scope tests and server SSE tests | 0 / 0; 42 + 4 tests | restore-scope.log; restore-sse-tests.log |
+| Full byte differential | 0 / 0; 57 fixtures, 25,147 equal replies, equal auth History/last-use | restore-parity-56.log; restore-parity-rich.log; parity-summary.json |
+| Cache check.mjs and check-hygiene.mjs at b4b289066cca9f8c5e527c177abc4a3d759a7558 before reference renewal | 0 / 0; all seven source and three observer controls, byte restoration | cache-pre-properties.log; cache-pre-hygiene.log; generated-sghzoj and hygiene-JcN4gR under docs/evidence/perf-cache |
+| AtomicCAS prove-sensitivity.ts before reference renewal | 0; two real defects exit 1 at behavioral assertions, restored full command 0 | atomic-sensitivity.log; docs/evidence/fv01/sensitivity-s2dgjO |
+| Same-source uncached oracle build at b4b289066cca9f8c5e527c177abc4a3d759a7558 | 0 | cache-oracle.log; docs/evidence/perf-cache/integrated-before-binaries.json |
+| AtomicCAS check.ts after reference renewal | 0; model, controls, 216 cases, 432 replay checks, seven crash boundaries and competing writers | atomic-final.log; docs/evidence/fv01/fv01-check-n0TFj7 |
+| Cache verify.mjs b4b289066cca9f8c5e527c177abc4a3d759a7558 after reference renewal | 0 at all nine stages, including behavioral controls, model, admission, lifecycle, erasure and CLI classifications | cache-final.log; docs/evidence/perf-cache/verify-r0IIAm |
+| Disk guard, actual command in commands.json | 0 before the final batch/root check | disk guard observed 46.9 GB free |
+| /usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm check | 0 on the first attempt; typecheck/lint/API checks, 431 domain, 69 CLI, 32 server, 168 Electron tests and one existing skip | root-check.log |
+
+The first read-write controller run exited 1 because its test schema expected a nested info object, while IssuedCredential is flat. After that wiring correction, the unchanged-66 run fails for the intended six-versus-two frame mismatch. The earlier controller type errors are likewise recorded as wiring errors. No such attempt is counted as a product red. commands.json preserves every substantive command and real exit; the formal commands preserve their internal stage receipts separately. The two added Token lifetime cases account for the root domain count increasing from 429 to 431.
+
+Both mappings move their single final product reference again, from accepted 5a996ce55a15cd6145f88c83a220ae2d4b54a956 to b4b289066cca9f8c5e527c177abc4a3d759a7558, because C4/C6 change auth.ts and sse.ts. ONLY confirmedCommit and productCommit change. Every covered file below is identical, so every mapped constructor/transaction/validation/append/rejection/replay member, cache/matcher/meter/runner/admission/observer body and all four epoch/preparation statements are byte-identical. The old reviewed body hashes consequently remain valid without renewal. No model, control, mapping table or hash changes. Both moves are explicitly submitted for the seat's re-check, not labeled already accepted for this source.
+
+| Covered file | SHA-256 at accepted 5a996ce5 | SHA-256 at b4b28906 |
+| --- | --- | --- |
+| apps/cli/src/main.ts | d02c596f930c970e15ea67aad6c43c0ca041bb2dc598fff9e9873c99a9814378 | d02c596f930c970e15ea67aad6c43c0ca041bb2dc598fff9e9873c99a9814378 |
+| apps/server/src/server.ts | 4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e | 4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e |
+| apps/server/src/task-search-cache-hygiene.ts | be77122a27f471e8d9804f6215bdd5c8622bfcdf952130cdb7e58ebd8b61883b | be77122a27f471e8d9804f6215bdd5c8622bfcdf952130cdb7e58ebd8b61883b |
+| packages/domain/src/attachments.ts | 7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e | 7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e |
+| packages/domain/src/commands.ts | 574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3 | 574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3 |
+| packages/domain/src/dependencies.ts | 18b75d53f24ed5a86e6c645d4d2b99766ae8a0786ec32c1c5a33254804a06caa | 18b75d53f24ed5a86e6c645d4d2b99766ae8a0786ec32c1c5a33254804a06caa |
+| packages/domain/src/dependency-rules.ts | 38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11 | 38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11 |
+| packages/domain/src/entities.ts | ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9 | ee505f78a6434528dbfe5f072463ec77cd6823bab1781f3f656d01c77f2d52f9 |
+| packages/domain/src/events.ts | 4d2fe50114ab16e379759bf3bbb4f6416120f323c62b9a5280c04284a597ec44 | 4d2fe50114ab16e379759bf3bbb4f6416120f323c62b9a5280c04284a597ec44 |
+| packages/domain/src/ids.ts | c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f | c1081994f401f4898f950348587ff4633fd36eb822628ca00d3d215e73defd0f |
+| packages/domain/src/store/dependencies.ts | b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411 | b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411 |
+| packages/domain/src/store/dependency-validation.ts | e73b9367e7aa93689a28e5e9e83fd53cac6dcbf949a6c50f0122ac28213ba0d5 | e73b9367e7aa93689a28e5e9e83fd53cac6dcbf949a6c50f0122ac28213ba0d5 |
+| packages/domain/src/store/projection.ts | dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9 | dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9 |
+| packages/domain/src/store/search-cache-events.ts | 4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600 | 4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600 |
+| packages/domain/src/store/snapshots.ts | 4ed23e32cffd61998f5cabd15616840d466ccbbe0e1d3d0e3121d730e2d827f9 | 4ed23e32cffd61998f5cabd15616840d466ccbbe0e1d3d0e3121d730e2d827f9 |
+| packages/domain/src/store/store.ts | 78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186 | 78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186 |
+| packages/domain/src/task-filters.ts | aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55 | aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55 |
+| packages/domain/src/task-search-cache.ts | a7a24d8211ebf7aaf1cf559547f7339150d680db9ac3a81c4ccea283e2b76baf | a7a24d8211ebf7aaf1cf559547f7339150d680db9ac3a81c4ccea283e2b76baf |
+| packages/domain/src/task-search.ts | 1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c | 1a82bab698508fe98c1d7de11fddbaf910454d69c3f6534e45e8b0ce9203c23c |
+
+The contract gate passes with id 78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289. No packages/domain file is added. No new timing, pixel, Swift or native-client claim is made; the previously accepted compiled-recipe and performance receipts retain their original source labels. Scratch only; no owner data, native app, Keychain, signing, installation, push, merge elsewhere, PR or child worker. Manual comment review found no added product comments and no comment changes to make; the explicit no-children instruction precluded the skill's delegated reviewer. Sixteen closed own Bun runtime copies, 1,418,573,824 bytes, were also removed after the final compile batch with zero open files skipped. All artifact retirement and compaction hashes remain in the receipts.
+
+## Implementation record for S1-C4, C5 and C6
 
 The coordinator forwarded the complete 93-command seat review. This worker read it in full. C1, C2 and C3 and both formal mappings were accepted for 5a996ce5; only C4/C5/C6 require correction. The extra read-write Token scenario below supplements the original fourteen and the 21 restore cases. The original blanket control was also run unchanged against 66f15653: it exits 0 while incorrectly approving delete-unscoped. The corrected state-based control exits 1 against that same product for both unscoped Token scopes, then passes on the corrected source. This is C5's false-green reproduction, not an additional product exception.
 
@@ -48,7 +100,7 @@ All receipts are local and ignored under `docs/evidence/ui-speed/server-reads/re
 | Refreshed 57-fixture differential | 0 / 0; 23,880 + 1,267 = 25,147 pairs, equal auth History/last-use | restore-parity-56.log; restore-parity-rich.log |
 | Final formatter | 0 | format-final.log |
 
-The complete report has now arrived. Root and formal-reference qualification follow on this frozen product source; their results will be appended before delivery. The broader timing and compiled-recipe receipts below describe the prior accepted captures and are not relabeled. The public contract and ADR text are unchanged; contract id remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`.
+The complete report arrived; final root and formal-reference qualification results are recorded above. The broader timing and compiled-recipe receipts below describe the prior accepted captures and are not relabeled. The public contract and ADR text are unchanged; contract id remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`.
 
 At the coordinator's disk request, 91 superseded binaries (8,237,094,230 logical bytes), six old evidence binaries, and 299 bulk parity captures were retired or compacted. Every removed file has its original path, size and SHA-256 in retired-binaries.json or compacted-evidence.json. Bulk reply bodies now retain individual byte lengths and hashes, route/status, credential fingerprints and auth History/last-use hashes, with equality reasserted before replacement. Summary receipts, all stream frames, failures and reusable inputs remain. .scratch/bin fell from 8.2 GiB to 692 MiB, docs/evidence/ui-speed from 5.6 GiB to 373 MiB; measured free space rose from 41 to 46 GiB. These are disk observations during concurrent builds, not estimates of physical bytes reclaimed.
 
