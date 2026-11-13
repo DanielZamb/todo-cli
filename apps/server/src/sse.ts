@@ -9,6 +9,7 @@ import { type OperationStore, StoreError } from "@todo/domain/store";
 import { Effect, Schema, Stream } from "effect";
 import { HttpApiBuilder, HttpApiSchema } from "effect/http-api";
 import { translate } from "./errors.ts";
+import type { StreamWake } from "./stream-wake.ts";
 
 type Connection = { active: boolean };
 type Cursor = { cursor: number; generation: string };
@@ -49,7 +50,7 @@ class TerminalPermission {
 Object.freeze(TerminalPermission.prototype);
 Object.freeze(TerminalPermission);
 
-export const changesLayer = (store: OperationStore) =>
+export const changesLayer = (store: OperationStore, wake: StreamWake) =>
   HttpApiBuilder.group(TodoApi, "changes", (handlers) =>
     handlers.handleAll({
       stream: ({ params, headers }) =>
@@ -115,10 +116,12 @@ export const changesLayer = (store: OperationStore) =>
             {
               cursor: reset ? initial.restore_seq : subscription.fields.after,
               generation: initial.generation,
+              wakeVersion: wake.version,
             },
             (state) =>
               Effect.gen(function* () {
-                yield* Effect.sleep("250 millis");
+                yield* wake.wait(state.wakeVersion);
+                const wakeVersion = wake.version;
                 if ("terminal" in state) {
                   yield* translate(
                     store.auth.authenticate({
@@ -169,6 +172,7 @@ export const changesLayer = (store: OperationStore) =>
                             {
                               cursor: current.restore_seq,
                               generation: current.generation,
+                              wakeVersion,
                             },
                           ] as const;
                         }
@@ -214,6 +218,7 @@ export const changesLayer = (store: OperationStore) =>
                           {
                             ...state,
                             cursor: batch.cursor,
+                            wakeVersion,
                             ...(result.kind === "terminal"
                               ? { terminal: true }
                               : {}),

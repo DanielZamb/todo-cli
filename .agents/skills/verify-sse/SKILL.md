@@ -41,7 +41,8 @@ The database and HOME both live there. Each run owns its server, CLI copy,
 credentials, port and database, so independent runs can coexist.
 
 The compiled server starts with `TODO_DB=<scratch>/scratch.db TODO_PORT=0`.
-`Listening on http://127.0.0.1:<port>` means ready. A zero helper exit and
+`Listening on http://127.0.0.1:<port>` means ready. The helper waits up to
+60 seconds for scratch startup and fails early if its child exits. A zero helper exit and
 `PASS; evidence survived cleanup` mean the full drive passed and cleaned up.
 
 ## Doctor
@@ -186,3 +187,85 @@ For the integration with Snapshot/Purge, run
 It adds a pre-Purge Snapshot to the existing restore scenario, Purges through
 the compiled CLI, restores over HTTP, and requires redacted saved History, no
 resurrected Task and identical reload/following-operation frames on both builds.
+
+## In-process commit wake
+
+The server decorates its store in `stream-wake-store.ts`. The exhaustive policies
+cover the store, Authentication, Snapshots and ScheduledWork. A new public member
+requires a policy choice at typecheck. Write-capable Effects signal after completion,
+including failure or cancellation after a partial commit. A pending bit belongs
+to the connection's adapter. Every decorated member exit, including reads and
+synchronous methods, checks Bun SQLite's native `inTransaction` flag and flushes
+the pending signal only outside a transaction. The connection is obtained once
+from the existing store, without changing pinned domain code. A fiber's inherited
+context does not decide transaction lifetime. Read-only calls do not create
+notifications. Empty scheduler passes, credential cleanup and daily Snapshot checks do not
+signal. SSE and cache hygiene retain the raw store to prevent self-waking polls.
+The domain transaction and projection implementations remain unchanged.
+
+`stream-wake.ts` broadcasts a revision to open waits. Each stream retains the
+revision from before its database pass. A newer revision makes its next wait return
+at once, including a commit after History was read. Several signals between passes
+collapse into one pass. The 250 ms timer still finds CLI commits and expired
+credentials. Its losing waiter is cancelled on timeout, wake or stream closure.
+
+The helper now also runs `test/sse.test.ts`, `test/stream-wake.test.ts`, `test/stream-wake-store.test.ts`, `test/stream-wake-observers.test.ts` and `test/stream-wake-compositions.test.ts` with its
+compiled CLI. These freeze the Effect clock to prove server delivery without a
+timer advance and compiled CLI delivery only after 250 ms, remembered signals,
+burst collapsing, five-waiter broadcast and cancellation/reopening counts. Without
+TODO_CLI_BINARY the compiled-CLI case returns early; the helper always supplies it.
+The original real-HTTP assertions remain in force.
+
+For paired measurements, compile `scripts/meter-server.mjs` against both source
+states, then run `bun scripts/measure.mjs <before> <after> <fresh-evidence>` from
+this skill directory, using absolute binary paths. The meter wraps Bun transaction
+completion and counts the unchanged History query. It adds no production route.
+The driver provisions synthetic scratch data, alternates five pairs with 40 writes
+per arm and pair, varies interarrival times, checks exact operation ids, records
+one/two/five-stream idle CPU and passes, and drives 300 HTTP edits with Task reads.
+Timestamps use `host-clock.mjs`, calling macOS
+`clock_gettime_nsec_np(CLOCK_MONOTONIC_RAW)` in both processes. The driver brackets
+meter samples and rejects negative commit-to-receipt intervals. Neither Bun hrtime
+nor its performance epoch is safe for comparisons across processes. Keep raw samples and load observations local.
+
+The client order proofs use the unsigned Electron host with
+`TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_STREAM_WAKE=1` and verify-electron's helper,
+and `StreamWriteOrderTests.ownWriteReplyAndStreamOrdersKeepTheSavedTask` through
+`scripts/swift-slot.sh` and the Mac state helper. They hold actual reply, stream and
+read responses while driving production refresh behavior against a compiled scratch
+server. No signed app or Keychain is involved.
+
+The observer regressions inject a throwing signal and preserve committed results,
+original failure causes and the fallback timer. They also compose all three
+conditional operations inside a failed enclosing write. The helper's compiled
+`scripts/verify-nested-wire.mjs` drive holds the scheduler and adds an internal stdin
+trigger without changing the production stream. It requires literal seq 5 and 6
+TaskCreated events, full equality with durable History, and no provisional reminder
+after the outer transaction rolls back. Its optional second argument is a store
+source file for an explicit red control; default verification uses current source.
+Its third argument selects `mutate`, `readSnapshot`, `sync-snapshot` or `matrix`.
+The helper runs all four. The matrix generates all six one/two-boundary paths
+over `auth.mutate` and `auth.readSnapshot`, with commit and rollback, and all 56
+callable member fixtures: 672 compositions. The fixture catalog is exhaustive at
+typecheck. Properties and connection close are excluded; closing the connection
+does not compose with continuing its transaction. Password changes use synchronous
+validation failures because their successful hashing is asynchronous and cannot
+run inside these synchronous callbacks. Destructive operations use refusal or
+preview fixtures. Every case first creates a provisional reminder, checks that
+the revision stays fixed at every inner exit, and requires literal event kinds,
+full operation equality with durable committed Profile History, and literal reused
+sequence numbers after rollback. The detached-child test advances only 100 ms and
+requires a fresh waiter to resume before the fallback can run.
+
+To measure the connection guard's idle cost separately, compile the reviewed
+decorator and current decorator with `scripts/build-idle-meter.mjs <binary>
+[reviewed-store-source]`, then run `scripts/measure-idle.mjs <before> <after>
+<fresh-evidence>`. It alternates five pairs on copied synthetic 178-Task databases,
+with one/two/five idle streams. The meter counts native state checks and SQL query
+calls, passes and process CPU; counters exist only in the compiled meter. Report
+the actual intervals and load, and do not interpret noisy CPU ranges as zero cost.
+The dedicated Mac order transport owns an ephemeral URLSession per order. It
+closes and awaits its forwarding Task, invalidates its session and requires zero
+remaining native requests. Cancelling the Swift body reader alone can leave an
+idle native SSE request in URLSession.shared and exhaust later fixtures' per-host
+connections. The original SearchTransport and its reconnect assertion stay unchanged.
