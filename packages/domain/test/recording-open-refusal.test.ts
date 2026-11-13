@@ -330,6 +330,27 @@ const classes: Array<
     },
   ],
   [
+    "a damaged table page beside committed WAL frames",
+    "integrity",
+    (root, dir) => {
+      new RecordingDatabase(dir).close();
+      const path = join(dir, "recordings.db");
+      const probe = new Database(path, { readonly: true });
+      const page = probe
+        .query<{ rootpage: number }, []>(
+          "SELECT rootpage FROM sqlite_schema WHERE name='runs'",
+        )
+        .get()?.rootpage;
+      probe.close();
+      committedWal(root, dir, "INSERT INTO counters VALUES('peer_row',1)");
+      expect(statSync(`${path}-wal`).size).toBeGreaterThan(0);
+      const bytes = readFileSync(path);
+      const at = ((page ?? 0) - 1) * bytes.readUInt16BE(16);
+      bytes.fill(0xff, at, at + 8);
+      writeFileSync(path, bytes);
+    },
+  ],
+  [
     "a damaged table page",
     "integrity",
     (_, dir) => {

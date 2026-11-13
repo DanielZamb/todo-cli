@@ -52,6 +52,23 @@ const committedWal = (base: string, dir: string, change: string) => {
   chmodSync(join(dir, "recordings.db-wal"), 0o600);
 };
 const fresh = (dir: string) => new RecordingDatabase(dir).close();
+const damage = (dir: string, between?: () => void) => {
+  fresh(dir);
+  const path = join(dir, "recordings.db");
+  const probe = new Database(path, { readonly: true });
+  const page =
+    probe
+      .query<{ rootpage: number }, []>(
+        "SELECT rootpage FROM sqlite_schema WHERE name='runs'",
+      )
+      .get()?.rootpage ?? 0;
+  probe.close();
+  between?.();
+  const bytes = readFileSync(path);
+  const at = (page - 1) * bytes.readUInt16BE(16);
+  bytes.fill(0xff, at, at + 8);
+  writeFileSync(path, bytes);
+};
 const cases: Record<string, (base: string, dir: string) => void> = {
   "wal-column": (b, d) => {
     fresh(d);
@@ -110,6 +127,12 @@ const cases: Record<string, (base: string, dir: string) => void> = {
       writeFileSync(join(d, `recordings.db${side}`), "");
     unlinkSync(join(d, "recordings.db"));
   },
+  "integrity-main-only": (_, d) => damage(d),
+  "integrity-with-wal-frames": (b, d) => {
+    damage(d, () =>
+      committedWal(b, d, "INSERT INTO counters VALUES('peer_row',1)"),
+    );
+  },
   "control-benign-wal-row": (b, d) => {
     fresh(d);
     committedWal(b, d, "INSERT INTO counters VALUES('peer_row',1)");
@@ -144,6 +167,23 @@ for (const [name, prepare] of Object.entries(cases)) {
       outcome,
       ...(reason ? { reason } : {}),
       files_unchanged: before === after,
+      changed: (() => {
+        const b = new Map<string, string>(
+          JSON.parse(before).files.map((f: string[]) => [f[0], JSON.stringify(f)]),
+        );
+        const c = new Map<string, string>(
+          JSON.parse(after).files.map((f: string[]) => [f[0], JSON.stringify(f)]),
+        );
+        return [...new Set([...b.keys(), ...c.keys()])]
+          .filter((name) => b.get(name) !== c.get(name))
+          .map((name) =>
+            !b.has(name)
+              ? `${name} created`
+              : !c.has(name)
+                ? `${name} removed`
+                : `${name} rewritten`,
+          );
+      })(),
       files_after: readdirSync(dir).sort(),
     });
   } finally {

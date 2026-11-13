@@ -526,7 +526,9 @@ A claimed store's committed catalog, including frames committed only in its
 WAL, is read from descriptors before SQLite opens the path, and the writable
 connection is validated under a shared exclusion on the store's own descriptor
 so that a refusal cannot checkpoint or reset the WAL. That descriptor stays open
-for the connection's lifetime. Empty main files beside empty sidecars are
+for the connection's lifetime. When committed WAL frames exist, the catalog and integrity
+checks run on an in-memory image of main plus those frames, never on the files.
+Empty main files beside empty sidecars are
 initialized as new. Every refusal leaves all files unchanged and is reported in
 owner Diagnostics with its state, reason code and the files to remove while the
 server is stopped; recordings may be discarded.

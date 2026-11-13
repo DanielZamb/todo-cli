@@ -41,7 +41,11 @@ export function recognizeRecordingFormat(db: Database) {
 }
 
 export type RecordingCatalogVerdict =
-  | { readonly kind: "owned"; readonly committedFrames: number }
+  | {
+      readonly kind: "owned";
+      readonly committedFrames: number;
+      readonly image?: Buffer;
+    }
   | { readonly kind: "foreign_header" | "foreign_catalog" };
 type Read = (target: Buffer, position: number) => number;
 const walChecksum = (
@@ -73,6 +77,7 @@ const varint = (page: Buffer, at: number): [number, number] => {
 export function inspectRecordingCatalog(
   main: { read: Read; size: number },
   wal: { read: Read; size: number } | undefined,
+  withImage = false,
 ): RecordingCatalogVerdict {
   const header = Buffer.alloc(100);
   if (main.read(header, 0) !== 100) return { kind: "foreign_header" };
@@ -234,9 +239,22 @@ export function inspectRecordingCatalog(
     const order = (a: SchemaRow, b: SchemaRow) =>
       Buffer.compare(Buffer.from(a.type), Buffer.from(b.type)) ||
       Buffer.compare(Buffer.from(a.name), Buffer.from(b.name));
-    return JSON.stringify(rows.sort(order)) === expected.catalog
-      ? { kind: "owned", committedFrames }
-      : { kind: "foreign_catalog" };
+    if (JSON.stringify(rows.sort(order)) !== expected.catalog)
+      return { kind: "foreign_catalog" };
+    if (!withImage || committedFrames === 0)
+      return { kind: "owned", committedFrames };
+    const image = Buffer.alloc(pageLimit * pageSize);
+    for (let pgno = 1; pgno <= pageLimit; pgno++) {
+      const target = image.subarray((pgno - 1) * pageSize, pgno * pageSize);
+      const at = committed.get(pgno);
+      if (at !== undefined) {
+        if (wal?.read(target, at) !== pageSize) throw new Error("catalog");
+      } else if ((pgno - 1) * pageSize < main.size)
+        main.read(target, (pgno - 1) * pageSize);
+    }
+    image[18] = 1;
+    image[19] = 1;
+    return { kind: "owned", committedFrames, image };
   } catch {
     return { kind: "foreign_catalog" };
   }

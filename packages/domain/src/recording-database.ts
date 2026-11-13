@@ -201,24 +201,27 @@ function inspect(fd: number, path: string) {
             read: (target, position) =>
               readSync(wal, target, 0, target.length, position),
           },
+      true,
     );
-    if (verdict.kind !== "owned") refuse(verdict.kind);
-    return verdict.kind === "owned" ? verdict.committedFrames : 0;
+    if (verdict.kind !== "owned") return refuse(verdict.kind);
+    return verdict;
   } finally {
     if (wal !== undefined) closeSync(wal);
   }
 }
-function preflight(path: string, integrity: boolean) {
+function preflight(path: string, image: Buffer | undefined) {
   const uri = pathToFileURL(path);
   uri.searchParams.set("immutable", "1");
-  const existing = new Database(uri.href, { readonly: true, strict: true });
+  const existing = image
+    ? Database.deserialize(image, true)
+    : new Database(uri.href, { readonly: true, strict: true });
   try {
     try {
       recognizeRecordingFormat(existing);
     } catch {
       refuse("foreign_catalog");
     }
-    if (integrity) checkIntegrity(existing);
+    checkIntegrity(existing);
   } finally {
     existing.close();
   }
@@ -348,8 +351,8 @@ export function openRecordingDatabase(
     }
     const journal = sizeOf(path + "-journal");
     if (journal !== undefined && journal > 0) refuse("hot_journal");
-    const committedFrames = inspect(fd, path);
-    preflight(path, committedFrames === 0);
+    const inspected = inspect(fd, path);
+    preflight(path, inspected.image);
     for (let attempt = 0; ; attempt++) {
       if (!sameFile(fd, path)) refuse("replaced");
       if (!tryRecordingExclusion(fd, true)) {
@@ -362,7 +365,15 @@ export function openRecordingDatabase(
           "database is locked",
         );
       }
-      db = new Database(path, { strict: true });
+      try {
+        db = new Database(path, {
+          strict: true,
+          readwrite: true,
+          create: false,
+        });
+      } catch {
+        return refuse("replaced");
+      }
       try {
         if (!sameFile(fd, path)) refuse("replaced");
         db.exec("PRAGMA busy_timeout=1");
@@ -372,7 +383,6 @@ export function openRecordingDatabase(
           if (busy(error)) throw error;
           refuse("foreign_catalog");
         }
-        if (committedFrames > 0) checkIntegrity(db);
       } catch (error) {
         db.close();
         db = undefined;
