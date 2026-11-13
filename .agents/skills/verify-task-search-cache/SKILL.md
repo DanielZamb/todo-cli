@@ -214,6 +214,17 @@ the new rejection-history.ts, neither mapped here. The uncached oracle is rebuil
 for this product, and the complete command's exit is in
 docs/decisions/ui-speed/c9-server-integration.md.
 
+## CLI routing integration renewal
+
+Candidate: immutable product 0733af4afcaac34774333ab019b29f05c7ebea9e (`feat/cli-through-server` with
+integ/c9-server merged). Only the hygiene row for apps/server/src/server.ts
+changes: endpoint acquisition before the store, verifyStore right after it,
+then the one StreamWake and its decorator. Hygiene still receives the raw store
+and is forked before the scheduler. main.ts equals its pin. Before renewal the
+seven cache controls and three observer controls failed at their witnesses,
+restores and typecheck passed, and hygiene stopped only at the server.ts hash.
+The full command's exit is in docs/decisions/ui-speed/cli-through-server-c9-merge.md.
+
 ## Diagnostics merge candidate, 2026-11-13
 
 Candidate product 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c. No matcher, runner, admission, epoch, preparation,

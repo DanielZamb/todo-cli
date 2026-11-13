@@ -3,6 +3,11 @@ import { Effect } from "effect";
 export class StreamWake {
   private revision = 0;
   private readonly waiters = new Set<() => void>();
+  // The fallback bounds every wait; tests pass Effect.never to prove a
+  // signal alone wakes the streams.
+  constructor(
+    private readonly fallback: Effect.Effect<void> = Effect.sleep("250 millis"),
+  ) {}
 
   get version() {
     return this.revision;
@@ -30,6 +35,6 @@ export class StreamWake {
         this.waiters.add(wake);
         return Effect.sync(() => this.waiters.delete(wake));
       }),
-      Effect.sleep("250 millis"),
+      this.fallback,
     );
 }

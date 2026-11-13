@@ -89,5 +89,18 @@
     "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
     "review": "docs/decisions/ui-speed/diag-recordings-report.md",
     "scope": "feat/diag-core 6cbbb953 merged with integ/c9-server 675aab82 (merge 7e16bb71). Since the previous candidate 34edaba7, the only changes in pinned files are integ/c9-server's: Authentication.perform, record, rejectionMinute, rejectionsThisMinute and verifyPassphrase (the durable refusal) in auth.ts, and serverLayer (the stream-wake wiring) in server.ts. The mapped Authentication.startSeries, append, requireCredential and mutate, and every graph, validation, write, replay, matcher, runner, admission, observer and erasure body, are unchanged. No model, invariant or bound change. Candidate for the seat."
+  },
+  "cliRoutingIntegration": {
+    "product": "0733af4afcaac34774333ab019b29f05c7ebea9e",
+    "status": "candidate for independent seat acceptance",
+    "review": "docs/decisions/ui-speed/cli-through-server-c9-merge.md",
+    "scope": "Immutable product of feat/cli-through-server after merging integ/c9-server 675aab82 (stream wake and durable refusal) in de9292be. Candidate for seat acceptance. Every pinned row is recomputed from the product's bytes; only the listed rows change. No model, invariant or bound changes.",
+    "contract": "259e9afb029a09213f5f1e2e3ed994bf5a85364af60a90b37f630f415e2aedad",
+    "certifies": "Finite DAG safety and production/public conformance on this product. The eight public rows change only outside their mapped items: the CLI routing flags, withStore, add, config and Snapshot helpers in main.ts; routing text in help.ts and the schema root $comment in schema.ts; the Local HttpApi group in packages/api/src/index.ts and openapi.json (three /local paths added, every existing path including the graph response byte-identical); serverLayer wiring in server.ts (endpoint, verifyStore, one StreamWake, localRoutes on the decorated store); and the contract identity, renewed here to the product's own value. Tasks, DependRequest, BatchEdgeRequest, TaskFilters, rejectUnknownQuery, the depend/undepend/batchDepend/importTasks handlers, dependencyCommand, batchDepend, the deletion confirmation, the false filter guard, the malformed Version boundary, registerCommandSchema and the rm confirmation wording are textually unchanged.",
+    "changes": [],
+    "previous": {
+      "commit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+      "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289"
+    }
   }
 }

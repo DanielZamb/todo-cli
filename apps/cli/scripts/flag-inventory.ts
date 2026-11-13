@@ -133,6 +133,10 @@ export function flagGolden(
   };
 }
 const globalConsumers: Record<string, string> = {
+  "--direct":
+    "database-selection.writeMode: overrides config/default; withStore writes directly and nudges after every writing store attempt; reads and provisioning stay direct",
+  "--require-server":
+    "database-selection.writeMode: overrides config/default, mutually exclusive with direct; withStore refuses writing commands before store open in protocol-1 slice",
   "--db":
     "main.ts withStore: explicit db, TODO_DB, config, default path; global setting used by database commands",
   "--format":

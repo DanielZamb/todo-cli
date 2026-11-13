@@ -75,6 +75,7 @@ import {
   HttpBody,
   HttpEffect,
   HttpRouter,
+  HttpServer,
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/http";
@@ -84,8 +85,10 @@ import {
   HttpApiSchema,
   OpenApi,
 } from "effect/http-api";
+import { databaseEndpoint } from "./database-endpoint.ts";
 import { recordingGuard, recordingRoutes } from "./diagnostic-recordings.ts";
 import { translate } from "./errors.ts";
+import { localRoutes } from "./local-routes.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
 import { StreamWake } from "./stream-wake.ts";
@@ -436,13 +439,32 @@ export const serverLayer = (options: {
   readonly port: number;
   readonly profiler?: DiagnosticRecorder;
   readonly allowedHosts?: ReadonlySet<string>;
+  readonly wake?: StreamWake;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
+      const endpoint = yield* Effect.acquireRelease(
+        Effect.try({
+          try: () => databaseEndpoint(options.path),
+          catch: (cause) =>
+            cause instanceof Error ? cause : new Error(String(cause)),
+        }),
+        (endpoint) => Effect.sync(() => endpoint?.close()),
+      );
+      // Start-up evidence window. verifyStore accepts the store only if a new
+      // descriptor on the kept database file appeared while it opened. Nothing
+      // else in this process may open the database path between beforeStore()
+      // and verifyStore(): an extra open of the kept file would supply that
+      // evidence even if the store had opened a different file (the swap-back
+      // case). Keep this window to the store acquisition alone; a test in
+      // apps/server/test/database-endpoint.test.ts pins it. The wake decorator
+      // is built after the window; it opens nothing.
+      const beforeStore = endpoint?.beforeStore();
       const rawStore = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
+      yield* Effect.sync(() => endpoint?.verifyStore(beforeStore));
       const recordings = yield* Effect.acquireRelease(
         Effect.sync(
           () =>
@@ -454,7 +476,7 @@ export const serverLayer = (options: {
         ),
         (value) => Effect.promise(() => value.close()),
       );
-      const wake = new StreamWake();
+      const wake = options.wake ?? new StreamWake();
       const store = streamWakeStore(rawStore, wake);
       const cacheHygiene = yield* taskSearchCacheHygiene(rawStore);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
@@ -1256,6 +1278,7 @@ export const serverLayer = (options: {
             Layer.provide(AuthorizationLive),
           ),
           SnapshotsLive,
+          localRoutes(store, endpoint, wake),
           changesLayer(rawStore, wake).pipe(Layer.provide(AuthorizationLive)),
         ]),
         Layer.provide(
@@ -1288,6 +1311,14 @@ export const serverLayer = (options: {
             idleTimeout: 0,
             maxRequestBodySize: 28 * 1024 * 1024,
           }),
+        ),
+        Layer.tap((context) =>
+          Effect.gen(function* () {
+            const server = yield* HttpServer.HttpServer;
+            const address = server.address;
+            if ("port" in address)
+              yield* Effect.try(() => endpoint?.publish(address.port));
+          }).pipe(Effect.provideContext(context)),
         ),
       );
     }),

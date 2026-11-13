@@ -33,6 +33,10 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 // Review 3's adapter limits (R3-1, R3-2, R3-3) need the store's private
 // connection, SQL transaction control or a writer built on the raw store. None
 // of those may appear in the server's source.
+// Known limit (CLI routing seat, review 3, R7): this guard is a text scan. It
+// catches ordinary spellings, not deliberate evasion: an alias such as
+// `const D = Database; new D(path)` passes it, and it does not count END,
+// SQLite's synonym for COMMIT. Both limits predate the routing guard exception.
 it("keeps the store's private connection and raw transactions out of apps/server", () => {
   const server = sources("apps/server/src");
   const reaches = server.flatMap((path) =>
@@ -50,7 +54,16 @@ it("keeps the store's private connection and raw transactions out of apps/server
       ...read(path).matchAll(/\b(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)\b/gi),
     ].map((match) => [path, match[0]]),
   );
-  expect(control).toEqual([]);
+  // The one allowed transaction statement takes the CLI routing singleton
+  // guard's lock on its own private SQLite file beside the database
+  // (database-endpoint.ts). It is never the store's connection: the only
+  // connection that file constructs opens guardPath.
+  expect(control).toEqual([["apps/server/src/database-endpoint.ts", "BEGIN"]]);
+  const endpointSource = read("apps/server/src/database-endpoint.ts");
+  expect(
+    [...endpointSource.matchAll(/new Database\(([^)]*)\)/g)].map((m) => m[1]),
+  ).toEqual(["guardPath"]);
+  expect(endpointSource).toContain('guard.exec("BEGIN EXCLUSIVE");');
   const opened = server.flatMap((path) =>
     [...read(path).matchAll(/\bopenStore\(|new OperationStore\(/g)].map(
       (match) => [path, match[0]],

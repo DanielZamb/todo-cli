@@ -8,10 +8,10 @@ not CLI flag registrations. Their normalized hashes remain unchanged.
 
 Every command inherits these shared and framework flags:
 
-`--completions`, `--credential-profile`, `--db`, `--format`, `--help`, `--help-human-flag`, `--log-level`, `--no-color`, `--profile`, `--version`, `--wizard`, `-h`, `-v`.
+`--completions`, `--credential-profile`, `--db`, `--direct`, `--format`, `--help`, `--help-human-flag`, `--log-level`, `--no-color`, `--profile`, `--require-server`, `--version`, `--wizard`, `-h`, `-v`.
 
 Their consumers are database selection, output/error rendering, Profile and
-credential selection, top color control, human onboarding, and Effect CLI
+credential selection, write-mode selection (`--direct`, `--require-server`), top color control, human onboarding, and Effect CLI
 help/version/wizard/completion/logging handlers. Database and authentication
 settings apply when a command uses them; pure help/schema commands stay auth-free.
 
@@ -76,7 +76,7 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | `diagnostics import` | `--dry-run`, `--file`, `--ndjson`, `--server` |
 | `diagnostics compare` | `--after`, `--before`, `--ndjson`, `--server` |
 
-The exact 886 command/flag pairs have source consumer references in
+The exact 1002 command/flag pairs have source consumer references in
 `flag-consumers.json`, produced by the verification recipe.
 `apps/cli/scripts/flag-inventory.ts` checks every collected flag against that
 reviewed mapping and refuses a flag without a consumer entry.
@@ -96,7 +96,7 @@ help/schema content stay unchanged. The five original Go output goldens do not c
 | init | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 | login | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 
-The 884 other pairs have consumers, including the four Delete/Purge flags only
+The 1000 other pairs have consumers, including the four Delete/Purge flags only
 on rm and Task editing fields only on add/edit. Some modifiers apply only to
 their documented branch, such as a label on a supplied Attachment or Markdown
 export templates. This is a compiled registration inventory plus source trace,

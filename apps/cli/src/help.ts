@@ -4,6 +4,7 @@ import {
 } from "@todo/domain";
 import { Command } from "effect/cli";
 import { credentialSelectionDescription } from "./credential-profile.ts";
+import { routingDescription } from "./database-selection.ts";
 
 const exitCodes =
   "0 success\n1 runtime failure\n2 validation or usage\n3 not found or auth missing\n4 Conflict";
@@ -25,6 +26,7 @@ const globals = [
   `--credential-profile <name> (default --profile; ${credentialSelectionDescription})`,
   "--no-color (default false)",
   "--help-human-flag (default false)",
+  `--direct | --require-server (default config write-mode or automatic; ${routingDescription})`,
 ];
 const taskFlags = [
   "--desc <markdown> (default unset)",
@@ -659,11 +661,14 @@ const guides = {
       "Writes one Markdown projection note. Dependencies add stable ^task-full-id blocks, same-note Depends on wiki links and a Mermaid graph. json returns generated_at and path, plus outside_projection ids when needed; md and table print the path. Surrounding text is preserved. Empty vault paths and paths outside the vault exit 2 without writing a projection.",
   }),
   config: reference({
-    purpose:
-      "Manage local CLI configuration. Database selection uses --db, TODO_DB, config db.path, then ~/.todo-cli/todo.db.",
+    purpose: `Manage local CLI configuration. Database selection uses --db, TODO_DB, config db.path, then ~/.todo-cli/todo.db. ${routingDescription}`,
     synopsis: "todo config show|get|set",
     flags: [],
-    examples: ["todo config show", "todo config set db.path /tmp/todo.db"],
+    examples: [
+      "todo config show",
+      "todo config set db.path /tmp/todo.db",
+      "todo config set write-mode direct",
+    ],
     auth: "No Session required.",
     output:
       "json returns generated_at and config for reads, or status for writes. md and table print values or a confirmation.",
@@ -677,22 +682,26 @@ const guides = {
     examples: ["todo config show"],
     auth: "No Session required.",
     output:
-      "json returns generated_at and config.db_path, with null when unset. md and table print db.path=<path>.",
+      "json returns generated_at, config.db_path and config.write_mode. An unset path is null and an unset mode is automatic. md and table print db.path=<path> and write-mode=<mode>.",
   }),
   "config get": reference({
-    purpose: "Read the configured value for db.path.",
-    synopsis: "todo config get db.path",
+    purpose: "Read the configured value for db.path or write-mode.",
+    synopsis: "todo config get db.path|write-mode",
     flags: [],
-    examples: ["todo config get db.path"],
+    examples: ["todo config get db.path", "todo config get write-mode"],
     auth: "No Session required.",
     output:
-      "json returns generated_at and config.db_path, with null when unset. md and table print the value. Unknown keys exit 2.",
+      "json returns generated_at, config.db_path and config.write_mode. md and table print the selected value. Unknown keys exit 2.",
   }),
   "config set": reference({
-    purpose: "Save the configured value for db.path.",
-    synopsis: "todo config set db.path <path>",
+    purpose: "Save db.path or write-mode while preserving the other setting.",
+    synopsis:
+      "todo config set db.path <path> | todo config set write-mode automatic|direct|server",
     flags: [],
-    examples: ["todo config set db.path /tmp/todo.db"],
+    examples: [
+      "todo config set db.path /tmp/todo.db",
+      "todo config set write-mode direct",
+    ],
     auth: "No Session required.",
     output:
       "json returns generated_at and status. md and table print ok. Unknown keys exit 2.",

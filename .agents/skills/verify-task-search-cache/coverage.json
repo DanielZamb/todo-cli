@@ -121,6 +121,25 @@
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
   },
+  "cliRoutingCandidateReview": {
+    "product": "0736980639ed666139789ab748c3059428beaa24",
+    "status": "candidate for independent seat acceptance",
+    "changes": [
+      {
+        "path": "apps/server/src/server.ts",
+        "before": "4abead0eafaf18835759651f2d7d7ed0d568506e02192e5aec3713500500844e",
+        "after": "f6dccce647b4eb769de3889fba1dbf8ffb9248514dc1921cb882d860a8f0d256"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "d935d13ffe26e9dee95c16db08a41c8cd8545c2dc1aec9a6300b98b7fe530de8",
+        "after": "6bb56265a6170f6f849d2a743e31b8d356cd74fee2e3f089ed586671e5ce63d7"
+      }
+    ],
+    "bodyReview": "Compared with integ/server 2a840b55. server.ts adds databaseEndpoint acquisition before openStore, verifyStore after it, localRoutes, the OutsideCommit waiter passed to changesLayer and record publication after the HTTP server binds; taskSearchCacheHygiene is still captured after store open and before HTTP. main.ts hunks are imports, root flags, withStore (discovery before store open, server-mode refusal, nudge in the store release after close), whoami, add (shared executeAdd), config write-mode and Snapshot use helpers. The Task list body, read lease and epoch capture are unchanged; reads pass writing false, discover nothing and nudge nothing. Domain matcher, cache, runner, store and Snapshot bodies are byte-identical.",
+    "controls": "docs/evidence/cli-routing/corrections-02/cache-properties-pre.log (seven cache controls fail their literal witnesses, restore and strict typecheck pass, exit 0) and cache-hygiene-pre.log (three hygiene controls fail their witnesses, restore and typecheck pass, then exit 1 solely at the server.ts whole-file hash). The full verify.mjs command follows this renewal.",
+    "limits": "No model, invariant or bound change; no native qualification or new performance claim."
+  },
   "streamWakeIntegration": {
     "product": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
     "previousProduct": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
@@ -169,5 +188,22 @@
     "contract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
     "review": "docs/decisions/ui-speed/diag-recordings-report.md",
     "scope": "feat/diag-core 6cbbb953 merged with integ/c9-server 675aab82 (merge 7e16bb71). Since the previous candidate 34edaba7, the only changes in pinned files are integ/c9-server's: Authentication.perform, record, rejectionMinute, rejectionsThisMinute and verifyPassphrase (the durable refusal) in auth.ts, and serverLayer (the stream-wake wiring) in server.ts. The mapped Authentication.startSeries, append, requireCredential and mutate, and every graph, validation, write, replay, matcher, runner, admission, observer and erasure body, are unchanged. No model, invariant or bound change. Candidate for the seat."
+  },
+  "cliRoutingIntegration": {
+    "product": "0733af4afcaac34774333ab019b29f05c7ebea9e",
+    "status": "candidate for independent seat acceptance",
+    "review": "docs/decisions/ui-speed/cli-through-server-c9-merge.md",
+    "scope": "Immutable product of feat/cli-through-server after merging integ/c9-server 675aab82 (stream wake and durable refusal) in de9292be. Candidate for seat acceptance. Every pinned row is recomputed from the product's bytes; only the listed rows change. No model, invariant or bound changes.",
+    "certifies": "The folded-word memo, its admission model and controls, and the cache hygiene observer on this product. Only server.ts changes among mapped files: endpoint acquisition before the store, verifyStore immediately after it, then the one StreamWake and its decorator; hygiene still receives the raw store and is forked before the scheduler. main.ts equals its pin.",
+    "changes": [
+      {
+        "path": "apps/server/src/server.ts",
+        "before": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8",
+        "after": "1436fbe2f8c184c194b3db9d7b351f2006dff7457dc32c38a65b154e8c550922"
+      }
+    ],
+    "previous": {
+      "productCommit": "0bd8476df7d7147ea355b418346b57d33f403aee"
+    }
   }
 }
