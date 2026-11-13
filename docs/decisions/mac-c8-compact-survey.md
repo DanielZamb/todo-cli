@@ -31,10 +31,10 @@ and long content scrolling inside its body.
 | Attachment label editor | `attachments-label`, at 393 × 426 | — | Yes | Its name lacks "compact"; it is the Compact size |
 | Import | `compact-import-*` | preview, rejected rows | Yes | — |
 | Dependency picker | `dag-compact-picker-*` (46) | added; long loop notice | Yes; the list scrolls under the notice | — |
-| Dependency batch | `dag-compact-batch-*` (10) | long selection | Yes | A scrolled list shows a partly hidden top row under the Action header |
+| Dependency batch | `dag-compact-batch-*` (10) | long selection | Yes | 8 pt of space and a divider separate the scrolled list from the Action control (seat note 5) |
 | Delete confirmation | `dag-compact-delete-*` (24) | blockers | Yes | — |
 | Dependency graph | `dag-graph-compact-*` | — | Yes (suite bounds checks) | — |
-| Series | `dag-compact-series-initial` | initial | Yes | The default action, "Create Series", renders as plain text beside a bordered Close. A raw `FREQ=DAILY` line sits under the chips. |
+| Series | `dag-compact-series-initial`, `dag-full-series-initial` | initial | Yes | Fixed (seat findings 3 and 4): Create Series is the prominent default button, and a preset shows no raw rule |
 | Task filters | `dag-compact-filter-*`, `*-compact` filters | combined | Yes | — |
 | Copy and Move to Profile | `compact-transfer-*` | copy picker | Yes | — |
 | New Project or Tag | `metadata-sheet-*-compact` | empty | Yes | — |
@@ -58,10 +58,17 @@ and long content scrolling inside its body.
 Ruling 4 (accessibility: combine only the Label; announce once per sequence)
 has no visual state; its state tests cover it.
 
-Wording note for the seat (D2, as ruled on 2026-11-12): a merged message never
-carries a singular reason. When every part was refused with the same code and
-that code has a plural sentence, the merged message closes with it, for example
-"Each would create a loop. Choose other Tasks." Any other mix closes with "Try
-each again to see why." in the picker or "Open each Task's Dependencies to see
-why." in the banner. The sentences are in `MergedFailureWording.pluralReasons`;
-the final words are the seat's.
+Wording (D2), final words by the seat (candidate 8 review, 2026-11-12): the closing
+sentences are in `MergedFailureWording.pluralReasons`. When every merged
+hand-off in the banner shares one Task and one verb, it reads as the single
+hand-off does ("Couldn't make “R” depend on “A” and “B”." and the mirrored
+forms). Otherwise it uses the picker's form, with "change" when the verbs
+differ.
+
+Two survey notes were ruled defects by the seat and are fixed in the corrected
+head:
+
+- "Create Series" is the prominent default button (Return).
+- The raw rule shows only for a custom rule.
+
+The batch list now has 8 pt of space and a divider under the Action control.
