@@ -106,7 +106,9 @@ try:
         environment['TODO_IDLE_START_CURSOR'] = str(max(row['seq'] for row in diagnostics['operations']['recent']))
         environment['TODO_IDLE_START_GENERATION'] = diagnostics['storage']['restore_generation']
         if '--long-idle' in sys.argv[2:]:
-            environment['TODO_IDLE_LONG_MS'] = '300000'
+            # --idle-ms shortens the window for the clock-change control only (MAC-C1-S1-29).
+            environment['TODO_IDLE_LONG_MS'] = sys.argv[sys.argv.index('--idle-ms') + 1] if '--idle-ms' in sys.argv else '300000'
+            if '--clock-control' in sys.argv[2:]: environment['TODO_IDLE_CLOCK_CONTROL'] = '1'
         class DelayedHealth(http.server.BaseHTTPRequestHandler):
             def log_message(self, *_): pass
             def do_GET(self):
@@ -163,6 +165,39 @@ try:
     if retirement_only: environment['TODO_MAC_RETIREMENT_RACE'] = '1'
     if retirement_stress:
         environment['TODO_MAC_RETIREMENT_STRESS'] = '1'
+        # The stress proves 3,000 credential replacements that each retire a Client with requests still
+        # in flight. With fast reads at low load a write or poll could finish before the replacement
+        # (the seat saw 2,988, MAC-C1-S1-29). The test counts the iterations that had work in flight
+        # and runs until 3,000 have (at most 3,300); a forwarding proxy delays each transition and
+        # diagnostics reply that reaches it by 60 ms so that few iterations go uncounted.
+        STRESS_DELAY = .06
+        class SlowReplies(http.server.BaseHTTPRequestHandler):
+            protocol_version = 'HTTP/1.1'
+            def log_message(self, *_): pass
+            def forward(self):
+                length = int(self.headers.get('Content-Length') or 0)
+                body = self.rfile.read(length) if length else None
+                headers = {k: v for k, v in self.headers.items() if k.lower() not in ('host', 'connection', 'content-length')}
+                connection = http.client.HTTPConnection('127.0.0.1', port, timeout=30)
+                try:
+                    connection.request(self.command, self.path, body=body, headers=headers)
+                    response = connection.getresponse(); data = response.read()
+                finally: connection.close()
+                path = self.path.split('?')[0]
+                if (self.command == 'POST' and path.endswith('/transition')) or path == '/diagnostics':
+                    stress_delays.append(path); time.sleep(STRESS_DELAY)
+                self.send_response(response.status)
+                for key, value in response.getheaders():
+                    if key.lower() not in ('transfer-encoding', 'connection', 'content-length', 'date', 'server'): self.send_header(key, value)
+                self.send_header('Content-Length', str(len(data))); self.end_headers()
+                try: self.wfile.write(data)
+                except (BrokenPipeError, ConnectionResetError): pass
+            do_GET = do_POST = do_PUT = do_PATCH = do_DELETE = forward
+        stress_delays = []
+        slow = http.server.ThreadingHTTPServer(('127.0.0.1', 0), SlowReplies)
+        slow.daemon_threads = True
+        threading.Thread(target=slow.serve_forever, daemon=True).start()
+        environment['TODO_CLIENT_DIAGNOSTICS_SERVER'] = f'http://127.0.0.1:{slow.server_port}'
         environment['TODO_MAC_RETIREMENT_COUNTER'] = f'http://127.0.0.1:{proxy.server_port}/counts/health'
     selected = 'MacRetirementStressTests' if retirement_stress else 'productionRefreshCredentialReplacementRaceDoesNotAbort' if retirement_only else 'reusedProductionPoolSurvivesRestartBeforeTheFirstReadAndEachWrite' if restart_only else 'productionModelHoldsAtMostSixteenSocketsAfterThreeHundredRefreshes' if sockets_only else 'MacConnectionReuseGuard' if connections_only else 'productionModelCancelsIdleSubscribersAtEveryLifecycleBoundary|stoppingTheStreamEndsItsServerSubscriptionPromptly' if subscribers_only else 'StreamIdleTests|StreamIdleTransportTests' if stream_only else 'ClientDiagnosticsTests|ClientDiagnosticsLiveTests|ClientDiagnosticsPanelTests|ClientNativeSelectionHookTests'
     # No test run links or calls the Keychain: state_package builds the mirrored package (in-memory
@@ -176,13 +211,20 @@ try:
         if retirement_stress:
             proof = json.loads((EVIDENCE / 'retirement-stress.json').read_text())
             late = json.loads((EVIDENCE / 'retired-client.json').read_text())
-            assert proof['iterations'] == 3000 and proof['writes_started'] == 3000 and proof['polls_started'] == 3000
-            assert proof['refreshes_started'] >= 3000 and proof['retired_calls_cancelled'] == 3000
+            # 3,000 retirements with requests in flight are counted; an iteration whose requests had all
+            # finished first is checked but not counted (MAC-C1-S1-29), up to 300 more iterations.
+            n = proof['iterations']
+            assert 3000 <= n <= 3300 and proof['writes_started'] == n and proof['polls_started'] == n
+            assert proof['refreshes_started'] >= n and proof['retired_calls_cancelled'] == n
             assert proof['tasks'] == 178 and proof['canonical_rows_match'] and proof['final_writable']
             assert proof['retired_server_health_delta'] == 0
             assert proof['iterations_with_unfinished_requests'] == 3000 and proof['unexpected_scope_iterations'] == 0
             assert late['rejected_retired_requests'] == 20 and late['retired_server_health_delta'] == 0
             assert late['new_scope_server_health_delta'] == 1 and late['new_scope_recorded_requests'] == 1
+            # Most retired requests are cancelled before they reach the proxy; it only has to be in the path.
+            assert len(stress_delays) > 0, 'the stress requests did not pass through the delaying proxy'
+            proof['precondition'] = dict(reply_delay_ms=int(STRESS_DELAY * 1000), delayed_replies=len(stress_delays), proxy='transition and diagnostics replies only')
+            (EVIDENCE / 'retirement-stress.json').write_text(json.dumps(proof, indent=2, sort_keys=True))
         elif retirement_only:
             proof = json.loads((EVIDENCE / 'retirement-model-race.json').read_text())
             assert proof['iterations'] == 200 and proof['tasks'] == 178 and proof['final_writable'] and not proof['crashed']
@@ -211,6 +253,13 @@ try:
                 assert stop['resumed_from'] == stop['stopped_at'] and stop['event_written_while_stopped_delivered'], setup
                 native[f'stop_{setup}'] = stop
         else: assert native['stream_survived_idle'] and native['ordinary_timeout_observed'] and native['operations_received'] == 1
+        if '--long-idle' in sys.argv[2:]:
+            # A window with no system clock change has no refresh, request or reconnect; a window that
+            # saw one was restarted and is recorded (MAC-C1-S1-29). The control must restart exactly once.
+            idle = json.loads((EVIDENCE / 'stream-five-minutes.json').read_text())
+            assert idle['refreshes'] == 0 and idle['requests'] == 0 and idle['reconnects'] == 0 and idle['can_write'], idle
+            assert len(idle['windows_restarted_for_clock_change']) == (1 if '--clock-control' in sys.argv[2:] else len(idle['windows_restarted_for_clock_change'])) < 3, idle
+            native['long_idle'] = idle
         result = dict(result='PASS', errors=0, native=native, keychain_called=keychain_linked, keychain_guard='keychain-guard.json', app_launched=False, signed=False, pushed=False)
     else:
         live = json.loads((EVIDENCE / 'live.json').read_text())

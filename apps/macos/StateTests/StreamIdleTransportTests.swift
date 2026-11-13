@@ -184,20 +184,58 @@ private actor IdleStreamObservation {
             try await Task.sleep(for: .milliseconds(10))
         }
         try #require(model.canWrite && model.tasks.count == 178 && (model.lastSequence.flatMap(Int64.init) ?? 0) > 0 && !model.searchPending)
-        let baseline = await recorder.snapshot(), reconnects = model.reconnectCount, cursor = model.lastSequence
-        let start = ProcessInfo.processInfo.systemUptime
-        try await Task.sleep(for: .milliseconds(idleMS))
-        let final = await recorder.snapshot()
+        // The window's precondition (MAC-C1-S1-29): no system clock or time zone change during it. Such
+        // a change rightly makes the model refresh (TodoModel's clockChange trigger), so a window that
+        // sees one is not an idle window: it is recorded and the window starts again, at most three
+        // times. The expectations below are unchanged and apply to a window without one.
+        let clock = ClockChanges()
+        let observers = [Notification.Name.NSSystemClockDidChange, .NSSystemTimeZoneDidChange].map { name in
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: nil) { _ in clock.record(name.rawValue) }
+        }
+        defer { observers.forEach(NotificationCenter.default.removeObserver) }
+        // A control posts a clock change into the first window (TODO_IDLE_CLOCK_CONTROL=1).
+        let control = environment["TODO_IDLE_CLOCK_CONTROL"] == "1"
+        var restarted: [[String: Any]] = []
+        var baseline = await recorder.snapshot(), reconnects = model.reconnectCount, cursor = model.lastSequence
+        var start = ProcessInfo.processInfo.systemUptime
+        var final = baseline
+        for attempt in 0..<3 {
+            baseline = await recorder.snapshot(); reconnects = model.reconnectCount; cursor = model.lastSequence
+            start = ProcessInfo.processInfo.systemUptime
+            let seen = clock.count
+            if control && attempt == 0 {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(idleMS / 4))
+                    NotificationCenter.default.post(name: .NSSystemClockDidChange, object: nil)
+                }
+            }
+            try await Task.sleep(for: .milliseconds(idleMS))
+            final = await recorder.snapshot()
+            guard clock.count > seen else { break }
+            restarted.append(["attempt": attempt, "changes": Array(clock.names.dropFirst(seen)), "refreshes": final.refreshes - baseline.refreshes, "requests": final.requests - baseline.requests])
+            for _ in 0..<1000 where model.loading || model.searchPending { try await Task.sleep(for: .milliseconds(10)) }
+            try await Task.sleep(for: .milliseconds(500))
+        }
+        try #require(restarted.count < 3, "three idle windows in a row saw a system clock change: \(restarted)")
         #expect(model.canWrite)
         #expect(!model.loading)
         #expect(model.lastSequence == cursor)
         #expect(model.reconnectCount == reconnects)
         #expect(final.refreshes == baseline.refreshes)
         #expect(final.requests == baseline.requests)
-        let receipt: [String: Any] = ["idle_ms": (ProcessInfo.processInfo.systemUptime - start) * 1000, "refreshes": final.refreshes - baseline.refreshes, "requests": final.requests - baseline.requests, "reconnects": model.reconnectCount - reconnects, "can_write": model.canWrite, "loading": model.loading, "app_launched": false]
+        let receipt: [String: Any] = ["idle_ms": (ProcessInfo.processInfo.systemUptime - start) * 1000, "refreshes": final.refreshes - baseline.refreshes, "requests": final.requests - baseline.requests, "reconnects": model.reconnectCount - reconnects, "can_write": model.canWrite, "loading": model.loading, "app_launched": false, "windows_restarted_for_clock_change": restarted, "clock_control": control]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-five-minutes.json"))
         if let data = try await recorder.exportMetadata() { try data.write(to: output.appendingPathComponent("stream-five-minutes-metadata.json")) }
         model.signedIn = false; model.connect(); await recorder.flush()
     }
 
+}
+
+/// System clock and time zone changes seen during an idle window (MAC-C1-S1-29).
+private final class ClockChanges: @unchecked Sendable {
+    private let lock = NSLock()
+    private var seen: [String] = []
+    func record(_ name: String) { lock.withLock { seen.append(name) } }
+    var count: Int { lock.withLock { seen.count } }
+    var names: [String] { lock.withLock { seen } }
 }

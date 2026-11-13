@@ -73,7 +73,14 @@ import TodoAPI
         var unfinishedIterations = 0, unfinishedRequests = 0
         var startedRefreshes = 0, startedWrites = 0, startedPolls = 0, retiredCallsCancelled = 0
         let start = ProcessInfo.processInfo.systemUptime
-        for index in 0..<3000 {
+        // MAC-C1-S1-29: the proof is 3,000 credential replacements that each retire a Client with
+        // requests still in flight. With fast reads an iteration can finish everything before the
+        // replacement; it still gets every check below but does not count, and the run continues
+        // until 3,000 have counted (at most 3,300 iterations). The receipt says how many ran.
+        var iterations = 0
+        for index in 0..<3300 {
+            if unfinishedIterations == 3000 { break }
+            iterations += 1
             let target = try TaskSnapshot.decode(await observer.client.tasks_period_show(path: .init(profile: "work", task: targetID)).ok.body.json)
             recorder.clear(); recorder.authorizeOwnerSession(true)
             let old = model.client
@@ -114,21 +121,21 @@ import TodoAPI
             #expect(clean)
             #expect(model.signedIn && model.canWrite && model.message == "Current credential scope")
         }
-        #expect(startedRefreshes >= 3000 && startedWrites == 3000 && startedPolls == 3000)
-        #expect(retiredCallsCancelled == 3000 && unfinishedIterations == 3000)
+        #expect(startedRefreshes >= iterations && startedWrites == iterations && startedPolls == iterations)
+        #expect(retiredCallsCancelled == iterations && unfinishedIterations == 3000, "\(unfinishedIterations) of \(iterations) iterations retired a Client with requests in flight")
         let healthDelta = try await healthCount() - beforeHealth
         #expect(healthDelta == 0)
         await model.refreshAfterWrite("Stress final catalog")
         let canonical = try await observer.client.tasks_period_list(path: .init(profile: "work")).ok.body.json.map(TaskSnapshot.decode)
         let finalTask = try #require(canonical.first { $0.id == targetID })
         let committedTransitions = finalTask.row_version - initialTask.row_version
-        #expect(committedTransitions >= 0 && committedTransitions <= 3000)
+        #expect(committedTransitions >= 0 && committedTransitions <= iterations)
         #expect(model.tasks.count == 178 && model.appliedSearchSnapshot?.rows.count == 178)
         let canonicalMatch = Dictionary(uniqueKeysWithValues: model.tasks.map { ($0.id, $0) }) == Dictionary(uniqueKeysWithValues: canonical.map { ($0.id, $0) })
         #expect(canonicalMatch)
         #expect(model.canWrite && model.signedIn)
         if let path = env["TODO_CLIENT_DIAGNOSTICS_EVIDENCE"] {
-            let value: [String: Any] = ["iterations": 3000, "refresh_attempts": 3000, "refreshes_started": startedRefreshes, "writes_started": startedWrites, "committed_transitions": committedTransitions, "polls_started": startedPolls, "retired_calls_cancelled": retiredCallsCancelled, "retired_server_health_delta": healthDelta, "tasks": model.tasks.count, "canonical_rows_match": canonicalMatch, "iterations_with_unfinished_requests": unfinishedIterations, "unfinished_requests_at_retirement": unfinishedRequests, "unexpected_scope_iterations": unexpected.count, "final_writable": model.canWrite, "elapsed_seconds": ProcessInfo.processInfo.systemUptime - start, "client_factory_override": false, "transport_override": false]
+            let value: [String: Any] = ["iterations": iterations, "iterations_counted": unfinishedIterations, "iterations_not_counted": iterations - unfinishedIterations, "refresh_attempts": iterations, "refreshes_started": startedRefreshes, "writes_started": startedWrites, "committed_transitions": committedTransitions, "polls_started": startedPolls, "retired_calls_cancelled": retiredCallsCancelled, "retired_server_health_delta": healthDelta, "tasks": model.tasks.count, "canonical_rows_match": canonicalMatch, "iterations_with_unfinished_requests": unfinishedIterations, "unfinished_requests_at_retirement": unfinishedRequests, "unexpected_scope_iterations": unexpected.count, "final_writable": model.canWrite, "elapsed_seconds": ProcessInfo.processInfo.systemUptime - start, "client_factory_override": false, "transport_override": false]
             try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: path).appendingPathComponent("retirement-stress.json"))
         }
     }
