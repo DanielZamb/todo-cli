@@ -24,8 +24,12 @@ public struct ClientStallAttribution: Codable, Sendable, Equatable {
     public var frames: [ClientStallFrame]
     /// Why sampling is off for the rest of this run (a failure or a window over 1 ms), if it is.
     public var disabled: String?
-    public init(samples: Int, inLabel: String?, agreeing: Int, frames: [ClientStallFrame], disabled: String?) {
+    /// How long each sample held the main thread suspended, in microseconds, in order: what the
+    /// sampler cost this stall (MAC-C1-S1-21 review). Absent in records written before it.
+    public var suspendedMicroseconds: [Int]?
+    public init(samples: Int, inLabel: String?, agreeing: Int, frames: [ClientStallFrame], disabled: String?, suspendedMicroseconds: [Int]? = nil) {
         self.samples = samples; self.inLabel = inLabel; self.agreeing = agreeing; self.frames = frames; self.disabled = disabled
+        self.suspendedMicroseconds = suspendedMicroseconds
     }
 }
 
@@ -95,7 +99,7 @@ public enum ClientStallAttributor {
     }
 
     /// Reduces a stall's samples to one bounded record.
-    public static func attribute(_ stacks: [[ClientStallSymbol]], disabled: String?) -> ClientStallAttribution {
+    public static func attribute(_ stacks: [[ClientStallSymbol]], disabled: String?, suspendedMicroseconds: [Int]? = nil) -> ClientStallAttribution {
         let labels = stacks.map(label)
         var counts: [String: Int] = [:]
         for case let label? in labels { counts[label, default: 0] += 1 }
@@ -103,7 +107,7 @@ public enum ClientStallAttributor {
         let best = labels.compactMap { $0 }.max { (counts[$0] ?? 0) < (counts[$1] ?? 0) }
         let chosen = best.flatMap { winner in labels.firstIndex(of: winner) }
         var record = ClientStallAttribution(samples: stacks.count, inLabel: best, agreeing: best.map { counts[$0] ?? 0 } ?? 0,
-                                            frames: chosen.map { kept(stacks[$0]) } ?? [], disabled: disabled)
+                                            frames: chosen.map { kept(stacks[$0]) } ?? [], disabled: disabled, suspendedMicroseconds: suspendedMicroseconds)
         // Keep the record within its bound: drop the outermost own frames first, then the
         // outermost system frames.
         while encodedSize(record) > recordLimit, !record.frames.isEmpty {
@@ -123,6 +127,13 @@ public final class ClientStallSampler: @unchecked Sendable {
     public static let intervalMS = 50.0
     /// A suspended window longer than this turns sampling off for the run.
     public static let windowLimitNS: UInt64 = 1_000_000
+    /// The most a stall's samples may hold the main thread suspended in all. Checked before each
+    /// suspend: a sample starts only if a window as long as the limit would still fit, so one stall
+    /// costs at most this plus whatever the last window overran the limit by. A single window has
+    /// no hard maximum from user space (the kernel can preempt the sampling thread mid-window);
+    /// the watchdog queue runs at user-interactive QoS to make that rare, and every window is
+    /// recorded so Diagnostics shows the cost.
+    public static let stallBudgetNS: UInt64 = 2_000_000
     private let windowLimitNS: UInt64
     private let ownImages: [String]
     private let thread: thread_act_t
@@ -131,6 +142,9 @@ public final class ClientStallSampler: @unchecked Sendable {
     private var stall: UUID?
     private var taken = 0
     private var lastSampleMS = 0.0
+    /// This stall's suspended windows (ns), and their sum.
+    private var windows: [UInt64] = []
+    private var spentNS: UInt64 = 0
     /// At most this many attributed stalls an hour; later stalls are recorded without one.
     public static let perHour = 120
     private var hourStartMS = -Double.infinity
@@ -151,6 +165,7 @@ public final class ClientStallSampler: @unchecked Sendable {
         self.windowLimitNS = windowLimitNS
         buffer = .allocate(capacity: Self.capacity)
         buffer.initialize(repeating: todo_stall_sample(), count: Self.capacity)
+        windows.reserveCapacity(Self.capacity)
         var base = mach_timebase_info_data_t()
         mach_timebase_info(&base)
         timebase = base
@@ -164,16 +179,18 @@ public final class ClientStallSampler: @unchecked Sendable {
 
     /// Drops the stall in progress, unfinished (the monitor stopping). The hourly count is kept, so the
     /// cap of `perHour` attributed stalls an hour holds across a stop and a start.
-    public func abandon() { stall = nil; taken = 0; lastSampleMS = 0 }
+    public func abandon() { stall = nil; taken = 0; lastSampleMS = 0; windows.removeAll(keepingCapacity: true); spentNS = 0 }
 
     /// Called on every watchdog tick with how long the main thread's ping has been pending.
     /// Takes a sample when one is due; returns whether it did.
     @discardableResult public func tick(stall id: UUID, pendingMS: Double, nowMS: Double) -> Bool {
         guard disabled == nil, pendingMS > Self.firstAfterMS else { return false }
-        if stall != id { stall = id; taken = 0; lastSampleMS = 0 }
+        if stall != id { stall = id; taken = 0; lastSampleMS = 0; windows.removeAll(keepingCapacity: true); spentNS = 0 }
         // The count is read once and every buffer use is checked against that one value.
         let index = taken
         guard index >= 0, index < Self.capacity, index == 0 || nowMS - lastSampleMS >= Self.intervalMS else { return false }
+        // The stall's time budget, before the suspend: start only if a full-limit window still fits.
+        guard spentNS + windowLimitNS <= Self.stallBudgetNS else { return false }
         let slot = buffer.advanced(by: index)
         let status = Int(todo_sample_thread(thread, slot))
         let windowNS = slot.pointee.suspended_ticks * UInt64(timebase.numer) / UInt64(max(timebase.denom, 1))
@@ -187,6 +204,7 @@ public final class ClientStallSampler: @unchecked Sendable {
         }
         taken = index + 1
         samplesTaken += 1
+        windows.append(windowNS); spentNS += windowNS
         lastSampleMS = nowMS
         return true
     }
@@ -194,7 +212,7 @@ public final class ClientStallSampler: @unchecked Sendable {
     /// Ends the stall: symbolicates its samples (off the main thread, after every resume) and
     /// returns one bounded record, or nil when the stall took no sample.
     public func finish(stall id: UUID, nowMS: Double) -> ClientStallAttribution? {
-        defer { if stall == id { stall = nil; taken = 0 } }
+        defer { if stall == id { stall = nil; taken = 0; windows.removeAll(keepingCapacity: true); spentNS = 0 } }
         let count = taken
         let sampled = stall == id && count > 0 && count <= Self.capacity
         guard sampled || disabled != nil else { return nil }
@@ -203,6 +221,7 @@ public final class ClientStallSampler: @unchecked Sendable {
         guard attributedThisHour < Self.perHour else { return nil }
         attributedThisHour += 1
         guard sampled else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0) } }
+        let suspended = windows.prefix(count).map { Int($0 / 1000) }
         var stacks: [[ClientStallSymbol]] = []
         for index in 0..<count {
             let sample = buffer.advanced(by: index).pointee
@@ -214,7 +233,7 @@ public final class ClientStallSampler: @unchecked Sendable {
             let pcs = ClientStallStack.assemble(pcs: walked, lr: sample.lr, functionStart: ClientStallSymbolizer.functionStart)
             stacks.append(pcs.enumerated().map { offset, pc in ClientStallSymbolizer.symbol(pc, isReturnAddress: offset > 0, ownImages: ownImages) })
         }
-        return ClientStallAttributor.attribute(stacks, disabled: disabled)
+        return ClientStallAttributor.attribute(stacks, disabled: disabled, suspendedMicroseconds: suspended)
     }
 }
 

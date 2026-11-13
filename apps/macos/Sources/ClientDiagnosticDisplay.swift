@@ -64,6 +64,14 @@ enum ClientDiagnosticDisplay {
             return action($0.action) < action($1.action)
         }
     }
+    /// What the stall sampler cost: how often it held the main thread and for how long in all and
+    /// at most once. Nil for a stall without recorded windows.
+    static func samplerCost(_ attribution: ClientStallAttribution?) -> String? {
+        guard let windows = attribution?.suspendedMicroseconds, let longest = windows.max() else { return nil }
+        func ms(_ microseconds: Int) -> String { String(format: "%.2f ms", Double(microseconds) / 1000) }
+        let times = windows.count == 1 ? "once" : "\(windows.count) times"
+        return "Sampled \(times): main thread held \(ms(windows.reduce(0, +))), longest \(ms(longest))"
+    }
     static func age(_ milliseconds: Double) -> String {
         if milliseconds < 1000 { return String(format: "%.0f ms", milliseconds) }
         if milliseconds < 120_000 { return String(format: "%.1f s", milliseconds / 1000) }

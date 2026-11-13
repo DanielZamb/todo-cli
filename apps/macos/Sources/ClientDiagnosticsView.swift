@@ -127,6 +127,7 @@ struct ClientDiagnosticsView: View {
                                 if let trigger = event.trigger, let label = ClientDiagnosticDisplay.environmentTrigger(trigger) { Text(label).foregroundStyle(.secondary) }
                                 // What the main thread was doing (stall attribution): our deepest frame or the system entry.
                                 if let label = event.stallAttribution?.inLabel { Text("In " + label).font(.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled) }
+                                if let cost = ClientDiagnosticDisplay.samplerCost(event.stallAttribution) { Text(cost).font(.caption).foregroundStyle(.secondary).monospacedDigit() }
                                 if let capability = event.nativeSelectionNotifications {
                                     if capability.changing == .unavailable { Text("Row highlight started: unavailable").foregroundStyle(.secondary) }
                                     if capability.committed == .unavailable { Text("Row highlight settled: unavailable").foregroundStyle(.secondary) }

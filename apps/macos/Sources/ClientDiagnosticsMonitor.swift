@@ -60,7 +60,9 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var sampler: ClientStallSampler?
     /// The one serial queue for the watchdog and the sampler, for the monitor's whole life
     /// (MAC-C1-S1-21): never one per start, so no sampler state is reachable from two queues.
-    @ObservationIgnored let watchdogQueue = DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .utility)
+    /// User-interactive, so the thread that holds the main thread suspended during a sample is
+    /// not starved by the work it waits behind (the seat's stress saw one 3,040 µs window).
+    @ObservationIgnored let watchdogQueue = DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .userInteractive)
     /// The live watchdog generation, read and written only on `watchdogQueue`.
     @ObservationIgnored private let watchdogGate = WatchdogGate()
     private struct Pending {

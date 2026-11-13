@@ -105,6 +105,26 @@ import TodoAPI
         #expect(sampler.finish(stall: nextHour, nowMS: 1000 + 3_600_000)?.disabled != nil, "the next hour records again")
     }
 
+    /// The stall's time budget is checked before each suspend: with a window limit as large as the
+    /// budget, only the first sample fits, and the second is refused without suspending.
+    @Test func aStallsSuspendedTimeBudgetIsCheckedBeforeEachSuspend() throws {
+        let worker = SampledWorker(); defer { worker.finish() }
+        let sampler = ClientStallSampler(thread: try worker.port(), ownImages: [], windowLimitNS: ClientStallSampler.stallBudgetNS)
+        let stall = UUID()
+        #expect(sampler.tick(stall: stall, pendingMS: 150, nowMS: 1000), "the first sample fits the budget: \(sampler.disabled ?? "")")
+        #expect(!sampler.tick(stall: stall, pendingMS: 200, nowMS: 1050), "the second would not fit, so it is not taken")
+        #expect(sampler.samplesTaken == 1)
+        let record = try #require(sampler.finish(stall: stall, nowMS: 1100))
+        #expect(record.samples == 1 && record.suspendedMicroseconds?.count == 1, "each window is recorded: \(record.suspendedMicroseconds ?? [])")
+    }
+
+    @Test func diagnosticsShowsWhatTheSamplerCost() {
+        let attribution = ClientStallAttribution(samples: 3, inLabel: "f", agreeing: 3, frames: [], disabled: nil, suspendedMicroseconds: [120, 80, 300])
+        #expect(ClientDiagnosticDisplay.samplerCost(attribution) == "Sampled 3 times: main thread held 0.50 ms, longest 0.30 ms")
+        let once = ClientStallAttribution(samples: 1, inLabel: "f", agreeing: 1, frames: [], disabled: nil, suspendedMicroseconds: [45])
+        #expect(ClientDiagnosticDisplay.samplerCost(once) == "Sampled once: main thread held 0.04 ms, longest 0.04 ms")
+        #expect(ClientDiagnosticDisplay.samplerCost(.init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: "off")) == nil)
+    }
 }
 
 private struct LifetimeTimeout: Error { let what: String }

@@ -222,3 +222,46 @@ function other than the pc's (used as a scratch register, or left stale), it
 is inserted as a caller that is not on the stack. No sample can tell this apart from a true leaf. A label therefore
 still needs the samples to agree, as `agreeing` reports, before it names the
 stalling function.
+
+## Stall sampler lifetime and cost (MAC-C1-S1-21, S1-22)
+
+The seat found two defects in candidate 8's sampler and measured its cost under
+stress.
+
+**One queue, one lifetime (S1-21).** `ClientDiagnosticsMonitor.start` made a new
+watchdog queue each time but kept one sampler. After a stop and a start, the
+sampler's `tick` and `finish` could run on two queues at once, racing its
+counters and its unsafe sample buffer. The seat's Thread Sanitizer probe
+reported the race. The rule now:
+
+- The monitor owns one serial `watchdogQueue` for its whole life. No sampler
+  state is reachable from another queue.
+- A watchdog generation lives on that queue. `start` sets it there. Every
+  handler and every queued `finish` checks it there first.
+- `stop` is complete when it returns. It ends the generation on the queue with a
+  synchronous drain, after any handler already running there. It also abandons
+  the stall in progress. No handler of the stopped generation touches the
+  sampler afterwards. This is a drain on one queue, not timing.
+- Every use of the sample buffer reads the count once and checks it against
+  that one value. So does each sample's frame count.
+
+**The hourly cap comes first (S1-22).** After one sampling failure, `finish`
+returned a disabled record for every stall before checking the 120-an-hour
+budget. The budget is now checked before every outcome, disabled ones
+included.
+
+**The cost of a sample, made as small and as visible as user space allows.**
+The seat's stress run took 100,000 samples, all of which succeeded and resumed.
+One window lasted 3,040 µs. The 1 ms window limit turns sampling off only after
+the resume, so a single window has no hard maximum: the kernel can preempt the
+sampling thread mid-window. Three changes:
+
+- The watchdog queue runs at user-interactive QoS, so the thread holding the
+  main thread suspended is not starved behind other work.
+- Each stall has a 2 ms budget of suspended time, checked before each suspend.
+  A sample starts only if a window as long as the limit still fits. One stall
+  therefore holds the main thread at most 2 ms plus whatever its last window
+  overran the limit by.
+- Each sample's window is recorded in the stall's attribution
+  (`suspendedMicroseconds`). Diagnostics shows it under the stall: "Sampled N
+  times: main thread held X ms, longest Y ms".
