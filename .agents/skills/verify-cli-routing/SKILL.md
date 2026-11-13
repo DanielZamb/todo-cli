@@ -95,6 +95,13 @@ Launch enters scripts/isolate.sh automatically on macOS. Every child inherits OS
 denial of the real Todo directory and TCP/UDP 4310 and 14310, with loopback-only
 networking. The compile-time default-port shim is a test control, not the network
 boundary. Other verification recipes must also run through isolate.sh.
+The profile is the run store's reference (2026-11-13): outbound network is
+loopback only. Before relying on it, run
+`node .agents/skills/verify-cli-routing/scripts/isolation-controls.mjs` (node,
+not bun, which reports a denial as ECONNREFUSED). It requires EPERM for an owned
+14310 listener and for 1.1.1.1:80, a loopback connect, EPERM on the protected
+directory, and the same four in a child. The profile used before 2026-11-13
+(deny network*, then allow localhost both ways) let outbound connects through.
 
 The correction driver independently seeds scratch databases and owns a barrier
 build of the real server. It reproduces rename-over and swap-back on immutable
