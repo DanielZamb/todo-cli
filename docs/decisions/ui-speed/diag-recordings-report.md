@@ -3443,3 +3443,107 @@ Facts that rest on a check and stay as they are:
 
 No pinned file changed; the pin audit at the head shows the same one
 deferred mismatch (verify-discovery-formal's `task-client.ts`).
+
+## Review 8 finding R8-1 and the seat's notes (2026-11-13)
+
+Claude Opus 5.5. Commit 0d346273. Evidence: `docs/evidence/ui-speed/recordings-r8/`.
+
+**Defect.** The pre-exclusion check "an empty main beside a non-empty journal
+is an interrupted initialization" assumed nobody held the journal. So a
+second legitimate opener arriving during a live first commit was told to
+remove the files. `hot_journal` rested on the same premise, which a live
+rollback-mode writer holding its transaction contradicts.
+
+**Fix.**
+- Before the exclusion, sidecars are judged only when `recordings.db` is
+  absent; nobody can be initializing a file that does not exist.
+- With an empty main present, the journal and sidecar judgments wait until
+  this open holds the exclusion. `interrupted_initialization` already ran
+  there.
+- `hot_journal`, and `foreign_header` for a non-empty main, are judged while
+  this open holds at least a shared lock on its own descriptor. If it cannot
+  take one within 100 ms, the answer is `initialization_busy`.
+
+`foreign_header` on a non-empty main is the same family: a first commit in
+flight could show a header that is not ours yet.
+
+**The seat's first note** (decide first, remove after). The sidecar clean-up
+decided and removed one sidecar at a time, so a denied `-shm` could be
+reached after an empty `-wal` was already gone. Every sidecar is now decided
+before any is removed.
+
+| Proof | 1a9f8b63 | 0d346273 |
+| --- | --- | --- |
+| Review 8 `live-initializer.ts`: opener B while A is inside its first commit (main 0, journal 512) | `interrupted_initialization`, 2 files, "remove" | `initialization_busy`, retrying, no files, no advice; A opens; a later open succeeds |
+| `sqlite-journal-holder.ts`: live rollback writer holding a journal on our store | `hot_journal`, 3 files, "remove" | `initialization_busy`, no advice; the store opens after the writer releases |
+| The same: journal left by an initializer killed inside its first commit | (case added this round) | `interrupted_initialization`, judged under the exclusion, files unchanged |
+| The same: hot journal left by a writer killed inside its transaction | (case added this round) | `hot_journal`, files unchanged |
+| Review 8 `access-matrix.sh`, missing main with `-shm` data denied | `check_unavailable`, but files CHANGED (empty `-wal` removed) | `check_unavailable`, files identical |
+| `access-matrix.sh`, all 14 cases | 13 identical, 1 changed | 14 identical; every denial on a good store is `check_unavailable` with its stage, and every non-private state keeps its true reason |
+| The legitimate pair (`sqlite-initialization`, compiled) | one publication | one publication (see gates) |
+
+A green control was added to the domain tests: an empty main, an empty
+`-wal` and a hard-linked `-shm`. The refusal leaves the `-wal` in place. On
+1a9f8b63 this shape was already refused by the old pre-check, so the red for
+"decide first" is the access-matrix row above.
+
+**The seat's second note.** An ACL deny or an immutable flag on our own 0600
+file answers `check_unavailable`, with its stage, for as long as the
+restriction stays. That is correct under the ruling: `lstat` cannot
+establish an ACL or a flag, so the store cannot claim a fact about the file.
+It retries every minute and Task service is unaffected.
+
+**Looking for more of this family in the file.** These judgments now rest on
+a held lock or a direct observation:
+- the excluded branch's header (exclusive lock);
+- header and journal (shared lock);
+- catalog and integrity (two stable agreeing reads);
+- the writable connection's checks (shared lock);
+- `oversized`, `replaced`, link counts and file types (observed);
+- a non-empty `-wal` beside a missing main (nobody can be committing to a file
+  that does not exist).
+
+I found nothing else resting on the premise that nobody else holds a file.
+
+**Sandbox correction.** After the session restart I rebuilt the isolation
+profile from the run's memory note. The profile inherited from the run store,
+used in every earlier round, does not block external networking: its
+localhost allow rule opens all outbound connections. And bun reports a
+sandbox denial as `ECONNREFUSED`, so my earlier "port blocked" control proved
+less than it said. None of my earlier runs contacted port 4310 or an external
+host: every server bound port 0, and the clients spoke only to their own
+servers.
+
+The profile used from here on:
+- denies `network-outbound` except to loopback and unix sockets;
+- denies TCP and UDP to 4310 and to the control port 14310;
+- denies binding 4310 and 14310.
+
+Proven with node (`sandbox-controls.txt`):
+- an owned listener on 14310 is denied inside (EPERM) and reachable outside;
+- 1.1.1.1:80 is denied (EPERM);
+- a loopback ephemeral port is reachable;
+- the real `~/.todo-cli` is unreadable.
+
+### Gates on 0d346273 (gates8, under the corrected profile except the access controls, which apply their own profiles; every step gated on at least 40 GiB free)
+
+| Gate | Exit | Result |
+| --- | ---: | --- |
+| domain recordings tests | 0 | 85 |
+| initialization (compiled) | 0 | the legitimate pair both open, with exactly one `initialized` publication; the new-file, existing-file, Task-database and held cases pass |
+| initialization-server, foreign-files, visibility, swap, race, refusal-classes | 0 each | |
+| seat `classes.ts` | 1 | 20 of 21; the one row is the expectation withdrawn in review 6 |
+| seat `guidance-real`, `live-writer`, `temp-failure` | 0 each | |
+| seat `concurrent-open`, 60 s | 0 | 1,389 of 1,389 opened |
+| under load at 85 commits/s, 60 s | 0 | foreign 10,221 of 10,221 `foreign_catalog`; damaged 2,728 of 2,728 `integrity` |
+| under an unpaced writer, 30 s | 0 | foreign 882 + 8 `store_busy`; damaged 21 `integrity` + 43 `store_busy`; none opened |
+| `sqlite-check-temp.sh`, `sqlite-access-denial.ts` | 0, 0 | |
+| `sqlite-journal-holder.ts` | 0 | live writer: busy, then opens; killed initializer: `interrupted_initialization`; killed writer: `hot_journal`; files unchanged |
+| seat `live-initializer.ts` | 0 | B `initialization_busy` (retrying), A opened, a later open succeeds |
+| seat `access-matrix.sh` | 0 | 14 of 14 files identical |
+| image cost, 173 MiB and 253 MiB | 0, 0 | 63 MiB peak at 253 MiB with frames |
+| verify-ui-profiler `verify.ts`, recorder faults, verify-occ-atomicity `check.ts` | 0 each | |
+| disk guard, then root `lockf pnpm check` | 0, 0 | domain 575, server 38, Electron 168 + 1 skipped, CLI 87 |
+
+No pinned file changed. The pin audit at the head shows the one deferred
+mismatch (verify-discovery-formal's `task-client.ts`).
