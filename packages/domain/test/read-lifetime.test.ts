@@ -335,6 +335,202 @@ for (const transition of [
   );
 }
 
+for (const phase of [
+  "commit",
+  "rollback",
+  "callback throw",
+  "attachment cleanup",
+  "nested scope",
+]) {
+  it.effect(
+    `an authority cannot enter a new transaction during post-${phase} work`,
+    () =>
+      fixture((store, credential) =>
+        Effect.gen(function* () {
+          const db = Reflect.get(store, "db");
+          const transaction = Reflect.get(store, "transaction").bind(store);
+          const retained: Array<Parameters<typeof store.graphRead>[0]> = [];
+          let observed: Array<{ outcome: string; ids: string[] }> | undefined;
+          const probe = () => {
+            if (retained.length && !db.inTransaction) {
+              observed = db
+                .transaction(() =>
+                  retained.map((read) => {
+                    const exit = Effect.runSyncExit(store.graphRead(read));
+                    return Exit.isSuccess(exit)
+                      ? {
+                          outcome: "success",
+                          ids: exit.value.tasks.map((t) => t.id),
+                        }
+                      : {
+                          outcome: Reflect.get(
+                            Object(Cause.squash(exit.cause)),
+                            "_tag",
+                          ),
+                          ids: [],
+                        };
+                  }),
+                )
+                .immediate();
+            }
+          };
+          if (phase === "attachment cleanup") {
+            Object.defineProperty(store, "cleanupAttachmentsSync", {
+              configurable: true,
+              value: probe,
+            });
+            Reflect.set(store, "attachmentCleanupRequested", true);
+          } else
+            Object.defineProperty(store, "transaction", {
+              configurable: true,
+              value: (run: () => unknown) => {
+                try {
+                  return transaction(() => {
+                    const result = run();
+                    if (phase === "rollback")
+                      throw new Error("forced transaction rollback");
+                    return result;
+                  });
+                } finally {
+                  probe();
+                }
+              },
+            });
+          try {
+            const enter = store.auth.withRead(
+              { credential, profile: work.id },
+              Schema.Struct({}),
+              {},
+              (read) =>
+                Effect.sync(() => {
+                  retained.push(read);
+                  if (phase === "callback throw")
+                    throw new Error("forced callback failure");
+                }),
+            );
+            const result = yield* Effect.exit(
+              phase === "nested scope"
+                ? store.auth.withRead(
+                    { credential, profile: work.id },
+                    Schema.Struct({}),
+                    {},
+                    (outer) =>
+                      Effect.gen(function* () {
+                        retained.push(outer);
+                        yield* enter;
+                        for (const read of retained)
+                          expect(
+                            (yield* store.graphRead(read)).tasks.map(
+                              (task) => task.id,
+                            ),
+                          ).toEqual(["task-1"]);
+                        expect(
+                          (yield* new Discovery(store).directory(
+                            credential,
+                          )).map((profile) => profile.id),
+                        ).toEqual(["personal", "work"]);
+                      }),
+                  )
+                : enter,
+            );
+            if (phase === "callback throw" || phase === "rollback") {
+              expect(Exit.isFailure(result)).toBe(true);
+              if (Exit.isFailure(result))
+                expect(
+                  String(
+                    Reflect.get(Object(Cause.squash(result.cause)), "cause"),
+                  ),
+                ).toBe(
+                  phase === "rollback"
+                    ? "Error: forced transaction rollback"
+                    : "Error: forced callback failure",
+                );
+            } else expect(Exit.isSuccess(result)).toBe(true);
+            expect(observed).toEqual(
+              phase === "nested scope"
+                ? [
+                    { outcome: "StoreError", ids: [] },
+                    { outcome: "StoreError", ids: [] },
+                  ]
+                : [{ outcome: "StoreError", ids: [] }],
+            );
+          } finally {
+            Reflect.deleteProperty(store, "transaction");
+            Reflect.deleteProperty(store, "cleanupAttachmentsSync");
+          }
+        }),
+      ),
+  );
+}
+
+it.effect(
+  "failed transaction admission still clears the lease and the next request on the same tick is fresh",
+  () =>
+    fixture((store, credential) =>
+      Effect.gen(function* () {
+        let callbackRan = false,
+          clears = 0;
+        const originalClear = Map.prototype.clear;
+        Map.prototype.clear = function () {
+          if (new Error().stack?.includes("withinLease")) clears++;
+          return originalClear.call(this);
+        };
+        Object.defineProperty(store, "transaction", {
+          configurable: true,
+          value: () => {
+            throw new Error("forced admission failure");
+          },
+        });
+        try {
+          const result = yield* Effect.exit(
+            store.auth.withRead(
+              { credential, profile: work.id },
+              Schema.Struct({}),
+              {},
+              () =>
+                Effect.sync(() => {
+                  callbackRan = true;
+                }),
+            ),
+          );
+          expect(callbackRan).toBe(false);
+          expect(Exit.isFailure(result)).toBe(true);
+          expect(clears).toBe(1);
+          if (Exit.isFailure(result))
+            expect(
+              String(Reflect.get(Object(Cause.squash(result.cause)), "cause")),
+            ).toBe("Error: forced admission failure");
+        } finally {
+          Map.prototype.clear = originalClear;
+          Reflect.deleteProperty(store, "transaction");
+        }
+        let nextTick = false;
+        queueMicrotask(() => {
+          nextTick = true;
+        });
+        const retained = yield* store.auth.withRead(
+          { credential, profile: work.id },
+          Schema.Struct({}),
+          {},
+          (read) => Effect.succeed(read),
+        );
+        yield* store.auth.withRead(
+          { credential, profile: work.id },
+          Schema.Struct({}),
+          {},
+          (read) =>
+            Effect.gen(function* () {
+              expect(
+                (yield* store.graphRead(read)).tasks.map((task) => task.id),
+              ).toEqual(["task-1"]);
+              yield* refused(store.graphRead(retained));
+            }),
+        );
+        expect(nextTick).toBe(false);
+      }),
+    ),
+);
+
 it.effect(
   "a fresh checked scope rechecks once and cannot revive a failed nested scope",
   () =>

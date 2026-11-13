@@ -105,7 +105,17 @@ const withinLease = <A>(
   lease.frame = frame;
   if (!nested) leases.set(db, lease);
   try {
-    return transaction(run);
+    return transaction(() => {
+      try {
+        return run();
+      } finally {
+        if (!nested) {
+          lease.active = false;
+          lease.credentials.clear();
+          if (leases.get(db) === lease) leases.delete(db);
+        }
+      }
+    });
   } catch (error) {
     frame.failed = true;
     throw error;
@@ -114,7 +124,7 @@ const withinLease = <A>(
     else {
       lease.active = false;
       lease.credentials.clear();
-      leases.delete(db);
+      if (leases.get(db) === lease) leases.delete(db);
     }
   }
 };

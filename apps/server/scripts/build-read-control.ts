@@ -46,11 +46,22 @@ const result = await Bun.build({
     }});
     this.projection = new ClientProjection(db);`,
                 );
+                const begin = "    return transaction(() => {";
+                const end =
+                  "    });\n  } catch (error) {\n    frame.failed = true;";
+                assert.equal(contents.split(begin).length, 2);
+                assert.equal(contents.split(end).length, 2);
                 contents = contents.replace(
-                  "    return transaction(run);",
+                  begin,
                   `    let start = 0;
-    try { return transaction(() => { if (!nested) start = performance.now(); return run(); }); }
-    finally { if (start) globalThis[Symbol.for("todo.read-control.scope")]?.holds.push(performance.now() - start); }`,
+    try { return transaction(() => { if (!nested) start = performance.now();`,
+                );
+                contents = contents.replace(
+                  end,
+                  `    }); }
+    finally { if (start) globalThis[Symbol.for("todo.read-control.scope")]?.holds.push(performance.now() - start); }
+  } catch (error) {
+    frame.failed = true;`,
                 );
               }
               if (path === "apps/server/src/server.ts")

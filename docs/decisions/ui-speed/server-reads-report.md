@@ -1,5 +1,13 @@
 # Server projection reads
 
+## Final native-COMMIT repair, qualification in progress
+
+This was found by this worker's own final control after the 1c9bf4d4 review checkpoint, before delivery. The root lease was closed after OperationStore.transaction returned, leaving a window after SQLite COMMIT. A hook opening a fresh native transaction in that window could return task-1 with the old authority. The new literal control exited 1. The approved auth.ts-only correction closes the root lease in the checked callback's finally, before native COMMIT/post-commit work, and keeps final cleanup for failed admission.
+
+Commit, rollback, callback throw, the real attachment-cleanup exit hook, and outermost completion after nested scopes now refuse the old value. Removing the early close makes all five fail with Task data; removing failed-admission cleanup fails its separate literal assertion. Exact restoration passes all 36 scope tests. Successful inner scopes and Discovery inside the grouped read keep the outer lease; completion closes both inner and outer values. The next same-tick request has a fresh lease. Attachment cleanup is the only production callable hook after the native transaction returns in OperationStore.transaction. Its other post-callback work is restoring the writing flag before COMMIT and returning the result; native transaction-return hooks are additionally controlled.
+
+The full changed-source gate set is being rerun. The following qualification section currently describes the preceding 1c9bf4d4 checkpoint and is not a delivery claim for this correction. The covered file hashes are unchanged from 27ea0c5e. The coordinator approved moving only both mapping references to the corrected immutable capture after its gates pass, and required the delivery note to say why this is a second reference move.
+
 ## Strict read scopes, delivery candidate
 
 The owner chose B. The read-authority lifetime is now enforced by the ports, and ordinary reads materialize inside synchronous checked callbacks. This candidate is ready for SERVER-READS-S1 to review. It is not installed. The immutable qualification capture is `27ea0c5e4ba1d1fd143b8b668790904ce07e2a2d`; production domain/CLI/server source is byte-identical to the final source at 7ec357cd77afc76ddb784f1fcd294662a14b4580. Later changes qualify and document it. No experiment work resumed. The contract remains `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`.
