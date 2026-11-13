@@ -14,6 +14,15 @@ import type { StreamWake } from "./stream-wake.ts";
 
 type Connection = { active: boolean };
 type Cursor = { cursor: number; generation: string };
+// Every pass returns all four fields explicitly, never by spreading the
+// previous state: a missing wakeVersion would otherwise keep the version from
+// when the stream opened, and every later wait would return at once.
+type PassState = {
+  readonly cursor: number;
+  readonly generation: string;
+  readonly wakeVersion: number;
+  readonly terminal: boolean;
+};
 class TerminalPermission {
   #used = false;
   readonly #connection: Connection;
@@ -118,12 +127,13 @@ export const changesLayer = (store: StreamReads, wake: StreamWake) =>
               cursor: reset ? initial.restore_seq : subscription.fields.after,
               generation: initial.generation,
               wakeVersion: wake.version,
-            },
-            (state) =>
+              terminal: false,
+            } satisfies PassState,
+            (state: PassState) =>
               Effect.gen(function* () {
                 yield* wake.wait(state.wakeVersion);
                 const wakeVersion = wake.version;
-                if ("terminal" in state) {
+                if (state.terminal) {
                   yield* translate(
                     store.auth.authenticate({
                       credential: subscription.credential,
@@ -174,7 +184,8 @@ export const changesLayer = (store: StreamReads, wake: StreamWake) =>
                               cursor: current.restore_seq,
                               generation: current.generation,
                               wakeVersion,
-                            },
+                              terminal: false,
+                            } satisfies PassState,
                           ] as const;
                         }
                         const batch =
@@ -217,13 +228,11 @@ export const changesLayer = (store: StreamReads, wake: StreamWake) =>
                         return [
                           events,
                           {
-                            ...state,
                             cursor: batch.cursor,
+                            generation: state.generation,
                             wakeVersion,
-                            ...(result.kind === "terminal"
-                              ? { terminal: true }
-                              : {}),
-                          },
+                            terminal: result.kind === "terminal",
+                          } satisfies PassState,
                         ] as const;
                       }),
                   ),
