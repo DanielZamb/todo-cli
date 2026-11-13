@@ -1,6 +1,6 @@
 {
   "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
-  "scope": "Reviewed runtime read-authority guards; immutable product ade8f941; no performance claim from cache properties.",
+  "scope": "Reviewed immutable merged strict reads and Snapshot/Purge source 5f46e7b3; no performance claim from cache properties.",
   "seed": "0x5ea2c001",
   "files": [
     {
@@ -32,7 +32,7 @@
       "sha256": "4f0276e1953a56db0a31844c51faec02835eea134b04a06ed2ba6e9231d6d600"
     }
   ],
-  "review": "Read consumers validate private authority values; both memo tokens remain before authentication and both preparation callbacks are unchanged. Matcher, meter, runner, cache/accounting/admission, erasure and observer bodies are unchanged. All generated and hygiene mutation controls restored and typechecked before stale source hashes failed; full gate follows reviewed renewal. No model change.",
+  "review": "All 69 protected cache/matcher/runner/epoch/preparation bodies or statements remain byte-identical. Snapshots.restore adds reviewed post-transaction erasure while its generation and afterRestore epoch clear remain unchanged. Seven source controls, three observer controls and the full nine-stage gate pass on merged source; see docs/decisions/ui-speed/server-integration.md. No model change.",
   "reviewedCandidate": true,
   "hygieneFiles": [
     {

@@ -195,3 +195,11 @@ fail with StoreError before SQL, and checks that closing the preview leaves the
 live authority usable. It also requires owner admission to have returned outside
 a transaction before restore starts. Use a fresh .scratch/integ-server/interactions
 path or retire the completed prior fixture before repeating it.
+
+For direct public restore-entry observations, compile the two proof variants
+with `scripts/build-restore-entry.mjs cli|server <output>`, then run
+`bun .agents/skills/verify-snapshots/scripts/restore-entry.mjs <cli> <server> <evidence>`.
+The observer throws if restore enters with db.inTransaction true. The controller
+requires CLI exit 0, HTTP 200 and the literal false entry observation on both.
+Its HTTP Snapshot is created after server startup so normal daily retention
+cannot prune the CLI fixture before that second check.
