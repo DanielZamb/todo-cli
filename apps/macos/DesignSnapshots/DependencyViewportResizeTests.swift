@@ -46,7 +46,7 @@ import WebKit
         func record(_ name: String) async throws -> [String: Any] {
             let geometry = try #require(try await javascript("const frame=document.getElementById('graph').getBoundingClientRect();const boxes=[...document.querySelectorAll('.pele-node:not(.graph-hidden),.pele-edge:not(.graph-hidden)')].map(n=>n.getBoundingClientRect());const left=Math.min(...boxes.map(b=>b.left)),right=Math.max(...boxes.map(b=>b.right)),top=Math.min(...boxes.map(b=>b.top)),bottom=Math.max(...boxes.map(b=>b.bottom));return {width:frame.width,height:frame.height,dx:(left+right-frame.left-frame.right)/2,dy:(top+bottom-frame.top-frame.bottom)/2,inside:left>=frame.left-1&&right<=frame.right+1&&top>=frame.top-1&&bottom<=frame.bottom+1};") as? [String: Any])
             phases.append(["phase": name, "viewport_replies": replies.count, "geometry": geometry, "same_web_view": DependencyGraphSnapshots.webViews(host).first === web])
-            try JSONSerialization.data(withJSONObject: ["phases": phases, "native_app": false, "keychain": false], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("wk-resize-proof.json"))
+            try JSONSerialization.data(withJSONObject: ["phases": phases, "native_app": false], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("wk-resize-proof.json"))
             return geometry
         }
         func expectCentred(_ geometry: [String: Any]) {

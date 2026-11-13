@@ -39,5 +39,5 @@ for entry in globals {
 try require(globalKinds == ["AuthChanged", "DatabaseRestored", "DependencyAdded", "DependencyRemoved"], "Missing global operation kinds")
 let fixture = try roundTripHistory(arguments[3])
 try require(fixture.count == 20, "Expected every effect-port event kind")
-let result: [String: Any] = ["status": "PASS", "real_history_entries": history.count, "logical_task_kinds": logicalKinds.sorted(), "global_operation_kinds": globalKinds.sorted(), "database_restored_source": "scratch operation store", "fixture_kinds": 20, "native_app_launched": false, "keychain_accessed": false]
+let result: [String: Any] = ["status": "PASS", "real_history_entries": history.count, "logical_task_kinds": logicalKinds.sorted(), "global_operation_kinds": globalKinds.sorted(), "database_restored_source": "scratch operation store", "fixture_kinds": 20, "native_app_launched": false]
 print(String(decoding: try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]), as: UTF8.self))

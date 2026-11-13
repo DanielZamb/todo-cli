@@ -265,7 +265,7 @@ func liveGeneratedWritesAgainstScratchServer() async throws {
     #expect(model.showingSeries)
     #expect(model.series?.id == first.seriesKey)
     #expect(model.series?.recurrence.rrule == "FREQ=DAILY")
-    let data = try JSONSerialization.data(withJSONObject: ["seriesTask": seriesTask.id, "movedTask": base.id, "seriesVersion": 4, "movedVersion": 2, "appLaunched": false, "keychainAccessed": false], options: [.sortedKeys])
+    let data = try JSONSerialization.data(withJSONObject: ["seriesTask": seriesTask.id, "movedTask": base.id, "seriesVersion": 4, "movedVersion": 2, "appLaunched": false], options: [.sortedKeys])
     let path = try #require(ProcessInfo.processInfo.environment["TODO_W06_RECEIPT"])
     try data.write(to: URL(fileURLWithPath: path))
 }

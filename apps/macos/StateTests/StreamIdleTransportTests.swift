@@ -48,7 +48,7 @@ private actor IdleStreamObservation {
         model.signedIn = false; model.connect()
         try await Task.sleep(for: .seconds(3)); counts.append(try await count())
         let labels = ["before", "connected", "first_switch_after_3s", "ten_switches_after_3s", "old_profile_operation_after_3s", "credential_change_after_3s", "profile_deletion_after_3s", "signed_out_after_3s"]
-        let receipt: [String: Any] = ["labels": labels, "counts": counts, "diagnostics_enabled": true, "app_launched": false, "keychain_called": false, "sign_out_boundary": "signedIn false plus connect; SessionVault signOut not called"]
+        let receipt: [String: Any] = ["labels": labels, "counts": counts, "diagnostics_enabled": true, "app_launched": false, "sign_out_boundary": "signedIn false plus connect; SessionVault signOut not called"]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-subscribers.json"))
         #expect(counts == [0, 1, 1, 1, 1, 1, 1, 0])
     }
@@ -157,7 +157,7 @@ private actor IdleStreamObservation {
         var ordinaryTimedOut = false
         do { _ = try await todoClient(server: delayed, credential: owner, diagnostics: .disabled, requestTimeout: 0.1).system_period_health() }
         catch { ordinaryTimedOut = ClientDiagnosticReason(error: error) == .timeout }
-        let receipt: [String: Any] = ["stream_survived_idle": survived, "ready_observed": ready, "ordinary_timeout_observed": ordinaryTimedOut, "stream_end_reason": reason, "idle_ms": (ProcessInfo.processInfo.systemUptime - idleStarted) * 1000, "minimum_idle_ms": 1500, "ordinary_timeout_ms": 100, "operations_received": survived ? 1 : 0, "app_launched": false, "keychain_called": false]
+        let receipt: [String: Any] = ["stream_survived_idle": survived, "ready_observed": ready, "ordinary_timeout_observed": ordinaryTimedOut, "stream_end_reason": reason, "idle_ms": (ProcessInfo.processInfo.systemUptime - idleStarted) * 1000, "minimum_idle_ms": 1500, "ordinary_timeout_ms": 100, "operations_received": survived ? 1 : 0, "app_launched": false]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-native.json"))
         #expect(survived)
         #expect(ready)
@@ -194,7 +194,7 @@ private actor IdleStreamObservation {
         #expect(model.reconnectCount == reconnects)
         #expect(final.refreshes == baseline.refreshes)
         #expect(final.requests == baseline.requests)
-        let receipt: [String: Any] = ["idle_ms": (ProcessInfo.processInfo.systemUptime - start) * 1000, "refreshes": final.refreshes - baseline.refreshes, "requests": final.requests - baseline.requests, "reconnects": model.reconnectCount - reconnects, "can_write": model.canWrite, "loading": model.loading, "app_launched": false, "keychain_called": false]
+        let receipt: [String: Any] = ["idle_ms": (ProcessInfo.processInfo.systemUptime - start) * 1000, "refreshes": final.refreshes - baseline.refreshes, "requests": final.requests - baseline.requests, "reconnects": model.reconnectCount - reconnects, "can_write": model.canWrite, "loading": model.loading, "app_launched": false]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("stream-five-minutes.json"))
         if let data = try await recorder.exportMetadata() { try data.write(to: output.appendingPathComponent("stream-five-minutes-metadata.json")) }
         model.signedIn = false; model.connect(); await recorder.flush()

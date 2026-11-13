@@ -1095,7 +1095,7 @@ private final class DiagnosticTickCounter: @unchecked Sendable {
         #expect(!text.contains(owner)); #expect(!text.contains(token)); #expect(!text.contains("Measurement Task")); #expect(!text.contains("Planning notes")); #expect(!text.contains(server.absoluteString)); #expect(!text.contains(journal.path))
         for task in model.tasks { #expect(!text.contains(task.id)) }
         try data.write(to: output.appendingPathComponent("metadata.json"))
-        let receipt: [String: Any] = ["errors": 0, "refreshes": completed, "enabled_refreshes": summary.refreshes, "enabled_requests": summary.requests, "tasks": model.tasks.count, "timings": timings, "ui_input_proven": false, "keychain_called": false]
+        let receipt: [String: Any] = ["errors": 0, "refreshes": completed, "enabled_refreshes": summary.refreshes, "enabled_requests": summary.requests, "tasks": model.tasks.count, "timings": timings, "ui_input_proven": false]
         try JSONSerialization.data(withJSONObject: receipt, options: [.prettyPrinted, .sortedKeys]).write(to: output.appendingPathComponent("live.json"))
         model.signedIn = false
         await recorder.flush()

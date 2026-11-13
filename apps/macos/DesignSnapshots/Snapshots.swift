@@ -1184,7 +1184,7 @@ struct Snapshots {
         }
         try JSONSerialization.data(
             withJSONObject: [
-                "renderer": "offscreen NSHostingView cacheDisplay", "appLaunched": false, "keychainAccess": false, "files": files,
+                "renderer": "offscreen NSHostingView cacheDisplay", "appLaunched": false, "files": files,
                 "bundle": TodoColors.bundle.bundlePath, "accentAssetLoaded": NSColor(named: "primary", bundle: TodoColors.bundle) != nil,
             ], options: [.prettyPrinted, .sortedKeys]
         ).write(to: directory.appendingPathComponent("manifest.json"))
