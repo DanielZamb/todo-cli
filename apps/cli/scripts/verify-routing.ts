@@ -375,6 +375,7 @@ try {
           ),
         (error) =>
           error instanceof CommandTransportError &&
+          error.exit === 1 &&
           error.code === "write_outcome_unknown" &&
           error.outcome === "unknown",
       );

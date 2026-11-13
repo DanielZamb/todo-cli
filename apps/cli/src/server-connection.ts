@@ -5,6 +5,7 @@ import type { Socket } from "node:net";
 import { dirname } from "node:path";
 import { CONTRACT_ID } from "@todo/api";
 import { BackendCommand, BackendReply } from "@todo/domain/backend-command";
+import { CommandError } from "@todo/domain/commands";
 import {
   databaseBinding,
   EndpointRecord,
@@ -17,16 +18,16 @@ import {
 } from "@todo/domain/database-route";
 import { Schema } from "effect";
 
-export class CommandTransportError extends Error {
-  readonly code: "write_outcome_unknown" | "server_unverified";
+export class CommandTransportError extends CommandError {
   readonly outcome: "unknown" | "not_sent";
   constructor(sent: boolean) {
     super(
+      1,
+      sent ? "write_outcome_unknown" : "server_unverified",
       sent
         ? "The server may have applied this command. Inspect History before retrying."
         : "Server connection is no longer proven",
     );
-    this.code = sent ? "write_outcome_unknown" : "server_unverified";
     this.outcome = sent ? "unknown" : "not_sent";
   }
 }
