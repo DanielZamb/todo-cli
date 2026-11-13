@@ -43,6 +43,8 @@ const sameIdentity = (
 
 // SQLite's unix VFS retains the main-file descriptor until connection close.
 // Only descriptors opened by this synchronous store acquisition count as evidence.
+// Nothing else in this process may open the database path in that window (see
+// serverLayer in server.ts); an extra open would supply false evidence.
 const descriptors = () => {
   try {
     const directory =

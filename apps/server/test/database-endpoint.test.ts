@@ -1,10 +1,13 @@
 import {
+  closeSync,
   existsSync,
   linkSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   unlinkSync,
 } from "node:fs";
@@ -119,6 +122,68 @@ it.live(
       } finally {
         first.close();
         second.close();
+        rmSync(directory, { recursive: true, force: true });
+      }
+    }),
+);
+// R1: verifyStore's evidence is a new descriptor on the kept file that appears
+// while the store opens. It holds only while nothing else in the server process
+// opens the database path in that window. These tests fail if serverLayer puts
+// anything else in the window, or if the store acquisition itself leaves an
+// extra descriptor on the database file.
+it("serverLayer keeps the start-up evidence window to the store acquisition alone", () => {
+  const source = readFileSync(
+    new URL("../src/server.ts", import.meta.url),
+    "utf8",
+  );
+  const start = "const beforeStore = endpoint?.beforeStore();";
+  const end = "yield* Effect.sync(() => endpoint?.verifyStore(beforeStore));";
+  expect(source.split(start)).toHaveLength(2);
+  expect(source.split(end)).toHaveLength(2);
+  const window = source
+    .slice(source.indexOf(start) + start.length, source.indexOf(end))
+    .replace(/\s+/g, " ")
+    .trim();
+  expect(window).toBe(
+    "const store = yield* Effect.acquireRelease( openStore({ path: options.path }), (store) => Effect.orDie(store.close()), );",
+  );
+});
+it.live(
+  "store acquisition leaves exactly one new descriptor on the kept database file",
+  () =>
+    Effect.gen(function* () {
+      const directory = mkdtempSync(join(tmpdir(), "todo-endpoint-window-"));
+      const path = join(directory, "scratch.db");
+      const endpoint = databaseEndpoint(path);
+      if (!endpoint) throw new Error("Missing endpoint");
+      const kept = statSync(path, { bigint: true });
+      const onKeptFile = (map: ReturnType<typeof endpoint.beforeStore>) =>
+        [...(map ?? new Map())]
+          .filter(
+            ([, id]) =>
+              id.device === String(kept.dev) && id.inode === String(kept.ino),
+          )
+          .map(([fd]) => fd);
+      const before = endpoint.beforeStore();
+      if (!before) throw new Error("Descriptor evidence unavailable");
+      const store = yield* openStore({ path });
+      let extra: number | undefined;
+      try {
+        const opened = onKeptFile(endpoint.beforeStore()).filter(
+          (fd) => !before.has(fd),
+        );
+        expect(opened).toHaveLength(1);
+        endpoint.verifyStore(before);
+        // Sensitivity: the witness from the seat's R1, one extra open of the
+        // path in the window, is visible to this count.
+        extra = openSync(path, "r");
+        expect(
+          onKeptFile(endpoint.beforeStore()).filter((fd) => !before.has(fd)),
+        ).toHaveLength(2);
+      } finally {
+        if (extra !== undefined) closeSync(extra);
+        yield* store.close();
+        endpoint.close();
         rmSync(directory, { recursive: true, force: true });
       }
     }),

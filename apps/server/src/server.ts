@@ -299,6 +299,13 @@ export const serverLayer = (options: {
         (endpoint) => Effect.sync(() => endpoint?.close()),
       );
       const outside = options.outsideCommit ?? new OutsideCommit();
+      // Start-up evidence window. verifyStore accepts the store only if a new
+      // descriptor on the kept database file appeared while it opened. Nothing
+      // else in this process may open the database path between beforeStore()
+      // and verifyStore(): an extra open of the kept file would supply that
+      // evidence even if the store had opened a different file (the swap-back
+      // case). Keep this window to the store acquisition alone; a test in
+      // apps/server/test/database-endpoint.test.ts pins it.
       const beforeStore = endpoint?.beforeStore();
       const store = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
