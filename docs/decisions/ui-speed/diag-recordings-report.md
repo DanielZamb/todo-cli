@@ -1,8 +1,9 @@
 # Private Diagnostics recordings
 
-The current delivery corrects SQL8 and SQL9 from the third SQLite review. See
-"SQL8 and SQL9 after the third SQLite review" below for its design, failing-first
-controls and final gate receipts. Earlier sections describe superseded versions.
+The current delivery merges `integ/server` and corrects SQL10, SQL11 and VERIFY1
+from the fourth SQLite review. See "Merge of integ/server and review 4" at the
+end for the merge resolutions, the pin audit, the failing-first controls and the
+gate receipts. Earlier sections describe superseded versions.
 
 The SQLite implementation replaces the unshipped file journal with a separate
 SQLite database in a worker thread. The SQLite replacement section at the end
@@ -2717,3 +2718,365 @@ seat's re-check. Quiet-machine confirmation, real app batching cadence,
 Linux execution of the exclusion branch and the terminal PNG remain explicitly
 unclaimed here. The Mac unit owns its integration work. The HTTP contract stays
 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8.
+
+## Merge of integ/server and review 4 (SQL10, SQL11, VERIFY1)
+
+Claude Opus 5.5 did this work, continuing the thread at the owner's instruction.
+Evidence is local and ignored, under
+`docs/evidence/ui-speed/recordings-sql10-sql11/`.
+
+### The merge
+
+Merge commit ae9c5be3 has parents 6d653742 (this branch) and 2a840b55
+(`integ/server`): one merge, with no squash or rebase. Ten files conflicted.
+Four more files were changed on both sides and merged without conflict
+(`apps/cli/src/main.ts`, `packages/domain/src/index.ts`, and the verify-cli and
+verify-sse SKILL.md files). Their hunks are disjoint: integ/server changed the
+attachment, history and Snapshot commands, and this branch changed the
+diagnostics commands and the store wrapper. Each conflicted region:
+
+| Region | This branch changed | integ/server changed | Result |
+| --- | --- | --- | --- |
+| `store.ts` `graph` | Wrapped the read in a `graph` span | Read Tasks through `ClientProjection.tasksForMutation` and edges through a Profile-scoped decode | integ/server's read inside the `graph` span |
+| `auth.ts` credential check | Wrapped the check in an `authentication` span, the credential SELECT in an `auth.credential` database span, and marked owner Sessions authorized | Split it into `credentialCheck`, which adds a lease cache, a frozen read and Profile classification, and a `requireCredential` wrapper | integ/server's `credentialCheck` body inside the span. The uncached SELECT keeps its database span. The authorization mark sits after the tombstone check and before `credentialUsed` |
+| `diagnostics.ts` `read` | Added an optional `detail` flag | Wrapped the read in `withOwner`, with the body in `readWithin` under `checkedRead` | `read` passes `detail` into `readWithin`. The read still runs inside one owner lease |
+| `sse.ts` | Added stream ids, commit_seen and transport observation, generation tracking, and guarded connect, disconnect and delivered | Replaced the stream with `withRead`/`withStreamRead`, a `TerminalPermission` and the `connection.active` flag | integ/server's stream and terminal permission, with the observation re-applied. `generation` updates on each `current` snapshot. The release clears `connection.active` and the guarded calls |
+| `server.ts` imports | Added `provideDiagnosticContext` | Replaced `readGraph` with `readGraphQuery` and added `QuickAddInput` | All three |
+| `architecture.md`, verify-server-api `SKILL.md`, verify-occ-atomicity `SKILL.md` | New sections | New sections | Both sides' sections kept |
+| verify-occ-atomicity and verify-task-search-formal `coverage.json` | `diagnosticsReview` records | `integrationReview` / `integrationQualification` records and pins | integ/server's pins and records, plus this branch's review records |
+
+The merge also left a semantic gap that no text conflict showed. integ/server
+added two read paths without the Diagnostics spans that their older
+equivalents carried:
+- `ClientProjection.tasksForMutation` reads Tasks without `store.read` and
+  `task_materialization`.
+- `history-reads.ts` decodes History without `history_decode`.
+
+The existing server test `diagnostics.test.ts:110` was red on the merge
+(`server-tests-pre.log`). 7429c0c8 times both paths. A Task list no longer
+decodes the whole History: on 6d653742 the auth read snapshot did that on
+every list. So the list's literal stage set drops `history_decode`, and a
+History read now asserts it. Removing the new span turns that assertion red
+(`server-history-mutant.log`). verify-ui-profiler's driver now reads a Task's
+History before it checks the detail spans.
+
+A second gap appeared only in the root check. integ/server's
+`mutation-flags.test.ts` requires a reviewed consumer and a golden entry for
+every compiled CLI flag. This branch's `diagnostics --detail` had neither. The
+five recording subcommands each registered all eight recording flags, most of
+which their handler ignored (root1, exit 1: "No reviewed consumer for
+diagnostics --detail"). b378f596 fixes this:
+- each subcommand registers only the flags its handler reads, with matching
+  help;
+- `todo diagnostics runs --file x` is now refused with exit 2
+  (`invalid_args`), before any database or credential is touched
+  (`unregistered-flag.json`);
+- every pair has a consumer entry;
+- the golden adds those six entries, and `top` and `diagnostics` share the
+  Diagnostics response-schema hash. No other command's flags, help or schema
+  changed.
+
+**Contract id: 55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8,
+unchanged.** integ/server made no change under `packages/api` (its id is still
+the base's 78a2be44…). The merged document is therefore this branch's, and
+`bun packages/api/scripts/openapi.ts --check` exits 0. The SQL11 owner
+guidance uses the existing Diagnostics `errors` list, so it adds no schema.
+
+### Pin audit
+
+I hashed all 76 pins in the five `coverage.json` files against 6d653742,
+2a840b55, the merge and the final head:
+- 2a840b55: no mismatches.
+- 6d653742: nine mismatches, carried by this branch before the merge.
+- The merge and the final head: ten.
+
+Declaration-level comparison against base, this branch, integ/server and the
+merge, per skill:
+
+- **verify-occ-atomicity**: nothing it certifies has new content. Each listed
+  function is byte-identical to one parent's certified body, and the other
+  parent left it at base:
+  - integ/server's: the constructor (its Init mapping), which this branch
+    left at base;
+  - this branch's (diagnosticsReview 3ef9e674): `transaction`, `record`,
+    `appendSync`, `historySync` and projection `readTasks`, which integ/server
+    left at base;
+  - identical in base, both parents and the merge: `recordRejection`,
+    `validate`, `append`, `takeSnapshot`, `rebuild`, `changes`, `applyEvent`,
+    `applyChanges`, `putTask`, `Snapshot` and `snapshot`.
+
+  Only the whole-file `store.ts` pin moves (f7f7aac1… → 489f3471…). Its renewal
+  candidate is below. No listed function changed, so nothing was sent for a
+  ruling.
+- **verify-dag-formal**: `OperationStore.graph` is the one body that differs
+  from both parents: integ/server's read inside this branch's span.
+  `startSeries`, `append`, `applyEvent`, `changes`, `applyChanges`, `snapshot`
+  and `createProjection` are unchanged. Its `auth.ts`, `projection.ts` and
+  `store.ts` pins were already stale on 6d653742 and stay owed to its own
+  renewal procedure. None was renewed here.
+- **verify-discovery-formal**: the `directory`, `lookup` and `showTask`
+  branches are unchanged. The `task-client.ts` pin was already stale on
+  6d653742 (the Diagnostics snapshot `{ query: {} }` call). It is owed, not
+  renewed.
+- **verify-task-search-formal**: all pins match.
+- **verify-task-search-cache**: `task-filters.ts` (this branch's span on
+  `filterTaskRecordsEffect`) and the `store.ts`, `apps/cli/src/main.ts` and
+  `apps/server/src/server.ts` hygiene pins differ. The declarations that
+  differ from integ/server are this branch's spans and the Diagnostics routes.
+  It is owed, not renewed.
+
+The corrections after the merge change no pinned declaration. Only
+`serverLayer` in `server.ts` (unmapped), `client-projection.ts` and
+`history-reads.ts` (neither pinned) changed.
+
+### SQL10: a refusal leaves every file byte-identical
+
+The fix is in f58215cc. For a store whose header is ours, the store now
+decides from descriptors before SQLite opens the path:
+- `inspectRecordingCatalog` reads the main file and the WAL itself. It
+  validates the WAL header and frame checksums and salts, overlays frames up
+  to the last commit frame (as SQLite's recovery does), and walks the
+  `sqlite_schema` b-tree from page 1, including overflow pages.
+- It compares the header identifier, version and the sorted catalog with this
+  version's.
+- A non-empty journal beside the store is refused (`hot_journal`), because
+  SQLite would roll it back on open.
+
+Only then does the store run the immutable preflight, with `quick_check` when
+no WAL frames are committed. Next it checks that the path still names the
+inode it inspected, and takes a shared exclusion on its own descriptor. It
+then opens the writable connection, checks the inode again and validates.
+
+If that validation fails, the connection closes while the shared exclusion is
+held. SQLite cannot take the exclusive lock it needs to checkpoint or delete
+the WAL, so the close changes nothing. The descriptor then stays open until
+the connection closes, because closing it earlier would drop SQLite's POSIX
+locks on the same file.
+
+| Witness | 6d653742 | f58215cc |
+| --- | --- | --- |
+| Seat `wal-refusal2.ts`, renamed column / user_version / application_id in the WAL | refused; page 1 rewritten, WAL 4152 → 0, shm created | refused; main and WAL byte-identical, no shm |
+| same, benign counter row (control) | opened, checkpointed | opened, checkpointed |
+| `sqlite-swap-witness.ts`: a real CLI Task database with a 16,512-byte committed WAL, renamed over the path after the preflight | refused; Task main 172032 → 176128 bytes, WAL → 0, shm created | refused (`replaced`); every file byte-identical |
+| Seat `swap-task.ts` unchanged | swapped and refused; in this run its killed peer left a 0-byte Task WAL, so it cannot show the checkpoint; shm created | swapped and refused; no shm |
+
+All exits were 0 (`wal-refusal2-*.exit`, `swap-witness-*.exit`,
+`swap-task-*.exit`). The deterministic swap witness replaces the kill timing
+with a WAL copied while its writer is open.
+
+`sqlite-refusal-classes.ts` runs every class it can enumerate against both
+checkouts, using only the API both share. On f58215cc, every refusal leaves
+the directory listing, hashes and modes unchanged:
+
+| Class | Reason | 6d653742 files unchanged |
+| --- | --- | --- |
+| renamed column in WAL | foreign_catalog | no |
+| user_version in WAL | foreign_header | no |
+| application_id in WAL | foreign_header | no |
+| dropped trigger in WAL | foreign_catalog | no |
+| foreign SQLite file | foreign_header | yes |
+| non-SQLite bytes | foreign_header | yes |
+| dropped index in main | foreign_catalog | yes |
+| non-empty journal beside the store | hot_journal | no (it opened) |
+| hard-linked main | not_private | yes |
+| empty main + non-empty journal | interrupted_initialization | yes |
+| missing main + non-empty WAL | foreign_sidecar | yes |
+| empty main + non-empty shm | foreign_sidecar | yes |
+
+The domain test `recording-open-refusal.test.ts` (21 cases) adds a symbolic
+link, a damaged table page (`integrity`, decided on the immutable connection)
+and the swap. Every case asserts its reason code and an unchanged listing,
+hashes and modes. Oversized files stay in `recording-header.test.ts`, and
+`sqlite-foreign-files.ts` passes unchanged.
+
+`hot_journal` is stricter than 6d653742, which opened the store and let SQLite
+act on the journal. The store writes no journal after its first COMMIT, so a
+non-empty one cannot be shown to be its own. A non-empty journal left by a
+crash during that first COMMIT is the interrupted-initialization case, with
+the same way out.
+
+Not covered: the integrity class with committed WAL frames. It is decided on
+the writable connection. The main file and WAL stay unchanged, because the
+close happens under the exclusion, but SQLite must create or update the -shm
+index to read a WAL. Reaching it needs a store that is ours, has
+committed-but-uncheckpointed frames, and fails `quick_check`.
+
+Linux: `releaseRecordingExclusion` uses F_OFD_SETLK with F_UNLCK on the same
+range as before. Like the rest of that branch, it was inspected but not
+executed.
+
+### SQL11: no permanent refusal without a way out
+
+Two shapes that were refused forever on 6d653742 now open, with every sidecar
+zero-length:
+- an empty main whose initializer died before COMMIT, with an empty journal;
+- empty `-wal` and `-shm` left after only `recordings.db` was deleted.
+
+Under exclusion, the store re-checks each zero-length sidecar against its own
+descriptor and removes it, then initializes as new. A non-empty sidecar is
+still refused and left untouched (`foreign_sidecar`). So is an interrupted
+initialization with a non-empty journal (`interrupted_initialization`).
+
+Every refusal has a reason code (`recordingOpenRefusals`). The worker reports
+the reason and the store files present. Owner Diagnostics then adds an `errors`
+entry:
+- code: `Recordings refused: <reason>. <why>`;
+- route: `Recording storage. Recordings are diagnostic data and may be
+  discarded; Task service is unaffected. Stop the server, remove <absolute
+  paths>, then start it again to create an empty store.`
+
+Busy and open failures say `retrying` instead. `todo diagnostics --format json`
+carries the same entry. The Markdown report adds a "Recording storage"
+section. The `todo top` Recent errors pane wraps the entry to 46 columns, so
+the reason and every path stay readable.
+
+`sqlite-refusal-visibility.ts` proves the whole path on the compiled server and
+CLI (exit 0):
+1. An empty main beside a 512-byte journal gives the literal entry over HTTP,
+   CLI JSON, Markdown and the terminal pane. Task reads still return 200, and
+   the files stay unchanged.
+2. The server is stopped and exactly the named files are removed.
+3. After a restart, an upload returns 200 and no refusal entry remains.
+
+Its first run failed on my own over-strict pane assertion, which also caught
+the existing unwrapped "Recordings unavailable" line. That receipt is kept as
+`visibility-red-assertion.log`.
+
+Owed to the app-side unit: show the same entry (state, reason, files, the
+statement that recordings may be discarded) in the Electron and Mac
+Diagnostics panels. The entry text is already in the `errors` list both apps
+receive.
+
+### VERIFY1
+
+db5de9a4 sets the initialization helper's server-listening wait, held-child
+wait and recording-admission wait to 60 s. `sqlite-initialization-server.ts`
+exits 0 on the final binaries.
+
+### AtomicCAS renewal candidate
+
+The procedure ran as SKILL.md writes it:
+1. The pre-renewal `check.ts` passed every behavioral, model and enumeration
+   stage and stopped only on `store.ts` drift (`fv01-check-q7Eq1X`, exit 1).
+2. The `store.ts` pin moved from f7f7aac1… to
+   489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f, with
+   `confirmedCommit` set to ae9c5be3.
+3. `prove-sensitivity.ts` exited 0 (`sensitivity-iQpwza`):
+   missing-task-before-check exit 1, missing-edit-projection exit 1, restored
+   exit 0, and the source byte-restored.
+4. The renewed `check.ts` exited 0 (`fv01-check-y8YbXS`).
+
+48af735d records this with `reviewedCandidate: false` for the seat. No model,
+invariant, fixture or bound changed.
+
+### Gates
+
+Compiled servers, CLIs and drivers ran under `sandbox-exec`. The profile
+denies the real `~/.todo-cli` and ports 4310 and 14310, and allows ephemeral
+loopback (`sandbox-controls.txt`):
+- blocked controls: reading `~/.todo-cli` exited 1, connecting to 4310 exited
+  1, and binding 14310 was refused;
+- allowed controls: an ephemeral loopback connection exited 0, and a scratch
+  read exited 0.
+
+No request was sent to port 4310 outside the sandbox.
+
+The sandbox forbids setuid executables, so `/bin/ps` cannot run inside it. The
+frozen cost command therefore found a `ps` on `PATH` that answers `-p <pid> -o
+time=` for the caller's own processes, through `proc_pidinfo` and the Mach
+timebase (`ps-shim.ts`). It agreed with `/bin/ps` to within 0.01 s
+(`ps-shim-agreement.txt`). The command line and the recipe are otherwise
+unchanged. The first attempt failed at its first CPU sample and is kept
+(`cost-sandbox-ps-refused.log`).
+
+| Gate | Exit | Receipt |
+| --- | ---: | --- |
+| `pnpm --filter @todo/domain test` | 0 (63 files, 561 tests) | domain-all.log |
+| `pnpm --filter @todo/server test` | 1 on the merge, then 0 (38) after 7429c0c8 | server-tests-pre.log, server-tests-green.log |
+| `pnpm --filter @todo/cli test top.test.ts` | 0 (13) | |
+| `recording-open-refusal.test.ts` | 0 (21) | green-unit-1.log |
+| seat witnesses, `sqlite-swap-witness.ts`, `sqlite-refusal-classes.ts` on 6d653742 and the head | 0 each, red then green as tabled | wal-refusal2-*, swap-*, classes-*, final-head/ |
+| verify-ui-profiler `verify.ts` (TODO_PROFILER_STRESS=1) | 1 on f58215cc (history_decode), 0 on 7429c0c8 | gates/, gates2/profiler-verify |
+| completeness, corrections, admission-fault, sqlite-wire | 0 each | gates/ |
+| sqlite-initialization (compiled), sqlite-initialization-server | 0, 0 | gates/ |
+| sqlite-format-boundary (compiled), sqlite-foreign-files | 0, 0 | gates/ |
+| sqlite-refusal-visibility | 0 (first run 1 on my own over-strict pane assertion) | gates2/profiler-visibility, visibility-red-assertion.log |
+| recorder fault controls (`verify-diagnostic-faults`, 47 cases) | 0 | gates2/recorder-faults |
+| verify-diagnostics, TODO_DIAGNOSTICS_NO_SWIFT=1 | 0 (terminal PNG HOLD, as before) | gates2/verify-diagnostics |
+| verify-server-api | 0 | gates2/verify-server-api |
+| verify-auth | 0 | gates2/verify-auth |
+| verify-snapshots | 0 | gates2/verify-snapshots |
+| frozen cost command, `TODO_RECORDING_COST_REQUESTS=20` | 0; report 0 | cost/, loads 4.54 start, 9.00 end |
+| verify-occ-atomicity | 1 (hash only), then 0 after the candidate renewal | above |
+| `openapi.ts --check` | 0 | contract 55c6d138… |
+
+The frozen cost run (`cost/tables.md`, ten alternating pairs, 20 checked
+requests per cell, loads 4.54 to 9.00) gives these median paired Task-write
+differences:
+
+| Scenario | Median paired difference [range] | Batches accepted |
+| --- | --- | --- |
+| 16 events | +1.00 ms [0.32, 1.67] | |
+| 128 events | +1.95 ms [1.25, 2.46] | |
+| 32-producer flood | +15.19 ms [11.56, 17.36] | 2,470 of 6,400 |
+| eviction | +2.99 ms [1.31, 3.87] | |
+| expiry | +0.28 ms [−0.47, 1.16] | |
+
+The flood sits inside review 4's range for the same recipe: the worker's
++11.70 [9.46, 15.34] and the Codex rerun's +20.63 [14.57, 36.41]. These
+commits do not touch ingestion or the worker's write path. The flood remains
+about ten times the owner's real producer count, as review 4 explains.
+
+### Root check
+
+The root check ran exactly as standing order 27 writes it: `sh
+scripts/disk-guard.sh`, then `/usr/bin/lockf -k /tmp/todo-pnpm-check.lock pnpm
+check`. It ran inside the sandbox profile, with TMPDIR in my scratch directory
+outside the repository.
+
+| Run | Head | Guard | Exit | Result |
+| --- | --- | --- | ---: | --- |
+| root1 | 48af735d | 68.0 GB | 1 | domain 561, server 38, Electron 168 + 1 skipped pass; CLI fails `mutation-flags.test.ts` on the unreviewed Diagnostics flags (the second merge gap) |
+| root2 | b378f596 | 58.3 GB | 0 | domain 561, server 38, Electron 168 + 1 skipped, CLI 87; type checks, contract check and lint pass |
+
+Loads were 6.48–6.40 for root1 and 6.41–5.91 for root2. The Electron 30 s
+deadline from e2ee47da held. The `auth-history.test.ts:276` race did not
+appear in either run.
+
+The final pin audit at b378f596 finds nine mismatches, the same set this
+branch carried before the merge. AtomicCAS now matches its candidate.
+
+### Hygiene
+
+- No real `~/.todo-cli`, port 4310, Todo.app, Keychain, signing, launchd or
+  Swift was used.
+- I stopped no process I did not start.
+- Bun compile temporaries were removed after `lsof` checks: 22 files
+  (1,950,564,352 allocated bytes), then 5 more (443,310,080), with no skips
+  (`cleanup.txt`).
+- Free space stayed above 40 GiB before every compile batch. The lowest
+  reading was 54.3 GiB.
+- The commit 1ebf6425 says it adds the two witness scripts, but they were
+  already in f58215cc. 1ebf6425 carries only the skill text and the visibility
+  assertion.
+
+### Owed
+
+- To the app-side unit: show the recording refusal entry in the Electron and
+  Mac Diagnostics panels (state, reason, the files to remove, and that
+  recordings may be discarded).
+- To the seat: the AtomicCAS `store.ts` renewal candidate.
+- Still stale and owed to their own renewal procedures, unchanged here:
+  verify-dag-formal (`auth.ts`, `projection.ts`, `store.ts`, now including the
+  merged `graph` body), verify-discovery-formal (`task-client.ts`) and
+  verify-task-search-cache (`store.ts`, `task-filters.ts`, and the CLI and
+  server hygiene files).
+- Still owed from review 4:
+  - Linux execution of the exclusion and release branch;
+  - relabelling `rpc_capacity` refusals, which are still counted as
+    `storage_failures`;
+  - real uploader cadence;
+  - terminal PNGs;
+  - quiet-host confirmation.
+- The integrity class with committed WAL frames may still update SQLite's -shm
+  index when it refuses (see SQL10).
