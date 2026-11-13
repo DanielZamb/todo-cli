@@ -47,15 +47,19 @@ struct RootView: View {
 struct CompactWindowHeight {
     static let key = "compactWindowHeight"
     static let minimum = TaskWindowSizing.compactSize.height
+    /// Where Compact opens when no height is remembered: tall enough to show the editor through
+    /// Estimate, or the screen's usable height if that is less (O34 follow-up, Mac UI review 2).
+    static let opening: CGFloat = 640
     let defaults: UserDefaults
     init(defaults: UserDefaults = .standard) { self.defaults = defaults }
     static func clamp(_ height: CGFloat, maximum: CGFloat) -> CGFloat {
         guard height.isFinite else { return minimum }
         return min(max(height, minimum), max(minimum, maximum))
     }
-    /// The height to open Compact at: the remembered one, clamped to what fits.
+    /// The height to open Compact at: the remembered one, clamped to what fits; with none,
+    /// min(640 pt, the screen's usable height), never below the 426 pt minimum.
     func restored(maximum: CGFloat) -> CGFloat {
-        Self.clamp((defaults.object(forKey: Self.key) as? NSNumber).map { CGFloat($0.doubleValue) } ?? Self.minimum, maximum: maximum)
+        Self.clamp((defaults.object(forKey: Self.key) as? NSNumber).map { CGFloat($0.doubleValue) } ?? min(Self.opening, maximum), maximum: maximum)
     }
     func save(_ height: CGFloat, maximum: CGFloat) { defaults.set(Double(Self.clamp(height, maximum: maximum)), forKey: Self.key) }
 }

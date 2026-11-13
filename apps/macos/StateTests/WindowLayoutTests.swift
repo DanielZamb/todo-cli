@@ -14,9 +14,16 @@ struct WindowLayoutTests {
         init(compact: Bool) { self.compact = compact }
     }
 
+    /// Where Compact opens with no remembered height (UI review 2, item 1): 640 pt, or the usable
+    /// height of the window's screen if that is less; 426 pt at the least.
+    private func opening(_ window: NSWindow) -> CGFloat {
+        guard let screen = window.screen ?? NSScreen.main else { return 640 }
+        return max(426, min(640, window.contentRect(forFrameRect: screen.visibleFrame).height))
+    }
+
     @Test func collapseAndRestore() async throws {
         NSApplication.shared.setActivationPolicy(.prohibited)
-        UserDefaults.standard.removeObject(forKey: CompactWindowHeight.key) // Compact opens at its minimum here (O34)
+        UserDefaults.standard.removeObject(forKey: CompactWindowHeight.key) // nothing stored: Compact opens at min(640, the screen)
         let layout = Layout(compact: false)
         let model = TodoModel(configuration: ClientConfiguration(
             server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused.window-layout"))
@@ -42,7 +49,7 @@ struct WindowLayoutTests {
         layout.compact = true
         try await settle(window)
         #expect(window.contentLayoutRect.width == 393)
-        #expect(window.contentLayoutRect.height == 426)
+        #expect(window.contentLayoutRect.height == opening(window), "\(window.contentLayoutRect.height)")
         // O34: Compact's width is fixed (its maximum equals its minimum); its height is free.
         #expect(window.contentMaxSize.width == 393 && window.contentMinSize == NSSize(width: 393, height: 426) && window.contentMaxSize.height > 426, "\(window.contentMinSize) \(window.contentMaxSize)")
         #expect(window.frame.minX == expanded.minX)
@@ -57,13 +64,13 @@ struct WindowLayoutTests {
         layout.compact = true
         try await settle(window)
         #expect(window.contentLayoutRect.width == 393)
-        #expect(window.contentLayoutRect.height == 426)
+        #expect(window.contentLayoutRect.height == opening(window), "\(window.contentLayoutRect.height)")
         #expect(window.isVisible == false)
     }
 
     @Test func startCompactAndExpand() async throws {
         NSApplication.shared.setActivationPolicy(.prohibited)
-        UserDefaults.standard.removeObject(forKey: CompactWindowHeight.key) // Compact opens at its minimum here (O34)
+        UserDefaults.standard.removeObject(forKey: CompactWindowHeight.key) // nothing stored: Compact opens at min(640, the screen)
         let layout = Layout(compact: true)
         let controller = NSHostingController(rootView: Color.clear.background(TaskWindowSizing(compact: layout.compact)))
         let window = NSWindow(
@@ -74,7 +81,7 @@ struct WindowLayoutTests {
         defer { window.contentViewController = nil; window.close() }
         try await settle(window)
         #expect(window.contentLayoutRect.width == 393)
-        #expect(window.contentLayoutRect.height == 426)
+        #expect(window.contentLayoutRect.height == opening(window), "\(window.contentLayoutRect.height)")
         layout.compact = false
         controller.rootView = Color.clear.background(TaskWindowSizing(compact: layout.compact))
         try await settle(window)

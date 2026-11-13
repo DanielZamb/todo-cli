@@ -3,8 +3,8 @@ import SwiftUI
 import Testing
 @testable import TodoState
 
-/// The taller Compact window (owner decision O34): its width stays 393 pt, its height starts at
-/// 426 pt, can be dragged taller, and is remembered across launches and across switching to the
+/// The taller Compact window (owner decision O34): its width stays 393 pt, its height opens at
+/// min(640 pt, the screen) when none is remembered, is at least 426 pt, can be dragged taller, and is remembered across launches and across switching to the
 /// full window and back. A stored value out of range is clamped.
 @MainActor @Suite(.serialized) struct CompactWindowHeightTests {
     private func suite() -> (UserDefaults, String) {
@@ -15,14 +15,19 @@ import Testing
     @Test func anOutOfRangeStoredHeightIsClamped() {
         let (defaults, name) = suite(); defer { defaults.removePersistentDomain(forName: name) }
         let store = CompactWindowHeight(defaults: defaults)
-        #expect(store.restored(maximum: 900) == 426, "nothing stored: the minimum")
+        // Nothing stored: min(640, the screen's usable height), never below the minimum (UI review 2, item 1).
+        #expect(store.restored(maximum: 900) == 640, "nothing stored, a tall screen: 640")
+        #expect(store.restored(maximum: 560) == 560, "nothing stored, a shorter screen: its usable height")
+        #expect(store.restored(maximum: 300) == 426, "nothing stored, a screen shorter than the minimum: the minimum")
         let cases: [(Double, CGFloat)] = [(100, 426), (5000, 900), (640, 640), (.nan, 426), (-.infinity, 426)]
         for (stored, expected) in cases {
             defaults.set(stored, forKey: CompactWindowHeight.key)
             #expect(store.restored(maximum: 900) == expected, "stored \(stored)")
         }
         defaults.set("tall", forKey: CompactWindowHeight.key)
-        #expect(store.restored(maximum: 900) == 426, "a value of the wrong type")
+        #expect(store.restored(maximum: 900) == 640, "a value of the wrong type counts as nothing stored")
+        defaults.set(426.0, forKey: CompactWindowHeight.key)
+        #expect(store.restored(maximum: 900) == 426, "a stored height wins, even the minimum")
         #expect(CompactWindowHeight.clamp(700, maximum: 300) == 426, "a screen shorter than the minimum still gives the minimum")
     }
 
