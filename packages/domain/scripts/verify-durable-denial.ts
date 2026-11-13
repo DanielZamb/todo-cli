@@ -461,15 +461,25 @@ const program = Effect.acquireUseRelease(
           {
             const target = scenario === "null" ? null : profile;
             const before = count(db, target);
-            noise(
-              db,
-              scenario === "whole-window"
-                ? stamp()
-                : "2026-11-13T00:18:59.999Z",
-              200000,
-              target,
-            );
-            if (scenario.endsWith("-before")) bulk(target);
+            // TODO_BENCH_STAGE=seed builds the scenario's History and stops,
+            // so one fixture can be cloned for every arm; =run reuses it.
+            const stage = process.env.TODO_BENCH_STAGE;
+            if (stage !== "run") {
+              noise(
+                db,
+                scenario === "whole-window"
+                  ? stamp()
+                  : "2026-11-13T00:18:59.999Z",
+                200000,
+                target,
+              );
+              if (scenario.endsWith("-before")) bulk(target);
+            }
+            if (stage === "seed") {
+              db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+              mark("seed", { scenario, rows: count(db, target) - before });
+              return;
+            }
             const attempt = () =>
               target === null
                 ? Effect.map(
