@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+  "confirmedCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
   "source": "immutable git objects; current worktree product files are not candidates",
   "scope": "Current immutable integrated graph/storage source. All16 files remain byte-identical; current conformance is recorded separately from historical campaigns.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -35,7 +35,7 @@
     },
     {
       "path": "packages/domain/src/graph-queries.ts",
-      "sha256": "402257e1773144a0570582ade9dca80efd25f265bac9f2de212b5ca626760213",
+      "sha256": "ff099b0484a16de21eb20ad9a27cb0366c7816061d65b7bca7d158303962babb",
       "functions": [
         "graphShape",
         "queryGraph component/shape fields"
@@ -86,7 +86,7 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "9cbc8b8a2920b91f8cfc0e2137ade7d4ba11a28f7ad6c16fd29b4450d54cbc71",
+      "sha256": "78331436469154a79babaf1f47036c43c64b697164fada36cca266b82cc4e186",
       "functions": [
         "OperationStore.transaction",
         "OperationStore.validate",
@@ -155,7 +155,7 @@
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
-      "sha256": "887890d05908da4ea007a716b9ebc311ab0c58f9253506e17fcb38c7ea4a85ca",
+      "sha256": "7d1d589a41276e96e0ded770d823359c3546e6f55cfe79f74eb429591db6eb38",
       "functions": [
         "Authentication.startSeries",
         "Authentication.append"
