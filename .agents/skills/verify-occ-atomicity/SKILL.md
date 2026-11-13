@@ -290,3 +290,7 @@ bindings and immediate transaction entry/commit boundaries during construction.
 Run before and after a constructor wiring change and compare the seed hash and
 trace arrays exactly. It does not claim native SQLite internal tracing.
 The seed contains a committed Version-1 Task and no Purge, matching Init.
+
+[Purge restore mapping candidate](PURGE-RESTORE-MAPPING.md) records the approved
+constructor argument, statement trace, function comparison and final renewal.
+It remains pending the correctness seat's re-check.
