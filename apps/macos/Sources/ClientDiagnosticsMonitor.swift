@@ -56,8 +56,13 @@ struct ClientDiagnosticInputReceipt {
     @ObservationIgnored private var tableObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var observedObservers: [NSObjectProtocol] = []
     @ObservationIgnored private var probe = ClientHeartbeatProbe()
-    /// Samples the main thread during a stall; used only on the watchdog queue after start.
+    /// Samples the main thread during a stall; used only on `watchdogQueue` after start.
     @ObservationIgnored private var sampler: ClientStallSampler?
+    /// The one serial queue for the watchdog and the sampler, for the monitor's whole life
+    /// (MAC-C1-S1-21): never one per start, so no sampler state is reachable from two queues.
+    @ObservationIgnored let watchdogQueue = DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .utility)
+    /// The live watchdog generation, read and written only on `watchdogQueue`.
+    @ObservationIgnored private let watchdogGate = WatchdogGate()
     private struct Pending {
         let category: ClientDiagnosticAction
         let scope: Int
@@ -109,6 +114,8 @@ struct ClientDiagnosticInputReceipt {
     }
     isolated deinit {
         timer?.cancel()
+        let gate = watchdogGate
+        watchdogQueue.async { gate.generation = -1 }
         for token in activityObservers { notifications.removeObserver(token) }
         for token in tableObservers { notifications.removeObserver(token) }
         for token in observedObservers { notifications.removeObserver(token) }
@@ -128,11 +135,15 @@ struct ClientDiagnosticInputReceipt {
             MainActor.assumeIsolated { self?.commitOpportunity() }
         }
         if let observer { CFRunLoopAddObserver(CFRunLoopGetMain(), observer, .commonModes) }
-        let watchdog = DispatchQueue(label: "local.todo.client-diagnostics-watchdog", qos: .utility)
+        let watchdog = watchdogQueue, gate = watchdogGate
         let source = DispatchSource.makeTimerSource(queue: watchdog)
         if sampler == nil { sampler = ClientStallSampler() }
         let recorder = recorder, probe = probe, run = generation, scope = recorder.scopeToken, tick = watchdogTick, activity = applicationActive, cpu = ClientCpuSampler(), sampler = sampler
+        // This generation is live from here, on the queue; `stop` ends it there before returning.
+        watchdog.sync { gate.generation = run }
         source.setEventHandler { @Sendable [weak self] in
+            // A handler of a stopped generation does nothing (it can still be delivered after cancel).
+            guard gate.generation == run else { return }
             tick?()
             let now = ProcessInfo.processInfo.systemUptime * 1000
             // While the main thread's ping is overdue, sample its stack (approved design: after
@@ -152,7 +163,10 @@ struct ClientDiagnosticInputReceipt {
                     let traceID = delivered?.traceID
                     // Off the main thread: symbolicate the samples and record the stall.
                     watchdog.async {
-                        let attribution = traceID.flatMap { sampler?.finish(stall: $0, nowMS: ProcessInfo.processInfo.systemUptime * 1000) }
+                        // The sampler is touched only by its live generation; a stall that ended
+                        // after a stop is recorded (scope permitting) without an attribution.
+                        let live = gate.generation == run
+                        let attribution = live ? traceID.flatMap { sampler?.finish(stall: $0, nowMS: ProcessInfo.processInfo.systemUptime * 1000) } : nil
                         guard var event else { return }
                         event.stallAttribution = attribution
                         recorder.record(event, ifScope: scope)
@@ -202,8 +216,13 @@ struct ClientDiagnosticInputReceipt {
         probe.setActivity(active)
         timer?.schedule(deadline: .now(), repeating: .milliseconds(active ? 16 : 1000), leeway: .milliseconds(active ? 2 : 100))
     }
+    /// Complete when it returns (MAC-C1-S1-21): the watchdog generation ends on its own queue after
+    /// any handler already running there, so no handler of the stopped generation touches the
+    /// sampler afterwards and a later `start` cannot overlap it. Not timing: a drain on one queue.
     func stop() {
         generation += 1; timer?.cancel(); timer = nil; probe = ClientHeartbeatProbe()
+        let ended = generation, gate = watchdogGate, sampler = sampler
+        watchdogQueue.sync { gate.generation = ended; sampler?.abandon() }
         for token in activityObservers { notifications.removeObserver(token) }; activityObservers.removeAll()
         for token in tableObservers { notifications.removeObserver(token) }; tableObservers.removeAll()
         for token in observedObservers { notifications.removeObserver(token) }; observedObservers.removeAll()
@@ -457,4 +476,9 @@ private struct ClientDiagnosticNativeMarker: NSViewRepresentable {
         monitor.register(view)
     }
     static func dismantleNSView(_ view: ClientDiagnosticNativeView, coordinator: ()) { view.monitor?.unregister(view) }
+}
+
+/// The watchdog's live generation, confined to the monitor's `watchdogQueue` (MAC-C1-S1-21).
+final class WatchdogGate: @unchecked Sendable {
+    var generation = 0
 }

@@ -113,8 +113,9 @@ public enum ClientStallAttributor {
     }
 }
 
-/// Samples the main thread while it is stalled. Use from one serial queue only (the watchdog's);
-/// `init` runs on the main thread to capture its port.
+/// Samples the main thread while it is stalled. Every method after `init` runs on one serial queue
+/// only, for the sampler's whole life (MAC-C1-S1-21: the monitor owns that queue and never makes
+/// another); `init` runs on the main thread to capture its port.
 public final class ClientStallSampler: @unchecked Sendable {
     public static let capacity = 20
     /// The approved cadence: the first sample once the ping is 100 ms late, then every 50 ms.
@@ -161,13 +162,19 @@ public final class ClientStallSampler: @unchecked Sendable {
         _ = mach_port_deallocate(mach_task_self_, thread)
     }
 
+    /// Drops the stall in progress, unfinished (the monitor stopping). The hourly count is kept, so the
+    /// cap of `perHour` attributed stalls an hour holds across a stop and a start.
+    public func abandon() { stall = nil; taken = 0; lastSampleMS = 0 }
+
     /// Called on every watchdog tick with how long the main thread's ping has been pending.
     /// Takes a sample when one is due; returns whether it did.
     @discardableResult public func tick(stall id: UUID, pendingMS: Double, nowMS: Double) -> Bool {
         guard disabled == nil, pendingMS > Self.firstAfterMS else { return false }
         if stall != id { stall = id; taken = 0; lastSampleMS = 0 }
-        guard taken < Self.capacity, taken == 0 || nowMS - lastSampleMS >= Self.intervalMS else { return false }
-        let slot = buffer.advanced(by: taken)
+        // The count is read once and every buffer use is checked against that one value.
+        let index = taken
+        guard index >= 0, index < Self.capacity, index == 0 || nowMS - lastSampleMS >= Self.intervalMS else { return false }
+        let slot = buffer.advanced(by: index)
         let status = Int(todo_sample_thread(thread, slot))
         let windowNS = slot.pointee.suspended_ticks * UInt64(timebase.numer) / UInt64(max(timebase.denom, 1))
         if status != Int(TODO_SAMPLE_OK) {
@@ -178,7 +185,7 @@ public final class ClientStallSampler: @unchecked Sendable {
             disabled = "a suspended window took \(windowNS / 1000) µs (limit 1,000 µs)"
             return false
         }
-        taken += 1
+        taken = index + 1
         samplesTaken += 1
         lastSampleMS = nowMS
         return true
@@ -188,14 +195,19 @@ public final class ClientStallSampler: @unchecked Sendable {
     /// returns one bounded record, or nil when the stall took no sample.
     public func finish(stall id: UUID, nowMS: Double) -> ClientStallAttribution? {
         defer { if stall == id { stall = nil; taken = 0 } }
-        guard stall == id, taken > 0 else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0) } }
+        let count = taken
+        guard stall == id, count > 0, count <= Self.capacity else { return disabled.map { .init(samples: 0, inLabel: nil, agreeing: 0, frames: [], disabled: $0) } }
         if nowMS - hourStartMS >= 3_600_000 { hourStartMS = nowMS; attributedThisHour = 0 }
         guard attributedThisHour < Self.perHour else { return nil }
         attributedThisHour += 1
         var stacks: [[ClientStallSymbol]] = []
-        for index in 0..<taken {
+        for index in 0..<count {
             let sample = buffer.advanced(by: index).pointee
-            let walked = withUnsafeBytes(of: sample.pcs) { Array($0.bindMemory(to: UInt64.self).prefix(Int(sample.count))) }
+            let frames = Int(sample.count)
+            let walked = withUnsafeBytes(of: sample.pcs) { bytes in
+                let pcs = bytes.bindMemory(to: UInt64.self)
+                return Array(pcs.prefix(max(0, min(frames, pcs.count))))
+            }
             let pcs = ClientStallStack.assemble(pcs: walked, lr: sample.lr, functionStart: ClientStallSymbolizer.functionStart)
             stacks.append(pcs.enumerated().map { offset, pc in ClientStallSymbolizer.symbol(pc, isReturnAddress: offset > 0, ownImages: ownImages) })
         }
