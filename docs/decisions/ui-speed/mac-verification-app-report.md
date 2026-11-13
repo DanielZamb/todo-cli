@@ -1,5 +1,64 @@
 # Mac verification app V01 safety correction
 
+## Frozen 3b53bbcf qualification (Claude Opus 5.5, 2026-11-13)
+
+This section was written by Claude Opus 5.5 after it took over from the Codex
+worker. The runtime is unchanged since 3b53bbcf; this commit only adds this section.
+
+Three runs of the same headless command on 3b53bbcf, each into a fresh folder:
+
+| Run | Result | Receipts |
+| --- | --- | --- |
+| frozen-3b53bbcf (Codex, 01:00) | No result. The helper died with its Codex host at 01:10, during the parent-death controls. | interrupted.json |
+| frozen-3b53bbcf-r2 (01:10) | Exit 1 at its own swift-hold, placed for the coordinator's disk hold, before the app build. Every earlier stage passed; cleanup true. | result.json |
+| frozen-3b53bbcf-r3 (08:11) | Exit 1 in production-suites. 587 receipts; cleanup true. | result.json, production/ |
+
+Stages in r3, with their real exits:
+
+- Frozen source, compiled binaries, guard matrix and red controls, input
+  boundary, instance locks and parent-death cleanup: passed.
+- Credential boundary: 1,637 traps and 1,637 removals. Every removal exits
+  nonzero and fails its matching test at 1. No original function was called.
+- Networking-only analytics denial: PASS_COMPONENT.
+- Fresh app build: build-app 0. Ad hoc identity: 0.
+- Audit: 0. Bundle identifier local.todo.verification. No Security credential
+  imports in the app executable. 1,638 boundary-library imports, each with a
+  trap. Analytics denial body checked.
+- Built app's manifest check: 0. Production source preservation: 0.
+- Production comparison: 1.
+  - The two unguarded arms completed: base 8b9be429 first, then head 3b53bbcf.
+    Both recipes exit 0 on both sides. There are 298 tests per arm: 259
+    passed, and 39 skipped by the recipes' own filters. Compared with the
+    committed compareProductionOutcomes, they have the same list and the same
+    outcomes, with no changed or shared failures.
+  - Each unguarded arm had 14 completed descriptor audits and a kernel query
+    over its own PIDs. Neither found a protected denial. The offscreen recipe
+    rendered 872 PNGs.
+  - The first deny-only arm, base-deny-only, failed in its offscreen build.
+    The recipe adapter wraps every swift command in
+    `sandbox-exec -f deny-only.sb`. SwiftPM then compiles Package.swift under
+    its own `sandbox-exec`, which macOS refuses inside a sandboxed process:
+    `sandbox-exec: sandbox_apply: Operation not permitted` and
+    `error: 'macos': Invalid manifest`. No test ran, and the helper stopped at
+    `assert(tests > 0)`.
+  - This is the first deny-only arm ever executed; no earlier receipt has one.
+    It is a changed base outcome caused by the deny-only profile. As ADR-0021
+    requires, the run stopped without widening the profile or falling back,
+    and the case went to the coordinator for a ruling.
+  - Log: `.scratch/production-base-8b9be429/docs/evidence/mac-verification-app/v01-production-CNwgOT/base-deny-only/offscreen/build.log`.
+- Root check: run separately because the helper stopped before it. disk-guard
+  0, then `pnpm check` 0 with TMPDIR in the system temporary folder (domain 387,
+  CLI 69, server 32, Electron 168 plus one skip). It left one untracked .bun-build
+  file in apps/cli. Its hash was recorded, lsof showed nothing open, and it was
+  removed.
+
+Free disk during r3: 96.2 GiB at the start, 57.5 before the app build, 53.7
+before the production comparison and 43 at the end. The candidate offscreen
+recipe alone went from 71.1 to 47.2. A watcher would have placed the
+helper's own swift-hold below 40 GiB; it was never triggered.
+
+The skill stays draft. The visible recipe and V02 remain held.
+
 Frozen f296590021a3530fe51f38b7923388c7aecafc59 passed the 102-case guard
 matrix, all 15 class controls, all 63 predicate controls including 18, all
 1,637 credential traps and all 1,637 removals, the networking-only denial controls,
