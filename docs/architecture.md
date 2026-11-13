@@ -74,7 +74,13 @@ A Conflict or validation failure rolls back that transaction, then records a
 rejected attempt in its own short transaction. Rejected rows stay in History.
 Replay never applies them. A rejected input over 32,768 characters of JSON is
 stored only as its size, and a repeated auth denial is stored once per
-minute (ADR-0007 amendment).
+minute, decided from History: first in a read, and on absence again inside
+the write transaction that appends (ADR-0007 amendment). The
+look-back walks that Profile by descending sequence to the start of the preceding
+minute. A sufficiently late commit with an older recording clock can hide a
+matching refusal and permit another row. Missing, future and non-recording stamps
+never end the walk. The [timestamp audit](decisions/ui-speed/durable-denial.md)
+records the provenance and the explicit ordering limit.
 
 ![Write path: authenticate, validate, append to op_log, apply, commit; rejected attempts roll back and are recorded](diagrams/write.png)
 

@@ -237,3 +237,14 @@ files and unproven ownership; record safe removals with paths/hashes/bytes and
 separate capacity observations. Never signal unowned/shared helpers. The
 completed run has no active compiler, and the exact-pattern find receipt is
 under f1-closure-5PIxSP/order30-find-before.txt.
+
+## Durable refusal candidate renewal
+
+The candidate product is 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed (then 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9, then fb55ff7c83b968703634feb75f85c0e027142fa3, then 635a93d1c2a0d99c13857244c36b4a1656d73e92,
+first proposed as
+1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8; every mapped file is byte-identical between them).
+See docs/decisions/ui-speed/durable-denial-formal.md. Only the auth.ts whole-file
+hash changes. All four covered Authentication methods and all other mapped
+files are byte-identical. Auth recording remains outside the finite DAG model.
+No invariant, bound or control changes. Independent seat acceptance is pending;
+the next full default command supplies fresh candidate-specific evidence.
