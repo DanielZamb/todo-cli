@@ -11,6 +11,7 @@ export * from "./catalog-contract.ts";
 export * from "./catalog-order.ts";
 export * from "./client-diagnostics.ts";
 export * from "./client-reads.ts";
+export * from "./committed-operations.ts";
 export * from "./dependencies.ts";
 export * from "./dependency-commands.ts";
 export * from "./dependency-contract.ts";

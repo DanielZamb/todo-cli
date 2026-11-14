@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { AttachmentInput } from "./attachments.ts";
+import { operationSeqField } from "./committed-operations.ts";
 import { DependencyError } from "./dependencies.ts";
 import { TagId, TaskId, Version } from "./ids.ts";
 import {
@@ -88,6 +89,7 @@ export const ImportRow = Schema.Struct({
 });
 export type ImportRow = typeof ImportRow.Type;
 export const ImportReport = Schema.Struct({
+  ...operationSeqField,
   generated_at: Instant,
   dry_run: Schema.Boolean,
   items: Schema.Array(ImportRow),

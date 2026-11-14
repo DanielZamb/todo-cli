@@ -16,6 +16,10 @@ import {
   type AuthorizedTerminalRead,
   checkedRead,
 } from "../auth/authorized-read.ts";
+import {
+  markPreviewConnection,
+  noteCommitted,
+} from "../committed-operations.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   beginDiagnosticSpan,
@@ -193,6 +197,7 @@ export class OperationStore {
           readwrite: true,
           strict: true,
         });
+    if (this.isPreview) markPreviewConnection(this.db);
     try {
       this.db.function("domain_write_allowed", () => (this.writing ? 1 : 0));
       this.db.exec(
@@ -714,6 +719,12 @@ export class OperationStore {
           ),
       { statement: "store.write" },
     );
+    if (entry.outcome === "committed")
+      noteCommitted(this.db, {
+        seq: Number(result.lastInsertRowid),
+        actor: input.actor,
+        occurred_at: entry.event.occurred_at,
+      });
     return Schema.decodeUnknownSync(OpLogEntry)({
       ...entry,
       seq: Number(result.lastInsertRowid),

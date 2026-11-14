@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
+import { noteCommitted } from "../committed-operations.ts";
 import {
   diagnosticOwnerAuthenticated,
   diagnosticSync,
@@ -18,7 +19,6 @@ import { StoreError } from "../store/error.ts";
 import { taskHistory } from "../store/history-reads.ts";
 import { changes, metadata } from "../store/projection.ts";
 import { Instant } from "../time.ts";
-
 import {
   AccessRequest,
   type AccessScope,
@@ -31,7 +31,6 @@ import {
   StartSeriesRequest,
   TokenOptions,
 } from "./model.ts";
-
 import { repeatedAuthRejection } from "./rejection-history.ts";
 
 type AuthorityKind = "read" | "profiles" | "owner" | "terminal";
@@ -569,7 +568,7 @@ export class Authentication<Read> {
           entity_version: 1,
           occurred_at: instant(input.time),
         };
-    this.db
+    const inserted = this.db
       .query(
         "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,1,?,NULL,NULL,?,?)",
       )
@@ -580,6 +579,12 @@ export class Authentication<Read> {
         input.error ? "rejected" : "committed",
         input.error ? "auth" : null,
       );
+    if (!input.error)
+      noteCommitted(this.db, {
+        seq: Number(inserted.lastInsertRowid),
+        actor: input.actor,
+        occurred_at: event.occurred_at,
+      });
   }
 
   private perform<A>(

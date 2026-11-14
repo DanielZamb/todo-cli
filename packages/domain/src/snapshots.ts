@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { operationSeqField } from "./committed-operations.ts";
 
 export const isPreChangeSnapshot = (reason: string) =>
   reason.startsWith("pre-") ||
@@ -31,6 +32,7 @@ export const SnapshotList = Schema.Struct({
   last_snapshot_at: Schema.NullOr(Schema.String),
 });
 export const SnapshotRestoreReport = Schema.Struct({
+  ...operationSeqField,
   id: SnapshotId,
   dry_run: Schema.Boolean,
   seq_before: Count,

@@ -207,3 +207,84 @@ it.effect("serves the Catalog, its position and its refusals over HTTP", () =>
     }),
   ),
 );
+
+it.effect("carries operation_seq on writes that committed History", () =>
+  Effect.scoped(
+    Effect.gen(function* () {
+      const { request, credential, opLog } = yield* fixture;
+      const committedMax = () => opLog()?.seq;
+      const created = yield* request(
+        "POST",
+        "/profiles/work/tasks",
+        { title: "One" },
+        credential,
+      );
+      const task = created.body as {
+        id: string;
+        row_version: number;
+        operation_seq?: number;
+      };
+      expect(task.operation_seq).toBe(committedMax());
+      const catalog = Schema.decodeUnknownSync(CatalogReply)(
+        (yield* request("GET", "/profiles/work/catalog", undefined, credential))
+          .body,
+      );
+      if (catalog.unchanged) throw new Error("expected lists");
+      expect(catalog.position.seq).toBeGreaterThanOrEqual(
+        task.operation_seq ?? 0,
+      );
+      expect(catalog.tasks.map((t) => t.id)).toContain(task.id);
+
+      // A Conflict and a dry run commit nothing and carry no field.
+      const conflict = yield* request(
+        "PATCH",
+        `/profiles/work/tasks/${task.id}`,
+        { from_version: 99, changes: { title: "Stale" } },
+        credential,
+      );
+      expect(conflict.status).toBe(409);
+      expect(conflict.body).not.toHaveProperty("operation_seq");
+      const preview = yield* request(
+        "DELETE",
+        `/profiles/work/tasks/${task.id}?from_version=${task.row_version}&dry_run=true`,
+        undefined,
+        credential,
+      );
+      expect(preview.status).toBe(200);
+      expect(preview.body).not.toHaveProperty("operation_seq");
+
+      // A request that commits several operations carries the highest.
+      const before = committedMax() ?? 0;
+      const imported = yield* request(
+        "POST",
+        "/profiles/work/import",
+        {
+          items: [
+            { external_id: "a", title: "Imported A" },
+            { external_id: "b", title: "Imported B" },
+          ],
+        },
+        credential,
+      );
+      expect(imported.status).toBe(200);
+      const report = imported.body as { operation_seq?: number };
+      expect(report.operation_seq).toBe(committedMax());
+      expect((report.operation_seq ?? 0) - before).toBe(2);
+      const dryImport = yield* request(
+        "POST",
+        "/profiles/work/import",
+        { items: [{ external_id: "c", title: "Not yet" }], dry_run: true },
+        credential,
+      );
+      expect(dryImport.body).not.toHaveProperty("operation_seq");
+
+      const token = (yield* request(
+        "POST",
+        "/auth/tokens",
+        { name: "seq token", profile: null, scope: "read-only" },
+        credential,
+      )).body as { operation_seq?: number };
+      expect(token.operation_seq).toBe(committedMax());
+    }),
+  ),
+);

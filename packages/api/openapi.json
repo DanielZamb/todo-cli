@@ -63,6 +63,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "id": {
                       "type": "string",
                       "minLength": 1
@@ -346,6 +352,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "id": {
                       "type": "string",
                       "minLength": 1
@@ -850,6 +862,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -1162,6 +1180,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -1465,6 +1489,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -1486,6 +1516,12 @@
                               "result": {
                                 "type": "object",
                                 "properties": {
+                                  "operation_seq": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 9007199254740991,
+                                    "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                                  },
                                   "generated_at": {
                                     "type": "string"
                                   },
@@ -3236,6 +3272,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -4591,6 +4633,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -5073,6 +5121,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -29370,6 +29424,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "generated_at": {
                       "type": "string"
                     },
@@ -70029,6 +70089,12 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "operation_seq": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+                    },
                     "id": {
                       "type": "string"
                     },
@@ -83177,6 +83243,12 @@
       "TaskWrite": {
         "type": "object",
         "properties": {
+          "operation_seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "Present when the request committed History: the highest seq it committed, so every operation it committed is at or below this seq. A Catalog whose position.seq is at least this value (same generation) reflects all of them. Absent when nothing was committed (a dry run, a refusal, a no-op)."
+          },
           "title": {
             "type": "string",
             "minLength": 1

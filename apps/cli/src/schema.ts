@@ -18,6 +18,10 @@ import {
 import { Schema } from "effect";
 import { credentialSelectionDescription } from "./credential-profile.ts";
 import { routingDescription, WriteMode } from "./database-selection.ts";
+import {
+  committingCommands,
+  withOperationSeqProperty,
+} from "./operation-seq.ts";
 
 const registry = new Map<
   string,
@@ -100,7 +104,13 @@ export const inputNames = () =>
     .sort();
 
 export function commandSchema(name: string) {
-  const document = registry.get(name)?.document();
+  const entry = registry.get(name);
+  const document = entry?.document();
+  if (document && entry?.kind === "command" && committingCommands.has(name))
+    withOperationSeqProperty(
+      document.schema as Parameters<typeof withOperationSeqProperty>[0],
+      document.definitions as Parameters<typeof withOperationSeqProperty>[1],
+    );
   return document
     ? {
         generated_at: new Date().toISOString(),

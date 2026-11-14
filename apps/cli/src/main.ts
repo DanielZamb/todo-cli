@@ -35,6 +35,7 @@ import {
   batchEditTasks,
   ClientReads,
   CreateTask,
+  collectCommitted,
   DeleteTask,
   DependencyCommands,
   DependRequest,
@@ -132,6 +133,7 @@ import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { decodeInput } from "./input.ts";
 import { verifyMacPassword } from "./macos-password.ts";
+import { stampOperationSeq } from "./operation-seq.ts";
 import { resolveProfile } from "./profile-selection.ts";
 import {
   ConfigResponse,
@@ -173,7 +175,7 @@ const terminalSafe = (text: string) => {
 };
 const write = (text: string) =>
   Effect.sync(() => {
-    process.stdout.write(terminalSafe(text));
+    process.stdout.write(terminalSafe(stampOperationSeq(text)));
   });
 const response = <S extends Schema.ConstraintEncoder<unknown>>(
   format: Format,
@@ -308,7 +310,7 @@ const withStore = <A, E, R>(
               role: "cli",
               stage: "command",
             },
-            use(store),
+            collectCommitted(use(store)).pipe(Effect.map(({ value }) => value)),
           );
         })().pipe(
           Effect.catch((error) =>
