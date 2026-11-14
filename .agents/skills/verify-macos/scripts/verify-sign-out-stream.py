@@ -332,7 +332,7 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
     if only:
         exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', only], 'targeted-tests.log', test_env)
     else:
-        exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests|SeatCommittedWriteTests'], 'tests.log', test_env)
+        exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SignOutStreamTests', '--skip', 'DeletedProfileLivenessTests|SeatSignOutNoticeTests|SeatRestoreCancellationBoundaryTests|SeatMessageInterleavingTests|SeatMessageScopeObservationTests|SeatRestoreCancellationCorrectedTests|SeatSurfaceLifetimeTests|SeatSurfaceClassTests|SeatCandidate7InlineInterleavingTests|SeatCandidate7bBoundaryTests|SeatCandidate7cSupersessionTests|SeatGenerationLifetimeTests|SeatCommittedWriteTests'], 'tests.log', test_env)
         # The seat's unchanged probe runs alone: its teardown invalidates its URLSession while
         # the model can still reconnect, and an exception there would hide the other suites.
         seat_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'SeatSignOutNoticeTests'], 'seat-tests.log', test_env)
@@ -414,7 +414,10 @@ let package = Package(name: "SignOutStreamProof", platforms: [.macOS(.v26)], dep
                        expected_difference='SeatCandidate7bBoundaryTests.swift:56 for both arguments (D1 ruling, 2026-11-12: supersession is per target; a link on another row is live and reports its own failure)', accepted=sole or seat_others['SeatCandidate7bBoundaryTests'] == 0)
         if sole: seat_others['SeatCandidate7bBoundaryTests'] = 0
         (evidence / 'seat-ruling-d1.json').write_text(json.dumps(seat_d1, indent=2) + '\n')
-        exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values()))
+        # MAC-C1-S1-36's liveness suite runs last, on its own: its 80 delete-and-restore rounds and
+        # 200 deletions add Snapshots, restores and Profiles that the other suites must not see.
+        liveness_exit = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/SignOutStreamProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'DeletedProfileLivenessTests'], 'liveness-tests.log', test_env)
+        exit_code = exit_code or seat_exit or restore_exit or interleaving_exit or int(any(seat_others.values())) or liveness_exit
 
     with lock:
         (evidence / 'proxy-requests.json').write_text(json.dumps(requests, indent=1) + '\n')

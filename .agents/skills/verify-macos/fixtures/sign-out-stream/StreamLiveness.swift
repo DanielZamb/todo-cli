@@ -19,8 +19,11 @@ enum StreamLiveness {
         let api = todoClient(server: server, credential: credential)
         let profile = model.profile
         let title = "Liveness " + UUID().uuidString
-        _ = try await api.tasks_period_create(path: .init(profile: profile), body: .json(.init(title: title)))
+        let probe = try TaskSnapshot.decode(try await api.tasks_period_create(path: .init(profile: profile), body: .json(.init(title: title))).ok.body.json)
         let appeared = await until(seconds) { model.tasks.contains { $0.title == title } }
+        // The check leaves the Profile as it found it, so later scenarios on the same server see no
+        // Tasks of its own (a Profile deletion test expects an empty Profile).
+        _ = try? await api.tasks_period_delete(path: .init(profile: profile, task: probe.id), query: .init(from_version: String(probe.row_version)))
         var delivered: Bool?
         if reminder {
             var fired: [String] = []
@@ -32,6 +35,8 @@ enum StreamLiveness {
                 "title": "Liveness reminder " + UUID().uuidString, "due_at": ["kind": "instant", "utc": due, "time_zone": "UTC"]]))
             let created = try TaskSnapshot.decode(try await api.tasks_period_create(path: .init(profile: profile), body: .json(payload)).ok.body.json)
             delivered = await until(seconds + 5) { fired.contains(created.id) }
+            let current = try? TaskSnapshot.decode(try await api.tasks_period_show(path: .init(profile: profile, task: created.id)).ok.body.json)
+            _ = try? await api.tasks_period_delete(path: .init(profile: profile, task: created.id), query: .init(from_version: String(current?.row_version ?? created.row_version)))
         }
         return Result(live: true, streamFollows: follows, writeAppeared: appeared, reminderDelivered: delivered)
     }
