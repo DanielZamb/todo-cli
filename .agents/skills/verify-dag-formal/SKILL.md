@@ -3,6 +3,24 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Catalog contract correction renewal
+
+Candidate: product b110f4a8b286a737b1dc46e9093a66110b3589d5 (the coordinator's
+corrections to C10-S5), pinned at 6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3:
+byte-identical product plus the occ-atomicity and task-search-cache renewals the
+capture runs. OperationStore.record, Authentication.record and the restore bind
+the event text they note; the Catalog reads the Dependency graph from columns
+for matching; the contract moves to 7de9226a (operation_seq's description).
+Every other listed production function and every mapped public item is
+unchanged from the f3039274 candidate; all 80 mutant anchors match once. A first
+full default stopped in public conformance because I had deleted the preserved
+baseline CLI from .scratch/bin; with it restored from
+.storage-preserved/2026-11-13/dag-formal-inputs (digest dd1918fc…) the full
+default exits 0, "CONFORMANCE CHECKPOINT PASS" (check-lzAjVT): 36 production
+controls broken 1 and restored 0 (conformance-L0LBad), 53 public mutants exit 1
+and restore 0 (public-7kBasA), clean recheck 19,784 states. No model, invariant
+or bound changed. Candidate for the seats.
+
 ## Catalog contract renewal
 
 Candidate: product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5,
