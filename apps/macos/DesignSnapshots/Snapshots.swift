@@ -40,8 +40,8 @@ struct Snapshots {
     func renderScreens() async throws {
         if ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT1"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_CHECKPOINT2"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DAG_ONLY"] == "1" || ProcessInfo.processInfo.environment["TODO_SNAPSHOT_SC1_ONLY"] == "1" { return }
         NSApplication.shared.setActivationPolicy(.prohibited)
-        /// Candidates 9 and 10's images, both appearances (verify-design.py's C9_IMAGES).
-        let c9Images = 26
+        /// Candidates 9, 10 and 11's images, both appearances (verify-design.py's C9_IMAGES).
+        let c9Images = 58
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         #expect(NSColor(named: "primary", bundle: TodoColors.bundle) != nil)
@@ -442,6 +442,41 @@ struct Snapshots {
                 addingOne.parsedTask = .init(title: "Ship", due_at: .init(kind: "date", date: "2026-10-29"), priority: "P1", tags: ["focus", "planning"], project: "Client")
                 addingOne.dependencies.initial = [DependencySnapshots.task("initial-0", title: "Launch review 0")]
                 try await render("c10-compact-screen-quick-add-one-426", TaskListView(model: addingOne, compactMode: true, referenceDate: referenceDate).compactContent, width: 393, height: 426)
+                // Candidate 11: the Dependency picker as a native list with rows built on demand, at
+                // 100 and 400 Tasks, searching ("10 of 400 Tasks"), with a row updating and with a
+                // refusal on its row; and (the fix head) the picker's own Task gone, the stale-Version
+                // refusal and the loading overlay. Compact and full.
+                let root = DependencySnapshots.task("c11-root", title: "Ship the launch notes")
+                func candidates(_ count: Int) -> [TaskSnapshot] { (0..<count).map { DependencySnapshots.task(String(format: "c11-%04d", $0), title: String(format: "Review launch step %03d", $0)) } }
+                for (name, setup) in [
+                    ("picker-100", { (m: TodoModel) in m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, linked: Array(candidates(100).prefix(2)), candidates: candidates(100)) }),
+                    ("picker-400", { (m: TodoModel) in m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, linked: Array(candidates(400).prefix(2)), candidates: candidates(400)) }),
+                    ("picker-searching", { (m: TodoModel) in
+                        m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, text: "step 01", candidates: candidates(400).filter { $0.title.contains("step 01") })
+                        m.dependencies.picker?.unfilteredCount = 400 }),
+                    ("picker-updating", { (m: TodoModel) in
+                        let rows = candidates(100)
+                        m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, linked: [rows[0]], candidates: rows, pending: [rows[2].id]) }),
+                    ("picker-refusal", { (m: TodoModel) in
+                        let rows = candidates(100)
+                        m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, candidates: rows)
+                        m.dependencies.picker?.failure = DependencyNotice(message: "This Dependency would create a loop. Choose another Task.")
+                        m.dependencies.picker?.failure?.attemptTitle = rows[1].title
+                        m.dependencies.picker?.failure?.attemptVerb = "add" }),
+                    ("picker-gone", { (m: TodoModel) in
+                        m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, candidates: candidates(100))
+                        m.dependencies.picker?.rootGone = true
+                        m.dependencies.picker?.failure = DependencyNotice(message: "\u{201C}\(root.title)\u{201D} was deleted or moved. Close this window to continue.") }),
+                    ("picker-conflict", { (m: TodoModel) in
+                        let rows = candidates(100)
+                        m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, candidates: rows, requiresReload: true)
+                        m.dependencies.picker?.failure = DependencyNotice(message: "The Tasks changed since this list loaded.", attemptTitle: rows[3].title, detail: "error 4 - Conflict", recovery: "Reload and try again") }),
+                    ("picker-loading", { (m: TodoModel) in m.dependencies.picker = .init(profile: "work", root: root, direction: .dependsOn, loading: true) }),
+                ] as [(String, (TodoModel) -> Void)] {
+                    let picking = fixture(); picking.signedIn = true; setup(picking)
+                    try await render("c11-\(name)", DependencyPickerView(model: picking, compact: false), width: 560, height: 600)
+                    try await render("c11-compact-\(name)", DependencyPickerView(model: picking, compact: true), width: 393, height: 426)
+                }
                 // Candidate 9 restore ruling: each notice a Profile switch can show, full and Compact.
                 for (name, setup) in [
                     ("deleted", { (m: TodoModel) in m.publishNotice("\u{201C}Launch\u{201D} was deleted. Switched to Work.", seconds: 6) }),

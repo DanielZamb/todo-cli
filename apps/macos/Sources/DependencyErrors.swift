@@ -17,6 +17,8 @@ struct DependencyNotice {
     /// A failed "Create follow-up" offered by this notice, shown with it (the notice and its
     /// button stay, so the person can try again).
     var followUpFailure: String? = nil
+    /// The text for a failure without a more specific one.
+    static let genericFailure = "Couldn't update Dependencies. Try again."
     static func countAdvice(_ count: Int) -> String {
         "This Task depends on \(count) Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks."
     }
@@ -50,7 +52,7 @@ struct DependencyNotice {
         case "validation": message = "Check this Dependency and try again."
         case "unauthorized", "auth_required": message = "Your Session ended. Sign in again."
         case "forbidden": message = "This credential can't update Dependencies."
-        default: message = "Couldn't update Dependencies. Try again."
+        default: message = genericFailure
         }
         guard failure.exitDetail != nil else { return .init(message: "The server response could not be read. Your draft is preserved.") }
         return .init(message: message, detail: failure.exitDetail, failure: failure)
@@ -68,7 +70,7 @@ extension TodoModel {
         if error is DecodingError || error is DependencyGraphReply.ProtocolError { return .init(message: "The server response could not be read. Your draft is preserved.") }
         if let request = (error as? RequestFailure) ?? (error as? ClientError)?.underlyingError as? RequestFailure { return .project(request.body, context: context) }
         if let server = error as? ServerFailure { return .project(server, context: context) }
-        return .init(message: "Couldn't update Dependencies. Try again.")
+        return .init(message: DependencyNotice.genericFailure)
     }
 }
 

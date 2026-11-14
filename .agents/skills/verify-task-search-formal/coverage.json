@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f"
+      "sha256": "0507aa473d5f57d10863cf274d8c8a4b64895c2e4ee2d61c0cb1780d86943316"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
+      "sha256": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -182,6 +182,13 @@
         "descriptionMatch"
       ],
       "sha256": "a0e6e2e98aa724364a43254bfc4a1b1b284a2815160c509712f933292a884e6a"
+    },
+    {
+      "path": "apps/macos/Sources/ProfileReturn.swift",
+      "functions": [
+        "returnToProfile (applyTaskFilters, searchText and scheduleSearch)"
+      ],
+      "sha256": "1c3e327ec3160455f58ac4c88d9e663aeac2c31b45c870de076b4e070f0815a3"
     }
   ],
   "mapping": "CLIENT-MAPPING.md",
@@ -460,6 +467,36 @@
         }
       ],
       "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
+      "controls": "check-swift passed on 664c12a7: docs/evidence/discovery-formal/swift-wCss6Q",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f",
+          "to": "0507aa473d5f57d10863cf274d8c8a4b64895c2e4ee2d61c0cb1780d86943316"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1",
+          "to": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4"
+        }
+      ],
+      "review": "Candidate 11 (6cc45ab9 to 664c12a7) changes two files mapped here. TodoModel.swift: the Profile-return code (ProfileViewState, ForcedProfileLeave and the extension that records, resolves and offers a forced return) moves to ProfileReturn.swift, 27 declarations byte-identical at the parent and the head (declaration-identity.py); announce, scheduleSearch and failure lose `private` (access only); projects and tags gain didSets that build name dictionaries (projectNameByID, tagNameByID) and a tagNames(of:) helper for the Dependency picker's rows. AppViews.swift: the Dependency picker's sheet is presented through DependencyPickerSheet instead of an inline .sheet. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "12c45efb03a285b6e8eb876fb8abaaefb20a9cb6",
+      "controls": "check-swift passed on 12c45efb: docs/evidence/discovery-formal/swift-ZENmKX",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/ProfileReturn.swift",
+          "from": null,
+          "to": "1c3e327ec3160455f58ac4c88d9e663aeac2c31b45c870de076b4e070f0815a3",
+          "added": "MAC-C11-S1-5"
+        }
+      ],
+      "review": "The candidate 11 fix head (ef67c488, with its DAG public renewal on top). Of the mapped files only ClientErrors.swift changed: ClientErrorNotice gains dependencyShowsDetail, passed to DependencyNoticeContent, so the Dependency picker's notices leave out the exit-code line; no server-failure projection, discovery notice or Task lookup notice changed. MAC-C11-S1-5: ProfileReturn.swift, moved out of TodoModel.swift in 6cc45ab9 (27 declarations byte-identical, unchanged since), is now pinned here with its whole-file hash. It holds the forced-leave credential epoch comparisons (forcedLeaveToCarry, recordForcedLeave, resolveForcedLeave, goToRestoredProfile) and the return path (returnToProfile, which calls applyTaskFilters and scheduleSearch), which this mapping's records already speak for. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."

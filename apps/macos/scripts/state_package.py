@@ -29,8 +29,10 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -144,10 +146,136 @@ def checked(path: Path, receipt=None) -> dict:
     return result
 
 
+def _descendants(root: int) -> list:
+    """Every live process under `root`, by parent id (a child may be in a group of its own:
+    swift test starts swiftpm-testing-helper in a new process group)."""
+    rows = subprocess.run(['/bin/ps', '-axo', 'pid=,ppid='], capture_output=True, text=True).stdout.split('\n')
+    children = {}
+    for row in rows:
+        parts = row.split()
+        if len(parts) == 2:
+            children.setdefault(int(parts[1]), []).append(int(parts[0]))
+    found, queue = [], [root]
+    while queue:
+        for child in children.get(queue.pop(), []):
+            found.append(child); queue.append(child)
+    return found
+
+
+def _starts(pids) -> dict:
+    """Each live pid's start time (ps lstart), so a process is told from a later one that reuses
+    its pid (MAC-C11-S1-6). A zombie still has its start time; a pid that is gone is left out."""
+    pids = sorted(set(pids))
+    if not pids:
+        return {}
+    rows = subprocess.run(['/bin/ps', '-o', 'pid=,lstart=', '-p', ','.join(map(str, pids))], capture_output=True, text=True).stdout.splitlines()
+    starts = {}
+    for row in rows:
+        pid, _, start = row.strip().partition(' ')
+        if pid.isdigit():
+            starts[int(pid)] = start.strip()
+    return starts
+
+
+def _signal(known: dict, sig) -> None:
+    """Signals each process in `known` (pid -> start time) that is still that process."""
+    current = _starts(known)
+    for pid, start in known.items():
+        if current.get(pid) != start:
+            continue  # gone, or a later process that reuses the pid
+        try:
+            os.kill(pid, sig)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+
+def _alive(known: dict) -> list:
+    """The processes in `known` that are still running as themselves (not zombies)."""
+    if not known:
+        return []
+    current = _starts(known)
+    rows = subprocess.run(['/bin/ps', '-o', 'pid=,stat=', '-p', ','.join(map(str, sorted(known)))], capture_output=True, text=True).stdout.splitlines()
+    zombies = {int(r.split()[0]) for r in rows if len(r.split()) == 2 and r.split()[1].startswith('Z')}
+    return [pid for pid, start in known.items() if current.get(pid) == start and pid not in zombies]
+
+
+def _stop_tree(process) -> None:
+    """Stops the child and everything it started: freezes the whole tree (SIGSTOP until no new
+    process appears), then SIGTERM and SIGCONT, up to 3 s, then SIGKILL for what is left.
+    Every signal names a process by pid and start time (MAC-C11-S1-6). A child already reaped is
+    not touched: its pid, and the processes under it, may belong to someone else by now. Not
+    covered: a descendant whose parent ended before the freeze is re-parented to launchd and is
+    not found, and a SIGKILL of this runner cannot be handled."""
+    if process.poll() is not None:
+        return
+    frozen = {}
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        listed = _starts([process.pid] + _descendants(process.pid))
+        current = {pid: start for pid, start in listed.items() if pid not in frozen}
+        if not current:
+            break
+        _signal(current, signal.SIGSTOP)
+        frozen.update(current)
+    _signal(frozen, signal.SIGTERM)
+    _signal(frozen, signal.SIGCONT)
+    deadline = time.monotonic() + 3
+    others = {pid: start for pid, start in frozen.items() if pid != process.pid}
+    while time.monotonic() < deadline:
+        process.poll()
+        if not _alive(others) and process.returncode is not None:
+            return
+        time.sleep(0.05)
+    # Once the child is reaped its pid is left out; every pid is checked against its start time.
+    _signal(frozen if process.returncode is None else others, signal.SIGKILL)
+    process.poll()
+
+
+_running = None
+
+
+def _stop_requested(signum, frame):
+    """A stop sent to this process (a harness's time limit, an owner's cleanup) stops everything
+    the running Swift command started before this process ends."""
+    if _running is not None:
+        _stop_tree(_running)
+    raise SystemExit(128 + signum)
+
+
+def grouped_run(argv, timeout=None, **popen):
+    """Runs `argv` and, when this process is asked to stop (SIGTERM, SIGINT, SIGHUP) or the time
+    limit passes, stops it and everything it started, so no test helper is left orphaned under
+    launchd (coordinator, candidate 11: a stopped state-suite run left swiftpm-testing-helper for
+    two hours). The child stays in this session, so an owner that stops the whole session still
+    reaches it. Returns (exit code, stdout); 124 at the time limit."""
+    global _running
+    previous = {sig: signal.signal(sig, _stop_requested) for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+    try:
+        _running = subprocess.Popen(argv, **popen)
+        try:
+            stdout, _ = _running.communicate(timeout=timeout)
+            return _running.returncode, stdout
+        except subprocess.TimeoutExpired:
+            print(f'state_package: time limit of {timeout} s reached; stopping the run and everything it started', file=sys.stderr, flush=True)
+            _stop_tree(_running)
+            stdout, _ = _running.communicate()
+            return 124, stdout
+    finally:
+        _running = None
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+
+
 def _option(args, *names):
     for index, arg in enumerate(args):
         if arg in names and index + 1 < len(args): return args[index + 1]
     return None
+
+
+def _limit():
+    """STATE_PACKAGE_TIMEOUT: seconds for each Swift invocation; none when unset."""
+    value = os.environ.get('STATE_PACKAGE_TIMEOUT')
+    return float(value) if value else None
 
 
 def swift(args: list) -> int:
@@ -170,12 +298,12 @@ def swift(args: list) -> int:
                 elif arg in ('--disable-automatic-resolution', '--skip-update'): build.append(arg)
             # `swift test` makes release modules testable itself; a separate release build must ask.
             if (_option(args, '--configuration', '-c') or 'debug') == 'release': build += ['-Xswiftc', '-enable-testing']
-            code = subprocess.run(['swift'] + build).returncode
+            code = grouped_run(['swift'] + build, timeout=_limit())[0]
             if code: return code
             args.append('--skip-build')
         checked(scratch, receipt)
-        return subprocess.run(['swift'] + args).returncode
-    code = subprocess.run(['swift'] + args).returncode
+        return grouped_run(['swift'] + args, timeout=_limit())[0]
+    code = grouped_run(['swift'] + args, timeout=_limit())[0]
     if code == 0 and '--build-tests' in args: checked(scratch, receipt)
     return code
 
@@ -183,6 +311,9 @@ def swift(args: list) -> int:
 if __name__ == '__main__':
     command, rest = sys.argv[1], sys.argv[2:]
     if command == 'swift':
+        # A stop at any point of the run (also between its steps) ends it cleanly.
+        for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+            signal.signal(sig, _stop_requested)
         sys.exit(swift(rest))
     if command == 'guard':
         try:

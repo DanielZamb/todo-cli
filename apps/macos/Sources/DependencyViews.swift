@@ -40,8 +40,10 @@ struct DependencyNoticeView: View {
     let model: TodoModel
     let notice: DependencyNotice
     var warning = false
+    /// The exit-code line; the picker leaves it out (UI seat, candidate 11).
+    var showsDetail = true
     var body: some View {
-        ClientErrorNotice(model: model, text: notice.message, position: .message, dependency: notice, dependencyWarning: warning)
+        ClientErrorNotice(model: model, text: notice.message, position: .message, dependency: notice, dependencyWarning: warning, dependencyShowsDetail: showsDetail)
     }
 }
 
@@ -53,8 +55,11 @@ struct DependencyNoticeContent: View {
     /// The exit-code line ("error 2 - validation or usage"); the main window's banner leaves it out.
     var showsDetail = true
     private var titles: [String] { notice.path.map { id in model.tasks.first { $0.id == id }?.title ?? id } }
-    private var headline: String {
-        let prefix = notice.attemptTitle.map { "Can't \(notice.attemptVerb) \($0). " } ?? ""
+    private var headline: String { Self.headline(notice) }
+    /// The notice's first line. The picker's refusal form (UI seat, candidate 11): "Couldn't add
+    /// “A”." with the title quoted, then why, then what to do next.
+    static func headline(_ notice: DependencyNotice) -> String {
+        let prefix = notice.attemptTitle.map { "Couldn't \(notice.attemptVerb) \u{201C}\($0)\u{201D}. " } ?? ""
         let guidance = notice.followUp == nil ? notice.recovery.map { " \($0)." } ?? "" : ""
         return prefix + notice.message + guidance
     }
@@ -99,20 +104,62 @@ struct DependencyNoticeContent: View {
     }
 }
 
+/// Presents the Dependency picker (candidate 11). Only the small presenter reads the picker's
+/// state, so a picker change (a keystroke, a tick, new rows) no longer re-runs the body of the
+/// window or sheet that presents it; measured, that body was about 190 ms of a 400-Task open.
+struct DependencyPickerSheet: ViewModifier {
+    let model: TodoModel
+    let compact: Bool
+    func body(content: Content) -> some View {
+        content.background { DependencyPickerPresenter(model: model, compact: compact) }
+    }
+}
+
+private struct DependencyPickerPresenter: View {
+    @Bindable var model: TodoModel
+    let compact: Bool
+    var body: some View {
+        Color.clear.sheet(item: Binding(get: { model.dependencies.picker.map { PickerIdentity(id: $0.id) } }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in
+            DependencyPickerView(model: model, compact: compact)
+        }
+    }
+}
+
+private struct PickerIdentity: Identifiable { let id: UUID }
+
 struct DependencyPickerView: View {
     @Bindable var model: TodoModel
     var compact = false
     @FocusState private var searchFocused: Bool
     @FocusState private var focusedCandidate: String?
+    /// A row the arrow keys are moving to: scrolled into view (and so built) before it takes focus.
+    @State private var scrollTarget: String?
+    /// Every row has this height (UI check: an honest scroll bar, no jumps while scrolling).
+    static let rowHeight: CGFloat = 56
+    /// The count beside the search: "100 Tasks"; with search text "10 of 100 Tasks"; blank (not
+    /// "0 Tasks") while the first rows load.
+    static func countText(_ picker: DependencyPicker) -> String {
+        if picker.loading && picker.rowIDs.isEmpty { return " " }
+        if !picker.text.isEmpty, let total = picker.unfilteredCount { return TaskCount.text(picker.rowIDs.count, of: total, capitalized: true) }
+        return TaskCount.text(picker.rowIDs.count, capitalized: true)
+    }
     var body: some View {
         if let picker = model.dependencies.picker {
             VStack(alignment: .leading, spacing: 10) {
+                // The fixed top block (UI check): title, Direction, search, the count and any notice
+                // stay above the list and never scroll.
                 Text(picker.direction.sentence(picker.root.title)).font(.headline).lineLimit(2)
                 Picker("Direction", selection: Binding(get: { picker.direction }, set: { direction in Task { await model.setDependencyDirection(direction) } })) {
                     Text("Depends on").tag(DependencyDirection.dependsOn).accessibilityIdentifier("dependency-depends-on")
                     Text("Blocks").tag(DependencyDirection.blocks).disabled(picker.purpose != .edit).accessibilityIdentifier("dependency-blocks")
                 }.pickerStyle(.segmented).accessibilityIdentifier("dependency-direction")
-                TextField("Search Tasks in this Profile", text: Binding(get: { model.dependencies.picker?.text ?? "" }, set: { model.dependencies.picker?.text = $0 }))
+                // How many Tasks the list holds: with rows built on demand the scroll bar is the only
+                // other clue to its length (UI check). With search text, the matches out of all
+                // ("10 of 100 Tasks"). Under the search field; in Compact at its trailing end, so two
+                // whole rows still show under a long notice. Blank, not "0 Tasks", while loading.
+                let count = Text(Self.countText(picker))
+                    .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dependency-count")
+                let search = TextField("Search Tasks in this Profile", text: Binding(get: { model.dependencies.picker?.text ?? "" }, set: { model.dependencies.picker?.text = $0 }))
                     .textFieldStyle(.roundedBorder).focused($searchFocused).accessibilityIdentifier("dependency-search")
                     .onChange(of: picker.text) { _, text in
                         Task {
@@ -121,38 +168,50 @@ struct DependencyPickerView: View {
                             await model.searchDependencyCandidates()
                         }
                     }
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if picker.loading { ProgressView("Loading Dependencies…") }
-                        if let notice = picker.failure {
-                            DependencyNoticeView(model: model, notice: notice)
-                            if picker.requiresReload {
-                                Button("Reload") { Task { await model.reloadDependencyPicker() } }.accessibilityIdentifier("dependency-reload")
+                if compact {
+                    HStack(spacing: 8) { search; count.fixedSize() }
+                } else {
+                    VStack(alignment: .leading, spacing: 4) { search; count }
+                }
+                if let notice = picker.failure {
+                    DependencyNoticeView(model: model, notice: notice, showsDetail: false)
+                    if picker.requiresReload {
+                        Button("Reload") { Task { await model.reloadDependencyPicker() } }.accessibilityIdentifier("dependency-reload")
+                    }
+                }
+                ForEach(picker.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: picker.warnings[$0], warning: true, showsDetail: false) }
+                if !model.canWrite { Text(model.connection == .offline ? "Offline · Read only" : "Dependencies are read only right now.").foregroundStyle(.secondary) }
+                ScrollViewReader { proxy in
+                    // A native list (NSTableView-backed): only the rows in view are built, and each
+                    // row reads only its own entries of the picker's row index.
+                    List {
+                        ForEach(picker.rowIDs, id: \.self) { id in
+                            if let task = picker.tasksByID[id] {
+                                // The Task row draws its own divider, as before the list; the list
+                                // adds no inset or separator of its own.
+                                row(task, picker: picker).id(id)
+                                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden).listRowBackground(Color.clear)
                             }
                         }
-                        ForEach(picker.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: picker.warnings[$0], warning: true) }
-                        if !model.canWrite { Text(model.connection == .offline ? "Offline · Read only" : "Dependencies are read only right now.").foregroundStyle(.secondary) }
-                        ForEach(picker.rows) { task in
-                            if picker.pending.contains(task.id) {
-                                HStack(spacing: 8) {
-                                    ProgressView().controlSize(.mini).frame(width: 14, height: 14)
-                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {}).opacity(0.5)
-                                }.accessibilityIdentifier("dependency-pending-\(task.id)").accessibilityLabel(task.title).accessibilityValue("Updating").focusable().focused($focusedCandidate, equals: task.id)
-                            } else {
-                            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in model.clientDiagnosticsUI.perform(.toggleDependency, surface: .dependencyPicker) { await model.toggleDependency(task) } })) {
-                                VStack(alignment: .leading, spacing: 0) {
-                                    TaskRow(task: task, canWrite: false, compact: compact, projectName: model.projects.first { $0.id == task.project_id }?.name, tagNames: task.tagNames(from: model.tags), showsCompletion: false, relation: true, complete: {})
-                                }
-                            }.toggleStyle(.checkbox)
-                                .focused($focusedCandidate, equals: task.id)
-                                .disabled(!model.canWrite || picker.loading || picker.requiresReload || picker.pending.contains(task.id) || model.dependencies.pendingDependents.contains(picker.direction == .dependsOn ? picker.root.id : task.id))
-                                .accessibilityIdentifier("dependency-choice-\(task.id)")
-                                .accessibilityValue(picker.pending.contains(task.id) ? "Pending" : picker.checked(task.id) ? "Checked" : "Unchecked")
-                                .compactBounds("dependency-choice-\(task.id)")
-                            }
+                    }
+                    .listStyle(.plain).scrollContentBackground(.hidden).contentMargins(.horizontal, 0, for: .scrollContent)
+                    .environment(\.defaultMinListRowHeight, Self.rowHeight)
+                    // The loading state sits over the list, like "No matching Tasks", so the top
+                    // block never changes height and the rows never jump (UI seat, candidate 11).
+                    .overlay {
+                        if picker.loading {
+                            ProgressView("Loading Dependencies…").controlSize(.small).padding(10)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8)).accessibilityIdentifier("dependency-loading")
+                        } else if picker.rowIDs.isEmpty {
+                            Text("No matching Tasks").foregroundStyle(.secondary)
                         }
-                        if !picker.loading && picker.rows.isEmpty { Text("No matching Tasks").foregroundStyle(.secondary) }
-                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 4)
+                    }
+                    .onChange(of: scrollTarget) { _, target in
+                        guard let target else { return }
+                        proxy.scrollTo(target)
+                        // Focus after the scroll has built the row.
+                        DispatchQueue.main.async { searchFocused = false; focusedCandidate = target; scrollTarget = nil }
+                    }
                 }.compactBounds("dependency-body")
                 if let feedback = picker.feedback { Text(feedback).font(.caption).foregroundStyle(.secondary) }
                 HStack {
@@ -169,13 +228,50 @@ struct DependencyPickerView: View {
                 .onKeyPress(.upArrow) { moveCandidate(-1, picker: picker) }
         }
     }
+    /// One row: the checkbox and the Task, or the Task "Updating" while its link is pending. It
+    /// reads only this row's Task, its checked and pending state, and the prepared names.
+    @ViewBuilder private func row(_ task: TaskSnapshot, picker: DependencyPicker) -> some View {
+        let projectName = task.project_id.flatMap { model.projectNameByID[$0] }
+        let tagNames = model.tagNames(of: task)
+        if picker.pending.contains(task.id) {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.mini).frame(width: 14, height: 14)
+                TaskRow(task: task, canWrite: false, compact: compact, projectName: projectName, tagNames: tagNames, showsCompletion: false, relation: true, complete: {}).opacity(0.5)
+            }.frame(height: Self.rowHeight, alignment: .leading)
+                .accessibilityIdentifier("dependency-pending-\(task.id)").accessibilityLabel(task.title).accessibilityValue("Updating").focusable().focused($focusedCandidate, equals: task.id)
+        } else {
+            // The click acts on what this row showed when drawn: its checked state and the Version of
+            // the Task the link changes (candidate 11 ruling).
+            let drawn = TodoModel.DrawnPickerRow(checked: picker.checked(task.id), dependentVersion: picker.direction == .dependsOn ? picker.root.row_version : task.row_version)
+            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in model.clientDiagnosticsUI.perform(.toggleDependency, surface: .dependencyPicker) { await model.toggleDependency(task, drawn: drawn) } })) {
+                TaskRow(task: task, canWrite: false, compact: compact, projectName: projectName, tagNames: tagNames, showsCompletion: false, relation: true, complete: {})
+            }.toggleStyle(.checkbox)
+                .frame(height: Self.rowHeight, alignment: .leading)
+                .focused($focusedCandidate, equals: task.id)
+                .disabled(!model.canWrite || picker.loading || picker.requiresReload || picker.rootGone || picker.pending.contains(task.id) || model.dependencies.pendingDependents.contains(picker.direction == .dependsOn ? picker.root.id : task.id))
+                .accessibilityIdentifier("dependency-choice-\(task.id)")
+                .accessibilityValue(picker.pending.contains(task.id) ? "Pending" : picker.checked(task.id) ? "Checked" : "Unchecked")
+                .compactBounds("dependency-choice-\(task.id)")
+        }
+    }
+    /// Down from the search field moves into the rows; Up and Down walk them; Up from the first row
+    /// returns to the search field. The next row is scrolled into view before it takes focus.
     private func moveCandidate(_ step: Int, picker: DependencyPicker) -> KeyPress.Result {
-        let ids = picker.rows.map(\.id)
-        guard !ids.isEmpty else { return .ignored }
-        let next = focusedCandidate.flatMap { ids.firstIndex(of: $0) }.map { $0 + step } ?? (step > 0 ? 0 : ids.count - 1)
-        if next < 0 { focusedCandidate = nil; searchFocused = true }
-        else if next < ids.count { searchFocused = false; focusedCandidate = ids[next] }
+        switch Self.next(from: focusedCandidate, step: step, rowIDs: picker.rowIDs, rowIndex: picker.rowIndex) {
+        case .ignored: return .ignored
+        case .search: focusedCandidate = nil; searchFocused = true
+        case .row(let id): scrollTarget = id
+        case .stay: break
+        }
         return .handled
+    }
+    enum ArrowTarget: Equatable { case row(String), search, stay, ignored }
+    /// Where an arrow key goes from the focused row (nil: the search field), through the row index.
+    static func next(from focused: String?, step: Int, rowIDs: [String], rowIndex: [String: Int]) -> ArrowTarget {
+        guard !rowIDs.isEmpty else { return .ignored }
+        let next = focused.flatMap { rowIndex[$0] }.map { $0 + step } ?? (step > 0 ? 0 : rowIDs.count - 1)
+        if next < 0 { return .search }
+        return next < rowIDs.count ? .row(rowIDs[next]) : .stay
     }
 }
 

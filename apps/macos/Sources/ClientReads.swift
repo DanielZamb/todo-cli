@@ -285,6 +285,11 @@ enum TaskCount {
     static func text(_ count: Int, singular: String, plural: String) -> String {
         "\(count) \(count == 1 ? singular : plural)"
     }
+    /// "10 of 100 Tasks", "1 of 100 Tasks": the noun follows the total.
+    static func text(_ count: Int, of total: Int, capitalized: Bool = false) -> String {
+        let noun = capitalized ? "Task" : "task"
+        return "\(count) of \(total) \(total == 1 ? noun : noun + "s")"
+    }
 }
 
 enum SnapshotPresentation {

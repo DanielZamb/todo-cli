@@ -1,5 +1,5 @@
 {
-  "commit": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
+  "commit": "ef67c4885e21dac90371b7d2cb9b5e5c1918ffaf",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",

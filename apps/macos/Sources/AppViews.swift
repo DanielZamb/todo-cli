@@ -359,9 +359,7 @@ struct TaskListView: View {
         .sheet(isPresented: Binding(get: { model.dependencies.graph != nil }, set: { if !$0 { model.closeDependencyGraph() } })) {
             DependencyGraphView(model: model, compact: compactMode)
         }
-        .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in
-            DependencyPickerView(model: model, compact: compactMode)
-        }
+        .modifier(DependencyPickerSheet(model: model, compact: compactMode))
         .sheet(item: Binding(get: { model.dependencies.deletion }, set: { if $0 == nil { model.closeDependencyDelete() } })) { _ in
             DependencyDeleteView(model: model, compact: compactMode)
         }

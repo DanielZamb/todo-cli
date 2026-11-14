@@ -75,6 +75,6 @@ struct SeriesView: View {
             }.compactBounds("series-actions")
         }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 + model.compactExtraHeight : 600)
             .interactiveDismissDisabled(model.busy)
-            .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }
+            .modifier(DependencyPickerSheet(model: model, compact: compact))
     }
 }

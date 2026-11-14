@@ -46,7 +46,10 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
         if package_state(log, 'before'):
             raise SystemExit('Package.resolved changed before Swift invocation')
     with (evidence / log).open('w') as output:
-        result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE if capture_stdout else output, stderr=output if capture_stdout else subprocess.STDOUT, text=True)
+        # Candidate 11: the whole process group of the command is stopped if this runner is
+        # stopped, so no test helper is left orphaned (state_package.grouped_run).
+        code, stdout = state_package.grouped_run(command, cwd=root, env=env, stdout=subprocess.PIPE if capture_stdout else output, stderr=output if capture_stdout else subprocess.STDOUT, text=True)
+        result = subprocess.CompletedProcess(command, code, stdout, None)
         if capture_stdout:
             output.write(result.stdout)
     packages = package_state(log, 'after') if swift else None
@@ -130,8 +133,8 @@ if any(evidence.glob('dag*-capture-manifest.json')):
         validation.append(state_command)
     run(validation, 'capture-inputs.log')
 manifest = json.loads((evidence / 'manifest.json').read_text())
-# Candidates 9 and 10's states, both appearances (part of the full suite, or alone with TODO_SNAPSHOT_C9_ONLY=1).
-C9_IMAGES = 26
+# Candidates 9, 10 and 11's states, both appearances (part of the full suite, or alone with TODO_SNAPSHOT_C9_ONLY=1).
+C9_IMAGES = 58
 assert len(manifest['files']) == (C9_IMAGES if os.environ.get('TODO_SNAPSHOT_C9_ONLY') == '1' else 52 if os.environ.get('TODO_SNAPSHOT_C8_ONLY') == '1' else 22 if os.environ.get('TODO_SNAPSHOT_C7_ONLY') == '1' else 8 if os.environ.get('TODO_SNAPSHOT_SC1_ONLY') == '1' else 32 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT2') == '1' else 24 if os.environ.get('TODO_SNAPSHOT_DAG_CHECKPOINT1') == '1' else 394 if os.environ.get('TODO_SNAPSHOT_DAG_ONLY') == '1' else 116 if os.environ.get('TODO_SNAPSHOT_DISCOVERY_ONLY') == '1' else 60 if os.environ.get('TODO_SNAPSHOT_SEARCH_ONLY') == '1' else 2 if os.environ.get('TODO_SNAPSHOT_QUICK_ONLY') == '1' else 18 if os.environ.get('TODO_SNAPSHOT_PRIORITY_ONLY') == '1' else 28 if os.environ.get('TODO_SNAPSHOT_BATCH_EDIT_ONLY') == '1' else 872 + C9_IMAGES)
 assert all((evidence / name).is_file() for name in manifest['files'])
 settle_rows = [json.loads(line) for line in (evidence / 'settle.jsonl').read_text().splitlines()] if (evidence / 'settle.jsonl').is_file() else []

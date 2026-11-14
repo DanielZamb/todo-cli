@@ -243,7 +243,11 @@ import TodoAPI
                             let title = try #require(picker.failure?.attemptTitle)
                             let candidate = try #require(picker.rows.first { $0.title == title })
                             #expect(!picker.checked(candidate.id))
-                            #expect(text.joined(separator: " ").contains("Can't add \(candidate.title)."))
+                            // The picker's refusal form (UI seat, candidate 11): "Couldn't add “<title>”." The OCR may
+                            // read the curly quotes either way, so the words and the title are checked.
+                            let joined = text.joined(separator: " ")
+                            #expect(joined.contains("Couldn") && joined.contains("add") && joined.contains(candidate.title))
+                            #expect(!joined.contains("error 4") && !joined.contains("error4"), "no exit-code line in the picker")
                         }
                         try JSONEncoder().encode(text).write(to: directory.appendingPathComponent(file + ".text.json"))
                     }
