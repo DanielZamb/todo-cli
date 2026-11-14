@@ -64,8 +64,12 @@ with (evidence / 'server.log').open('w') as log:
         task = created['id']
         path = '/profiles/work/tasks/' + task
         assert [created['title'], created['status'], created['row_version'], created['priority'], created['source']] == ['Prove the HTTP API', 'open', 1, 'P3', 'manual']
-        assert request('GET', path, 200, credential=session) == created
+        # A write reply carries operation_seq (the highest seq it committed); the Task is what Show returns.
+        assert isinstance(created['operation_seq'], int) and created['operation_seq'] > 0
+        assert request('GET', path, 200, credential=session) == {k: v for k, v in created.items() if k != 'operation_seq'}
         edited = request('PATCH', path, 200, {'from_version': 1, 'changes': {'title': 'Ship the HTTP API'}}, session)
+        assert edited['operation_seq'] > created['operation_seq']
+        edited = {k: v for k, v in edited.items() if k != 'operation_seq'}
         conflict = request('PATCH', path, 409, {'from_version': 1, 'changes': {'title': 'Stale edit'}}, session)
         assert conflict == {'_tag': 'Conflict', 'latest': edited, 'exit_code': 4, 'exit_meaning': 'Conflict'}
         reader = request('POST', '/auth/tokens', 200, {'name': 'reader', 'profile': 'work', 'scope': 'read-only'}, session)['credential']
@@ -86,6 +90,15 @@ with (evidence / 'server.log').open('w') as log:
         assert deleted['deleted_at'] and deleted['row_version'] == 6
         assert request('GET', '/profiles/work/tasks', 200, credential=session) == []
         request('GET', path, 404, credential=session)
+        catalog = request('GET', '/profiles/work/catalog?view=today&now=2026-11-13T15:00:00Z', 200, credential=reader)
+        assert [catalog['unchanged'], catalog['counts'], catalog['tasks'], catalog['day']] == [
+            False, {'all': 0, 'today': 0, 'overdue': 0, 'scheduled': 0, 'inbox': 0}, [], '2026-11-13']
+        assert catalog['position']['seq'] >= deleted['operation_seq']
+        known = f"known_generation={catalog['position']['generation']}&known_seq={catalog['position']['seq']}&known_day=2026-11-13"
+        assert request('GET', '/profiles/work/catalog?view=today&now=2026-11-13T15:00:00Z&' + known, 200, credential=reader) == {
+            'unchanged': True, 'position': catalog['position'], 'day': '2026-11-13'}
+        assert request('GET', '/profiles/work/catalog?time_zone=Mars%2FOlympus', 400, credential=reader)['code'] == 'invalid_args'
+        request('GET', '/profiles/personal/catalog', 403, credential=reader)
         request('DELETE', '/auth/tokens/writer', 204, credential=session)
         request('GET', '/profiles/work/tasks', 401, credential=writer)
         request('DELETE', '/auth/session', 204, credential=session)
