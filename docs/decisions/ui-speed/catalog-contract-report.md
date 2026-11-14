@@ -9,9 +9,10 @@ contract only; neither app changes (2b is Electron, C10-S3 the Mac app).
 (after the seat's second delta: F8; 2a delivered 76f09fa6…, the corrections
 7de9226a…, the first seat round a49a9627…, the second cae74594…, the first
 delta dfade560…).
-Product for every renewal: ec16d45d44146e061aa802bf3f9876cb3a5b03fa (2a
-delivered f3039274, the corrections b110f4a8, the first seat round beae37bc,
-the second de766e3c, the first delta 5da90607).
+Product: 5150042c (seat F9; the contract did not move). The mapping renewals
+stand on ec16d45d, because F9 changes no mapped file (2a delivered f3039274,
+the corrections b110f4a8, the first seat round beae37bc, the second de766e3c,
+the first delta 5da90607, the second ec16d45d).
 
 `operation_seq` became `operation_position` (`{generation, seq}`) in F8; the
 earlier sections keep the name they had then.
@@ -52,7 +53,9 @@ earlier sections keep the name they had then.
 | d25b1d67, 106f22fa | Report and pin audit for 5da90607 |
 | 8a646594 | Seat F8: `operation_position {generation, seq}` replaces `operation_seq`; the generation comes from the request's own classification |
 | ec16d45d | The order goldens pinned in golden-baseline.json (the product) |
-| the next commits | The atomic-commit record (statement review, correction), mapping candidates for ec16d45d, this report |
+| 7131f133, ee4c31a0, 002edb8a, 10b78f9d, 53564fd3, 66dee60e | Mapping candidates for ec16d45d, the report and the pin audit |
+| 5150042c | Seat F9: the settle compares the current generation with the noted one (the product) |
+| eebcc894 | The atomic-commit record of F9's generation reads |
 
 ## What changed for a person to see
 
@@ -725,6 +728,87 @@ statementNow with the exact lines).
   and verify-install's drive check its rows. One problem, the base's known drift (the next
   unit's): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
 
+## Seat delta at 66dee60e (CATALOG-S1): F9, and the intermittent CLI failure
+
+**F9. A restore to an older Snapshot between two commits of one request**
+(5150042c). The seat's schedule:
+1. The request commits at seq 13 in generation `initial`.
+2. Another request restores an older Snapshot; DatabaseRestored lands at seq
+   5, in a new generation.
+3. The request commits again at seq 6.
+
+The reply said `{initial, 6}`. My range scan started at the lowest noted seq
+(6), missed the restore at 5, and its comment wrongly assumed every note
+precedes the restore.
+
+The fix is the coordinator's ruling: exactness first.
+- The settle again reads the current generation (committed-operations.ts:189)
+  after the request, outside any transaction, and compares it with the noted
+  one. A difference, or a failed read, means nothing is reported.
+- `noteGeneration` stays for the noted side, so nothing is read inside a
+  write's transaction except on the owner-only paths (committed-operations.ts:102).
+- I did not add a skip for requests whose notes sit in one transaction: a
+  restore can still land between that transaction and the settle, and only a
+  read after it can see that.
+- The cost is the one measured above (about 9.7 ms at 50,000 `profile IS NULL`
+  rows), outside the write lock. Bounding the lookup everywhere is a separate
+  Task.
+- Test: the seat's schedule in the domain reports nothing. It is red on
+  66dee60e's settle, which reports exactly `{ generation: "initial", seq: 6 }`.
+- The contract does not move (4c932cfc). No mapped file changes: the
+  atomic-commit check passes (fv01-check-iKGXt3), and so do the task-search
+  formal check and the cache check and hygiene. The Dependency mapping stays
+  pinned at 7131f133, whose mapped rows are unchanged.
+
+**The intermittent CLI failure the seat saw once** (two tests in
+`apps/cli/test/contract.test.ts` that saw a write as missing). It is not
+explained, and it is not reproduced.
+
+1. **The fixtures.**
+   - The file makes one scratch directory (`mkdtemp`, removed in `afterAll`).
+     Every command runs with `HOME` set to it and `TODO_DB=""`, so the default
+     database is `<scratch>/.todo-cli/todo.db`.
+   - "reports the current Version…" uses that shared HOME with its own Profile
+     (`versions`). It depends on an earlier test having set up the owner: its
+     `init` passes no passphrase, and run alone the test fails at `login`.
+   - "validates every command's…" uses its own home and database
+     (`<scratch>/conformance/scratch.db`). The file's diagnostics server starts
+     on that database only after the attach-many step.
+   - Tests in a file run one after another (`fileParallelism: false`, no
+     `retry`), and no other file shares the directory.
+   - Nothing runs on a preview store or with `--dry-run` unless the test passes
+     the flag. The attach-many step is an explicit `--dry-run`, and it reported
+     a Conflict because the Task's stored Version was 3 against 5.
+   - The write path cannot report success and then drop the commit. Every
+     write is `db.transaction(...).immediate()` with `synchronous=FULL` and
+     `busy_timeout=5000`, a failed COMMIT throws, and the CLI prints only after
+     the store call returns.
+2. **The loop.**
+   - The owner-away check first: HID idle about 4.9 h.
+   - Then `contract.test.ts` 60 times on each line, the three lines at once,
+     with six CPU burners. 1-minute load 11.5 to 32, median 17.7, against the
+     seat's 5 to 8. Each line used its own detached worktree and compiled
+     binaries.
+   - The head (66dee60e): 0 of 60 failed. `integ/contract` (c8762776): 0 of
+     60. `main` (3b0d7020): 0 of 60.
+   - The Swift slot was not used.
+3. **History.**
+   - No run failed, so there is no database to read. I cannot say whether the
+     seat's edit was committed and then not seen, or never written.
+   - So the next occurrence decides it. `contract.test.ts` now keeps its
+     scratch directory when any test in the file fails, and writes
+     `history-on-failure.json` beside it: every database's `op_log` (seq,
+     kind, outcome, versions, Task id and title) and every command the file
+     ran, with its exit code and output (1188b889).
+   - Control: a failure injected in the versions test kept the directory, and
+     its History shows the edit as seq 12, `TaskEdited`, committed,
+     `to_version` 2. A passing run still removes everything.
+4. **Not attributed to the product** on this evidence. No line I can read
+   loses a committed write, and 180 runs under heavier load did not show it.
+   That is not a proof. If the hook ever keeps a database whose History lacks
+   an edit that exited 0, it is the product, and it goes to the coordinator at
+   once.
+
 ## What the clients inherit
 
 - **The zone.** Electron sends its zone with each planning and Catalog read
@@ -744,6 +828,8 @@ statementNow with the exact lines).
   Electron (2b) the same, through its HttpApi client and IPC `ClientTask`.
 - **The `due:` label** in CLI Markdown stays the UTC date for instants until
   the owner decides.
+- **`operation_position` is exact after F9**: it is absent whenever a restore
+  happened during the request, however the request's commits fall around it.
 - **The Swift client** must be regenerated with `generate-api.sh` (then
   `swift-contract.ts --write` runs) before a Mac app can talk to this server;
   until then `swift-client-pending.json` names the pair and what stays red.
