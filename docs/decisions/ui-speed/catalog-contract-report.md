@@ -760,6 +760,14 @@ The fix is the coordinator's ruling: exactness first.
   formal check and the cache check and hygiene. The Dependency mapping stays
   pinned at 7131f133, whose mapped rows are unchanged.
 
+**Proof for F9**, sandboxed:
+- Root check exit 0 at 1188b889: domain 632, server 203, CLI 98, Electron 168
+  (1 skipped).
+- verify-server-api and verify-cli exit 0.
+- Pin audit (`pin-audit.mjs HEAD` with the ledger, at ac927b0a):
+  `filesScanned 488, occurrences 657, unknown 0`, plus the known Discovery
+  drift (the next unit's).
+
 **The intermittent CLI failure the seat saw once** (two tests in
 `apps/cli/test/contract.test.ts` that saw a write as missing). It is not
 explained, and it is not reproduced.
