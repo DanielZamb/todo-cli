@@ -46,7 +46,10 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
         if package_state(log, 'before'):
             raise SystemExit('Package.resolved changed before Swift invocation')
     with (evidence / log).open('w') as output:
-        result = subprocess.run(command, cwd=root, env=env, stdout=subprocess.PIPE if capture_stdout else output, stderr=output if capture_stdout else subprocess.STDOUT, text=True)
+        # Candidate 11: the whole process group of the command is stopped if this runner is
+        # stopped, so no test helper is left orphaned (state_package.grouped_run).
+        code, stdout = state_package.grouped_run(command, cwd=root, env=env, stdout=subprocess.PIPE if capture_stdout else output, stderr=output if capture_stdout else subprocess.STDOUT, text=True)
+        result = subprocess.CompletedProcess(command, code, stdout, None)
         if capture_stdout:
             output.write(result.stdout)
     packages = package_state(log, 'after') if swift else None

@@ -36,6 +36,17 @@ five node controls in `isolation/isolation.py` (`isolation-controls.json`) and w
 fails if a Mac runner's binaries did not run under the profile. Swift builds and test processes
 cannot be wrapped; the binaries they spawn are the wrappers.
 
+## A stopped Swift run leaves nothing behind
+
+`apps/macos/scripts/state_package.py` runs every Swift command through `grouped_run`. When it is
+stopped (SIGTERM, SIGINT or SIGHUP from a harness or an owner), or when `STATE_PACKAGE_TIMEOUT`
+seconds pass (exit 124), it stops the command and every process the command started. The tree is
+found by parent id, because `swift test` starts `swiftpm-testing-helper` in a process group of
+its own, and stays in the caller's session so a session-wide stop still reaches it. The design
+runner uses the same function. `scripts/verify-runner-cleanup.py` proves it with
+`RunnerCleanupProbeTests.hangsOnPurpose`: after the time limit, and after a stop from outside,
+no process of that run remains.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not
