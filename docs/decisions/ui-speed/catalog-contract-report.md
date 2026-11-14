@@ -5,11 +5,12 @@ Design and rulings: [catalog-contract-design.md](catalog-contract-design.md)
 and the coordinator's answer of 2026-11-13. Phase 2a is domain, server, CLI and
 contract only; neither app changes (2b is Electron, C10-S3 the Mac app).
 
-**Contract id: cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d**
-(after the seat's six findings and the owner's Q8 and Q9; 2a delivered
-76f09fa6…, the corrections 7de9226a…, the first seat round a49a9627…).
-Product for every renewal: de766e3c20e3efbd6967763714fb99e9c1727354 (2a
-delivered f3039274, the corrections b110f4a8, the first seat round beae37bc).
+**Contract id: dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797**
+(after the seat's delta: F7 and F2b; 2a delivered 76f09fa6…, the corrections
+7de9226a…, the first seat round a49a9627…, the second cae74594…).
+Product for every renewal: 5da90607e8c5a19d7007174925c6b6253c0714d3 (2a
+delivered f3039274, the corrections b110f4a8, the first seat round beae37bc,
+the second de766e3c).
 
 ## The line
 
@@ -37,7 +38,13 @@ delivered f3039274, the corrections b110f4a8, the first seat round beae37bc).
 | a9ab1930 | The seat's own schedules for F1 and F2 as tests |
 | 86f4314c | Owner's Q8: undated Tasks last inside a priority |
 | de766e3c | Owner's Q9: today from the sent zone, else the reader's own zone (the product) |
-| 187d610e, 9f397332, and the next | Mapping candidates for de766e3c: task-search formal and cache; dag-formal inputs and result |
+| 187d610e, 9f397332, b57ba61b | Mapping candidates for de766e3c: task-search formal and cache; dag-formal inputs and result |
+| af12d6bc, 44ff839e, 7f08409e | Report, pin ledger and pin audit for de766e3c |
+| 180f929d | Seat F2b: no `operation_seq` when a restore moved the generation during the request |
+| c2958b75 | Seat F7: a blank Project name is matched exactly again; only a blank Tag name is refused |
+| 5da90607 | A golden freezing undated-last (the product) |
+| b79a9dc9 | The coordinator's source review of `OperationStore.record`, recorded |
+| cee500f0, f4080def, ead12256 | Mapping candidates for 5da90607: task-search formal and cache; dag-formal inputs and result |
 
 ## What changed for a person to see
 
@@ -47,7 +54,7 @@ Nothing changes in either app yet: both still use the older reads.
 - `todo profile list`, `GET /profiles`, `/projects` and `/tags` list names in one order: `9` before `10`, `a` before `á`, capitals beside lower case. Today `/projects` and `/tags` come in id order and `/profiles` in id order.
 - A writing command's JSON and a write reply carry `operation_seq`.
 - `--tag work` now also finds a migrated Tag stored as `" Work"` (D3's one change).
-- A blank Project or Tag name filter (`?tag=`, `?project=%20`, `todo list --tag " "`, `todo catalog --tag ""`) is refused as `invalid_args`.
+- A blank Tag name filter (`?tag=`, `?tag=%20`, `todo list --tag " "`, `todo catalog --tag ""`) is refused as `invalid_args`. A Project name, blank or not, is compared exactly (F7).
 - Undated Tasks come last inside a priority (Q8), in `todo list`, export and every read that orders Tasks.
 - Today and Overdue follow a zone (Q9): the zone a read sends, else the server's own zone, and for the CLI the machine's zone. The installed apps send no zone, so on the owner's Mac they become right as soon as this server is installed.
 - Once the apps use the Catalog (2b, C10-S3), the owner will see, as changes: Today counts a Task once; Electron's All badge counts open Tasks only; Projects and Tags in the name order above; Tasks inside each group in the one Task order (priority, then due date with undated last, then age).
@@ -464,6 +471,113 @@ Project or Tag name made only of whitespace is not a filter value.
 - ADR-0006 has the dated amendment, and architecture.md and verify-server-api's
   client-reads feature state the rule.
 
+## Seat delta at 7f08409e (CATALOG-S1): F7, F2b, the order golden, the `due:` label
+
+**F7. A blank Project name is a real name again** (c2958b75). The F4 fix
+refused `?project=%20%20` and `todo list --project '  '`, but a Project named
+`"  "` can be created and both apps send the selected Project's name verbatim.
+The coordinator's ruling: the blank refusal stays for the Tag name filter
+only; the Project name filter matches the stored name exactly, on `/tasks`, the
+Catalog and the CLI. `TaskFilters.project` is a plain string again (its
+description says "compared exactly, whitespace included"); `rejectUnknownQuery`
+refuses only a blank `tag`. Tests: a Project named two spaces (beside one named
+one space and one named Errands) is found by name on `/tasks`, the Catalog,
+`todo list` and `todo catalog`, and nothing else is; red with 7f08409e's
+server.ts and task-filters.ts. `todo catalog --project ""` stays refused (an
+empty value, the catalog flag rule; no Project can be named ""). Whether a
+blank Project name should be refused at create is not part of this unit.
+
+**F2b. A restore during the request** (180f929d). The seat's schedule: R edits
+X (seq 12); another request takes a Snapshot; R edits Z (13); another request
+restores; DatabaseRestored takes 13 with other kept columns, so Z's note read as
+rolled back and R reported 12. Now the request notes each database's generation
+at its first note there (the newest committed DatabaseRestored's generation, the
+same rule as the Profile classification); at the settle a moved or unreadable
+generation means nothing is reported. Only committed-operations.ts changes; no
+store, auth or snapshot body. Tests: the seat's schedule reports nothing (it
+reported X's seq with the check removed); a request after a restore, inside one
+generation, still reports its seq.
+
+**Which generation the seq belongs to.** No write reply names a generation:
+there is no generation header on any reply, and only a Snapshot restore's
+report carries one (the new generation, in its body). The field's description
+now says the seq belongs to the generation current from the request's first
+commit to its reply, that a client holds the generation from its last Catalog
+position or stream, and that a restore reaches the stream as `reload`. The 23
+committing CLI schemas embed that description (flag golden).
+
+**A golden for the owner's order** (5da90607). `apps/cli/test/golden-order/`
+holds `list_json.golden` (`todo list --format json`) and
+`export_default_md.golden` (`todo export`) over two P2 Tasks: "Dated Task"
+(due 2030-01-15) and "Undated Task", which has the lower id. The dated one comes
+first in both. Red with `undatedDuePlacement` set to `"first"`.
+
+**The `due:` label, unchanged; what would change.** `taskLine` prints
+`due:${due_at.slice(0, 10)}`: a date as is, an instant as its UTC date. Showing
+an instant's date in the zone stored with it (the Today rule) would change only
+instants whose stored zone puts them on another date than UTC, in every
+Markdown output built on `taskLine`. Captured with the compiled CLI, a Task due
+at 19:30 in Bogota on 2026-11-13 (stored `2026-11-14T00:30:00Z`,
+`America/Bogota`):
+
+| Output | Before (today) | After |
+| --- | --- | --- |
+| `todo list` | `- [ ] [P3] Evening call (id: f9983bfb…, v:1) due:2026-11-14` | `… due:2026-11-13` |
+| `todo show` and every Markdown write reply (`add`, `edit`, `done`, …) | `- [ ] [P3] Evening call (id: f9983bfb…, v:1) due:2026-11-14` under `# Task` | `… due:2026-11-13` |
+| `todo export` | `- [ ] [P3] Evening call (id: f9983bfb…, v:1) due:2026-11-14` | `… due:2026-11-13` |
+| `todo export --template jira-context` | the same line under `## Tasks` | `… due:2026-11-13` |
+| `todo review daily` | the same line under `## Overdue` or `## Scheduled` | `… due:2026-11-13` |
+| `todo review weekly` | the same line in its groups | `… due:2026-11-13` |
+| `todo catalog` (Markdown) | the same line under Due today at Bogota 20:00 | `… due:2026-11-13` |
+| `todo sync obsidian` | the same line in the projection file | `… due:2026-11-13` |
+
+- JSON, table output and the Catalog's JSON are unaffected: they carry
+  `due_at` whole.
+- Instants entered with CLI flags are stored in UTC, so their label cannot
+  change; only instants from the apps, quick-add drafts or import with another
+  zone can.
+- **The frozen goldens:** four hold an instant, a-overdue
+  `2000-01-01T09:00:00Z` stored in `UTC` (export_default_md, export_jira_md,
+  review_daily, review_weekly). Its UTC date is its zone's date, so none of
+  them would change. The new order golden holds only a date.
+- The label would need the instant's stored zone, which TaskView drops (it
+  keeps the UTC text): a small change to TaskView or to `taskLine`'s caller.
+  `dateText` has the same rule and no caller.
+
+**The coordinator's source review** of `OperationStore.record` (7f08409e,
+byte-identical to the beae37bc candidate) is recorded in the atomic-commit
+mapping's seatFindings record as coordinatorSourceReview, and in its SKILL.md
+(b79a9dc9). The check still passes with no other change.
+
+**Proof for the delta** (product 5da90607), all under the reference sandbox:
+- Root check exit 0 at ead12256: domain 630, server 202, CLI 97, Electron 168
+  (1 skipped).
+- Controls made red, then restored: F2b's schedule without the generation
+  check (reports X's seq); F7's two tests with 7f08409e's server.ts and
+  task-filters.ts; the order golden with `undatedDuePlacement` at `"first"`.
+- Verify skills, each exit 0: verify-server-api and its reads, verify-filters,
+  verify-sse, verify-cli, verify-profiles, verify-task-search,
+  verify-cli-routing (after its isolation controls), and verify-install
+  (install-6, first try; the store path given on the command line as before,
+  and run once the shared Swift lock was free).
+- Mappings, each appended as a candidate:
+  - verify-occ-atomicity: no mapped file changed; the check passes; the
+    coordinator's source review is recorded.
+  - verify-task-search-formal: the pre-renewal check passed every model run and
+    stopped only at task-filters.ts; renewed, the one command passes.
+  - verify-task-search-cache: before renewal check.mjs stopped only at
+    task-filters.ts and check-hygiene.mjs only at server.ts; after renewal
+    both pass, build-baseline `--uncached` passes and the full verify.mjs
+    passes (verify-Qd7WS0).
+  - verify-dag-formal: pinned at cee500f0 (the product plus the two sibling
+    renewals); 80 of 80 anchors; full default exit 0, "CONFORMANCE CHECKPOINT
+    PASS" (check-KzDYEU); 36 production controls (conformance-kzKfpm) and 53
+    public mutants with 53 restores (public-4ifApl); clean recheck 19,784
+    states.
+  - verify-discovery-formal: TypeScript steps exit 0 (electron-HqZpbQ); the
+    Swift step and renewal stay owed to step 2.
+- PIN_AUDIT_DELTA
+
 ## What the clients inherit
 
 - **The zone.** Electron sends its zone with each planning and Catalog read
@@ -471,8 +585,13 @@ Project or Tag name made only of whitespace is not a filter value.
   (C10-S3). Until then both get the server's own zone, which on the owner's Mac
   is the owner's zone.
 - **Undated last** inside a priority, through the Catalog's group order.
-- **Blank name filters** are refused; neither app sends one today.
+- **Blank name filters.** A blank Tag name filter is refused; neither app sends
+  one. A Project name, blank or not, is compared exactly (F7).
 - **`operation_seq`** on every write reply, including the routed command's.
+  Absent after a concurrent Purge or restore; when present it belongs to the
+  generation the client already holds (no reply names one).
+- **The `due:` label** in CLI Markdown stays the UTC date for instants until
+  the owner decides.
 - **The Swift client** must be regenerated with `generate-api.sh` (then
   `swift-contract.ts --write` runs) before a Mac app can talk to this server;
   until then `swift-client-pending.json` names the pair and what stays red.
