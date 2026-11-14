@@ -1,7 +1,7 @@
 {
   "about": "The one place that names what stays red while the Swift client is not regenerated for the server's contract. packages/api/scripts/swift-contract.ts reads it; verify-dag-formal's contract properties accept a Swift identity that differs from the API identity only when this file names that exact pair. apps/macos/scripts/generate-api.sh (step 2) regenerates the Swift client, writes the identity and empties this file.",
   "swiftContract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
-  "serverContract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+  "serverContract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
   "evidence": "apps/macos/API/Sources/TodoAPI/openapi.json has the content of packages/api/openapi.json at d304589f normalized by normalize-openapi.py; that document's contract id is 55c6d138. The Swift sources were last generated there.",
   "expectedRed": [
     {
@@ -10,7 +10,7 @@
     },
     {
       "check": "verify-macos and the Mac gate cycle against a server built from this line",
-      "reason": "A Mac app built here reports contract 55c6d138 and refuses this server as outdated (Transport.swift health check, TodoModel.swift health check); its generated TaskWrite does not know operation_seq."
+      "reason": "A Mac app built here reports contract 55c6d138 and refuses this server as outdated (Transport.swift health check, TodoModel.swift health check); its generated TaskWrite does not know operation_position."
     },
     {
       "check": "verify-discovery-formal's Swift step",

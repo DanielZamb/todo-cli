@@ -244,8 +244,11 @@ machine's zone for `todo catalog` (unless `--time-zone`), `list --today` and
 in the zone stored with it (ADR-0006). One Task order
 (`compareTasks`), one name order (`compareNames`) and one Tag-name rule
 (`tag-name.ts`) serve every read and writer. Write replies and writing CLI
-commands carry `operation_seq`: when present, everything the request committed
-is at or below it; when absent, read to find out (`committed-operations.ts`). The desktop clients still use the older reads
+commands carry `operation_position` (`{generation, seq}`, the Catalog position's
+shape): when present, everything the request committed is at or below `seq` in
+`generation`. A client compares it with a Catalog position or a stream id only
+when the generations are equal; when they differ, or the field is absent, it
+reads (`committed-operations.ts`). The desktop clients still use the older reads
 until they move to the Catalog.
 
 Credential checks create read authorities inside the authentication module.

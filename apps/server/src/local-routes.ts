@@ -1,5 +1,5 @@
 import { BadRequest, TodoApi } from "@todo/api";
-import { withOperationSeq } from "@todo/domain";
+import { withOperationPosition } from "@todo/domain";
 import {
   CommandNotRun,
   commandNotRunMessage,
@@ -59,7 +59,7 @@ export const localRoutes = (
           const credential = authorization.startsWith("Bearer ")
             ? authorization.slice(7)
             : "";
-          return yield* withOperationSeq(
+          return yield* withOperationPosition(
             executeBackendCommand(store, credential, payload),
           );
         }),

@@ -1,7 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
-import { noteCommitted } from "../committed-operations.ts";
+import { noteCommitted, noteGeneration } from "../committed-operations.ts";
 import {
   diagnosticOwnerAuthenticated,
   diagnosticSync,
@@ -785,6 +785,10 @@ export class Authentication<Read> {
       if (lease) lease.checkedSerial = checkedSerial;
       const classification =
         profile === null ? undefined : this.classifyProfile(profile);
+      // The generation this request now holds, for its write replies'
+      // operation_position: noting it here means the write itself reads none.
+      if (classification)
+        noteGeneration(this.db, classification.snapshot.generation);
       if (classification?.kind === "tombstoned")
         throw new AuthError("profile_deleted", value.id);
       if (value.kind === "session") diagnosticOwnerAuthenticated();

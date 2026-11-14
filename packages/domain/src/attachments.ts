@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { operationSeqField } from "./committed-operations.ts";
+import { operationPositionField } from "./committed-operations.ts";
 import { AttachmentId, TaskId, Version } from "./ids.ts";
 import {
   AttachmentIdInput,
@@ -179,7 +179,7 @@ export const AttachManyRow = Schema.Struct({
 });
 export type AttachManyRow = typeof AttachManyRow.Type;
 export const AttachManyReport = Schema.Struct({
-  ...operationSeqField,
+  ...operationPositionField,
   generated_at: Instant,
   dry_run: Schema.Boolean,
   items: Schema.Array(AttachManyRow),

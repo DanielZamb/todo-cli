@@ -135,7 +135,7 @@ it.live(
 );
 
 it.live(
-  "a routed command's reply carries operation_seq, the seq its commit reached",
+  "a routed command's reply carries operation_position, the position its commit reached",
   () =>
     Effect.scoped(
       Effect.gen(function* () {
@@ -196,9 +196,14 @@ it.live(
           added.status,
           added.body.outcome,
           added.body.result.task.title,
-          added.body.operation_seq,
-        ]).toEqual([200, "success", "Routed add", after.seq]);
-        // A refused command committed nothing: no operation_seq.
+          added.body.operation_position,
+        ]).toEqual([
+          200,
+          "success",
+          "Routed add",
+          { generation: after.generation, seq: after.seq },
+        ]);
+        // A refused command committed nothing: no operation_position.
         const refused = yield* run({
           kind: "add",
           profile: "missing",
@@ -208,7 +213,7 @@ it.live(
           refused.status,
           refused.body.outcome,
           refused.body.error.code,
-          "operation_seq" in refused.body,
+          "operation_position" in refused.body,
         ]).toEqual([200, "failure", "not_found", false]);
         expect((yield* store.snapshots.generation()).seq).toBe(after.seq);
       }),

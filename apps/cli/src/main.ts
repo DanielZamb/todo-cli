@@ -138,7 +138,7 @@ import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { decodeInput } from "./input.ts";
 import { verifyMacPassword } from "./macos-password.ts";
-import { stampOperationSeq } from "./operation-seq.ts";
+import { stampOperationPosition } from "./operation-position.ts";
 import { resolveProfile } from "./profile-selection.ts";
 import {
   ConfigResponse,
@@ -180,7 +180,7 @@ const terminalSafe = (text: string) => {
 };
 const write = (text: string) =>
   Effect.sync(() => {
-    process.stdout.write(terminalSafe(stampOperationSeq(text)));
+    process.stdout.write(terminalSafe(stampOperationPosition(text)));
   });
 const response = <S extends Schema.ConstraintEncoder<unknown>>(
   format: Format,

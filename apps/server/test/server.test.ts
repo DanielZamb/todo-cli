@@ -611,12 +611,12 @@ describe("Todo HTTP contract", () => {
             1,
           ]);
           const path = `/profiles/work/tasks/${task.id}`;
-          // The write reply adds operation_seq; the Task itself is what Show returns.
-          const { operation_seq, ...createdTask } = created.body as Record<
+          // The write reply adds operation_position; the Task itself is what Show returns.
+          const { operation_position, ...createdTask } = created.body as Record<
             string,
             unknown
           >;
-          expect(operation_seq).toBe(3);
+          expect(operation_position).toEqual({ generation: "initial", seq: 3 });
           expect(yield* request("GET", path, undefined, credential)).toEqual({
             status: 200,
             body: createdTask,

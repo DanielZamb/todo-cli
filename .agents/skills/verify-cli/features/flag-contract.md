@@ -89,7 +89,8 @@ the five recording subcommands, each registering only the flags its handler read
 the Diagnostics response schema hash shared by `diagnostics` and `top`.
 The Catalog unit then added `catalog`
 (24 flags of its own and the 15 every command carries, 39 pairs) and the
-optional `operation_seq` to the response schemas of the 23 committing commands.
+optional `operation_position` (`{generation, seq}`, the Catalog position's shape) to the
+response schemas of the 23 committing commands.
 Remaining flag order and all other
 help/schema content stay unchanged. The five original Go output goldens do not change.
 

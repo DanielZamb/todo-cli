@@ -1,7 +1,7 @@
 import { Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import { TaskCommands } from "./commands.ts";
-import { operationSeqField } from "./committed-operations.ts";
+import { operationPositionField } from "./committed-operations.ts";
 import { exitStatus } from "./exit-status.ts";
 import { TaskId, Version } from "./ids.ts";
 import { limitedItems, TaskIdInput } from "./limits.ts";
@@ -65,7 +65,7 @@ export const BatchEditRow = Schema.Struct({
 });
 export type BatchEditRow = typeof BatchEditRow.Type;
 export const BatchEditReport = Schema.Struct({
-  ...operationSeqField,
+  ...operationPositionField,
   generated_at: Instant,
   dry_run: Schema.Boolean,
   items: Schema.Array(BatchEditRow),

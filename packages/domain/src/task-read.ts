@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { operationSeqField } from "./committed-operations.ts";
+import { operationPositionField } from "./committed-operations.ts";
 import { Edge, VersionChange } from "./dependencies.ts";
 import {
   DeleteConfirmationVersion,
@@ -18,7 +18,7 @@ export const DependencyReadFields = {
   remaining_energy: Schema.optionalKey(RemainingEnergySchema),
 };
 export const TaskWrite = Schema.Struct({
-  ...operationSeqField,
+  ...operationPositionField,
   ...Task.fields,
   dependency_warnings: Schema.optionalKey(Schema.Array(DependencyWarning)),
   removed_dependencies: Schema.optionalKey(Schema.Array(Edge)),

@@ -50,7 +50,7 @@ it.effect("reports the highest seq a request committed, per request", () =>
               ).seq;
             // Sign-in decides in the passphrase queue, outside the request:
             // its AuthChanged commit is not attributed to the request.
-            expect(signIn.seq).toBe(null);
+            expect(signIn.position?.seq ?? null).toBe(null);
             const commands = new TaskCommands(store);
             const created = yield* collectCommitted(
               commands.create(request, {
@@ -58,7 +58,7 @@ it.effect("reports the highest seq a request committed, per request", () =>
                 source: "agent",
               } as never),
             );
-            expect(created.seq).toBe(committedMax());
+            expect(created.position?.seq ?? null).toBe(committedMax());
             if (created.value.outcome !== "committed")
               throw new Error("create");
             const task = created.value.task;
@@ -70,10 +70,10 @@ it.effect("reports the highest seq a request committed, per request", () =>
                 changes: { title: "Stale" },
               } as never),
             );
-            expect([conflict.value.outcome, conflict.seq]).toEqual([
-              "rejected",
-              null,
-            ]);
+            expect([
+              conflict.value.outcome,
+              conflict.position?.seq ?? null,
+            ]).toEqual(["rejected", null]);
             // A dry run commits nothing.
             const preview = yield* collectCommitted(
               commands.delete(target, {
@@ -81,7 +81,7 @@ it.effect("reports the highest seq a request committed, per request", () =>
                 dry_run: true,
               } as never),
             );
-            expect(preview.seq).toBe(null);
+            expect(preview.position?.seq ?? null).toBe(null);
             // Two requests interleaving between transactions keep their own seqs.
             const [left, right] = yield* Effect.all(
               [
@@ -112,9 +112,13 @@ it.effect("reports the highest seq a request committed, per request", () =>
             );
             const titles = (yield* commands.list(request)).length;
             expect(titles).toBe(4);
-            expect(left.seq).toBe(committedMax());
-            expect(right.seq).toBeLessThan(left.seq ?? 0);
-            expect(right.seq).toBeGreaterThan(created.seq ?? 0);
+            expect(left.position?.seq ?? null).toBe(committedMax());
+            expect(right.position?.seq ?? null).toBeLessThan(
+              left.position?.seq ?? 0,
+            );
+            expect(right.position?.seq ?? null).toBeGreaterThan(
+              created.position?.seq ?? 0,
+            );
             // Outside collectCommitted nothing is collected and nothing fails.
             yield* commands.create(request, {
               title: "Plain",
@@ -247,7 +251,7 @@ it.effect(
         expect(JSON.parse(taken?.event ?? "{}").task.id).toBe("task-2");
         expect(JSON.parse(taken?.event ?? "{}").occurred_at).toBe(time);
         // A committed nothing and reports nothing.
-        expect(first.seq).toBe(null);
+        expect(first.position?.seq ?? null).toBe(null);
       }),
     ),
 );
@@ -260,13 +264,13 @@ it.effect("a note made outside the request's fiber is dropped", () =>
       const inside = yield* collectCommitted(
         Effect.sync(() => noteCommitted(db, noted(row))),
       );
-      expect(inside.seq).toBe(row.seq);
+      expect(inside.position?.seq ?? null).toBe(row.seq);
       const outside = yield* collectCommitted(
         Effect.promise(() =>
           Promise.resolve().then(() => noteCommitted(db, noted(row))),
         ),
       );
-      expect(outside.seq).toBe(null);
+      expect(outside.position?.seq ?? null).toBe(null);
     }),
   ),
 );
@@ -312,7 +316,7 @@ it.effect("a redacted operation never lets a request report a lower seq", () =>
       expect(row?.outcome).toBe("committed");
       // The highest operation can no longer be confirmed: nothing is reported,
       // never the lower seq of the first create.
-      expect(reply.seq).toBe(null);
+      expect(reply.position?.seq ?? null).toBe(null);
     }),
   ),
 );
@@ -377,7 +381,7 @@ it.effect(
           redacted?.outcome,
         ]).toEqual(["TaskHistoryRedacted", "committed"]);
         // Never the first edit's seq: absent, read to find out.
-        expect(reply.seq).toBe(null);
+        expect(reply.position?.seq ?? null).toBe(null);
       }),
     ),
 );
@@ -437,7 +441,7 @@ it.effect(
           JSON.parse(restored?.event ?? "{}").kind,
         ]).toEqual([second, second, "DatabaseRestored"]);
         // Never X's seq in a generation the reply does not name: absent.
-        expect(reply.seq).toBe(null);
+        expect(reply.position?.seq ?? null).toBe(null);
       }),
     ),
 );
@@ -454,9 +458,35 @@ it.effect("a request inside one generation still reports its seq", () =>
       const reply = yield* collectCommitted(
         commands.create(request, { title: "After", source: "agent" } as never),
       );
-      expect(reply.seq).toBe(rows().at(-1)?.seq ?? -1);
+      expect(reply.position?.seq ?? null).toBe(rows().at(-1)?.seq ?? -1);
+      // It names the generation the restore started, as the store reads it.
+      expect(reply.position?.generation).toBe(
+        (yield* store.snapshots.generation()).generation,
+      );
+      expect(reply.position?.generation).not.toBe("initial");
     }),
   ),
+);
+
+it.effect(
+  "the restore's own position names the new generation its report carries",
+  () =>
+    scratchStore((store, rows) =>
+      Effect.gen(function* () {
+        const saved = yield* store.snapshots.create("before");
+        const reply = yield* collectCommitted(
+          store.snapshots.restore(saved.id),
+        );
+        const restored = rows().at(-1);
+        expect([
+          JSON.parse(restored?.event ?? "{}").kind,
+          reply.position,
+        ]).toEqual([
+          "DatabaseRestored",
+          { generation: reply.value.generation, seq: restored?.seq },
+        ]);
+      }),
+    ),
 );
 
 it.effect("a rolled-back insert leaves the request's committed seq", () =>
@@ -483,7 +513,7 @@ it.effect("a rolled-back insert leaves the request's committed seq", () =>
         }),
       );
       const committed = rows().filter((row) => row.outcome === "committed");
-      expect(reply.seq).toBe(committed.at(-1)?.seq);
+      expect(reply.position?.seq ?? null).toBe(committed.at(-1)?.seq);
       expect(JSON.parse(committed.at(-1)?.event ?? "{}").task.title).toBe(
         "Committed",
       );

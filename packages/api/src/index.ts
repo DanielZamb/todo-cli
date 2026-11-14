@@ -36,7 +36,7 @@ import {
   LookupQuery,
   MoveTask,
   OpLogEntry,
-  operationSeqField,
+  operationPositionField,
   PlanningView,
   PlanningViewName,
   PlanningViewQuery,
@@ -526,7 +526,7 @@ const Passphrase = Schema.Struct({
   ),
 });
 const IssuedCredential = Schema.Struct({
-  ...operationSeqField,
+  ...operationPositionField,
   ...CredentialInfo.fields,
   credential: Schema.String,
 });

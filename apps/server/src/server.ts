@@ -55,7 +55,7 @@ import {
   TaskRead,
   type TaskWrite,
   taskLookupError,
-  withOperationSeq,
+  withOperationPosition,
 } from "@todo/domain";
 import { AttachmentCommands } from "@todo/domain/attachments";
 import {
@@ -812,7 +812,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           detach: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -825,7 +825,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           labelAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -838,7 +838,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           uploadAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -851,7 +851,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
               const {
@@ -884,7 +884,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           batchEdit: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -895,7 +895,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           importTasks: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -906,7 +906,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           depend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -917,7 +917,7 @@ export const serverLayer = (options: {
                   "depend",
                 ),
               ).pipe(Effect.flatMap(dependencyResult));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           undepend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -928,7 +928,7 @@ export const serverLayer = (options: {
                   "undepend",
                 ),
               ).pipe(Effect.flatMap(dependencyResult));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           batchDepend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -939,7 +939,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           graph: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1000,7 +1000,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           edit: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1010,7 +1010,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           transition: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1020,7 +1020,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           move: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1031,7 +1031,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           copy: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1042,7 +1042,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           revert: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1053,7 +1053,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "read")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           createSeries: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1064,7 +1064,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           editSeries: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1075,7 +1075,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           skipOccurrence: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1086,7 +1086,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           delete: ({ params, query }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1096,7 +1096,7 @@ export const serverLayer = (options: {
                   query,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
         }),
       ).pipe(
         Layer.provide(ValidationHistoryLive),
@@ -1123,7 +1123,7 @@ export const serverLayer = (options: {
                     : { ...result.error, ...exitStatus(2) },
                 );
               return result.report;
-            }).pipe(withOperationSeq),
+            }).pipe(withOperationPosition),
           lookup: ({ query }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -1258,7 +1258,7 @@ export const serverLayer = (options: {
               Effect.gen(function* () {
                 const credential = yield* BearerCredential;
                 return yield* translate(
-                  withOperationSeq(
+                  withOperationPosition(
                     store.auth.issueToken({ credential, token: payload }),
                   ),
                 );
@@ -1353,7 +1353,7 @@ export const serverLayer = (options: {
               }),
             restore: ({ params, payload }) =>
               snapshotOwner(
-                withOperationSeq(
+                withOperationPosition(
                   store.snapshots.restore(params.snapshot, {
                     dryRun: payload.dry_run,
                   }),

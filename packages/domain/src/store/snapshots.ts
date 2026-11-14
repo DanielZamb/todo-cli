@@ -585,15 +585,19 @@ export class Snapshots {
               "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES ('snapshot-restore',NULL,1,?,NULL,NULL,'committed',NULL)",
             )
             .run(text);
-          noteCommitted(this.db, {
-            seq: Number(restored.lastInsertRowid),
-            event: text,
-            actor: "snapshot-restore",
-            profile: null,
-            from_version: null,
-            to_version: null,
-            occurred_at: event.occurred_at,
-          });
+          noteCommitted(
+            this.db,
+            {
+              seq: Number(restored.lastInsertRowid),
+              event: text,
+              actor: "snapshot-restore",
+              profile: null,
+              from_version: null,
+              to_version: null,
+              occurred_at: event.occurred_at,
+            },
+            generation,
+          );
           for (const trigger of triggers) this.db.exec(trigger.sql);
           if (this.db.query("PRAGMA foreign_key_check").all().length)
             throw new SnapshotError(

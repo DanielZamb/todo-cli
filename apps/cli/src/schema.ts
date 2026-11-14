@@ -20,8 +20,8 @@ import { credentialSelectionDescription } from "./credential-profile.ts";
 import { routingDescription, WriteMode } from "./database-selection.ts";
 import {
   committingCommands,
-  withOperationSeqProperty,
-} from "./operation-seq.ts";
+  withOperationPositionProperty,
+} from "./operation-position.ts";
 
 const registry = new Map<
   string,
@@ -107,9 +107,11 @@ export function commandSchema(name: string) {
   const entry = registry.get(name);
   const document = entry?.document();
   if (document && entry?.kind === "command" && committingCommands.has(name))
-    withOperationSeqProperty(
-      document.schema as Parameters<typeof withOperationSeqProperty>[0],
-      document.definitions as Parameters<typeof withOperationSeqProperty>[1],
+    withOperationPositionProperty(
+      document.schema as Parameters<typeof withOperationPositionProperty>[0],
+      document.definitions as Parameters<
+        typeof withOperationPositionProperty
+      >[1],
     );
   return document
     ? {

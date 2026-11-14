@@ -1,6 +1,7 @@
-// A writing command's JSON carries operation_seq, the highest seq it committed
+// A writing command's JSON carries operation_position, the generation and the
+// highest seq it committed
 // (see committed-operations.ts in the domain). Its published schema says so.
-import { committedSoFar, OperationSeq } from "@todo/domain";
+import { committedSoFar, OperationPosition } from "@todo/domain";
 import { jsonText } from "@todo/domain/presentation";
 import { Schema } from "effect";
 
@@ -37,10 +38,10 @@ type JsonSchema = {
   oneOf?: JsonSchema[];
   $ref?: string;
 };
-const property = Schema.toJsonSchemaDocument(OperationSeq).schema;
+const property = Schema.toJsonSchemaDocument(OperationPosition).schema;
 
-/** Adds the optional operation_seq property to every object the response can be. */
-export const withOperationSeqProperty = (
+/** Adds the optional operation_position property to every object the response can be. */
+export const withOperationPositionProperty = (
   schema: JsonSchema,
   definitions: Record<string, JsonSchema>,
 ) => {
@@ -52,21 +53,21 @@ export const withOperationSeqProperty = (
       const target = definitions[node.$ref.split("/").at(-1) ?? ""];
       if (target) visit(target);
     }
-    if (node.properties) node.properties.operation_seq = property;
+    if (node.properties) node.properties.operation_position = property;
     for (const member of [...(node.anyOf ?? []), ...(node.oneOf ?? [])])
       visit(member);
   };
   visit(schema);
 };
 
-/** The command's JSON object with operation_seq when it committed History. */
-export const stampOperationSeq = (text: string) => {
-  const seq = committedSoFar();
-  if (seq === null || !text.startsWith("{")) return text;
+/** The command's JSON object with operation_position when it committed History. */
+export const stampOperationPosition = (text: string) => {
+  const position = committedSoFar();
+  if (position === null || !text.startsWith("{")) return text;
   try {
     const value: unknown = JSON.parse(text);
     return typeof value === "object" && value !== null && !Array.isArray(value)
-      ? jsonText({ ...value, operation_seq: seq })
+      ? jsonText({ ...value, operation_position: position })
       : text;
   } catch {
     return text;

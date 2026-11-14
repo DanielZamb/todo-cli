@@ -265,7 +265,7 @@ it.effect(
     ),
 );
 
-it.effect("carries operation_seq on writes that committed History", () =>
+it.effect("carries operation_position on writes that committed History", () =>
   Effect.scoped(
     Effect.gen(function* () {
       const { request, credential, opLog } = yield* fixture;
@@ -279,16 +279,19 @@ it.effect("carries operation_seq on writes that committed History", () =>
       const task = created.body as {
         id: string;
         row_version: number;
-        operation_seq?: number;
+        operation_position?: { generation: string; seq: number };
       };
-      expect(task.operation_seq).toBe(committedMax());
+      expect(task.operation_position).toEqual({
+        generation: "initial",
+        seq: committedMax(),
+      });
       const catalog = Schema.decodeUnknownSync(CatalogReply)(
         (yield* request("GET", "/profiles/work/catalog", undefined, credential))
           .body,
       );
       if (catalog.unchanged) throw new Error("expected lists");
       expect(catalog.position.seq).toBeGreaterThanOrEqual(
-        task.operation_seq ?? 0,
+        task.operation_position?.seq ?? 0,
       );
       expect(catalog.tasks.map((t) => t.id)).toContain(task.id);
 
@@ -300,7 +303,7 @@ it.effect("carries operation_seq on writes that committed History", () =>
         credential,
       );
       expect(conflict.status).toBe(409);
-      expect(conflict.body).not.toHaveProperty("operation_seq");
+      expect(conflict.body).not.toHaveProperty("operation_position");
       const preview = yield* request(
         "DELETE",
         `/profiles/work/tasks/${task.id}?from_version=${task.row_version}&dry_run=true`,
@@ -308,7 +311,7 @@ it.effect("carries operation_seq on writes that committed History", () =>
         credential,
       );
       expect(preview.status).toBe(200);
-      expect(preview.body).not.toHaveProperty("operation_seq");
+      expect(preview.body).not.toHaveProperty("operation_position");
 
       // A request that commits several operations carries the highest.
       const before = committedMax() ?? 0;
@@ -324,24 +327,128 @@ it.effect("carries operation_seq on writes that committed History", () =>
         credential,
       );
       expect(imported.status).toBe(200);
-      const report = imported.body as { operation_seq?: number };
-      expect(report.operation_seq).toBe(committedMax());
-      expect((report.operation_seq ?? 0) - before).toBe(2);
+      const report = imported.body as {
+        operation_position?: { generation: string; seq: number };
+      };
+      expect(report.operation_position).toEqual({
+        generation: "initial",
+        seq: committedMax(),
+      });
+      expect((report.operation_position?.seq ?? 0) - before).toBe(2);
       const dryImport = yield* request(
         "POST",
         "/profiles/work/import",
         { items: [{ external_id: "c", title: "Not yet" }], dry_run: true },
         credential,
       );
-      expect(dryImport.body).not.toHaveProperty("operation_seq");
+      expect(dryImport.body).not.toHaveProperty("operation_position");
 
       const token = (yield* request(
         "POST",
         "/auth/tokens",
         { name: "seq token", profile: null, scope: "read-only" },
         credential,
-      )).body as { operation_seq?: number };
-      expect(token.operation_seq).toBe(committedMax());
+      )).body as { operation_position?: { generation: string; seq: number } };
+      expect(token.operation_position).toEqual({
+        generation: "initial",
+        seq: committedMax(),
+      });
     }),
   ),
+);
+
+it.effect(
+  "a write reply names its generation: the seat's F8 schedule across a restore",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const { request, credential } = yield* fixture;
+        type Position = { generation: string; seq: number };
+        type Written = {
+          id: string;
+          row_version: number;
+          title: string;
+          operation_position?: Position;
+        };
+        const catalog = () =>
+          Effect.map(
+            request("GET", "/profiles/work/catalog", undefined, credential),
+            ({ body }) => {
+              const reply = Schema.decodeUnknownSync(CatalogReply)(body);
+              if (reply.unchanged) throw new Error("expected lists");
+              return reply;
+            },
+          );
+        // The client rule: a write is covered by a Catalog only when the
+        // generations are equal and its seq is at or below the position's.
+        const covered = (write: Position | undefined, at: Position) =>
+          write !== undefined &&
+          write.generation === at.generation &&
+          write.seq <= at.seq;
+        let task = (yield* request(
+          "POST",
+          "/profiles/work/tasks",
+          { title: "X-0" },
+          credential,
+        )).body as Written;
+        const saved = (yield* request(
+          "POST",
+          "/snapshots",
+          { reason: "before the edits" },
+          credential,
+        )).body as { id: string };
+        for (const title of ["X-1", "X-2", "X-3", "X-4", "X-5"]) {
+          task = (yield* request(
+            "PATCH",
+            `/profiles/work/tasks/${task.id}`,
+            { from_version: task.row_version, changes: { title } },
+            credential,
+          )).body as Written;
+        }
+        // One generation: the write and the Catalog after it agree.
+        const held = yield* catalog();
+        expect(held.position.generation).toBe("initial");
+        expect(covered(task.operation_position, held.position)).toBe(true);
+        // 1. The client holds {initial, n} showing X-5.
+        // 2. Another request restores the Snapshot.
+        const restore = (yield* request(
+          "POST",
+          `/snapshots/${saved.id}/restore`,
+          { dry_run: false },
+          credential,
+        )).body as { generation: string; operation_position?: Position };
+        // The restore's own position names the generation its body reports.
+        expect(restore.operation_position?.generation).toBe(restore.generation);
+        // 3. Before seeing the reload, the client writes.
+        const current = (yield* request(
+          "GET",
+          `/profiles/work/tasks/${task.id}`,
+          undefined,
+          credential,
+        )).body as Written;
+        const write = (yield* request(
+          "PATCH",
+          `/profiles/work/tasks/${task.id}`,
+          {
+            from_version: current.row_version,
+            changes: { title: "client write" },
+          },
+          credential,
+        )).body as Written;
+        // Its seq alone would read as covered by the old Catalog; its
+        // generation says it is not: read.
+        expect([
+          write.operation_position?.generation,
+          (write.operation_position?.seq ?? 0) <= held.position.seq,
+          covered(write.operation_position, held.position),
+        ]).toEqual([restore.generation, true, false]);
+        // 4. The later Catalog is in the write's generation and covers it.
+        const later = yield* catalog();
+        expect([
+          later.position.generation,
+          covered(write.operation_position, later.position),
+          later.tasks.find((t) => t.id === task.id)?.title,
+        ]).toEqual([restore.generation, true, "client write"]);
+      }),
+    ),
 );
