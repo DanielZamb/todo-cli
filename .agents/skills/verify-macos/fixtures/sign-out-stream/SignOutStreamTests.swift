@@ -179,6 +179,8 @@ private struct Control {
                 #expect((try vault.load()) == credential, "\(item.name) vault kept")
                 if item.cancel { #expect(model.message == nil, "\(item.name) cancellation shows no error") }
                 else { #expect(model.message != nil, "\(item.name) failure shows its message") }
+                // MAC-C1-S1-36: a kept Session is live and still follows changes.
+                try await StreamLiveness.expectFollows(model, server: model.configuration.server, "\(item.name)")
                 model.signedIn = false; model.connect()
                 try await Task.sleep(for: .seconds(3))
             }

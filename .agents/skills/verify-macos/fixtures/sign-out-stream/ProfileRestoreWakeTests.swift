@@ -88,6 +88,8 @@ import TodoAPI
         #expect(model.signedIn && model.profile == restored && model.tasks.contains { $0.title == title }, "\(receipt)")
         #expect(receipt["catalog_matches_server"] as? Bool == true, "\(receipt)")
         if left { #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)") }
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "aDeletionThenARestoreReturnsToTheRestoredProfile")
     }
 
     /// The person acted after the forced switch: the client stays, and the notice offers the
@@ -115,6 +117,8 @@ import TodoAPI
         model.goToRestoredProfile()
         try await until("the offer taken") { model.profile == restored && model.tasks.contains { $0.title == title } }
         #expect(model.restoredProfileOffer == nil && model.signedIn)
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "aPersonWhoActedStaysAndIsOfferedTheRestoredProfile")
     }
 
     /// A reload after which the deletion still holds: stay where the client switched to, and the
@@ -138,6 +142,8 @@ import TodoAPI
         try write("deletion-holds", receipt)
         #expect(model.profile == away && model.deletionNotice == notice && notice != nil, "\(receipt)")
         try await restore(api, before) // leave the database as the suite had it
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "whenTheDeletionHoldsTheClientStaysAndSaysWhy")
     }
 
     /// A second deletion while away (the Profile the client was moved to is deleted too): the
@@ -163,6 +169,8 @@ import TodoAPI
         var receipt = try await state(model, api); receipt["first_switch"] = first
         try write("second-deletion", receipt)
         #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)")
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "aSecondDeletionWhileAwayStillReturnsToTheFirstProfile")
     }
 
     /// The restored Profile comes back with the Snapshot's Tasks, not the ones it had when deleted.
@@ -183,6 +191,8 @@ import TodoAPI
         let receipt = try await state(model, api)
         try write("different-tasks", receipt)
         #expect(!model.tasks.contains { $0.title == later } && receipt["catalog_matches_server"] as? Bool == true, "\(receipt)")
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "aRestoreWithDifferentTasksShowsTheRestoredTasks")
     }
 
     /// A restore that removes the shown Profile (a Snapshot from before it existed): the client
@@ -210,6 +220,8 @@ import TodoAPI
         // or a reconnect's not_found ("was deleted").
         let notice = model.deletionNotice ?? ""
         #expect(model.signedIn && notice.hasPrefix("\u{201C}\(late)\u{201D} ") && notice.contains("Switched to "), "\(receipt)")
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "aRestoreThatRemovesTheShownProfileSaysWhy")
     }
 
     /// MAC-C1-S1-32: each kind of person action while away counts, through the one entry point
@@ -222,6 +234,7 @@ import TodoAPI
         _ = try await api.tasks_period_create(path: .init(profile: restored), body: .json(.init(title: title)))
         let id = try await snapshot(api, "c10 acted: \(action)")
         let model = try await live(credential, on: restored, showing: title)
+        model.personInput.applicationActive = { true } // a test process is never the active app
         defer { model.signedIn = false; model.connect() }
         try await delete(api, restored)
         do { try await until("the client left the deleted Profile") { model.profile != restored } } catch {
@@ -268,6 +281,8 @@ import TodoAPI
         #expect(model.profile == away, "\(action): the person stays: \(receipt)")
         #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored.", "\(action): \(receipt)")
         #expect(model.restoredProfileOffer?.profile == restored, "\(action): \(receipt)")
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "eachActionKindWhileAwayStaysAndOffers \(action)")
     }
 
     /// MAC-C1-S1-32: the input that caused the leave does not count. The person deletes the shown
@@ -275,11 +290,25 @@ import TodoAPI
     /// returns them, and with one click in between leaves them where they are, with the offer.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
     func aDeletionFromSettingsThenARestoreFromElsewhere(_ clicked: Bool) async throws {
+        try await settingsDeletion(clicked ? ["click"] : [])
+    }
+
+    /// The coordinator's refinement: a click that only brings Todo to the front does not count. An
+    /// activating click then a restore returns; an activating click and a second click stays.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["SEAT_SERVER"] != nil), arguments: [false, true])
+    func anActivatingClickThenARestore(_ secondClick: Bool) async throws {
+        try await settingsDeletion(secondClick ? ["activating click", "click"] : ["activating click"])
+    }
+
+    private func settingsDeletion(_ clicks: [String]) async throws {
+        let clicked = clicks.contains("click")
         let credential = try await owner(), api = todoClient(server: url, credential: credential)
         let title = "Wake restore settings " + UUID().uuidString
         _ = try await api.tasks_period_create(path: .init(profile: restored), body: .json(.init(title: title)))
         let id = try await snapshot(api, "c10 settings deletion, clicked \(clicked)")
         let model = try await live(credential, on: restored, showing: title)
+        var active = true
+        model.personInput.applicationActive = { active }
         defer { model.signedIn = false; model.connect() }
         // The click on Delete Profile, the prompt, the confirm: all before the leave.
         model.personInput.observe(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
@@ -289,15 +318,21 @@ import TodoAPI
         let away = model.profile
         try await settled(model)
         #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was deleted. Switched to \(model.profileName).")
-        if clicked { model.personInput.observe(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!) }
+        for click in clicks {
+            if click == "activating click" { active = false } // another app is in front; the click brings Todo forward
+            model.personInput.observe(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+            if click == "activating click" { active = true; model.personInput.applicationDidBecomeActive() }
+        }
         try await restore(api, id)
         if clicked { try await until("the offer") { model.restoredProfileOffer != nil } }
         else { try await until("back on the restored Profile") { model.profile == restored && model.tasks.contains { $0.title == title } } }
         try await settled(model)
-        var receipt = try await state(model, api); receipt["clicked"] = clicked; receipt["away"] = away
-        try write("settings-deletion-\(clicked ? "clicked" : "untouched")", receipt)
+        var receipt = try await state(model, api); receipt["clicks"] = clicks; receipt["away"] = away
+        try write("settings-deletion-\(clicks.isEmpty ? "untouched" : clicks.joined(separator: "-").replacingOccurrences(of: " ", with: "-"))", receipt)
         #expect(model.profile == (clicked ? away : restored), "\(receipt)")
         #expect(model.deletionNotice == (clicked ? "\u{201C}\(restored)\u{201D} was restored." : "\u{201C}\(restored)\u{201D} was restored. Switched back to it."), "\(receipt)")
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "settingsDeletion")
     }
 
     /// A return never crosses a sign-out or a credential change (S1-20, S1-24).
@@ -325,5 +360,7 @@ import TodoAPI
         try write("boundary-\(boundary)", receipt)
         #expect(model.profile == away && model.restoredProfileOffer == nil && model.forcedLeave == nil, "\(receipt)")
         #expect(model.deletionNotice != "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)")
+        // MAC-C1-S1-36: whatever the case ends on, the client still follows changes.
+        try await StreamLiveness.expectFollows(model, server: url, "aReturnNeverCrossesASignOutOrACredentialChange")
     }
 }

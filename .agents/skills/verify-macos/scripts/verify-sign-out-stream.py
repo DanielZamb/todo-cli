@@ -86,7 +86,10 @@ try:
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
     state_package.swap_vault(sources)
-    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift', 'ProfileRestoreWakeTests.swift']:
+    for name in ['SignOutStreamTests.swift', 'SignOutNoticeTests.swift', 'SeatSignOutNoticeTests.swift', 'CredentialTransitionCancellationTests.swift', 'SeatRestoreCancellationBoundaryTests.swift', 'MessageKindTests.swift', 'SeatMessageInterleavingTests.swift', 'SeatMessageScopeObservationTests.swift', 'SeatRestoreCancellationCorrectedTests.swift', 'SeatSurfaceLifetimeTests.swift', 'SeatSurfaceClassTests.swift', 'SeatCandidate7Gate.swift', 'SeatCandidate7InlineInterleavingTests.swift', 'SeatCandidate7bBoundaryTests.swift', 'SeatCandidate7cSupersessionTests.swift', 'SeatCommittedWriteTests.swift', 'ProfileRestoreWakeTests.swift',
+                 # MAC-C1-S1-36: the liveness helper every stream scenario ends with, the deletion and
+                 # restore liveness tests, and the correctness seat's candidate 9 return probes.
+                 'StreamLiveness.swift', 'DeletedProfileLivenessTests.swift', 'SeatProfileReturnTests.swift']:
         shutil.copyfile(fixtures / 'sign-out-stream' / name, tests / name)
     # A failing-first run replaces a copied test with its red variant (SIGN_OUT_STREAM_TEST_OVERRIDE:
     # a directory of test files); the committed fixtures are never edited for it. Recorded below.
