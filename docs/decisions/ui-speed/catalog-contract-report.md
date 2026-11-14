@@ -272,6 +272,71 @@ Tests:
   counted as unaccounted.
 - The fixed-clock reuse case still reports nothing.
 
+## Seat findings 3 and 4 (CATALOG-S1, confirmed on its head), fixed on top
+
+**3. The Swift contract identity lied** (commit "Make the Swift contract
+identity describe the Swift sources beside it").
+- `openapi.ts` used to write `ContractIdentity.swift` to the server's new id
+  while the Mac's `openapi.json` and generated sources stayed older. A Mac app
+  built from this line (and from `integ/contract` since step 1, whose constant
+  claims dae320b0) would pass the health check (`Transport.swift:24`,
+  `TodoModel.swift:1367`). It would then fail to decode the reply of every
+  write the server had already committed.
+- **The id the Mac sources implement, found rather than guessed.** The Mac
+  `openapi.json` has exactly the content of `packages/api/openapi.json` at
+  d304589f after `normalize-openapi.py`, and that document's contract id is
+  55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8. The base's
+  and this line's documents differ from it. The constant is back at 55c6d138.
+- **`packages/api/scripts/swift-contract.ts`** decides the state:
+  - regenerated: the Mac document is the normalized server document and the
+    constant names the server's contract;
+  - not regenerated: the documents differ and the constant is honest. It says
+    plainly "the Swift client is not regenerated for this contract" and
+    requires `apps/macos/API/swift-client-pending.json` to name the pair and
+    what stays red;
+  - dishonest: the documents differ and the constant claims the server's
+    contract. Refused.
+- **Where it runs:**
+  - the root check;
+  - `make sign-desktop`, before `xcodebuild` (the install path), so no Mac app
+    is built in the dishonest state;
+  - with `--write` at the end of `generate-api.sh`, the only writer of the
+    constant.
+
+  `openapi.ts` no longer touches it.
+- **This line is in the "not regenerated" state.** The Swift sources implement
+  55c6d138; the server serves this line's contract.
+- **Expected red until step 2**, named with reasons in
+  `swift-client-pending.json`:
+  - the Dependency mapping's identity property, which now accepts a differing
+    identity only for that named pair;
+  - verify-macos and the Mac gate cycle against this server: a Mac built here
+    refuses it as outdated;
+  - the Discovery Swift step, already owed.
+
+  verify-install's drive now drives the new check (honest passes, dishonest
+  refused) instead of `openapi.ts`'s Swift branch. Nothing is skipped silently.
+
+**4. `todo catalog --view tomorrow` threw** (commit "Refuse every invalid todo
+catalog flag with invalid_args before the store").
+- The parser threw synchronously inside the handler, which made it a defect.
+  Flags defaulting to `""` also could not tell an empty value from an absent
+  one.
+- Now every value flag is optional, and parsing is an Effect that fails with
+  `invalid_args` (exit 2). It refuses an empty value (except `--text`, a
+  documented blank search), anything the schema refuses, a bad `--known-seq`,
+  an unknown zone and an incomplete known position. The last two use
+  `catalogQueryError`, shared with the HTTP read.
+- All of this happens before a store is opened, a credential read or a Profile
+  created.
+- The read's defects become `runtime_error`, as in `list`, and rendering runs
+  inside `io`.
+- The compiled-CLI test is red on the previous code:
+  - every flag with a wrong, empty and dash value answers the envelope with
+    exit 2, no stack trace and no Profile created;
+  - dash values and repeated flags answer a reply or the envelope, never a
+    defect.
+
 ## Proof
 
 Each item below is "logic passes"; nothing here is "used for real".
