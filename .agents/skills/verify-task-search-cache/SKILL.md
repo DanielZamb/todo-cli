@@ -264,3 +264,14 @@ ran clean, three observer controls (exit 1 each) and restored, then stopped
 only at server.ts. After renewal both exit 0 (generated-ufsr29, hygiene-1KQne8);
 build-baseline.mjs --uncached and the full verify.mjs on the product exit 0
 (verify-gnRcYs). Candidate until the seats accept it.
+
+## Catalog contract correction, 2026-11-13
+
+Product b110f4a8b286a737b1dc46e9093a66110b3589d5. store/store.ts and
+store/snapshots.ts move again (the operation_seq note binds its event text;
+catalogTasks becomes catalogPayloads, decoded after the lease); no cache body
+changes. Before renewal check.mjs ran its controls (PASS_BEFORE_MAPPING_GATE)
+and stopped only at store/store.ts; check-hygiene.mjs ran clean, three controls
+(exit 1 each) and restored, then stopped only at a mapped hash. After renewal
+check.mjs, check-hygiene.mjs, build-baseline.mjs --uncached and the full
+verify.mjs all exit 0 on the product. Candidate until the seats accept it.

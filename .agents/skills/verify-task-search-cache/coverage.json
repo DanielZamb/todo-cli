@@ -21,11 +21,11 @@
     },
     {
       "path": "store/store.ts",
-      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
+      "sha256": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
     },
     {
       "path": "store/search-cache-events.ts",
@@ -49,11 +49,11 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
+      "sha256": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -275,6 +275,35 @@
       }
     ],
     "review": "No cache, matcher, runner, admission, accounting or erasure body changes. task-filters.ts: the Tag predicate calls tagNameMatches. commands.ts: readTasks sorts with compareTasks; the tag rule goes through tag-name.ts; both list helpers keep the token taken before the lease. store/store.ts: the catalog members, the operation_seq note in record and the preview mark in the constructor. store/snapshots.ts: the restore notes its DatabaseRestored seq. server.ts: the Catalog route and operation_seq on write handlers; hygiene still gets the raw store and is forked before the scheduler. main.ts: todo catalog and operation_seq stamping. One new cache consumer: CatalogReads.read takes searchWords.read(profile) before its lease and prepares through searchWords.words(search, text), the same shape as the two list helpers.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "previous": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e",
+        "to": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e",
+        "to": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      }
+    ],
+    "review": "store/store.ts: OperationStore.record binds the event text it notes; catalogTasks becomes catalogPayloads (payload text, decoded after the lease). store/snapshots.ts: the restore binds the event text it notes. No cache, matcher, runner, admission, accounting or erasure body changes; CatalogReads.read still takes searchWords.read(profile) before its lease and prepares through searchWords.words(search, text).",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }
