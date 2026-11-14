@@ -287,7 +287,9 @@ Each item below is "logic passes"; nothing here is "used for real".
 - **2a's own runs** on f3039274 (superseded by the above): the occ, Task search
   formal and cache renewals, the dag-formal full default at 45b86ff9
   (check-A4oZvO), and all seven verify recipes exited 0.
-- **Pin audit**: PIN_AUDIT.
+- **Pin audit** (`pin-audit.mjs HEAD` with the ledger, at d0f14e12):
+  `filesScanned 488, occurrences 516, unknown 0`. One problem, the same as on
+  the base (owed to step 2): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
 
 ## Measurements
 
