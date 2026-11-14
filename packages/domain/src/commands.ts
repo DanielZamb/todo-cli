@@ -41,6 +41,7 @@ import {
 import { StoreError } from "./store/error.ts";
 import { changes as eventChanges } from "./store/projection.ts";
 import type { OperationStore } from "./store/store.ts";
+import { tagKey, tagNames } from "./tag-name.ts";
 import {
   type CreateSeries,
   CreateTask,
@@ -275,26 +276,17 @@ function metadata(
           (t) =>
             t.profile_id === request.profile && before?.tags.includes(t.id),
         )
-      : [
-          ...new Set(
-            flags.tag
-              .flatMap((t) => t.split(","))
-              .map((t) => t.trim().toLowerCase())
-              .filter(Boolean),
-          ),
-        ]
-          .sort()
-          .map(
-            (name) =>
-              data.tags.find(
-                (t) => t.profile_id === request.profile && t.name === name,
-              ) ??
-              Schema.decodeUnknownSync(Tag)({
-                id: crypto.randomUUID(),
-                profile_id: request.profile,
-                name,
-              }),
-          );
+      : tagNames(flags.tag).map(
+          (name) =>
+            data.tags.find(
+              (t) => t.profile_id === request.profile && t.name === name,
+            ) ??
+            Schema.decodeUnknownSync(Tag)({
+              id: crypto.randomUUID(),
+              profile_id: request.profile,
+              name,
+            }),
+        );
   return { project, tags, now };
 }
 type Definitions = {
@@ -1100,7 +1092,7 @@ const checkSubmittedNames = (flags: TaskFlags) => {
   // Tags are stored lowercased, and lowercasing can lengthen a name.
   if (
     flags.tag?.some((value) =>
-      value.split(",").some((name) => tooLong(name.trim().toLowerCase())),
+      value.split(",").some((name) => tooLong(tagKey(name))),
     )
   )
     throw invalid(`Tag names have at most ${inputLimits.name} characters.`);
@@ -1371,7 +1363,7 @@ export function filterTasks(
     (t) =>
       (!filters.status || t.status === filters.status) &&
       (!filters.project || t.project === filters.project) &&
-      (!filters.tag || t.tags?.includes(filters.tag.trim().toLowerCase())) &&
+      (!filters.tag || t.tags?.includes(tagKey(filters.tag))) &&
       (!filters.priority || t.priority === filters.priority) &&
       (!filters.today ||
         t.due_at?.slice(0, 10) === today ||

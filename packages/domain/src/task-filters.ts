@@ -5,6 +5,7 @@ import { graphEnergy } from "./graph-energy.ts";
 import { dependencyState, indexGraph, type TaskGraph } from "./graph-model.ts";
 import { topologicalOrder } from "./graph-order.ts";
 import { inputLimits, TaskIdPrefix } from "./limits.ts";
+import { tagNameMatches } from "./tag-name.ts";
 import type { TaskRead } from "./task-read.ts";
 import {
   matchTaskSearchSteps,
@@ -122,7 +123,7 @@ function* filterTaskRecordSteps(
           (tag) =>
             tag.profile_id === task.profile_id &&
             task.tags.includes(tag.id) &&
-            tag.name.toLowerCase() === filters.tag?.trim().toLowerCase(),
+            tagNameMatches(tag.name, filters.tag ?? ""),
         )) &&
       (filters.status === undefined ||
         (filters.status === "closed"
