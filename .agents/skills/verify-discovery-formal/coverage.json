@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
+  "productionSyncCommit": "12c45efb03a285b6e8eb876fb8abaaefb20a9cb6",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -185,7 +185,7 @@
         "TaskLookupErrorNotice",
         "ServerErrorNotice"
       ],
-      "sha256": "ff0b5d47a7a733442bad3917de2fe36a9613aebf921146f19fc3ab58d9da4402",
+      "sha256": "22b969e89bb243ff96935ddef705b28f47815ce6aa330d97db4b2f23eb3b8551",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -213,6 +213,19 @@
       ],
       "sha256": "ee879680f803f56ca92b25d986bcee99aeb697732f0eb4aa22d0dfb14447c1a4",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
+    },
+    {
+      "path": "apps/macos/Sources/ProfileReturn.swift",
+      "functions": [
+        "forcedLeaveToCarry credential epoch comparison",
+        "recordForcedLeave credential epoch",
+        "resolveForcedLeave isCurrentEpoch guard",
+        "goToRestoredProfile isCurrentEpoch guard",
+        "personActedSinceLeave",
+        "returnToProfile"
+      ],
+      "sha256": "1c3e327ec3160455f58ac4c88d9e663aeac2c31b45c870de076b4e070f0815a3",
+      "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
   "mapping": "SOURCE-MAPPING.md",
@@ -225,7 +238,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "718b016859f866ab37394ce191736f2a10b242db",
+  "previousProductionSyncCommit": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -653,6 +666,24 @@
         }
       ],
       "review": "Candidate 11 (6cc45ab9 to 664c12a7) changes two files mapped here. TodoModel.swift: the Profile-return code (ProfileViewState, ForcedProfileLeave and the extension that records, resolves and offers a forced return) moves to ProfileReturn.swift, 27 declarations byte-identical at the parent and the head (declaration-identity.py); announce, scheduleSearch and failure lose `private` (access only); projects and tags gain didSets that build name dictionaries (projectNameByID, tagNameByID) and a tagNames(of:) helper for the Dependency picker's rows. AppViews.swift: the Dependency picker's sheet is presented through DependencyPickerSheet instead of an inline .sheet. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "12c45efb03a285b6e8eb876fb8abaaefb20a9cb6",
+      "controls": "check-swift passed on 12c45efb: docs/evidence/discovery-formal/swift-ZENmKX",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/ProfileReturn.swift",
+          "from": null,
+          "to": "1c3e327ec3160455f58ac4c88d9e663aeac2c31b45c870de076b4e070f0815a3",
+          "added": "MAC-C11-S1-5"
+        },
+        {
+          "path": "apps/macos/Sources/ClientErrors.swift",
+          "from": "ff0b5d47a7a733442bad3917de2fe36a9613aebf921146f19fc3ab58d9da4402",
+          "to": "22b969e89bb243ff96935ddef705b28f47815ce6aa330d97db4b2f23eb3b8551"
+        }
+      ],
+      "review": "The candidate 11 fix head (ef67c488, with its DAG public renewal on top). Of the mapped files only ClientErrors.swift changed: ClientErrorNotice gains dependencyShowsDetail, passed to DependencyNoticeContent, so the Dependency picker's notices leave out the exit-code line; no server-failure projection, discovery notice or Task lookup notice changed. MAC-C11-S1-5: ProfileReturn.swift, moved out of TodoModel.swift in 6cc45ab9 (27 declarations byte-identical, unchanged since), is now pinned here with its whole-file hash. It holds the forced-leave credential epoch comparisons (forcedLeaveToCarry, recordForcedLeave, resolveForcedLeave, goToRestoredProfile) and the return path (returnToProfile, which calls applyTaskFilters and scheduleSearch), which this mapping's records already speak for. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
