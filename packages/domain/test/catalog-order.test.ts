@@ -48,12 +48,13 @@ for (const priority of ["P1", "P2", "P3", "P4"] as const)
         tasks.push(task({ priority, due_at, created_at, id }));
 
 describe("compareTasks", () => {
-  it("orders like readTasks did on every pair of real values", () => {
+  it("orders like readTasks did on every pair of real values when set to first", () => {
     expect(tasks.length).toBe(896);
+    const before = taskOrder("first");
     let pairs = 0;
     for (const a of tasks)
       for (const b of tasks) {
-        expect(Math.sign(compareTasks(a, b))).toBe(
+        expect(Math.sign(before(a, b))).toBe(
           Math.sign(readTasksComparator(a, b)),
         );
         pairs++;
@@ -83,15 +84,8 @@ describe("compareTasks", () => {
       id: "e",
     }),
   ];
-  it("puts undated Tasks first inside a priority (today's CLI order)", () => {
+  it("puts undated Tasks first inside a priority when set to first (the order before Q8)", () => {
     expect([...literal].sort(taskOrder("first")).map((t) => t.id)).toEqual([
-      "c",
-      "e",
-      "b",
-      "d",
-      "a",
-    ]);
-    expect([...literal].sort(compareTasks).map((t) => t.id)).toEqual([
       "c",
       "e",
       "b",
@@ -101,6 +95,15 @@ describe("compareTasks", () => {
   });
   it("puts undated Tasks last inside a priority when set to last", () => {
     expect([...literal].sort(taskOrder("last")).map((t) => t.id)).toEqual([
+      "e",
+      "b",
+      "c",
+      "a",
+      "d",
+    ]);
+  });
+  it("is set to last: the owner's Q8 answer", () => {
+    expect([...literal].sort(compareTasks).map((t) => t.id)).toEqual([
       "e",
       "b",
       "c",

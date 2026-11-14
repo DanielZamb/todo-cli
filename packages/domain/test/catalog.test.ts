@@ -200,13 +200,14 @@ it.effect("counts each open Task once per view and groups each Task once", () =>
 
       const all = changed(yield* fixture.catalog());
       expect(named(fixture, all)).toEqual({
+        // Undated Tasks last inside each priority (Q8): T5 and T7 have no due date.
         groups: [
-          ["P1", ["T5", "T1"]],
-          ["P2", ["T7", "T6", "T2"]],
+          ["P1", ["T1", "T5"]],
+          ["P2", ["T6", "T2", "T7"]],
           ["P3", ["T3"]],
           ["P4", ["T4"]],
         ],
-        tasks: ["T5", "T1", "T7", "T6", "T2", "T3", "T4"],
+        tasks: ["T1", "T5", "T6", "T2", "T7", "T3", "T4"],
       });
       const t7 = all.tasks.find((task) => task.id === fixture.ids.T7);
       expect([t7?.blocked, t7?.ready, t7?.open_blocker_count]).toEqual([

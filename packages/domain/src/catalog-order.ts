@@ -3,10 +3,11 @@ import type { Task } from "./entities.ts";
 
 export type UndatedDuePlacement = "first" | "last";
 /**
- * Where a Task without a due date sorts inside its priority. "first" is the
- * order `todo list` and `export` have always had; the owner decides (Q8).
+ * Where a Task without a due date sorts inside its priority. The owner chose
+ * "last" on 2026-11-13 (Q8, ADR-0009); "first" was the order `todo list` and
+ * `export` had before.
  */
-export const undatedDuePlacement: UndatedDuePlacement = "first";
+export const undatedDuePlacement: UndatedDuePlacement = "last";
 
 type OrderedTask = Pick<Task, "priority" | "due_at" | "created_at" | "id">;
 
