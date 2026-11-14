@@ -3,6 +3,27 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Catalog contract renewal
+
+Candidate: product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5,
+feat/catalog-contract), pinned at 45b86ff9c8ea32ada0a65d83350c5239e99ba027:
+byte-identical product files plus the occ-atomicity, task-search-formal and
+task-search-cache renewals that the candidate capture runs. Changed mapped
+items: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite gain optional
+operation_seq; the depend, undepend, batchDepend and importTasks handlers are
+wrapped by withOperationSeq; executeImport and filterTaskRecordSteps route the
+Tag-name rule through tag-name.ts; the public contract moves to 76f09fa6.
+Every listed production function is byte-identical, and all 80 mutant anchors
+match exactly once on the product. The first full default stopped in the
+compile guard because ps cannot run in the sandbox; with the isolation note's
+read-only ps proxy, a pin at f3039274 stopped inside production conformance at
+the occ mapping (its renewal is a later commit). At 45b86ff9 the full default,
+under the reference profile, exits 0 with "CONFORMANCE CHECKPOINT PASS"
+(check-A4oZvO): 36 production controls each broken 1 and restored 0
+(conformance-QfjXiq), 53 public mutants exit 1 and restore 0 (public-mZ3Vme),
+clean recheck 19,784 distinct states. No model, invariant or bound changed.
+Candidate for the seats.
+
 ## Recordings and CLI routing integration renewal
 
 Candidate: product 29927cb04cc49bb706be602127557f43602ed5b2 on integ/contract,
