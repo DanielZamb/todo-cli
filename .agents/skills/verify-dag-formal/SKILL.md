@@ -391,3 +391,21 @@ once at the pin. The full default exits 0, "CONFORMANCE CHECKPOINT PASS"
 (conformance-kzKfpm), 53 public mutants and 53 restores (public-4ifApl), clean
 recheck 19,784 distinct states. No model, invariant or bound change. Candidate
 for the seats.
+
+## Seat delta 2 candidate (F8), 2026-11-14
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa (seat F8 on top of
+5da90607), pinned at 7131f133b1ef79469dc6736d3a6f5bd86b758060 (byte-identical
+product plus the atomic-commit, task-search formal and cache renewals);
+contract 4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc.
+Every listed production function is byte-identical (auth.ts moves only in
+credentialCheck, which notes the classified generation). The mapped public
+bodies that change are field renames: EdgeReport, BatchEdgeReport,
+ImportReport and TaskWrite carry operation_position where they carried
+operation_seq, the depend, undepend, batchDepend and importTasks handlers pipe
+withOperationPosition, and registerCommandSchema adds operation_position. All
+80 mutant anchors match once at the pin. The full default exits 0,
+"CONFORMANCE CHECKPOINT PASS" (check-gVKQsx): 36 production controls behave
+broken 1 and restore 0 (conformance-myvggM), 53 public mutants and 53 restores
+(public-0DGg5w), clean recheck 19,784 distinct states. No model, invariant or
+bound change. Candidate for the seats.
