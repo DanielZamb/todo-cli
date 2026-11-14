@@ -603,3 +603,42 @@ it.effect(
       }),
     ),
 );
+
+it.effect(
+  "lists Profiles, Projects and Tags in name order on the existing reads",
+  () =>
+    withFixture((fixture) =>
+      Effect.gen(function* () {
+        const commands = new TaskCommands(fixture.store);
+        for (const [title, project, tag] of [
+          ["a", "Project 10", "b10"],
+          ["b", "project 9", "B9"],
+          ["c", "Éclair", "e"],
+          ["d", "eclair", "é"],
+        ] as const)
+          yield* commands.create(fixture.request, {
+            title,
+            source: "agent",
+            project_name: project,
+            tag_names: [tag],
+          } as never);
+        const reads = new ClientReads(fixture.store);
+        expect(
+          (yield* reads.projects(fixture.request)).map((p) => p.name),
+        ).toEqual([
+          "eclair",
+          "Éclair",
+          "Home",
+          "project 9",
+          "Project 10",
+          "Travel",
+        ]);
+        expect((yield* reads.tags(fixture.request)).map((t) => t.name)).toEqual(
+          ["b9", "b10", "e", "é", "home", "travel"],
+        );
+        expect(
+          (yield* reads.profiles(fixture.credential)).map((p) => p.name),
+        ).toEqual(["Personal", "Work"]);
+      }),
+    ),
+);

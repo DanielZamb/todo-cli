@@ -346,9 +346,9 @@ export class CatalogReads {
           position: lease.position,
           day: calendarDate(lease.day.today),
           now: lease.now,
-          profiles: [...lease.profiles].sort(compareNames),
-          projects: [...lease.projects].sort(compareNames),
-          tags: [...lease.tags].sort(compareNames),
+          profiles: lease.profiles,
+          projects: lease.projects,
+          tags: lease.tags,
           counts: {
             all: count("open"),
             today: count("today"),
