@@ -71720,6 +71720,12 @@
                           },
                           "required": ["task", "view"],
                           "additionalProperties": false
+                        },
+                        "operation_seq": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Present: everything this request committed to History is at or below this seq, so a Catalog whose position.seq is at least this value (same generation) reflects all of it. Absent: read to find out. Absence never means nothing changed; a dry run, a refusal, and History written outside the request (such as a sign-in) all leave it out."
                         }
                       },
                       "required": ["outcome", "kind", "result"],
@@ -78920,6 +78926,12 @@
                               "additionalProperties": false
                             }
                           ]
+                        },
+                        "operation_seq": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 9007199254740991,
+                          "description": "Present: everything this request committed to History is at or below this seq, so a Catalog whose position.seq is at least this value (same generation) reflects all of it. Absent: read to find out. Absence never means nothing changed; a dry run, a refusal, and History written outside the request (such as a sign-in) all leave it out."
                         }
                       },
                       "required": ["outcome", "error"],

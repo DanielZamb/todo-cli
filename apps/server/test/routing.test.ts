@@ -132,3 +132,80 @@ it.live(
     ),
   10000,
 );
+
+it.live(
+  "a routed command's reply carries operation_seq, the seq its commit reached",
+  () =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const directory = yield* Effect.acquireRelease(
+          Effect.sync(() => mkdtempSync(join(tmpdir(), "todo-route-seq-"))),
+          (directory) =>
+            Effect.sync(() => rmSync(directory, { recursive: true })),
+        );
+        const path = join(directory, "scratch.db");
+        const store = yield* Effect.acquireRelease(
+          openStore({ path }),
+          (store) => Effect.orDie(store.close()),
+        );
+        yield* store.auth.setupOwner("routing test passphrase");
+        yield* ensureProfile(store, "work");
+        const session = yield* store.auth.signIn("routing test passphrase");
+        yield* Layer.build(
+          serverLayer({ path, port: 0, wake: new StreamWake(Effect.never) }),
+        );
+        const binding = databaseBinding(path);
+        if (!binding) throw new Error("No database binding");
+        const record = JSON.parse(
+          readFileSync(endpointPath(binding.path), "utf8"),
+        );
+        const run = (body: unknown) =>
+          Effect.tryPromise(async () => {
+            const response = await fetch(
+              `http://127.0.0.1:${record.port}/local/commands`,
+              {
+                method: "POST",
+                headers: {
+                  "content-type": "application/json",
+                  authorization: `Bearer ${session.credential}`,
+                  "x-todo-incarnation": record.incarnation,
+                  "x-todo-proof": routeMac(
+                    record.secret,
+                    "command",
+                    record.incarnation,
+                  ),
+                },
+                body: JSON.stringify(body),
+              },
+            );
+            return { status: response.status, body: await response.json() };
+          });
+        const added = yield* run({
+          kind: "add",
+          profile: "work",
+          flags: { title: "Routed add" },
+        });
+        const after = yield* store.snapshots.generation();
+        expect([
+          added.status,
+          added.body.outcome,
+          added.body.result.task.title,
+          added.body.operation_seq,
+        ]).toEqual([200, "success", "Routed add", after.seq]);
+        // A refused command committed nothing: no operation_seq.
+        const refused = yield* run({
+          kind: "add",
+          profile: "missing",
+          flags: { title: "Never" },
+        });
+        expect([
+          refused.status,
+          refused.body.outcome,
+          refused.body.error.code,
+          "operation_seq" in refused.body,
+        ]).toEqual([200, "failure", "not_found", false]);
+        expect((yield* store.snapshots.generation()).seq).toBe(after.seq);
+      }),
+    ),
+  10000,
+);
