@@ -15,6 +15,7 @@ import Testing
         let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "never-used-person-input-cost"),
                               catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
         model.clientDiagnosticsUI.stop()
+        model.personInput.applicationActive = { true }
         let ids = (0..<1_000).map { "task-\($0)" }
         let down = PersonInputTests.mouse(.leftMouseDown), up = PersonInputTests.mouse(.leftMouseUp)
         // The row's own work on a click: the list's selection binding (AppViews), as both candidates run it.

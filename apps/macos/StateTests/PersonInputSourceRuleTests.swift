@@ -24,6 +24,25 @@ import Testing
                     .map { $0.trimmingCharacters(in: .whitespaces).hasPrefix("//") ? "" : String($0) }.joined(separator: "\n"))
             }
     }
+    /// Code only: every `//` comment removed, so a mark written in a comment is not a mark (S1-37).
+    static func codeOnly(_ text: String) -> String {
+        text.split(separator: "\n", omittingEmptySubsequences: false).map { line in
+            line.range(of: "//").map { String(line[..<$0.lowerBound]) } ?? String(line)
+        }.joined(separator: "\n")
+    }
+    /// Every menu item: Button, Toggle and Picker lines inside `.commands { … }` and inside any type
+    /// that conforms to `Commands` (S1-37).
+    static func commandItems(in text: String) throws -> [String] {
+        var blocks: [Substring] = []
+        for pattern in [#"\.commands\s*\{"#, #"(struct|extension)\s+\w+\s*:\s*Commands\s*\{"#] {
+            let regex = try NSRegularExpression(pattern: pattern)
+            for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                let range = Range(match.range, in: text)!
+                blocks.append(extent(text, from: text.index(before: range.upperBound), trailing: false))
+            }
+        }
+        return blocks.flatMap { $0.split(separator: "\n").map(String.init) }.filter { $0.contains("Button(") || $0.contains("Toggle(") || $0.contains("Picker(") }
+    }
     private func line(_ text: String, _ offset: String.Index) -> Int { text[..<offset].split(separator: "\n", omittingEmptySubsequences: false).count }
     private func matches(_ pattern: String, _ text: String) throws -> [Range<String.Index>] {
         try NSRegularExpression(pattern: pattern).matches(in: text, range: NSRange(text.startIndex..., in: text)).map { Range($0.range, in: text)! }
@@ -75,6 +94,9 @@ import Testing
         ("showingHistory", "TodoModel.swift", "notePresented("), ("quickAdd", "TodoModel.swift", "notePersonActed()"),
         ("dialog", "Discovery.swift", "presented()"), ("graph", "Dependencies.swift", "presented()"), ("batch", "Dependencies.swift", "presented()"),
         ("picker", "Dependencies.swift", "presented()"), ("deletion", "Dependencies.swift", "presented()"),
+        ("editor", "TodoModel.swift", "notePersonActed()"),
+        // A view binding derived from model state, and the state it reads (S1-37: the inspector).
+        ("inspectorPresented", "AppViews.swift", "model.editor != nil"),
     ]
 
     @Test func thereIsOneInputMonitor() throws {
@@ -93,12 +115,9 @@ import Testing
                 let statement = Self.extent(text, from: text.index(before: range.upperBound))
                 if !statement.contains("notePersonActed") { failures.append("\(name):\(line(text, range.lowerBound)) \(text[range]) does not call notePersonActed") }
             }
-            for range in try matches(#"\.commands\s*\{"#, text) {
-                let block = Self.extent(text, from: text.index(before: range.upperBound))
-                for item in block.split(separator: "\n") where item.contains("Button(") || item.contains("Toggle(") {
-                    checked += 1
-                    if !item.contains("notePersonActed") { failures.append("\(name): menu command does not call notePersonActed: \(item.trimmingCharacters(in: .whitespaces))") }
-                }
+            for item in try Self.commandItems(in: text) {
+                checked += 1
+                if !item.contains("notePersonActed") { failures.append("\(name): menu command does not call notePersonActed: \(item.trimmingCharacters(in: .whitespaces))") }
             }
         }
         #expect(checked >= 7, "found the commands, drops, pastes and accessibility actions (\(checked))")
@@ -122,7 +141,7 @@ import Testing
                     let before = String(text[..<range.lowerBound])
                     guard let function = try matches(#"\bfunc\s+(\w+)"#, before).last else { failures.append("\(name): \(write) outside a function"); continue }
                     let functionName = String(before[function].split(separator: " ").last!)
-                    let body = before[function.lowerBound...]
+                    let body = Self.codeOnly(String(before[function.lowerBound...]))
                     if let reason = Self.notWrites["\(functionName)/\(write)"], !reason.isEmpty { excused.insert("\(functionName)/\(write)"); continue }
                     if !body.contains("notePersonActed()") { failures.append("\(name):\(line(text, range.lowerBound)) \(functionName) calls \(write) without notePersonActed() first") }
                 }
@@ -137,7 +156,7 @@ import Testing
         let files = Dictionary(uniqueKeysWithValues: try sources())
         for state in Self.modelState {
             let text = try #require(files[state.file])
-            let start = try #require(try matches(#"(?m)^[ \t]*var "# + state.name + #"\b"#, text).first, "\(state.name) is declared in \(state.file)")
+            let start = try #require(try matches(#"(?m)^[ \t]*(private )?var "# + state.name + #"\b"#, text).first, "\(state.name) is declared in \(state.file)")
             // The declaration with its observer block, if any.
             let lineEnd = text[start.lowerBound...].firstIndex(of: "\n") ?? text.endIndex
             let brace = text[start.lowerBound..<lineEnd].firstIndex(of: "{")
@@ -146,7 +165,7 @@ import Testing
         }
         var failures: [String] = [], checked = 0
         for (name, text) in files {
-            for range in try matches(#"\.(sheet|alert|confirmationDialog|popover|fileImporter|fileExporter)\("#, text) {
+            for range in try matches(#"\.(sheet|alert|confirmationDialog|popover|fileImporter|fileExporter|inspector)\("#, text) {
                 checked += 1
                 // The argument list only, not the presented content.
                 let arguments = String(Self.extent(text, from: text.index(before: range.upperBound), trailing: false))
@@ -172,5 +191,11 @@ import Testing
         #expect(Self.extent(alert, from: alert.firstIndex(of: "(")!).hasSuffix("model.notePersonActed()\n}"), "a labelled trailing closure is part of the statement")
         let monitors = try matches(#"add(Local|Global)MonitorForEvents"#, "NSEvent.addLocalMonitorForEvents(matching: []) { $0 }\nNSEvent.addGlobalMonitorForEvents(matching: []) { _ in }")
         #expect(monitors.count == 2)
+        // The seat's three misses on 5702b2bb (S1-37), each caught now.
+        #expect(!Self.codeOnly("func save() async {\n    // notePersonActed()\n    _ = try await client.tasks_period_edit(").contains("notePersonActed"), "a mark in a comment is not a mark")
+        let commands = "struct SortCommands: Commands {\n    var body: some Commands {\n        CommandMenu(\"Sort\") { Picker(\"Order\", selection: $order) { Text(\"Due\") } }\n    }\n}"
+        #expect(try Self.commandItems(in: commands).contains { $0.contains("Picker(") && !$0.contains("notePersonActed") }, "a Picker in its own Commands type is a menu item")
+        let inspector = ".inspector(isPresented: $showing) { Text(\"x\") }"
+        #expect(try matches(#"\.(sheet|alert|confirmationDialog|popover|fileImporter|fileExporter|inspector)\("#, inspector).count == 1, "an inspector is a presentation")
     }
 }

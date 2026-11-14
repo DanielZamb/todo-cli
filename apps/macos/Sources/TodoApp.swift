@@ -10,13 +10,17 @@ struct TodoApp: App {
     init() {
         let configuration = ClientConfiguration.load()
         configureVerificationKeychain()
-        _model = State(initialValue: TodoModel(configuration: configuration, clientDiagnostics: .init()))
+        let model = TodoModel(configuration: configuration, clientDiagnostics: .init())
+        // The person-input observer (MAC-C1-S1-32) is installed with the model, before any window or
+        // owner diagnostics can start, so Diagnostics input never depends on which window opened first.
+        model.personInput.install()
+        _model = State(initialValue: model)
     }
 
     var body: some Scene {
         Window("Todo", id: "tasks") {
             RootView(model: model, compactMode: $compactMode)
-                .task { model.personInput.install(); await model.restore() }
+                .task { await model.restore() }
         }
         .defaultSize(width: 1100, height: 760)
         // The window's limits come from the content: Compact is 393 pt wide (its maximum width

@@ -448,6 +448,17 @@ final class TodoModel {
         batchEdit?.loading = false
     }
     private var streamTask: Task<Void, Never>?
+    /// MAC-C1-S1-36: the stream that followChanges is reading, while it runs.
+    struct StreamIdentity: Equatable { let profile: String; let credentialEpoch: Int; let generation: Int }
+    @ObservationIgnored private(set) var followingStream: StreamIdentity?
+    /// Tests receive a fired reminder here instead of the notification centre, which a test process
+    /// cannot use (MAC-C1-S1-36's liveness check). Nil in the app.
+    @ObservationIgnored var reminderDelivery: ((CommittedOperation) async throws -> Void)?
+    /// The invariant: whenever `connection` reads live, a stream for the current Profile, credential
+    /// epoch and generation is running.
+    var streamFollowsCurrentProfile: Bool {
+        followingStream == StreamIdentity(profile: profile, credentialEpoch: discovery.credentialEpoch, generation: generation)
+    }
     private var restored = false
     private var generation = 0
     private var refreshGeneration = 0
@@ -756,15 +767,32 @@ final class TodoModel {
         }
     }
 
-    func leaveDeletedProfile(named name: String? = nil) async throws {
+    /// What leaveDeletedProfile did (MAC-C1-S1-36). The stream decides from it whether it may end.
+    enum DeletedProfileLeave: Equatable {
+        /// Switched to another Profile: activateProfile ends with connect(), which starts its stream.
+        case switched
+        /// The Profile is listed again (a restore landed first): nothing to leave.
+        case notNeeded
+        /// No other Profile is listed to go to.
+        case nowhereToGo
+        /// The shown Profile or the generation changed during the read.
+        case superseded
+        /// The task was cancelled (only disconnect() cancels the stream, and it advances the generation).
+        case cancelled
+    }
+
+    @discardableResult
+    func leaveDeletedProfile(named name: String? = nil) async throws -> DeletedProfileLeave {
         let deleted = profile
         let run = generation
         let deletedName = name ?? profiles.first { $0.id == deleted }?.name ?? deleted
         let values = try await client.reads_period_profiles().ok.body.json
         let latest = try decode([DiscoveryEntry].self, values)
-        guard profile == deleted, generation == run, !Task.isCancelled else { return }
+        if Task.isCancelled { return .cancelled }
+        guard profile == deleted, generation == run else { return .superseded }
         profiles = latest
-        guard !latest.contains(where: { $0.id == deleted }), let next = latest.first else { return }
+        if latest.contains(where: { $0.id == deleted }) { return .notNeeded }
+        guard let next = latest.first else { return .nowhereToGo }
         let left = ProfileViewState(self)
         let carried = forcedLeaveToCarry(leaving: deleted)
         editor = nil
@@ -774,6 +802,7 @@ final class TodoModel {
         let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)."
         recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice, carrying: carried)
         publishNotice(notice, seconds: 6)
+        return .switched
     }
 
     /// Whether choosing `value` starts a Profile switch.
@@ -1040,7 +1069,17 @@ final class TodoModel {
         let credentialEpoch = discovery.credentialEpoch
         var attempt = 0, quietEnds = 0
         var openingAction = initialAction
-        while !Task.isCancelled && generation == run {
+        // MAC-C1-S1-36: no silent exit. Every way out is tagged `exit:` with its class, and
+        // FollowChangesExitTests fails on an untagged or new one:
+        // - hand-over: the line that starts the next stream for the current Profile is named;
+        // - owner: the generation advanced or the task was cancelled, which only disconnect() does,
+        //   and every disconnect() caller starts the next stream or stops on purpose (sign-out,
+        //   Session expiry, credential replaced), or the server is outdated (connection offline;
+        //   reconnectAfterUpdate restarts it);
+        // - reconnect: not an exit; the error path below reconnects under the current generation.
+        defer { if followingStream?.generation == run { followingStream = nil } }
+        while !Task.isCancelled && generation == run { // exit: owner (the loop ends only when the generation advanced or the task was cancelled)
+            followingStream = StreamIdentity(profile: profile, credentialEpoch: credentialEpoch, generation: run)
             var sawReady = false
             // Ready after this attempt may clear only connection messages older than the attempt.
             let mark = messageMark
@@ -1049,12 +1088,12 @@ final class TodoModel {
                 let healthy = try await ClientDiagnosticContext.$actionID.withValue(openingAction) {
                     try await ClientDiagnosticContext.$periodicPoll.withValue(openingAction == nil) { try await checkServerContract() }
                 }
-                guard generation == run, !Task.isCancelled else { return }
-                guard healthy else { loading = false; return }
+                guard generation == run, !Task.isCancelled else { return } // exit: owner
+                guard healthy else { loading = false; return } // exit: owner (outdated server: connection offline; reconnectAfterUpdate restarts)
                 let response = try await ClientDiagnosticContext.$actionID.withValue(openingAction) {
                     try await client.changes_period_stream(path: .init(profile: profile), headers: .init(last_hyphen_event_hyphen_id: lastSequence, x_hyphen_todo_hyphen_client: .swiftui, x_hyphen_todo_hyphen_generation: restoreGeneration))
                 }
-                guard generation == run, !Task.isCancelled else { return }
+                guard generation == run, !Task.isCancelled else { return } // exit: owner
                 var streamConnected = ClientDiagnosticEvent(name: .streamConnected, run: clientDiagnostics.run)
                 streamConnected.reason = .ready
                 clientDiagnostics.record(streamConnected)
@@ -1063,7 +1102,7 @@ final class TodoModel {
                 var parser = EventStreamDecoder()
                 for try await chunk in body {
                     for event in try parser.append(chunk) {
-                        guard generation == run, !Task.isCancelled else { return }
+                        guard generation == run, !Task.isCancelled else { return } // exit: owner
                         if event.name == "ready" {
                             let recovering = connection != .live
                             let healthySnapshot = catalogReady && !catalogStale && appliedCatalogGeneration == restoreGeneration && appliedCatalogCursor == lastSequence
@@ -1071,11 +1110,11 @@ final class TodoModel {
                             if !healthySnapshot {
                                 _ = await ClientDiagnosticContext.$actionID.withValue(openingAction) { await refresh(generation: run, trigger: .streamReady) }
                             }
-                            guard generation == run, !Task.isCancelled else { return }
+                            guard generation == run, !Task.isCancelled else { return } // exit: owner
                             if connection != .live { connection = .live }
                             if !healthySnapshot || recovering {
                                 await refreshDependencyReads()
-                                guard generation == run, !Task.isCancelled else { return }
+                                guard generation == run, !Task.isCancelled else { return } // exit: owner
                                 clearMessage([.connection], since: mark)
                             }
                             if discovery.phase == .offline { await requestDiscovery(retry: true) }
@@ -1120,12 +1159,12 @@ final class TodoModel {
                             try await discoverProfiles(afterRestore: true)
                             if let (leave, acted) = leaveBeforeReload, resolveForcedLeave(leave, acted: acted) {
                                 UserDefaults.standard.set(String(reload.seq), forKey: cursorKey)
-                                return
+                                return // exit: hand-over (resolveForcedLeave → returnToProfile → activateProfile → connect())
                             }
                             if profile != previousProfile {
                                 UserDefaults.standard.set(String(reload.seq), forKey: cursorKey)
                                 connect()
-                                return
+                                return // exit: hand-over (connect() on the line above)
                             }
                             _ = await refresh(generation: run)
                             await loadSnapshots()
@@ -1137,35 +1176,45 @@ final class TodoModel {
                                   let id = event.id, Int64(id) == operation.seq else { throw StreamError.invalidUTF8 }
                             if let cursor = lastSequence.flatMap(Int64.init), operation.seq <= cursor { continue }
                             if operation.event.kind == "ProfileDeleted" {
-                                try await leaveDeletedProfile(named: operation.event.profile?.name)
-                                return
+                                // MAC-C1-S1-36: the stream ends only when another one takes over.
+                                switch try await leaveDeletedProfile(named: operation.event.profile?.name) {
+                                case .switched: return // exit: hand-over (leaveDeletedProfile → activateProfile → connect())
+                                case .cancelled: return // exit: owner
+                                case .superseded:
+                                    if generation != run { return } // exit: owner
+                                    throw StreamError.closed // the shown Profile changed under this generation: reconnect for it
+                                case .notNeeded, .nowhereToGo:
+                                    break // keep reading: a restore's reload follows on this stream as a barrier
+                                }
                             }
                             catalogStale = true
                             let applied = await refresh(generation: run, trigger: .streamOperation)
-                            guard generation == run, !Task.isCancelled else { return }
+                            guard generation == run, !Task.isCancelled else { return } // exit: owner
                             await refreshDependencyReads(erased: operation.event.kind == "TaskPurged" || operation.event.original_kind == "TaskPurged")
-                            guard generation == run, !Task.isCancelled else { return }
+                            guard generation == run, !Task.isCancelled else { return } // exit: owner
                             if operation.event.kind == "ReminderFired" {
-                                try await reminders.deliver(operation, server: configuration.server.absoluteString, profile: profile)
+                                if let reminderDelivery { try await reminderDelivery(operation) }
+                                else { try await reminders.deliver(operation, server: configuration.server.absoluteString, profile: profile) }
                             }
-                            guard generation == run, !Task.isCancelled else { return }
+                            guard generation == run, !Task.isCancelled else { return } // exit: owner
                             lastSequence = id
                             if applied == .applied { appliedCatalogCursor = id }
                             UserDefaults.standard.set(id, forKey: cursorKey)
                         } else if event.name == "effect/http-api/stream/failure" {
-                            if event.data.contains("Unauthorized") { expireSession(credentialEpoch: credentialEpoch); return }
+                            if event.data.contains("Unauthorized") { expireSession(credentialEpoch: credentialEpoch); return } // exit: owner (the Session ended)
                             throw StreamError.closed
                         }
                     }
                 }
                 throw StreamError.closed
             } catch {
-            guard isCurrentCredential(credentialEpoch) else { return }
-                if Task.isCancelled || generation != run { return }
-                if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch); return }
+            guard isCurrentCredential(credentialEpoch) else { return } // exit: owner (the credential was replaced)
+                if Task.isCancelled || generation != run { return } // exit: owner
+                if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch); return } // exit: owner (the Session ended)
                 if failure(error)?.status == 404 {
-                    do { try await leaveDeletedProfile(); if generation != run { return } } catch {
-            guard isCurrentCredential(credentialEpoch) else { return }
+                    // switched: activateProfile → connect() took over; otherwise reconnect below.
+                    do { try await leaveDeletedProfile(); if generation != run { return } } catch { // exit: hand-over (leaveDeletedProfile → activateProfile → connect()) or owner
+            guard isCurrentCredential(credentialEpoch) else { return } // exit: owner (the credential was replaced)
             publishMessage(describe(error), kind: .connection) }
                 }
                 let cause: ClientDiagnosticReason
@@ -1178,7 +1227,7 @@ final class TodoModel {
                     if ProcessInfo.processInfo.systemUptime - openedAt > 1 { quietEnds = 0 }
                     quietEnds += 1
                     if quietEnds > 1 {
-                        do { try await Task.sleep(for: .seconds(min(8, quietEnds - 1))) } catch { return }
+                        do { try await Task.sleep(for: .seconds(min(8, quietEnds - 1))) } catch { return } // exit: owner (the sleep was cancelled)
                     }
                     continue
                 }
@@ -1188,9 +1237,9 @@ final class TodoModel {
                 attempt += 1
                 reconnectCount += 1
                 do { try await Task.sleep(for: .seconds(min(8, attempt))) } catch {
-            guard isCurrentCredential(credentialEpoch) else { return }
-            return }
-                guard generation == run else { return }
+            guard isCurrentCredential(credentialEpoch) else { return } // exit: owner (the credential was replaced)
+            return } // exit: owner (the sleep was cancelled)
+                guard generation == run else { return } // exit: owner
                 connection = .connecting
             }
         }
@@ -2259,6 +2308,10 @@ struct ForcedProfileLeave: Equatable {
 
 extension TodoModel {
     /// "\"Work\" was restored. Switched back to it." and the offer "\"Work\" was restored."
+    /// The offer as VoiceOver hears it (coordinator, candidate 10).
+    static func restoredProfileAnnouncement(_ name: String) -> String {
+        "\u{201C}\(name)\u{201D} was restored. To go there, use Switch to \(name) at the bottom of the window."
+    }
     static func restoredProfileNotice(_ name: String, returned: Bool) -> String {
         returned ? "\u{201C}\(name)\u{201D} was restored. Switched back to it." : "\u{201C}\(name)\u{201D} was restored."
     }
@@ -2314,7 +2367,7 @@ extension TodoModel {
             restoredProfileOffer = leave
             publishNotice(Self.restoredProfileNotice(back.name, returned: false), seconds: 10)
             // The offer is spoken too, with its action, so VoiceOver users hear it (UI check, c10).
-            announce(Self.restoredProfileNotice(back.name, returned: false) + " Switch to \(back.name) is available in the notice.")
+            announce(Self.restoredProfileAnnouncement(back.name))
             return false
         }
         returnToProfile(leave)

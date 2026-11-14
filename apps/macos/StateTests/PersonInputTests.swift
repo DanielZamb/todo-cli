@@ -34,6 +34,7 @@ import Testing
                               catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
         model.profiles = [DiscoveryEntry(id: "work", name: "Work", open_task_count: 0, inbox_task_count: 0),
                           DiscoveryEntry(id: "launch", name: "Launch", open_task_count: 0, inbox_task_count: 0)]
+        model.personInput.applicationActive = { true } // a test process is never the active app
         return model
     }
     private func task(_ id: String) -> TaskSnapshot {
@@ -58,6 +59,7 @@ import Testing
 
     @Test func mouseDownsAndKeyDownsCountAndNothingElseDoes() {
         let input = PersonInput()
+        input.applicationActive = { true }
         var handed: [NSEvent.EventType] = []
         input.diagnostics = { handed.append($0.type) }
         let counted: [(String, NSEvent)] = [("left mouse down", Self.mouse(.leftMouseDown)), ("right mouse down", Self.mouse(.rightMouseDown)),
@@ -83,7 +85,9 @@ import Testing
     }
 
     @Test func theObserverDoesNotAllocate() {
-        let input = PersonInput(), events = [Self.mouse(.leftMouseDown), Self.key(.keyDown), Self.scroll(), Self.mouse(.mouseMoved)]
+        let input = PersonInput()
+        input.applicationActive = { true }
+        let events = [Self.mouse(.leftMouseDown), Self.key(.keyDown), Self.scroll(), Self.mouse(.mouseMoved)]
         for event in events { input.observe(event) } // warm
         var samples: [Int] = []
         for _ in 0..<5 {
@@ -154,6 +158,63 @@ import Testing
         #expect(!model.personActedSinceLeave(leave))
         model.personInput.observe(Self.mouse(.leftMouseDown))
         #expect(model.personActedSinceLeave(leave))
+    }
+
+    /// Coordinator's refinement (candidate 10): the click that only brings Todo to the front is not
+    /// an action. A mouse-down while the app is not active does not count; nor does the first
+    /// mouse-down within 0.5 s of activation with no input in between. The next click counts.
+    @Test func theActivatingClickDoesNotCount() {
+        // AppKit may deliver the activating click before or after the app becomes active.
+        // Before: the click arrives while the app is not active, and the next click counts.
+        let before = PersonInput()
+        var active = false
+        before.applicationActive = { active }
+        before.observe(Self.mouse(.leftMouseDown))
+        before.observe(Self.mouse(.rightMouseDown))
+        #expect(before.count == 0, "mouse-downs while the app is not active")
+        active = true
+        before.applicationDidBecomeActive()
+        before.observe(Self.mouse(.leftMouseDown))
+        #expect(before.count == 1, "the click after the activating one counts")
+        // After: the app is already active when the click arrives; the first mouse-down within half
+        // a second of activation, with no input in between, is the activating one.
+        let after = PersonInput()
+        after.applicationActive = { true }
+        after.applicationDidBecomeActive()
+        after.observe(Self.mouse(.leftMouseDown))
+        #expect(after.count == 0, "the first mouse-down just after activation")
+        after.observe(Self.mouse(.leftMouseDown))
+        #expect(after.count == 1, "the next click counts")
+        after.applicationDidBecomeActive()
+        after.observe(Self.key(.keyDown))
+        after.observe(Self.mouse(.leftMouseDown))
+        #expect(after.count == 3, "after a key-down, a click is not the activating one")
+        after.applicationDidBecomeActive(at: ProcessInfo.processInfo.systemUptime - 1)
+        after.observe(Self.mouse(.leftMouseDown))
+        #expect(after.count == 4, "a first click a second after activation counts")
+    }
+
+    /// An activating click, then a restore: back to it. An activating click and a second click: stay
+    /// and offer.
+    @Test(arguments: [false, true]) func anActivatingClickThenARestore(_ secondClick: Bool) {
+        let model = model()
+        model.signedIn = true
+        var active = false
+        model.personInput.applicationActive = { active }
+        let leave = leave(model)
+        model.personInput.observe(Self.mouse(.leftMouseDown)) // brings Todo forward
+        active = true
+        model.personInput.applicationDidBecomeActive()
+        if secondClick { model.personInput.observe(Self.mouse(.leftMouseDown)) }
+        let returned = model.resolveForcedLeave(leave, acted: model.personActedSinceLeave(leave))
+        #expect(returned == !secondClick)
+        #expect(model.profile == (secondClick ? "work" : "launch"))
+        #expect(model.deletionNotice == (secondClick ? "\u{201C}Launch\u{201D} was restored." : "\u{201C}Launch\u{201D} was restored. Switched back to it."))
+        #expect((model.restoredProfileOffer != nil) == secondClick)
+    }
+
+    @Test func theOfferIsAnnouncedWithWhereToFindIt() {
+        #expect(TodoModel.restoredProfileAnnouncement("Launch") == "\u{201C}Launch\u{201D} was restored. To go there, use Switch to Launch at the bottom of the window.")
     }
 
     /// Restored, the person did nothing: back to it, told so for 6 s. Restored after one click:
