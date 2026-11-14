@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+  "confirmedCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -86,7 +86,7 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
       "functions": [
         "OperationStore.transaction",
         "OperationStore.validate",
@@ -155,7 +155,7 @@
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
-      "sha256": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada",
+      "sha256": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32",
       "functions": [
         "Authentication.startSeries",
         "Authentication.append"
@@ -307,5 +307,28 @@
     ],
     "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
     "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "pinCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+    "previous": [
+      "45b86ff9c8ea32ada0a65d83350c5239e99ba027"
+    ],
+    "contract": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "The coordinator's corrections: OperationStore.record, Authentication.record and the restore bind the event text they note for operation_seq (total, settled on the row's bytes); the Catalog reads the Dependency graph from columns for matching and decodes after the lease; the operation_seq description changes the contract to 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d. Every listed production function other than the reviewed record path is byte-identical; mapped public items are unchanged from the f3039274 candidate apart from the contract identity and openapi.json's operation_seq description. All 80 mutant anchors match once at the pin. Pinned at 6c8a5c4f, byte-identical product to b110f4a8 plus the occ-atomicity and task-search-cache renewals the capture runs. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      },
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada",
+        "to": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32"
+      }
+    ]
   }
 }

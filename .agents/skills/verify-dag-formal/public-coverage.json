@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+  "confirmedCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada"
+      "sha256": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -116,7 +116,7 @@
         "takeSnapshot",
         "graph"
       ],
-      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
     },
     {
       "path": "packages/domain/src/store/purge.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "90b372abdc3c1e357c136d9ad3261d65d8f3b15cc1f3a1141898f6cc20958fa9"
+      "sha256": "f4e757f3dc93843aad161bfe4a75bde69a72d340c1f459c46b8edd064a19ee83"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,14 +304,14 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "2bf3556da994f2c9b52ab29d9488d48497b17078671a03698d225f225cbbc4a7",
+      "sha256": "49bbc3014c143e6507de825b28c0c155484411493c0180f36ebb902add43c445",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "62bf877f4d9274bcd0de2a8e7433ce1ded6ebc15d7d56435097dfd5c3d1828c9",
+      "sha256": "0385bd70421191da2e3e0dc5998f6361c6d54b02f20c0d40e5a07f1de7798ef2",
       "functions": [
         "contract identity"
       ]
@@ -779,5 +779,43 @@
     ],
     "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
     "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "pinCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+    "previous": [
+      "45b86ff9c8ea32ada0a65d83350c5239e99ba027"
+    ],
+    "contract": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "The coordinator's corrections: OperationStore.record, Authentication.record and the restore bind the event text they note for operation_seq (total, settled on the row's bytes); the Catalog reads the Dependency graph from columns for matching and decodes after the lease; the operation_seq description changes the contract to 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d. Every listed production function other than the reviewed record path is byte-identical; mapped public items are unchanged from the f3039274 candidate apart from the contract identity and openapi.json's operation_seq description. All 80 mutant anchors match once at the pin. Pinned at 6c8a5c4f, byte-identical product to b110f4a8 plus the occ-atomicity and task-search-cache renewals the capture runs. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada",
+        "to": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "90b372abdc3c1e357c136d9ad3261d65d8f3b15cc1f3a1141898f6cc20958fa9",
+        "to": "f4e757f3dc93843aad161bfe4a75bde69a72d340c1f459c46b8edd064a19ee83"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "2bf3556da994f2c9b52ab29d9488d48497b17078671a03698d225f225cbbc4a7",
+        "to": "49bbc3014c143e6507de825b28c0c155484411493c0180f36ebb902add43c445"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "from": "62bf877f4d9274bcd0de2a8e7433ce1ded6ebc15d7d56435097dfd5c3d1828c9",
+        "to": "0385bd70421191da2e3e0dc5998f6361c6d54b02f20c0d40e5a07f1de7798ef2"
+      }
+    ]
   }
 }
