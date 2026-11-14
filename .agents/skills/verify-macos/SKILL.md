@@ -25,6 +25,17 @@ ready and dense priority renders in both appearances and window sizes. Run every
 Swift command through the shared swift-slot script specified by the active run.
 This proof never launches Todo.app or accesses Keychain.
 
+## Isolation of compiled Todo binaries
+
+The Mac runners (`apps/macos/scripts/verify-write-state.py`, `scripts/verify-sign-out-stream.py`
+and verify-client-diagnostics' `verify.py`) run the compiled server, CLI and seeds they spawn
+under the reference profile in `isolation/` (`profile.sb`, from the run's ISOLATION brief, with
+the owner's real data directory passed at run time). Each run first proves the profile with the
+five node controls in `isolation/isolation.py` (`isolation-controls.json`) and writes
+`isolation.json`. `scripts/gates.py` records one isolation line per gate in `result.json` and
+fails if a Mac runner's binaries did not run under the profile. Swift builds and test processes
+cannot be wrapped; the binaries they spawn are the wrappers.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not
@@ -279,6 +290,11 @@ One-second polling backs off after errors to at most 30 seconds. The agent
 NDJSON read is proven by [verify-diagnostics](../verify-diagnostics/SKILL.md).
 Every Swift verification script, swift build/test and xcodebuild uses
 `./scripts/swift-slot.sh`.
+The gate cycle for a Mac candidate head is `scripts/gates.py`: HOLD (the live
+state tests in `apps/macos/scripts/verify-write-state.py`) first, then the 18
+gates, each asserting the same clean head. Every runner builds the state
+package through `apps/macos/scripts/state_package.py`, so no test product links
+the Keychain and each receipt's Keychain field comes from its guard.
 Nothing here lifts native HOLD.
 ## Headless Snapshot proof during HOLD
 
@@ -352,7 +368,9 @@ same reference to the selected Tasks. Reload Tasks refreshes Versions after a
 Conflict. `liveAttachmentBatchSelectPreviewApplyConflictAndReload` drives this
 production state, including file and URI references. The design helper adds
 24 full and Compact light/dark captures for ready, preview, Conflict, loading,
-empty and error states. The complete run now has 346 captures including batch edit.
+empty and error states. That historical attachment/batch checkpoint had 346
+captures. The current integrated inventory is recorded in
+[Dependencies](features/dependencies.md).
 
 ## Batch edit
 
@@ -380,3 +398,22 @@ The [Session recipe](features/session.md#credential-epochs-during-hold) adds a
 standalone production-model proof for a delayed Unauthorized response across
 sign-out/sign-in. It uses only a memory Session adapter and scratch HTTP, with a
 current-credential control. Run it through the active shared Swift slot.
+
+[Task Dependencies](features/dependencies.md) extends production state, reviewed Delete, typed graph protocol and offscreen coverage during HOLD.
+
+## Dependency search recovery during HOLD
+
+Use [the Dependency recipe](features/dependencies.md) for S-C1. Successful current
+searches and cleared queries remove only their search notice. Mutation refusals,
+Conflict/Reload and batch reports survive. The controlled-transport regression
+and offscreen captures use production TodoModel and the generated client. Native
+key dispatch and VoiceOver remain held.
+
+## Responsiveness during HOLD
+
+Use [Responsiveness](features/responsiveness.md) for the three-revision, 180-Task
+scratch measurement. It records replay amplification, own writes and their echo,
+bursts, main-loop awake stretches, loading/busy time, decode time and offscreen
+layout separately. It does not launch Todo.app, access Keychain, sign or change
+product code. The separate scratch row runner requires explicit current
+authorization before displaying a window or posting pointer events.

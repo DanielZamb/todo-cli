@@ -1,3 +1,15 @@
+## Server and Snapshot integration renewal
+
+Immutable merged product 5f46e7b3c36afaffe8f2328df6453b8546be27a5 combines the independently reviewed strict read scopes and Snapshot/Purge/CLI corrections. docs/decisions/ui-speed/server-integration.md records the per-function review, exact diffs, three-way constructor trace, current command exits and exclusions. No model, invariant or bound changed. The full fresh qualification remains separate from historical results below. The owed native Swift stage remains explicit.
+
+## Server read mapping renewal
+
+Reviewed immutable product eca430bf1f3b5b9aeeb69a82c0086e3dab364249. The per-function byte/hash table, exact diffs including the Clock context fix, model-step review and exclusions are in docs/decisions/ui-speed/server-reads-formal-renewal.md. Graph algorithms, authoritative validation/write/replay bodies and client publication guards are unchanged. Profile-selected projection reads and checked synchronous materialization replace global decoding; matcher yields occur after lease exit. Auth/clock/lease mechanics and multi-command import are concrete boundaries outside the finite models. No model, invariant or bound changes. Fresh full recipe and sensitivity exits are recorded in that report; pending results are not prior qualification. This section supersedes earlier active-source descriptions below.
+
+## Current integrated mapping
+
+Immutable product `7d947f917d1895df45c78f9f9df31638a9f3f2b8` includes both DAG clients, the two-part Delete/batch contract amendment and main PR #12 at `2c488fc72fe264741d5d8db8f90b441bf426af32`. The contract is `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`. Core graph and AtomicCAS source is unchanged. Pre-renewal compiled mutation, matcher, cache and Discovery controls passed with exact restores. The complete integrated qualification is still pending at this mapping commit. Model bounds and native holds are unchanged.
+
 # Performance/main integration verification maintenance
 
 The former carried receipts below are historical provenance only. Current commands
@@ -391,3 +403,45 @@ Unfiltered catalog reads remain unfiltered. Explicit dialog filters still win.
 Catalog obligation, generation, complete identity and publication are unchanged.
 The source review does not replace the compiled sidebar, padded Tag, full/query
 and catalog-debt regressions, or the final finite model and real matcher checks.
+
+## Mac quiet reconnect review, 2026-11-11
+
+C2 wraps refresh measurement around `performRefresh`; the synchronous guarded
+publication and full/query promotion remain in that function. Native action
+wrappers preserve their existing mutations and async operations. They do not
+change identity, generation guards, error rollback or the catalog obligation.
+
+C3 maps a healthy reconnect to an allowed visible-state stutter. The concrete
+predicate requires an applied catalog, no catalog debt, Showing, the current
+complete identity, matching applied cursor and restore generation, no retained
+search/load error and no loading state. The applied cursor advances only after
+an applied operation refresh. A mismatched cursor or restore generation forces
+a new full read. These server cursor/restore dimensions remain outside the
+bounded response-order model, as Snapshot reload already did.
+
+`SSEReconnect` continues to implement Recovery in Error, including
+`search_too_broad`. The healthy stutter has no owed catalog and cannot erase an
+obligation. `SSEOp`, full/query promotion, superseded response guards and error
+rollback are unchanged. TaskSearch.tla therefore stays byte-identical. This is
+a reviewed abstraction mapping, not a mechanical refinement.
+
+`StreamIdleTests` checks unchanged availability/draft/dialog/picker/graph state
+and zero new reads after healthy EOF, failed-reconnect Offline plus directory
+and lookup recovery, cursor/generation drift, repeated-end backoff and both
+retained search error kinds. `StreamIdleTransportTests` supplies a native
+URLSession timeout control and a five-minute compiled-server idle observation.
+The complete bounded command and its broken controls must pass after renewing
+the two changed Mac source hashes. No independent review is claimed by this
+worker; the coordinator owns the candidate review seats.
+### C3b environmental catalog reads
+
+Calendar, clock/time-zone and wake notifications and stale activation enter
+the existing full-refresh transition with the current requested identity.
+They retain the text, filters and publication guard. The catalog signal revision
+prevents a full read started before a signal from clearing newer catalog debt.
+A read started after the signal can satisfy it. A disconnected signal leaves
+the same debt for ready recovery. There is no timer or automatic retry after
+an environmental read fails. These external causes are not new model inputs;
+their search effect maps to ordinary FullRefresh. Notification delivery, dates,
+resource ownership and native stream cancellation remain outside the finite
+search model and have separate compiled state/network controls.

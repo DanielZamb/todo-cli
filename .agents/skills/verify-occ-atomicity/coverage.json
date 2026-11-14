@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "dc43db3f16e3e1591793bf13b18127acd2be939d",
+  "confirmedCommit": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "bb3f0f0855c3bd5128b8d5f4c164734d13a04250ad7dfe32eacc18cf3ac69a60",
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -19,7 +19,7 @@
     },
     {
       "path": "packages/domain/src/store/projection.ts",
-      "sha256": "944adc71cfe493c8631119daeba165e16c688426de7e3694112cb3f8b84d465a",
+      "sha256": "dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9",
       "functions": [
         "changes",
         "applyEvent",
@@ -32,7 +32,7 @@
     },
     {
       "path": "packages/domain/src/events.ts",
-      "sha256": "145376a77e9dfb7e451d73169159fc0af672b0fff767f176b7a70e710719439b",
+      "sha256": "4d2fe50114ab16e379759bf3bbb4f6416120f323c62b9a5280c04284a597ec44",
       "functions": [
         "TaskCreated",
         "TaskEdited",
@@ -68,13 +68,54 @@
         "Attachment",
         "validAttachmentLocation"
       ]
+    },
+    {
+      "path": "packages/domain/src/store/dependency-validation.ts",
+      "sha256": "e73b9367e7aa93689a28e5e9e83fd53cac6dcbf949a6c50f0122ac28213ba0d5",
+      "functions": [
+        "validateDependencies"
+      ]
+    },
+    {
+      "path": "packages/domain/src/store/dependencies.ts",
+      "sha256": "b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411",
+      "functions": [
+        "applyDependencyVersions",
+        "incidentRemoval",
+        "upstream",
+        "hasDependents"
+      ]
+    },
+    {
+      "path": "packages/domain/src/dependency-rules.ts",
+      "sha256": "38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11",
+      "functions": [
+        "checkDependencyAddition",
+        "checkDependencyStatuses",
+        "dependencyCycle"
+      ]
+    },
+    {
+      "path": "packages/domain/src/dependencies.ts",
+      "sha256": "18b75d53f24ed5a86e6c645d4d2b99766ae8a0786ec32c1c5a33254804a06caa",
+      "functions": [
+        "Edge",
+        "VersionChange",
+        "DependencyChanges",
+        "DependencyError",
+        "RejectionDetails"
+      ]
     }
   ],
-  "reviewedCandidate": false,
-  "review": "Current merged-source AtomicCAS one-command passed at fv01-check-H5HU7k. Every covered body is byte-identical to the previously reviewed PERF source; Authentication discovery snapshot and CLI recovery changes do not alter Validate/Record/Apply/WriteVersion/Commit, rejection or replay. No model change or hash-only renewal of changed bodies.",
+  "reviewedCandidate": true,
+  "review": "Merged-source review: all covered store bodies match both parents except the combined constructor, whose identical three-way statement trace preserves Init. Actual-source behavioral sensitivity precedes renewal. No model or bound changes. See docs/decisions/ui-speed/server-integration.md.",
   "integrationReview": {
-    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
-    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "status": "Reviewed identical covered bodies; fresh actual-worktree model, production and sensitivity stages passed"
+    "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "parents": [
+      "150a8c33d63b73d61fca2849c1455c52d2298366",
+      "8292b067d43dca17c0919673785464b0831645b2"
+    ],
+    "evidence": "docs/evidence/ui-speed/integ-server",
+    "constructor": "Combined Diagnostics checked-read callback and Snapshots attachmentRoot; identical constructor statements/bindings on the same seed."
   }
 }

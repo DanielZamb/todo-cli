@@ -1,0 +1,183 @@
+{
+  "parent": "6b976262ac74e2da34f9c308e5c77ac64dab713c",
+  "scope": "Generated client and real HTTP; synthetic clock and interaction workload; candidate2 direct-recorder retention qualification withdrawn",
+  "red": {
+    "test_functions": 28,
+    "issues": 16,
+    "classification_issues": 9,
+    "flood_issues": 7,
+    "flood": {
+      "after": {
+        "availability.changed": 0,
+        "refresh.finished": 0,
+        "stream.dropped": 0,
+        "ui.layout.committed": 0,
+        "ui.stall": 0
+      },
+      "before": {
+        "availability.changed": 2,
+        "refresh.finished": 2,
+        "stream.dropped": 2,
+        "ui.layout.committed": 2,
+        "ui.stall": 2
+      },
+      "periodic_flag": false,
+      "requests": 100,
+      "thinned": 0
+    }
+  },
+  "green": {
+    "tests": 29,
+    "suites": 3,
+    "seconds": 38.625,
+    "flood": {
+      "after": {
+        "availability.changed": 2,
+        "refresh.finished": 2,
+        "stream.dropped": 2,
+        "ui.layout.committed": 2,
+        "ui.stall": 2
+      },
+      "before": {
+        "availability.changed": 2,
+        "refresh.finished": 2,
+        "stream.dropped": 2,
+        "ui.layout.committed": 2,
+        "ui.stall": 2
+      },
+      "failed_request_phases": 3,
+      "periodic_flag": false,
+      "requests": 100,
+      "thinned": 278
+    },
+    "hour": {
+      "active_hour_bytes": 2590737,
+      "diagnostics_polls": 3120,
+      "dropped": 0,
+      "evening_interaction_preserved": true,
+      "health_polls": 5580,
+      "hours_per_file": 25.90338733727121,
+      "idle_hour_bytes": 19502.833333333332,
+      "journal_failures": 0,
+      "refreshes": 120,
+      "requests": 9660,
+      "workload": "real generated HTTP and model refreshes with synthetic interaction metadata and clock; not an observed owner hour or UI latency"
+    }
+  },
+  "source_sha256": {
+    "apps/macos/API/Sources/TodoAPI/ClientRequestCorrelation.swift": "009765b8195c34077077edf6cbacf083b9ef27b7d3690b7a6d8d3a72368af891",
+    "apps/macos/API/Sources/TodoAPI/ClientDiagnosticsRecorder.swift": "d05f6cec73db0259433cd0a4b0a279b6e9c9f179db08de5234fb71e680a31b01",
+    "apps/macos/StateTests/ClientDiagnosticsTests.swift": "dc603414bd65f9c4a42969ba9c695886610fc53a5a004b3eb9d6803465b4427f"
+  },
+  "native_ui_proven": false,
+  "app_launched": false,
+  "keychain_called": false,
+  "signed": false,
+  "pushed": false,
+  "gates": {
+    "state_tests": 195,
+    "state_suites": 29,
+    "swift": [
+      {
+        "name": "state",
+        "command": [
+          "scripts/swift-slot.sh",
+          "swift",
+          "test",
+          "--package-path",
+          "apps/macos",
+          "--scratch-path",
+          "apps/macos/DerivedData/StateProof",
+          "--disable-automatic-resolution",
+          "--jobs",
+          "2",
+          "--filter",
+          "WriteStateTests|GeneratedContractTests"
+        ],
+        "exit": 0
+      },
+      {
+        "name": "unsigned",
+        "command": [
+          "scripts/swift-slot.sh",
+          "xcodebuild",
+          "-project",
+          "apps/macos/Todo.xcodeproj",
+          "-scheme",
+          "Todo",
+          "-configuration",
+          "Release",
+          "-destination",
+          "platform=macOS",
+          "-derivedDataPath",
+          "apps/macos/DerivedData/MacCandidate1",
+          "-disableAutomaticPackageResolution",
+          "-onlyUsePackageVersionsFromResolvedFile",
+          "CODE_SIGNING_ALLOWED=NO",
+          "CODE_SIGNING_REQUIRED=NO",
+          "ONLY_ACTIVE_ARCH=YES",
+          "ARCHS=arm64",
+          "build"
+        ],
+        "exit": 0
+      },
+      {
+        "name": "idle",
+        "command": [
+          ".agents/skills/verify-client-diagnostics/scripts/verify.py",
+          "docs/evidence/mac-perf/c3-review/final-idle",
+          "--stream-only",
+          "--long-idle"
+        ],
+        "exit": 0
+      },
+      {
+        "name": "subscribers",
+        "command": [
+          ".agents/skills/verify-client-diagnostics/scripts/verify.py",
+          "docs/evidence/mac-perf/c3-review/final-subscribers",
+          "--subscribers-only"
+        ],
+        "exit": 0
+      }
+    ],
+    "root_exit": 0,
+    "idle": {
+      "app_launched": false,
+      "can_write": true,
+      "idle_ms": 300015.75908333325,
+      "keychain_called": false,
+      "loading": false,
+      "reconnects": 0,
+      "refreshes": 0,
+      "requests": 0
+    },
+    "subscribers": {
+      "app_launched": false,
+      "counts": [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0
+      ],
+      "diagnostics_enabled": true,
+      "keychain_called": false,
+      "labels": [
+        "before",
+        "connected",
+        "first_switch_after_3s",
+        "ten_switches_after_3s",
+        "old_profile_operation_after_3s",
+        "credential_change_after_3s",
+        "profile_deletion_after_3s",
+        "signed_out_after_3s"
+      ],
+      "sign_out_boundary": "signedIn false plus connect; SessionVault signOut not called"
+    },
+    "design": "Not rerun; no view file changed; coordinator gate scope"
+  }
+}

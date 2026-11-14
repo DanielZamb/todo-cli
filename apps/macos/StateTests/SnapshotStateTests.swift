@@ -46,7 +46,7 @@ func snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer() async 
     model.importCloseMissing = true
     await model.previewImport()
     #expect(model.importReport?.totals.created == 1)
-    model.importError = "Old import error"
+    model.importMessages.publish("Old import error", kind: .run)
     await model.confirmSnapshotRestore()
     for _ in 0..<600 where model.restoreReloadCount == reloads || model.tasks.count != original { try await Task.sleep(for: .milliseconds(100)) }
     #expect(model.restoreReloadCount == reloads + 1)
@@ -133,5 +133,5 @@ func snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer() async 
     let encoded = try JSONEncoder().encode(wire)
     #expect(try JSONSerialization.jsonObject(with: encoded) as? NSArray == JSONSerialization.jsonObject(with: data) as? NSArray)
     let history = try JSONDecoder().decode([HistoryEntry].self, from: encoded)
-    #expect(Set(history.map { $0.event.kind }) == ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "ProfileDeleted", "ProfileDeletionRejected", "ReminderFired", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
+    #expect(Set(history.map { $0.event.kind }) == ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "DependencyAdded", "DependencyRemoved", "ProfileDeleted", "ProfileDeletionRejected", "ReminderFired", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
 }

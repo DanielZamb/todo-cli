@@ -1,0 +1,72 @@
+[
+  {
+    "route": "/profiles/never-created/projects",
+    "status": 200,
+    "bytes": "W10="
+  },
+  {
+    "route": "/profiles/never-created/tags",
+    "status": 200,
+    "bytes": "W10="
+  },
+  {
+    "route": "/profiles/never-created/tasks",
+    "status": 200,
+    "bytes": "W10="
+  },
+  {
+    "route": "/profiles/never-created/tasks?text=sentinel",
+    "status": 200,
+    "bytes": "W10="
+  },
+  {
+    "route": "/profiles/never-created/views/inbox?now=2026-11-11T12%3A00%3A00Z",
+    "status": 200,
+    "bytes": "eyJuYW1lIjoiaW5ib3giLCJub3ciOiIyMDI2LTExLTExVDEyOjAwOjAwWiIsImdyb3VwcyI6W3sibmFtZSI6IkluYm94IiwidGFza3MiOltdfV19"
+  },
+  {
+    "route": "/profiles/never-created/views/today?now=2026-11-11T12%3A00%3A00Z",
+    "status": 200,
+    "bytes": "eyJuYW1lIjoidG9kYXkiLCJub3ciOiIyMDI2LTExLTExVDEyOjAwOjAwWiIsImdyb3VwcyI6W3sibmFtZSI6Ik92ZXJkdWUiLCJ0YXNrcyI6W119LHsibmFtZSI6IkR1ZSB0b2RheSIsInRhc2tzIjpbXX0seyJuYW1lIjoiU2NoZWR1bGVkIHRvZGF5IiwidGFza3MiOltdfV19"
+  },
+  {
+    "route": "/profiles/never-created/views/overdue?now=2026-11-11T12%3A00%3A00Z",
+    "status": 200,
+    "bytes": "eyJuYW1lIjoib3ZlcmR1ZSIsIm5vdyI6IjIwMjYtMTEtMTFUMTI6MDA6MDBaIiwiZ3JvdXBzIjpbeyJuYW1lIjoiT3ZlcmR1ZSIsInRhc2tzIjpbXX1dfQ=="
+  },
+  {
+    "route": "/profiles/never-created/views/scheduled?now=2026-11-11T12%3A00%3A00Z",
+    "status": 200,
+    "bytes": "eyJuYW1lIjoic2NoZWR1bGVkIiwibm93IjoiMjAyNi0xMS0xMVQxMjowMDowMFoiLCJncm91cHMiOlt7Im5hbWUiOiJTY2hlZHVsZWQiLCJ0YXNrcyI6W119XX0="
+  },
+  {
+    "route": "/profiles/never-created/tasks/ab-present",
+    "status": 404,
+    "bytes": "eyJfdGFnIjoiTm90Rm91bmQiLCJtZXNzYWdlIjoiVGFzayBub3QgZm91bmQiLCJleGl0X2NvZGUiOjMsImV4aXRfbWVhbmluZyI6Im5vdCBmb3VuZCBvciBhdXRoIG1pc3NpbmcifQ=="
+  },
+  {
+    "route": "/profiles/never-created/tasks/ab-present/history",
+    "status": 200,
+    "bytes": "W10="
+  },
+  {
+    "route": "/profiles/never-created/tasks/ab-present/graph",
+    "status": 404,
+    "bytes": "eyJfdGFnIjoiTm90Rm91bmQiLCJtZXNzYWdlIjoiVGFzayBub3QgZm91bmQiLCJleGl0X2NvZGUiOjMsImV4aXRfbWVhbmluZyI6Im5vdCBmb3VuZCBvciBhdXRoIG1pc3NpbmcifQ=="
+  },
+  {
+    "route": "/profiles/never-created/tasks/ab-present/attachments/missing/image",
+    "status": 404,
+    "bytes": "eyJfdGFnIjoiTm90Rm91bmQiLCJtZXNzYWdlIjoiVGFzayBub3QgZm91bmQiLCJleGl0X2NvZGUiOjMsImV4aXRfbWVhbmluZyI6Im5vdCBmb3VuZCBvciBhdXRoIG1pc3NpbmcifQ=="
+  },
+  {
+    "route": "/profiles/never-created/quick-add/parse",
+    "status": 200,
+    "bytes": "eyJ0aXRsZSI6IlByZXBhcmUiLCJkdWVfYXQiOm51bGwsInNjaGVkdWxlZF9hdCI6bnVsbCwicHJpb3JpdHkiOiJQMSIsInRhZ3MiOlsiZm9jdXMiXSwicHJvamVjdCI6IkFic2VudCJ9"
+  },
+  {
+    "route": "/profiles/never-created/events",
+    "status": 200,
+    "bytes": "ZXZlbnQ6IHJlYWR5CmRhdGE6IG51bGwKCg=="
+  }
+]

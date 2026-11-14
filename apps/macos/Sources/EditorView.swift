@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import TodoAPI
 
 struct EditorView: View {
     @Bindable var model: TodoModel
@@ -29,6 +31,16 @@ struct EditorView: View {
                         } else {
                             editorForm(draft: draft)
                         }
+                        if let task = model.editor?.base {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Dependencies").font(.headline)
+                                HStack {
+                                    Button("Add dependency", systemImage: "link") { model.clientDiagnosticsUI.perform(.openDependencyPicker, surface: .dependencyPicker) { await model.openDependencyPicker(task) } }
+                                        .disabled(!model.canWrite).accessibilityIdentifier("dependency-add")
+                                    Button("View Dependencies") { model.clientDiagnosticsUI.perform(.openDependencies, surface: .dependencies) { await model.readDependencyGraph(root: task.id) } }
+                                }
+                            }
+                        }
                         AttachmentsSection(model: model)
                         DisclosureGroup("History", isExpanded: $model.showingHistory) {
                             if let error = model.historyError { ClientErrorNotice(model: model, text: error, position: .history) }
@@ -40,11 +52,13 @@ struct EditorView: View {
                                                 Text(entry.label).fontWeight(.semibold)
                                                 Spacer()
                                                 TimelineView(.periodic(from: .now, by: 60)) { context in
+                                                    let _ = ClientObservedActivity.timelineTick()
                                                     Text(entry.relativeTime(now: context.date)).foregroundStyle(Color.secondary)
                                                 }.help(entry.localTime())
                                             }
                                             if entry.outcome == "rejected" { Text("Rejected attempt. " + entry.rejectionReason) }
                                             if entry.event.kind == "TaskHistoryRedacted" { Text("Content erased by Purge.") }
+                                            DependencyHistoryView(model: model, entry: entry)
                                             ForEach(entry.fieldChanges, id: \.field) { change in
                                                 VStack(alignment: .leading, spacing: 2) {
                                                     Text(change.field).foregroundStyle(Color.secondary)
@@ -73,6 +87,10 @@ struct EditorView: View {
                         }
                     }.frame(maxWidth: .infinity).padding(20)
                 }
+                // Compact (candidate 8 ruling 5): the body shows its scroll bars, so a field at the
+                // bottom edge reads as more content, not a cut.
+                .scrollIndicators(compact ? .visible : .automatic)
+                .compactBounds("editor-scroll", when: compact)
                 Divider()
                 HStack {
                     if model.busy {
@@ -81,8 +99,7 @@ struct EditorView: View {
                     }
                     Spacer()
                     Button("Close") {
-                        model.editor = nil
-                        model.conflict = nil
+                        model.clientDiagnosticsUI.performSync(.closeInspector) { model.editor = nil; model.conflict = nil }
                     }.buttonStyle(.bordered).tint(nil as Color?).keyboardShortcut(.cancelAction).disabled(model.busy)
                     if let conflict = model.conflict {
                         Button(model.writeIntent == nil ? "Save resolution" : "Retry action") { Task { await model.resolveConflict() } }
@@ -95,7 +112,7 @@ struct EditorView: View {
                                         } ?? true))
                             )
                     } else {
-                        Button("Save changes") { Task { await model.save() } }
+                        Button("Save changes") { model.clientDiagnosticsUI.perform(.save, surface: .main) { await model.save() } }
                             .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
                             .disabled(
                                 !model.canWrite || draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -103,19 +120,21 @@ struct EditorView: View {
                             )
                             .accessibilityIdentifier("save-task")
                     }
-                }.controlSize(.large).padding(16)
+                }.controlSize(compact ? .regular : .large).padding(.horizontal, 16).padding(.vertical, compact ? 10 : 16)
+                    .compactBounds("editor-footer", when: compact)
             }
         }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(.background)
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .inspector, identity: model.editor?.id))
             .task(id: model.editor?.id) {
                 titleFocused = model.focusEditorTitle
             }
             .task(id: model.canWrite ? model.editor?.base : nil) {
                 if model.editor?.base.occurrence != nil && !model.showingSeries && !model.seriesLoading {
-                    await model.openSeries(presenting: false)
+                    await model.loadSeries()
                 }
             }
-            .sheet(isPresented: $model.showingSeries) { SeriesView(model: model) }
+            .sheet(isPresented: $model.showingSeries) { SeriesView(model: model, compact: compact) }
             .sheet(item: $newMetadata) { kind in
                 MetadataNameSheet(kind: kind, canWrite: model.canWrite) { name in
                     model.editor?.addMetadata(kind, name: name, projects: model.projects, tags: model.tags)
@@ -126,7 +145,7 @@ struct EditorView: View {
     private func editorForm(draft: TaskDraft) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
-                TextField("Task title", text: binding(\.title, default: ""), axis: .vertical)
+                TextField("Task title", text: textBinding(\.title, category: .editTitle), axis: .vertical)
                     .font(.title2.weight(.semibold)).textFieldStyle(.plain).frame(maxWidth: .infinity, alignment: .leading)
                     .focused($titleFocused).accessibilityIdentifier("edit-title")
                     .compactBounds("task-title")
@@ -134,9 +153,9 @@ struct EditorView: View {
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text("Description").foregroundStyle(.secondary)
-                TextEditor(text: binding(\.description, default: ""))
+                TextEditor(text: textBinding(\.description, category: .editDescription))
                     .scrollContentBackground(.hidden).padding(6).background(.background, in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator)).frame(height: 100).font(.body).accessibilityLabel(
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(.separator)).frame(height: compact ? 60 : 100).font(.body).compactBounds("edit-description", when: compact).accessibilityLabel(
                         "Description"
                     ).accessibilityIdentifier("edit-description")
                 Text("Markdown").font(.caption).foregroundStyle(.tertiary).padding(.leading, 11)
@@ -276,7 +295,8 @@ struct EditorView: View {
     }
 
     private func fieldLabel(_ title: String) -> some View {
-        Text(title).frame(width: 74, alignment: .leading)
+        // Its frame says where each field row sits (the taller Compact's field heights, O34).
+        Text(title).frame(width: 74, alignment: .leading).compactBounds("field-" + title.lowercased(), when: compact)
     }
 
     private func conflictView(draft: TaskDraft, conflict: TaskConflict) -> some View {
@@ -318,6 +338,15 @@ struct EditorView: View {
         draft.value(
             field, projects: Dictionary(uniqueKeysWithValues: model.projects.map { ($0.id, $0.name) }),
             tags: Dictionary(uniqueKeysWithValues: model.tags.map { ($0.id, $0.name) }))
+    }
+
+    private func textBinding(_ keyPath: WritableKeyPath<TaskDraft, String>, category: ClientDiagnosticAction) -> Binding<String> {
+        Binding(get: { model.editor?[keyPath: keyPath] ?? "" }, set: { value in
+            let id = model.clientDiagnosticsUI.begin(category, surface: .inspector, identity: model.editor?.id)
+            weak var editor = NSApp.keyWindow?.firstResponder as? NSTextView
+            model.editor?[keyPath: keyPath] = value
+            model.clientDiagnosticsUI.publish(id, validate: { editor?.string == value })
+        })
     }
 
     private func binding<Value>(_ keyPath: WritableKeyPath<TaskDraft, Value>, default fallback: Value) -> Binding<Value> {
@@ -521,6 +550,16 @@ struct TaskTransferResultView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Label(result.message, systemImage: "checkmark.circle").foregroundStyle(TodoColors.color("success"))
+                if !result.removedDependencies.isEmpty {
+                    Text("Removed Dependencies").font(.caption.weight(.semibold))
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(result.removedDependencies.enumerated()), id: \.offset) { _, edge in
+                                Text("\(dependencyTitle(edge.blocker_id)) blocks \(dependencyTitle(edge.dependent_id))").font(.caption).textSelection(.enabled)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                    }.frame(maxHeight: 120)
+                }
                 Button(result.openTitle) { Task { await model.openTransferredTask() } }.buttonStyle(.borderless).disabled(model.busy)
             }
             Spacer(minLength: 0)
@@ -528,34 +567,33 @@ struct TaskTransferResultView: View {
                 .buttonStyle(.borderless).accessibilityLabel("Dismiss transfer result")
         }.padding(12).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("task-transfer-result")
     }
+    private func dependencyTitle(_ id: String) -> String {
+        id == result.task.id ? result.task.title : model.tasks.first { $0.id == id }?.title ?? id
+    }
 }
 
 struct EditorTaskActions: View {
     @Bindable var model: TodoModel
-    @State private var confirmDelete = false
     var body: some View {
                 Menu {
                     if let task = model.editor?.base {
-                        Button("Complete task") { Task { await model.transition(task, action: "complete") } }.disabled(
+                        Button("Complete task") { model.clientDiagnosticsUI.perform(.complete, surface: .inspector) { await model.transition(task, action: "complete") } }.disabled(
                             task.status != "open")
-                        Button("Cancel task") { Task { await model.transition(task, action: "cancel") } }.disabled(task.status != "open")
+                        Button("Cancel task") { model.clientDiagnosticsUI.perform(.cancel, surface: .inspector) { await model.transition(task, action: "cancel") } }.disabled(task.status != "open")
                         if ["done", "cancelled"].contains(task.status) {
                             Button("Reopen task") { Task { await model.transition(task, action: "reopen") } }
                         }
                         Divider()
                         TaskTransferActions(model: model, task: task)
-                        Button("Delete task", role: .destructive) { confirmDelete = true }
+                        Button("Add dependency…") { model.clientDiagnosticsUI.perform(.openDependencyPicker, surface: .dependencyPicker) { await model.openDependencyPicker(task) } }
+                        Button("Delete task", role: .destructive) { Task { await model.openDependencyDelete(task) } }
                     }
                 } label: {
                     Image(systemName: "ellipsis")
                 }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().disabled(!model.canWrite || model.conflict != nil)
                     .accessibilityLabel("Task actions")
             .frame(minWidth: 28, minHeight: 28)
-            .confirmationDialog("Delete this task?", isPresented: $confirmDelete) {
-                if let task = model.editor?.base {
-                    Button("Delete task", role: .destructive) { Task { await model.deleteTask(task) } }
-                }
-            }
+
 
     }
 }

@@ -2,10 +2,8 @@ import { Clock, Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
 import { filterTasks } from "./commands.ts";
 import { Profile, Project, Tag, Task } from "./entities.ts";
-import type { OpLogEntry } from "./events.ts";
 import type { TaskId } from "./ids.ts";
 import { taskView } from "./presentation.ts";
-import { changes } from "./store/projection.ts";
 import type { OperationStore } from "./store/store.ts";
 import { Instant, type TaskTime } from "./time.ts";
 
@@ -68,32 +66,6 @@ export const isInboxTask = (
 
 const openTasks = (tasks: readonly Task[]) =>
   tasks.filter((task) => task.status === "open" && task.deleted_at === null);
-const concernsTask = (entry: OpLogEntry, id: TaskId) => {
-  const event = entry.event;
-  switch (event.kind) {
-    case "ProfileDeleted":
-    case "ProfileDeletionRejected":
-    case "AuthChanged":
-    case "DatabaseRestored":
-    case "AuthAttemptRejected":
-      return false;
-    case "TaskHistoryRedacted":
-      return (
-        event.task_ids.includes(id) ||
-        event.replay.tasks.some(
-          ({ before, after }) => before?.id === id || after?.id === id,
-        )
-      );
-    case "ReminderFired":
-    case "TaskAttemptRejected":
-      return event.task_id === id;
-    default:
-      return changes(event).tasks.some(
-        ({ before, after }) => before?.id === id || after?.id === id,
-      );
-  }
-};
-
 export const profileTaskCounts = (tasks: readonly Task[]) => ({
   visible_task_count: tasks.filter((task) => task.deleted_at === null).length,
   open_task_count: openTasks(tasks).length,
@@ -104,41 +76,12 @@ export class ClientReads {
   constructor(private readonly store: OperationStore) {}
 
   readonly profiles = (credential: string) =>
-    Effect.gen({ self: this }, function* () {
-      const profiles = yield* this.store.auth.profiles({ credential });
-      return yield* Effect.forEach(profiles, (profile) =>
-        this.store.auth.read({ credential, profile: profile.id }).pipe(
-          Effect.map((data) => ({
-            ...profile,
-            ...profileTaskCounts(data.tasks),
-          })),
-        ),
-      );
-    });
+    this.store.auth.profileSummaries({ credential });
 
   readonly projects = (request: AccessRequest) =>
-    this.store.auth.read(request).pipe(
-      Effect.map((data) =>
-        data.projects.map((project) => ({
-          ...project,
-          open_task_count: openTasks(data.tasks).filter(
-            (task) => task.project_id === project.id,
-          ).length,
-        })),
-      ),
-    );
+    this.store.auth.projects(request);
 
-  readonly tags = (request: AccessRequest) =>
-    this.store.auth.read(request).pipe(
-      Effect.map((data) =>
-        data.tags.map((tag) => ({
-          ...tag,
-          open_task_count: openTasks(data.tasks).filter((task) =>
-            task.tags.includes(tag.id),
-          ).length,
-        })),
-      ),
-    );
+  readonly tags = (request: AccessRequest) => this.store.auth.tags(request);
 
   readonly view = (
     request: AccessRequest,
@@ -146,9 +89,17 @@ export class ClientReads {
     at?: Instant,
   ) =>
     Effect.gen({ self: this }, function* () {
-      const data = yield* this.store.auth.read(request);
+      const { selection: authority, data } = yield* this.store.auth.readCatalog(
+        request,
+        Schema.Struct({
+          name: PlanningViewName,
+          at: Schema.optionalKey(Instant),
+        }),
+        { name, ...(at === undefined ? {} : { at }) },
+      );
+      const selected = authority.fields;
       const now =
-        at ??
+        selected.at ??
         Schema.decodeUnknownSync(Instant)(
           new Date(yield* Clock.currentTimeMillis).toISOString(),
         );
@@ -173,15 +124,15 @@ export class ClientReads {
           .map((task) => task.id),
       );
       const groups: PlanningView["groups"] =
-        name === "today"
+        selected.name === "today"
           ? [
               { name: "Overdue", tasks: rows(overdueIds) },
               { name: "Due today", tasks: rows(dueToday) },
               { name: "Scheduled today", tasks: rows(scheduledToday) },
             ]
-          : name === "overdue"
+          : selected.name === "overdue"
             ? [{ name: "Overdue", tasks: rows(overdueIds) }]
-            : name === "scheduled"
+            : selected.name === "scheduled"
               ? [
                   {
                     name: "Scheduled",
@@ -194,15 +145,9 @@ export class ClientReads {
                     tasks: tasks.filter(isInboxTask),
                   },
                 ];
-      return { name, now, groups };
+      return { name: selected.name, now, groups };
     });
 
   readonly history = (request: AccessRequest & { readonly task_id: TaskId }) =>
-    this.store.auth
-      .read(request)
-      .pipe(
-        Effect.map((data) =>
-          data.history.filter((entry) => concernsTask(entry, request.task_id)),
-        ),
-      );
+    this.store.auth.taskHistory(request);
 }

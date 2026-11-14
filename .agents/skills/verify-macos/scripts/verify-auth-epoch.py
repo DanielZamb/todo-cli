@@ -12,6 +12,8 @@ import tempfile
 import time
 
 root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip())
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package  # the vault swap and the Keychain guard every runner uses
 evidence = Path(sys.argv[1])
 source = sys.argv[2] if len(sys.argv) > 2 else 'HEAD'
 source = subprocess.check_output(['git', 'rev-parse', source], cwd=root, text=True).strip()
@@ -36,6 +38,11 @@ def cancelled(signum, frame):
 
 signal.signal(signal.SIGTERM, cancelled)
 signal.signal(signal.SIGINT, cancelled)
+
+def keychain_linked():
+    """From the guard's receipt (None if the guard never ran), never a constant."""
+    receipt = evidence / 'keychain-guard.json'
+    return json.loads(receipt.read_text())['keychainLinked'] if receipt.exists() else None
 
 def run(argv, log, environment=env):
     with (evidence / log).open('w') as output:
@@ -62,7 +69,7 @@ try:
         data = subprocess.check_output(['git', 'show', f'{source}:{file}'], cwd=root)
         (sources / Path(file).name).write_bytes(data)
         hashes[file] = hashlib.sha256(data).hexdigest()
-    shutil.copyfile(fixtures / 'SessionVault.swift', sources / 'SessionVault.swift')
+    state_package.swap_vault(sources)
     shutil.copyfile(fixtures / 'AuthEpochTests.swift', tests / 'AuthEpochTests.swift')
     shutil.copyfile(root / 'apps/macos/Package.resolved', package / 'Package.resolved')
     api = str(root / 'apps/macos/API')
@@ -75,7 +82,7 @@ let package = Package(name: "AuthEpochProof", platforms: [.macOS(.v26)], depende
 ''')
     api_hashes = {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in (root / 'apps/macos/API/Sources/TodoAPI').rglob('*.swift')}
     cache = json.loads((root / '.scratch/bin/build.json').read_text())
-    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'test': hashlib.sha256((tests / 'AuthEpochTests.swift').read_bytes()).hexdigest(), 'compiledServer': cache, 'nativeApp': False, 'keychain': False}, indent=2) + '\n')
+    (evidence / 'source-provenance.json').write_text(json.dumps({'source': source, 'sources': hashes, 'apiSources': api_hashes, 'memorySessionAdapter': hashlib.sha256((sources / 'SessionVault.swift').read_bytes()).hexdigest(), 'test': hashlib.sha256((tests / 'AuthEpochTests.swift').read_bytes()).hexdigest(), 'compiledServer': cache, 'nativeApp': False, 'keychainGuard': 'keychain-guard.json'}, indent=2) + '\n')
     if run([cache['seed'], str(scratch), 'diagnostics'], 'seed.log'):
         raise RuntimeError('Provisioner failed')
     with (evidence / 'server.log').open('w') as output:
@@ -93,8 +100,8 @@ let package = Package(name: "AuthEpochProof", platforms: [.macOS(.v26)], depende
         time.sleep(0.1)
     if not url:
         raise RuntimeError('Server readiness timed out')
-    test_env = dict(env, TODO_AUTH_EPOCH_MEMORY_VAULT='1', TODO_AUTH_EPOCH_SERVER=url, TODO_AUTH_EPOCH_RECEIPT=str(evidence / 'receipt.json'))
-    exit_code = run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/AuthEpochProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'AuthEpochTests'], 'tests.log', test_env)
+    test_env = dict(env, TODO_AUTH_EPOCH_MEMORY_VAULT='1', TODO_AUTH_EPOCH_SERVER=url, TODO_AUTH_EPOCH_RECEIPT=str(evidence / 'receipt.json'), STATE_PACKAGE_RECEIPT=str(evidence / 'keychain-guard.json'))
+    exit_code = run([sys.executable, str(root / 'apps/macos/scripts/state_package.py'), 'swift', 'test', '--package-path', str(package), '--scratch-path', str(root / 'apps/macos/DerivedData/AuthEpochProof'), '--jobs', '2', '--disable-automatic-resolution', '--no-parallel', '--filter', 'AuthEpochTests'], 'tests.log', test_env)
 finally:
     if server is not None:
         owned.stop(server)
@@ -102,5 +109,5 @@ finally:
     if safe:
         shutil.rmtree(scratch)
     (evidence / 'cleanup.json').write_text(json.dumps({'serverStopped': server is None or server.poll() is not None, 'scratchRemoved': not scratch.exists()}) + '\n')
-    (evidence / 'result.json').write_text(json.dumps({'exit': exit_code, 'status': 'PASS' if exit_code == 0 else 'FAIL', 'nativeAppLaunched': False, 'keychainAccess': False}) + '\n')
+    (evidence / 'result.json').write_text(json.dumps({'exit': exit_code, 'status': 'PASS' if exit_code == 0 else 'FAIL', 'nativeAppLaunched': False, 'keychainAccess': keychain_linked(), 'keychainGuard': 'keychain-guard.json'}) + '\n')
 raise SystemExit(exit_code)

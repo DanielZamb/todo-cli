@@ -1,4 +1,5 @@
 import {
+  type Edge,
   LookupQuery,
   ProfileId,
   type QuickAddDraft,
@@ -7,8 +8,9 @@ import {
   type Sequence,
   type Series,
   Task,
-  type TaskFilters,
+  TaskFilters,
   type TaskLookupDetails,
+  type TaskRead,
   TaskTime,
 } from "@todo/domain";
 import { cn } from "cn";
@@ -38,12 +40,14 @@ import {
   X,
 } from "lucide-react";
 import {
+  type DragEvent,
   type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { createRoot } from "react-dom/client";
 import { acceptAttachmentTask } from "./attachment-model.ts";
@@ -85,6 +89,32 @@ import {
 import { NativeSelect } from "./components/ui/native-select.tsx";
 import { Textarea } from "./components/ui/textarea.tsx";
 import { DatePicker } from "./date-picker.tsx";
+import { DependencyBatchDialog } from "./dependency-batch-dialog.tsx";
+import { DependencyBatchController } from "./dependency-batch-state.ts";
+import { DependencyDeleteDialog } from "./dependency-delete-dialog.tsx";
+import { DependencyDeleteController } from "./dependency-delete-state.ts";
+import {
+  DependencyErrorStatus,
+  DependencyPicker,
+} from "./dependency-dialog.tsx";
+import {
+  DependencyDragController,
+  dependencyDragHint,
+  dependencyDragSource,
+  dependencyDragType,
+} from "./dependency-drag-state.ts";
+import { DependencyDragStatus } from "./dependency-drag-status.tsx";
+import { DependencyEdgeReport } from "./dependency-edge-report.tsx";
+import { DependencyGraphDialog } from "./dependency-graph-dialog.tsx";
+import { DependencyGraphController } from "./dependency-graph-state.ts";
+import type { DependencyContext } from "./dependency-presentation.ts";
+import { dependencyBadge } from "./dependency-presentation.ts";
+import {
+  DependencySelectionDialog,
+  InitialDependencySection,
+} from "./dependency-selection-dialog.tsx";
+import { DependencyController } from "./dependency-state.ts";
+import { DependencyTitleStatus } from "./dependency-title-status.tsx";
 import { Diagnostics } from "./diagnostics.tsx";
 import { DiscoveryDialog } from "./discovery-dialog.tsx";
 import {
@@ -94,6 +124,7 @@ import {
 import {
   canRevertHistory,
   editedChanges,
+  historyDependencies,
   historyLabel,
   localHistoryTime,
   rejectionReason,
@@ -312,6 +343,21 @@ type WriteIntent =
   | { kind: "editSeries"; recurrence: Recurrence }
   | { kind: "skipOccurrence" };
 function App() {
+  const [dependencyDrag] = useState(() => new DependencyDragController());
+  const dragState = useSyncExternalStore(
+    dependencyDrag.subscribe,
+    dependencyDrag.snapshot,
+  );
+  const dragging = useRef<{
+    profile: Task["profile_id"];
+    task: Task["id"];
+    generation: number;
+  } | null>(null);
+  const [dependencyBatch] = useState(() => new DependencyBatchController());
+  const [dependencyGraph] = useState(() => new DependencyGraphController());
+  const [dependencies] = useState(() => new DependencyController());
+  const [taskDelete] = useState(() => new DependencyDeleteController());
+  const dependencyTrigger = useRef<HTMLElement | null>(null);
   const [discovery] = useState(() => new DiscoveryStateController());
   const discoveryReturnFocus = useRef<HTMLElement | null>(null);
   const [outdated, setOutdated] = useState<Extract<
@@ -408,15 +454,37 @@ function App() {
   const loadError = loadFailure?.message ?? "";
   const [announcement, setAnnouncement] = useState("");
   const [transferResult, setTransferResult] = useState<
-    | ({ task: Task; profileName: string } & (
-        | { kind: "copy" }
-        | { kind: "move"; editor: Editor }
-      ))
+    | ({
+        task: Task;
+        profileName: string;
+        removed: readonly Edge[];
+        tasks: readonly Task[];
+      } & ({ kind: "copy" } | { kind: "move"; editor: Editor }))
     | null
   >(null);
   const [pending, setPending] = useState(false);
   const [quick, setQuick] = useState(false);
   const [draft, setDraft] = useState("");
+  const [initialDependencies, setInitialDependencies] = useState<
+    readonly TaskRead[]
+  >([]);
+  const [initialPicker, setInitialPicker] = useState<{
+    target: "quick" | "series";
+    tasks: readonly TaskRead[];
+  } | null>(null);
+  const [seriesDependencies, setSeriesDependencies] = useState<
+    readonly TaskRead[]
+  >([]);
+  const initialTrigger = useRef<HTMLElement | null>(null);
+  const [dependencyFailure, setDependencyFailure] = useState<{
+    failure: Extract<Reply, { _tag: "error" }>;
+    context: DependencyContext;
+  } | null>(null);
+  const quickDependencyNotice = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (quick && dependencyFailure)
+      quickDependencyNotice.current?.scrollIntoView({ block: "nearest" });
+  }, [quick, dependencyFailure]);
   const [editor, setEditor] = useState<Editor | null>(() => storedEditor());
   const editorRef = useRef(editor);
   editorRef.current = editor;
@@ -455,46 +523,65 @@ function App() {
   }, []);
   const refreshGeneration = useRef(0);
   const profileGeneration = useRef(0);
-  const activateProfile = useCallback((next: typeof ProfileId.Type) => {
-    if (active.current === next) return;
-    const restored = storedEditor(next);
-    active.current = next;
-    profileGeneration.current++;
-    selected.current = restored?.base.id;
-    refreshGeneration.current++;
-    setProfileDelete(null);
-    setLookupError(null);
-    setEditor(restored);
-    setLatest(null);
-    setChoices({});
-    setIgnored([]);
-    setParsed(null);
-    setHistory(null);
-    setMoveOpen(false);
-    setSeriesDialog(null);
-    setWriteIntent(null);
-    setAppliedSearch(null);
-    catalogRef.current = null;
-    catalogOwedRef.current = true;
-    unfilteredSearch.current = null;
-    searchDefinitions.current = { profile: null, projects: [], tags: [] };
-    setSearchPhase("Idle");
-    clearTimeout(debounce.current);
-    setProject(null);
-    setTag(null);
-    setAdvancedFilters({});
-    advancedFiltersRef.current = {};
-    appliedFiltersRef.current = {};
-    setApplyingFilters(false);
-    setFiltersOpen(false);
-    needsDraft.current = true;
-    setDraft("");
-    setProfile(next);
-    localStorage.setItem("profile", next);
-    setError("");
-    setLoadFailure(null);
-    setTransferResult(null);
-  }, []);
+  const activateProfile = useCallback(
+    (next: typeof ProfileId.Type) => {
+      if (active.current === next) return;
+      dependencies.close();
+      dependencyBatch.close();
+      dependencyDrag.close();
+      dragging.current = null;
+      taskDelete.close();
+      dependencyGraph.close();
+      setInitialDependencies([]);
+      setSeriesDependencies([]);
+      setInitialPicker(null);
+      setDependencyFailure(null);
+      const restored = storedEditor(next);
+      active.current = next;
+      profileGeneration.current++;
+      selected.current = restored?.base.id;
+      refreshGeneration.current++;
+      setProfileDelete(null);
+      setLookupError(null);
+      setEditor(restored);
+      setLatest(null);
+      setChoices({});
+      setIgnored([]);
+      setParsed(null);
+      setHistory(null);
+      setMoveOpen(false);
+      setSeriesDialog(null);
+      setWriteIntent(null);
+      setAppliedSearch(null);
+      catalogRef.current = null;
+      catalogOwedRef.current = true;
+      unfilteredSearch.current = null;
+      searchDefinitions.current = { profile: null, projects: [], tags: [] };
+      setSearchPhase("Idle");
+      clearTimeout(debounce.current);
+      setProject(null);
+      setTag(null);
+      setAdvancedFilters({});
+      advancedFiltersRef.current = {};
+      appliedFiltersRef.current = {};
+      setApplyingFilters(false);
+      setFiltersOpen(false);
+      needsDraft.current = true;
+      setDraft("");
+      setProfile(next);
+      localStorage.setItem("profile", next);
+      setError("");
+      setLoadFailure(null);
+      setTransferResult(null);
+    },
+    [
+      dependencies,
+      taskDelete,
+      dependencyGraph,
+      dependencyBatch,
+      dependencyDrag,
+    ],
+  );
   const activateEditor = (next: Editor) => {
     const current = editorRef.current;
     if (current && current.base.id !== next.base.id) preserveDraft(current);
@@ -505,6 +592,16 @@ function App() {
   };
   const endAuthentication = useCallback(() => {
     discovery.credentialChanged();
+    dependencies.close();
+    dependencyBatch.close();
+    dependencyDrag.close();
+    dragging.current = null;
+    taskDelete.close();
+    dependencyGraph.close();
+    setInitialDependencies([]);
+    setSeriesDependencies([]);
+    setInitialPicker(null);
+    setDependencyFailure(null);
     setLookupError(null);
     refreshGeneration.current++;
     profileGeneration.current++;
@@ -527,18 +624,45 @@ function App() {
     appliedFiltersRef.current = {};
     setApplyingFilters(false);
     setFiltersOpen(false);
-  }, [discovery.credentialChanged]);
+  }, [
+    discovery.credentialChanged,
+    dependencies,
+    taskDelete,
+    dependencyGraph,
+    dependencyBatch,
+    dependencyDrag,
+  ]);
   const request = useCallback(
     async (request: Request): Promise<Reply> => {
+      const generation = profileGeneration.current;
       if (request._tag === "signIn" || request._tag === "signOut")
         discovery.credentialChanged();
-      const scopedDiscovery = ["directory", "lookup", "showTask"].includes(
-        request._tag,
-      );
+      const scopedDiscovery = [
+        "directory",
+        "lookup",
+        "showTask",
+        "graph",
+        "dependencyCandidates",
+        "depend",
+        "undepend",
+        "batchDepend",
+        "delete",
+      ].includes(request._tag);
       try {
-        const reply = Schema.decodeUnknownSync(Reply)(
+        const decoded = Schema.decodeUnknownExit(Reply)(
           await window.desktop.request(request),
         );
+        if (decoded._tag === "Failure") {
+          const reply: Reply = {
+            _tag: "error",
+            message:
+              "Todo returned an incompatible response. Reload after updating the server.",
+          };
+          if (!scopedDiscovery && generation === profileGeneration.current)
+            setError(reply.message);
+          return reply;
+        }
+        const reply = decoded.value;
         if (reply._tag === "outdatedServer") setOutdated(reply);
         else if (
           reply._tag === "signedIn" ||
@@ -549,7 +673,11 @@ function App() {
           for (const entry of reply.profiles)
             profileNames.current.set(entry.id, entry.name);
 
-        if (reply._tag === "task" && request._tag !== "showTask") {
+        if (
+          reply._tag === "task" &&
+          request._tag !== "showTask" &&
+          request._tag !== "delete"
+        ) {
           setLookupError(null);
           localStorage.removeItem(
             taskDraftKey(reply.task.profile_id, reply.task.id),
@@ -565,6 +693,7 @@ function App() {
         }
         if (
           reply._tag === "error" &&
+          generation === profileGeneration.current &&
           !scopedDiscovery &&
           request._tag !== "list" &&
           request._tag !== "search" &&
@@ -572,11 +701,26 @@ function App() {
           (!("profile" in request) || active.current === request.profile)
         ) {
           setLookupError(reply.details ?? null);
-          setError(reply.details ? "" : reply.message);
+          if (reply.dependency && generation === profileGeneration.current) {
+            setError("");
+            setDependencyFailure({
+              failure: reply,
+              context:
+                request._tag === "transition"
+                  ? request.payload.action === "complete"
+                    ? "complete"
+                    : "reopen"
+                  : request._tag === "revert"
+                    ? "revert"
+                    : "add",
+            });
+          } else setError(reply.details ? "" : reply.message);
         }
         if (
           reply._tag === "conflict" &&
           reply.exit_detail &&
+          !scopedDiscovery &&
+          generation === profileGeneration.current &&
           (!("profile" in request) || active.current === request.profile)
         )
           setError(reply.exit_detail);
@@ -862,9 +1006,23 @@ function App() {
         notice._tag === "changed" &&
         notice.profile === profile &&
         active.current === profile
-      )
+      ) {
+        dependencyBatch.changed();
         void refreshRef.current();
+        void dependencyGraph.refresh(request);
+        void dependencies.reload(request, false);
+      }
       if (notice._tag === "reload") {
+        dependencyDrag.close();
+        dragging.current = null;
+        dependencyBatch.close();
+        dependencies.close();
+        taskDelete.close();
+        dependencyGraph.close();
+        setInitialDependencies([]);
+        setSeriesDependencies([]);
+        setInitialPicker(null);
+        setDependencyFailure(null);
         discovery.credentialChanged();
         refreshGeneration.current++;
         setAppliedSearch(null);
@@ -934,6 +1092,13 @@ function App() {
     leaveDeletedProfile,
     discovery.credentialChanged,
     discovery.offline,
+    dependencies.close,
+    taskDelete.close,
+    dependencyGraph.close,
+    dependencyGraph.refresh,
+    dependencies.reload,
+    dependencyBatch,
+    dependencyDrag,
   ]);
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -997,6 +1162,7 @@ function App() {
     if (readOnly) return;
     setPending(true);
     setError("");
+    setDependencyFailure(null);
     const result = await request({
       _tag: "transition",
       profile,
@@ -1039,6 +1205,7 @@ function App() {
     setPending(true);
     setTransferResult(null);
     setError("");
+    setDependencyFailure(null);
     const command: Request =
       intent.kind === "move" || intent.kind === "copy"
         ? {
@@ -1095,6 +1262,8 @@ function App() {
           setEditor(null);
           setTransferResult({
             task: reply.task,
+            removed: reply.task.removed_dependencies ?? [],
+            tasks,
             kind: "move",
             profileName: name,
             editor: movedEditor,
@@ -1103,6 +1272,8 @@ function App() {
           setEditor(rebaseEditor(editor, base));
           setTransferResult({
             task: reply.task,
+            removed: [],
+            tasks,
             kind: "copy",
             profileName: name,
           });
@@ -1201,6 +1372,9 @@ function App() {
           ...taskPayload(editor.changes),
           description: editor.changes.description || null,
           source: "manual",
+          ...(seriesDependencies.length
+            ? { depends_on: seriesDependencies.map((task) => task.id) }
+            : {}),
         },
         recurrence,
       },
@@ -1212,39 +1386,76 @@ function App() {
     ) {
       setEditor(editorFor(reply.task));
       setSeriesDialog(null);
+      setSeriesDependencies([]);
       setAnnouncement("Series created");
       await refresh();
     }
     setPending(false);
   };
-  const deleteTask = async () => {
-    if (!editor || readOnly) return;
-    setPending(true);
-    setError("");
-    const reply = await request({
-      _tag: "delete",
-      profile,
-      task: editor.base.id,
-      query: { from_version: editor.base.row_version },
-    });
-    if (active.current !== profile || selected.current !== editor.base.id) {
-      setPending(false);
-      return;
-    }
-    if (reply._tag === "task") {
-      setEditor(null);
-      setAnnouncement("Task deleted");
-      await refresh();
-    }
-    if (reply._tag === "conflict") {
-      setLatest(reply.latest);
-      setChoices({});
-      setError(
-        "This task changed. Review the latest accepted Version before deleting.",
-      );
-    }
-    setPending(false);
+  const openDependencies = (task: Task) => {
+    if (readOnly) return;
+    dependencyTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void dependencies.open(
+      { profile: task.profile_id, root: task.id },
+      request,
+    );
   };
+  const openGraph = (task: Task) => {
+    dependencyTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void dependencyGraph.open(
+      { profile: task.profile_id, root: task.id },
+      request,
+      task,
+    );
+  };
+  const sourceForDrag = (event: DragEvent) => {
+    const source = dragging.current;
+    if (source)
+      return source.profile === profile &&
+        source.generation === profileGeneration.current
+        ? (tasks.find(
+            (task) => task.id === source.task && task.profile_id === profile,
+          ) ?? null)
+        : null;
+    return dependencyDragSource(
+      event.dataTransfer.getData(dependencyDragType),
+      profile,
+      tasks,
+    );
+  };
+  const deleteTask = (task = editor?.base) => {
+    if (!task || readOnly) return;
+    dependencyTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    void taskDelete.open(task, request);
+  };
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === "k" &&
+        editor &&
+        !readOnly &&
+        !document.querySelector('[role="dialog"][data-open]') &&
+        dependencies.snapshot().kind === "Closed" &&
+        taskDelete.snapshot().kind === "Closed"
+      ) {
+        event.preventDefault();
+        openDependencies(editor.base);
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  });
   useEffect(() => {
     draftRef.current = draft;
     if (!draft.trim() || !quick || !signedIn || connection !== "connected") {
@@ -1275,6 +1486,7 @@ function App() {
     if (!draft.trim() || readOnly) return;
     setPending(true);
     setError("");
+    setDependencyFailure(null);
     const resultDraft = await request({
       _tag: "parse",
       profile,
@@ -1299,6 +1511,9 @@ function App() {
       payload: {
         title: details.title,
         source: "manual",
+        ...(initialDependencies.length
+          ? { depends_on: initialDependencies.map((task) => task.id) }
+          : {}),
         priority: ignored.includes("priority") ? "P3" : details.priority,
         due_at: ignored.includes("due") ? null : details.due_at,
         scheduled_at: ignored.includes("scheduled")
@@ -1318,6 +1533,7 @@ function App() {
     }
     if (result._tag === "task") {
       setDraft("");
+      setInitialDependencies([]);
       setIgnored([]);
       setParsed(null);
       void request({ _tag: "draft", profile, text: "" });
@@ -1378,8 +1594,67 @@ function App() {
       }
     />
   );
-  const filtered =
-    project !== null || tag !== null || Object.keys(advancedFilters).length > 0;
+  const resolveDependencyTask = (
+    id: Task["id"],
+    captured: Task | undefined,
+    use: (task: TaskRead) => void,
+  ) => {
+    const generation = profileGeneration.current;
+    const accept = (task: TaskRead) => {
+      if (
+        generation === profileGeneration.current &&
+        active.current === profile &&
+        task.profile_id === profile &&
+        task.id === id
+      )
+        use(task);
+    };
+    const known = captured ?? tasks.find((task) => task.id === id);
+    if (known) accept(known);
+    else
+      void request({ _tag: "showTask", profile, task: id }).then((reply) => {
+        if (reply._tag === "task") accept(reply.task);
+        else if (
+          reply._tag === "error" &&
+          generation === profileGeneration.current &&
+          active.current === profile
+        ) {
+          setLookupError(reply.details ?? null);
+          setError(reply.details ? "" : reply.message);
+        }
+      });
+  };
+  const openDependencyTask = (id: Task["id"], captured?: Task) =>
+    resolveDependencyTask(id, captured, (task) => {
+      setDependencyFailure(null);
+      setHistory(null);
+      activateEditor(draftForTask(task, editorRef.current));
+    });
+  const followUpDependency = (id: Task["id"], captured?: Task) =>
+    resolveDependencyTask(id, captured, (task) => {
+      setInitialDependencies((current) => [
+        ...current.filter((value) => value.id !== task.id),
+        task,
+      ]);
+      setHistory(null);
+      setDependencyFailure(null);
+      setQuick(true);
+    });
+  const dependencyFailureStatus = dependencyFailure && (
+    <DependencyErrorStatus
+      failure={dependencyFailure.failure}
+      context={dependencyFailure.context}
+      tasks={tasks}
+      dismiss={() => setDependencyFailure(null)}
+      openTask={openDependencyTask}
+      followUp={followUpDependency}
+      onFindTask={findLookupTask}
+    />
+  );
+  const filterCount = Object.keys(advancedFilters).filter(
+    (key) => key !== "order",
+  ).length;
+  const filtered = project !== null || tag !== null || filterCount > 0;
   const invalidate = () => {
     clearTimeout(debounce.current);
     refreshGeneration.current++;
@@ -1389,8 +1664,9 @@ function App() {
     invalidate();
     setProject(null);
     setTag(null);
-    advancedFiltersRef.current = {};
-    if (searchTextRef.current === "" && unfilteredSearch.current) {
+    const order = advancedFiltersRef.current.order;
+    advancedFiltersRef.current = order ? { order } : {};
+    if (!order && searchTextRef.current === "" && unfilteredSearch.current) {
       setAppliedSearch(unfilteredSearch.current);
       appliedFiltersRef.current = {};
       setAdvancedFilters({});
@@ -1424,7 +1700,7 @@ function App() {
     if (signedIn) void refresh("query");
   }, [signedIn, refresh]);
   const groups = catalog
-    ? searchGroups(catalog)
+    ? searchGroups(catalog, appliedSearch?.appliedIdentity.filters.order)
         .map((group) => ({
           ...group,
           tasks: group.tasks.filter(
@@ -1583,9 +1859,107 @@ function App() {
         "shell",
         compact && "compact",
         compact && editor && "editing",
-        quick && "quick-search",
+        quick && initialPicker === null && "quick-search",
       )}
     >
+      {initialPicker !== null && (
+        <DependencySelectionDialog
+          profile={profile}
+          title={
+            initialPicker.target === "series"
+              ? editor?.changes.title || "New Series"
+              : parsed?.title || draft || "New Task"
+          }
+          selected={initialPicker.tasks}
+          request={request}
+          projects={catalog?.projects ?? []}
+          canWrite={!readOnly}
+          onSelect={(tasks) => setInitialPicker({ ...initialPicker, tasks })}
+          onClose={() => setInitialPicker(null)}
+          onDone={() => {
+            (initialPicker.target === "quick"
+              ? setInitialDependencies
+              : setSeriesDependencies)(initialPicker.tasks);
+            setInitialPicker(null);
+          }}
+          returnFocus={() => initialTrigger.current}
+        />
+      )}
+      <DependencyGraphDialog
+        controller={dependencyGraph}
+        projects={catalog?.projects ?? []}
+        request={request}
+        compact={compact}
+        dark={dark}
+        connected={connection === "connected"}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>('[aria-label="Task actions"]')
+        }
+        openTask={(task) =>
+          activateEditor(draftForTask(task, editorRef.current))
+        }
+        addDependency={openDependencies}
+        onFindTask={findLookupTask}
+      />
+      <DependencyPicker
+        controller={dependencies}
+        projects={catalog?.projects ?? []}
+        request={request}
+        canWrite={!readOnly}
+        onBatch={(root, direction) => dependencyBatch.open(root, direction)}
+        onFindTask={findLookupTask}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>(
+                '[data-testid="dependency-add"]',
+              )
+        }
+        onChanged={() => void refresh()}
+      />
+      <DependencyBatchDialog
+        controller={dependencyBatch}
+        request={request}
+        projects={catalog?.projects ?? []}
+        canWrite={!readOnly}
+        openTask={openDependencyTask}
+        followUp={followUpDependency}
+        onFindTask={findLookupTask}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>('[aria-label="Task actions"]')
+        }
+        onChanged={() => void refresh()}
+      />
+      <DependencyDeleteDialog
+        controller={taskDelete}
+        onFindTask={findLookupTask}
+        projects={catalog?.projects ?? []}
+        request={request}
+        canWrite={!readOnly}
+        returnFocus={() =>
+          dependencyTrigger.current?.isConnected
+            ? dependencyTrigger.current
+            : document.querySelector<HTMLElement>('[aria-label="More filters"]')
+        }
+        onDeleted={(task) => {
+          localStorage.removeItem(taskDraftKey(task.profile_id, task.id));
+          if (storedEditor(task.profile_id)?.base.id === task.id)
+            localStorage.removeItem(`editor:${task.profile_id}`);
+          setEditor((current) =>
+            current?.base.id === task.id &&
+            current.base.profile_id === task.profile_id
+              ? null
+              : current,
+          );
+          setLookupError(null);
+          setAnnouncement("Task deleted");
+          void refresh();
+        }}
+      />
       <DiscoveryDialog
         controller={discovery}
         returnFocus={discoveryTrigger}
@@ -1668,6 +2042,8 @@ function App() {
       )}
       {importOpen && (
         <ImportDialog
+          openTask={openDependencyTask}
+          followUp={followUpDependency}
           key={profile}
           profile={profile}
           profileName={profileName(
@@ -2131,22 +2507,51 @@ function App() {
             disabled={applyingFilters}
           >
             Filters
-            {Object.keys(advancedFilters).length > 0
-              ? ` · ${Object.keys(advancedFilters).length}`
-              : ""}
+            {filterCount > 0 ? ` · ${filterCount}` : ""}
           </Button>
+          {view === "tasks" && (
+            <Field orientation="horizontal" className="task-order-control">
+              <NativeSelect
+                id="task-order"
+                aria-label="Order"
+                value={advancedFilters.order ?? "default"}
+                onChange={(event) => {
+                  const { order: _order, ...rest } = advancedFiltersRef.current;
+                  const next = Schema.decodeUnknownSync(TaskFilters)({
+                    ...rest,
+                    ...(event.target.value === "default"
+                      ? {}
+                      : { order: event.target.value }),
+                  });
+                  invalidate();
+                  advancedFiltersRef.current = next;
+                  setApplyingFilters(true);
+                  void refresh("query");
+                }}
+              >
+                <option value="default">Priority</option>
+                <option value="topo" data-testid="task-order-topo">
+                  Dependency order
+                </option>
+                <option value="lightest" data-testid="task-order-lightest">
+                  Lightest first
+                </option>
+              </NativeSelect>
+            </Field>
+          )}
           {filtered && (
             <Button variant="ghost" onClick={clearFilters}>
               Clear filters
             </Button>
           )}
         </FieldSet>
+
         {applyingFilters && (
           <p role="status" className="filter-summary">
             Applying filters…
           </p>
         )}
-        {Object.keys(advancedFilters).length > 0 && (
+        {filterCount > 0 && (
           <p
             className="filter-summary"
             role="status"
@@ -2163,6 +2568,13 @@ function App() {
                 Task {transferResult.kind === "copy" ? "copied" : "moved"} to{" "}
                 {transferResult.profileName}
               </span>
+              <DependencyEdgeReport
+                removed={transferResult.removed}
+                tasks={transferResult.tasks}
+              />
+              {transferResult.kind === "copy" && (
+                <p>The copy has no Dependencies.</p>
+              )}
               <Button
                 variant="link"
                 onClick={() => {
@@ -2239,6 +2651,19 @@ function App() {
           </Alert>
         )}
         {!editor && lookupStatus}
+        <DependencyDragStatus
+          state={dragState}
+          tasks={tasks}
+          close={dependencyDrag.close}
+          choose={(task) => {
+            openDependencies(task);
+            dependencyTrigger.current = document.querySelector<HTMLElement>(
+              `[data-task-id="${CSS.escape(task.id)}"] .task-content`,
+            );
+            dependencyDrag.close();
+          }}
+        />
+        {!editor && !quick && !history && dependencyFailureStatus}
         {error && (
           <Alert variant="destructive">
             <CircleAlert />
@@ -2258,7 +2683,10 @@ function App() {
           </Alert>
         )}
         <div className="search-results" data-stale={stale}>
-          <TaskGroups compact={compact && !catalog?.planning}>
+          <TaskGroups
+            key={appliedSearch?.appliedIdentity.filters.order ?? "priority"}
+            compact={compact && !catalog?.planning}
+          >
             {!(compact && connection === "offline" && !catalog) &&
               groups.map((group) => (
                 <section
@@ -2283,7 +2711,7 @@ function App() {
                       </span>
                     </div>
                   )}
-                  <div className="task-list">
+                  <ul className="task-list">
                     {group.tasks.map((task) => {
                       const projectName = catalog?.projects.find(
                         (entry) => entry.id === task.project_id,
@@ -2292,7 +2720,14 @@ function App() {
                       const tagNames = tags
                         .map((name) => `#${name}`)
                         .join(" · ");
-                      const metadata = [projectName, tagNames]
+                      const badge = dependencyBadge(task, catalog?.tasks ?? []);
+                      const dropHint =
+                        (dragState.kind === "Hover" ||
+                          dragState.kind === "Pending") &&
+                        dragState.target.id === task.id
+                          ? dependencyDragHint(dragState)
+                          : null;
+                      const metadata = [badge, projectName, tagNames]
                         .filter(Boolean)
                         .join(" · ");
                       const overdue =
@@ -2305,8 +2740,19 @@ function App() {
                       const excerpt = appliedSearch?.appliedIdentity.text
                         ? descriptionMatch(task)
                         : null;
+                      const titleOnlyHint =
+                        dropHint &&
+                        !(
+                          badge ||
+                          projectName ||
+                          tags.length ||
+                          task.due_at ||
+                          task.scheduled_at ||
+                          task.external_id ||
+                          excerpt
+                        );
                       return (
-                        <div
+                        <li
                           className={cn(
                             "task-row",
                             excerpt && "has-search-excerpt",
@@ -2314,6 +2760,55 @@ function App() {
                           )}
                           key={task.id}
                           data-task-id={task.id}
+                          data-testid={`dependency-drop-target-${task.id}`}
+                          data-dependency-target={
+                            dragState.kind !== "Closed" &&
+                            dragState.kind !== "Dragging" &&
+                            dragState.target.id === task.id
+                              ? dragState.kind === "Hover"
+                                ? dragState.guidance
+                                : dragState.kind.toLowerCase()
+                              : undefined
+                          }
+                          onDragOver={(event) => {
+                            if (
+                              readOnly ||
+                              !(event.target instanceof Node) ||
+                              !event.currentTarget.contains(event.target)
+                            )
+                              return;
+                            event.preventDefault();
+                            dependencyDrag.hover(sourceForDrag(event), task);
+                            const current = dependencyDrag.snapshot();
+                            event.dataTransfer.dropEffect =
+                              current.kind === "Hover" &&
+                              current.guidance === "allowed"
+                                ? "link"
+                                : "none";
+                          }}
+                          onDragLeave={(event) => {
+                            if (
+                              !(event.relatedTarget instanceof Node) ||
+                              !event.currentTarget.contains(event.relatedTarget)
+                            )
+                              dependencyDrag.leave();
+                          }}
+                          onDrop={(event) => {
+                            if (
+                              readOnly ||
+                              !(event.target instanceof Node) ||
+                              !event.currentTarget.contains(event.target)
+                            )
+                              return;
+                            event.preventDefault();
+                            event.stopPropagation();
+                            dependencyDrag.hover(sourceForDrag(event), task);
+                            void dependencyDrag
+                              .drop(request)
+                              .then((changed) => {
+                                if (changed) void refresh();
+                              });
+                          }}
                         >
                           <button
                             type="button"
@@ -2332,6 +2827,31 @@ function App() {
                           <button
                             type="button"
                             className="task-content"
+                            data-testid={`dependency-drag-source-${task.id}`}
+                            draggable={
+                              !readOnly && dragState.kind !== "Pending"
+                            }
+                            onDragStart={(event) => {
+                              dragging.current = {
+                                profile,
+                                task: task.id,
+                                generation: profileGeneration.current,
+                              };
+                              dependencyDrag.begin(task);
+                              event.dataTransfer.effectAllowed = "link";
+                              event.dataTransfer.setData(
+                                dependencyDragType,
+                                JSON.stringify({
+                                  v: 1,
+                                  profile,
+                                  task: task.id,
+                                }),
+                              );
+                            }}
+                            onDragEnd={() => {
+                              dragging.current = null;
+                              dependencyDrag.end();
+                            }}
                             onContextMenu={(event) => {
                               event.preventDefault();
                               setContextTask(task);
@@ -2378,7 +2898,24 @@ function App() {
                             )}
                             {compact ? (
                               <RowMetadata
+                                {...(dropHint && !titleOnlyHint
+                                  ? {
+                                      status: dropHint.text,
+                                      statusLabel: dropHint.accessibilityValue,
+                                    }
+                                  : {})}
+                                statusId="dependency-drop-status"
                                 items={[
+                                  ...(badge
+                                    ? [
+                                        {
+                                          id: "dependency",
+                                          label: badge,
+                                          dependency: true,
+                                          testId: `dependency-state-${task.id}`,
+                                        },
+                                      ]
+                                    : []),
                                   ...(task.due_at
                                     ? [
                                         {
@@ -2415,15 +2952,47 @@ function App() {
                               />
                             ) : (
                               <>
-                                <span className="task-meta" title={metadata}>
-                                  {projectName && (
-                                    <span className="task-project">
-                                      {projectName}
+                                <span
+                                  className="task-meta"
+                                  title={
+                                    !titleOnlyHint && dropHint
+                                      ? dropHint.accessibilityValue
+                                      : metadata
+                                  }
+                                >
+                                  {dropHint && !titleOnlyHint ? (
+                                    <span
+                                      className="min-w-0 truncate"
+                                      role="status"
+                                      aria-label={dropHint.accessibilityValue}
+                                      data-testid="dependency-drop-status"
+                                    >
+                                      {dropHint.text}
                                     </span>
-                                  )}
-                                  {projectName && tagNames && " · "}
-                                  {tagNames && (
-                                    <TaskTags tags={tags} compact={compact} />
+                                  ) : (
+                                    <>
+                                      {badge && (
+                                        <span
+                                          className="dependency-row-state"
+                                          data-blocked={task.blocked}
+                                          data-testid={`dependency-state-${task.id}`}
+                                        >
+                                          {badge}
+                                        </span>
+                                      )}
+                                      {projectName && (
+                                        <span className="task-project">
+                                          {projectName}
+                                        </span>
+                                      )}
+                                      {projectName && tagNames && " · "}
+                                      {tagNames && (
+                                        <TaskTags
+                                          tags={tags}
+                                          compact={compact}
+                                        />
+                                      )}
+                                    </>
                                   )}
                                 </span>
                                 <span
@@ -2447,6 +3016,13 @@ function App() {
                               </>
                             )}
                           </button>
+                          {dropHint && titleOnlyHint && (
+                            <DependencyTitleStatus
+                              text={dropHint.text}
+                              accessibilityValue={dropHint.accessibilityValue}
+                              compact={compact}
+                            />
+                          )}
                           <DropdownMenu
                             open={contextTask?.id === task.id}
                             onOpenChange={(open) =>
@@ -2467,6 +3043,21 @@ function App() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
                               <DropdownMenuGroup>
+                                <DropdownMenuItem
+                                  onClick={() => openGraph(task)}
+                                >
+                                  View Dependencies
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => openDependencies(task)}
+                                >
+                                  Add dependency
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => deleteTask(task)}
+                                >
+                                  Delete task
+                                </DropdownMenuItem>
                                 {(["move", "copy"] as const).map((kind) => (
                                   <DropdownMenuItem
                                     key={kind}
@@ -2497,10 +3088,10 @@ function App() {
                               </DropdownMenuGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </div>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 </section>
               ))}
           </TaskGroups>
@@ -2627,6 +3218,15 @@ function App() {
                         Reopen task
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onClick={() => openGraph(editor.base)}>
+                      View Dependencies
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid="dependency-add"
+                      onClick={() => openDependencies(editor.base)}
+                    >
+                      Add dependency
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         void deleteTask();
@@ -2672,6 +3272,7 @@ function App() {
           </div>
           {compact && taskSearchField}
           {lookupStatus}
+          {!quick && !history && dependencyFailureStatus}
           <form
             id="task-editor-form"
             onSubmit={(e) => {
@@ -2921,6 +3522,27 @@ function App() {
                 }
               }}
             />
+            <section className="editor-dependencies">
+              <h3>Dependencies</h3>
+              <div className="actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  data-testid="dependency-add"
+                  disabled={readOnly}
+                  onClick={() => openDependencies(editor.base)}
+                >
+                  Add dependency
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => openGraph(editor.base)}
+                >
+                  View Dependencies
+                </Button>
+              </div>
+            </section>
           </form>
           <div className="editor-foot">
             <div className="actions">
@@ -3027,8 +3649,27 @@ function App() {
             })
           }
           disabled={readOnly}
-          busy={pending}
+          busy={pending || initialPicker?.target === "series"}
           error={error}
+          recovery={dependencyFailureStatus}
+          initialDependencies={
+            <InitialDependencySection
+              tasks={seriesDependencies}
+              disabled={readOnly}
+              onRemove={(id) =>
+                setSeriesDependencies((current) =>
+                  current.filter((task) => task.id !== id),
+                )
+              }
+              onChoose={(button) => {
+                initialTrigger.current = button;
+                setInitialPicker({
+                  target: "series",
+                  tasks: seriesDependencies,
+                });
+              }}
+            />
+          }
           onClose={() => setSeriesDialog(null)}
           onSave={(recurrence) => {
             void saveSeries(recurrence);
@@ -3042,6 +3683,10 @@ function App() {
         open={quick}
         modal={false}
         onOpenChange={(open, details) => {
+          if (!open && initialPicker !== null) {
+            details.cancel();
+            return;
+          }
           const field = searchInput.current?.closest(".task-search-field");
           const target = details.event.target;
           if (
@@ -3115,67 +3760,90 @@ function App() {
                   Try: Pay rent tomorrow p1 #bills @"Client Project"
                 </p>
               </div>
-              {parsed && (
-                <div className="parsed-draft">
-                  <p className="quiet">Task title: {parsed.title}</p>
-                  <div className="chips">
-                    {[
-                      {
-                        key: "due",
-                        icon: CalendarDays,
-                        label: "Clear due",
-                        text: parsed.due_at
-                          ? `Due ${timeText(parsed.due_at)}`
-                          : null,
-                      },
-                      {
-                        key: "scheduled",
-                        icon: CalendarDays,
-                        label: "Clear scheduled",
-                        text: parsed.scheduled_at
-                          ? `Scheduled ${timeText(parsed.scheduled_at)}`
-                          : null,
-                      },
-                      {
-                        key: "priority",
-                        text: parsed.priority,
-                        icon: Flag,
-                        label: "Clear priority",
-                      },
-                      {
-                        key: "project",
-                        text: parsed.project,
-                        icon: Folder,
-                        label: "Clear project",
-                      },
-                      ...parsed.tags.map((tag) => ({
-                        key: `tag:${tag}`,
-                        text: tag,
-                        icon: Hash,
-                        label: `Remove Tag ${tag}`,
-                      })),
-                    ]
-                      .filter(
-                        (chip) => chip.text && !ignored.includes(chip.key),
-                      )
-                      .map(({ icon: Icon, ...chip }) => (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          key={chip.key}
-                          aria-label={chip.label}
-                          disabled={pending}
-                          onClick={() => setIgnored([...ignored, chip.key])}
-                        >
-                          <Icon data-icon="inline-start" />
-                          {chip.text}
-                          <X data-icon="inline-end" />
-                        </Button>
-                      ))}
+              <div className="parsed-draft">
+                {parsed && (
+                  <>
+                    <p className="quiet">Task title: {parsed.title}</p>
+                    <div className="chips">
+                      {[
+                        {
+                          key: "due",
+                          icon: CalendarDays,
+                          label: "Clear due",
+                          text: parsed.due_at
+                            ? `Due ${timeText(parsed.due_at)}`
+                            : null,
+                        },
+                        {
+                          key: "scheduled",
+                          icon: CalendarDays,
+                          label: "Clear scheduled",
+                          text: parsed.scheduled_at
+                            ? `Scheduled ${timeText(parsed.scheduled_at)}`
+                            : null,
+                        },
+                        {
+                          key: "priority",
+                          text: parsed.priority,
+                          icon: Flag,
+                          label: "Clear priority",
+                        },
+                        {
+                          key: "project",
+                          text: parsed.project,
+                          icon: Folder,
+                          label: "Clear project",
+                        },
+                        ...parsed.tags.map((tag) => ({
+                          key: `tag:${tag}`,
+                          text: tag,
+                          icon: Hash,
+                          label: `Remove Tag ${tag}`,
+                        })),
+                      ]
+                        .filter(
+                          (chip) => chip.text && !ignored.includes(chip.key),
+                        )
+                        .map(({ icon: Icon, ...chip }) => (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            key={chip.key}
+                            aria-label={chip.label}
+                            disabled={pending}
+                            onClick={() => setIgnored([...ignored, chip.key])}
+                          >
+                            <Icon data-icon="inline-start" />
+                            {chip.text}
+                            <X data-icon="inline-end" />
+                          </Button>
+                        ))}
+                    </div>
+                  </>
+                )}
+                <InitialDependencySection
+                  tasks={initialDependencies}
+                  disabled={readOnly}
+                  onRemove={(id) =>
+                    setInitialDependencies((current) =>
+                      current.filter((task) => task.id !== id),
+                    )
+                  }
+                  onChoose={(button) => {
+                    initialTrigger.current = button;
+                    setInitialPicker({
+                      target: "quick",
+                      tasks: initialDependencies,
+                    });
+                  }}
+                />
+                {dependencyFailureStatus && (
+                  <div ref={quickDependencyNotice}>
+                    {dependencyFailureStatus}
                   </div>
-                </div>
-              )}
-              {error && <p role="alert">{error}</p>}
+                )}
+                {error && <p role="alert">{error}</p>}
+              </div>
             </FieldGroup>
             <div className="quick-add-footer">
               <span className="quiet">
@@ -3355,6 +4023,7 @@ function App() {
           <DialogDescription>
             Every accepted change and rejected attempt for this Task.
           </DialogDescription>
+          {dependencyFailureStatus}
           {error && <p role="alert">{error}</p>}
           <ol>
             {history?.entries.toReversed().map((entry) => (
@@ -3394,6 +4063,30 @@ function App() {
                     ))}
                   </dl>
                 )}
+                <DependencyEdgeReport
+                  {...historyDependencies(entry)}
+                  tasks={tasks}
+                />
+                {entry.event.kind === "TaskAttemptRejected" &&
+                  entry.event.details?.witness && (
+                    <DependencyErrorStatus
+                      failure={{
+                        _tag: "error",
+                        message: "",
+                        dependency: entry.event.details.witness,
+                      }}
+                      context={
+                        entry.event.attempted_kind === "TaskReverted"
+                          ? "revert"
+                          : entry.event.attempted_kind === "TaskReopened"
+                            ? "reopen"
+                            : entry.event.attempted_kind === "TaskCompleted"
+                              ? "complete"
+                              : "add"
+                      }
+                      tasks={tasks}
+                    />
+                  )}
                 {canRevertHistory(entry, reverted) && (
                   <Button
                     variant="outline"

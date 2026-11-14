@@ -21,6 +21,18 @@ _Avoid_: Todo, item, ticket
 **Task search**:
 Find Tasks by words in their title and description, or by the start of their id. Search combines with other filters and keeps the view's order.
 
+**Dependency**:
+A relation between two Tasks in one Profile. If B depends on A, A blocks B. Dependencies cannot form a loop. A Task may depend on several Tasks and block several others.
+
+**Ready**:
+An open or snoozed Task whose direct Dependencies are all done or cancelled.
+
+**Blocked**:
+An open or snoozed Task with at least one open or snoozed direct Dependency. Done and cancelled Tasks are neither Ready nor Blocked.
+
+**Dependency order**:
+An order that places blockers before the Tasks they block.
+
 **Energy**:
 How much energy a Task takes, from 1 light to 5 draining.
 

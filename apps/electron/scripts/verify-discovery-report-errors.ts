@@ -51,10 +51,14 @@ export async function verifyDiscoveryReportErrors({
       });
       await notify({ _tag: "windowMode", compact });
       const status = page.getByTestId("task-lookup-status").first();
-      if (!name.includes("MIXED") && (await status.count()))
-        await status
-          .getByRole("button", { name: "Find Task by id", exact: true })
-          .scrollIntoViewIfNeeded();
+      if (!name.includes("MIXED") && (await status.count())) {
+        if (compact && name.startsWith("import-"))
+          await status.scrollIntoViewIfNeeded();
+        else
+          await status
+            .getByRole("button", { name: "Find Task by id", exact: true })
+            .scrollIntoViewIfNeeded();
+      }
       for (const dark of [false, true]) {
         if (name.includes("MIXED"))
           await page.locator(".import-list-scroll").evaluate((node) => {
@@ -72,7 +76,7 @@ export async function verifyDiscoveryReportErrors({
             : page
                 .locator('[data-slot="dialog-content"][data-open]')
                 .locator(
-                  ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-table tbody tr td:last-child",
+                  ".batch-edit-row small[role=alert], .attachment-batch-row small[role=alert], .import-row-changes.import-rejected, .import-row .dependency-error-region, .import-table tbody tr td:last-child",
                 )
                 .first();
           await expect(row).toContainText(expectedPair);
@@ -82,6 +86,9 @@ export async function verifyDiscoveryReportErrors({
           );
           assert.equal(text.split("\n").at(-1), expectedPair);
           assert.equal(text.split(expectedPair).length - 1, 1);
+          const dependencyStatus = await row.evaluate((node) =>
+            node.classList.contains("dependency-error-region"),
+          );
           if (compactImport) {
             await expect(row.getByTestId("import-reason")).toHaveCSS(
               "white-space",
@@ -89,6 +96,26 @@ export async function verifyDiscoveryReportErrors({
             );
             await expect(row.getByTestId("import-exit")).toHaveText(
               expectedPair,
+            );
+          } else if (dependencyStatus) {
+            const pair = row.locator("p").last();
+            await expect(pair).toHaveText(expectedPair);
+            await expect(pair).toHaveClass(/text-muted-foreground/u);
+            const geometry = await row.evaluate((node) => {
+              const paragraphs = [...node.querySelectorAll("p")];
+              const pair = paragraphs.at(-1)?.getBoundingClientRect();
+              return {
+                pair: pair?.toJSON(),
+                previous: paragraphs
+                  .slice(0, -1)
+                  .map((p) => p.getBoundingClientRect().toJSON()),
+              };
+            });
+            const pairBounds = geometry.pair;
+            assert.ok(pairBounds);
+            assert.ok(
+              geometry.previous.every((p) => p.bottom <= pairBounds.top),
+              JSON.stringify(geometry),
             );
           } else assert.equal(whiteSpace, "pre-line");
           genericPairs.push({
@@ -98,6 +125,7 @@ export async function verifyDiscoveryReportErrors({
             expectedPair,
             text,
             whiteSpace,
+            dependencyStatus,
           });
           writeFileSync(
             join(evidence, "generic-row-pairs.json"),

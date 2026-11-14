@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { repositoryInput } from "../../../scripts/verification-inputs.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -44,7 +45,7 @@ run("admission-code", "bun", [
   join(import.meta.dirname, "admission/check-candidate.mjs"),
   ...process.argv.slice(2),
 ]);
-run("disk", "sh", ["/Users/zambamon/Work/todo-cli/scripts/disk-guard.sh"]);
+run("disk", "sh", [repositoryInput(root, "scripts/disk-guard.sh", "Cache verification guard")]);
 run("binaries", "bun", [".agents/skills/verify-cli/scripts/cache-binaries.ts"]);
 const manifest = join(root, ".scratch/bin/build.json");
 copyFileSync(manifest, join(evidence, "binary-provenance.json"));
@@ -86,7 +87,7 @@ writeFileSync(
       receipts,
       oracle,
       oracleLimit:
-        "Immutable uncached integrated SEC+Tag CLI; protected matcher/runner/projection hashes match the candidate",
+        baseline.cacheBypass ? "Immutable same-source candidate with only the two preparation hooks bypassed; protected matcher/runner/projection hashes match" : "Immutable uncached integrated SEC+Tag CLI; protected matcher/runner/projection hashes match the candidate",
       cleanup:
         "compiled child server exited; scratch HOME/database removed; evidence retained",
     },

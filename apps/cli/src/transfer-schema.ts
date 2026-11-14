@@ -1,4 +1,9 @@
-import { TaskLookupDetails } from "@todo/domain";
+import {
+  DependencyError,
+  Edge,
+  TaskLookupDetails,
+  VersionChange,
+} from "@todo/domain";
 import {
   ErrorDetails,
   ExternalIdConflictDetails,
@@ -16,8 +21,14 @@ const TransferResult = Schema.Struct({
   current_version: Schema.optionalKey(Schema.Int),
   message: Schema.optionalKey(Schema.String),
   details: Schema.optionalKey(
-    Schema.Union([ExternalIdConflictDetails, TaskLookupDetails]),
+    Schema.Union([
+      ExternalIdConflictDetails,
+      TaskLookupDetails,
+      ...DependencyError.members.map((member) => member.fields.details),
+    ]),
   ),
+  removed_dependencies: Schema.optionalKey(Schema.Array(Edge)),
+  affected_versions: Schema.optionalKey(Schema.Array(VersionChange)),
 });
 export type TransferResult = typeof TransferResult.Type;
 export const TransferResponse = Schema.Struct({

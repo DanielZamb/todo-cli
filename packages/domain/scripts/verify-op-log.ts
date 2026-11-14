@@ -8,6 +8,7 @@ import { openStore } from "@todo/domain/store";
 import { Effect, Schema } from "effect";
 import { ActorId, Instant, ProfileId, Sequence } from "../src/index.ts";
 
+import { dagCases, runDagCase } from "./dag-proof.ts";
 import { provePurge, proveSharedMetadataPurge } from "./purge-proof.ts";
 import { proveProjectionTagSets, proveTagLinks } from "./tag-link-proof.ts";
 
@@ -63,7 +64,7 @@ const migrated = JSON.parse(
 assert.deepEqual(migrated, {
   journal_mode: "wal",
   busy_timeout: 5000,
-  user_version: 6,
+  user_version: 7,
 });
 actions.push({
   stage: "migration-only-command",
@@ -88,7 +89,7 @@ await Effect.runPromise(
         assert.deepEqual(yield* store.settings(), {
           journal_mode: "wal",
           busy_timeout: 5000,
-          user_version: 6,
+          user_version: 7,
         });
         assert.deepEqual(
           (yield* store.tasks()).map((task) => [
@@ -291,6 +292,28 @@ writeFileSync(
   `${JSON.stringify(sharedPurgeProof, null, 2)}\n`,
 );
 
+const dagReplay: unknown[] = [];
+for (const name of ["edges", "groupedDelete"] as const) {
+  const isolated = join(directory, `dag-${name}`);
+  mkdirSync(isolated);
+  await Effect.runPromise(
+    runDagCase(join(isolated, "scratch.db"), (store) =>
+      Effect.gen(function* () {
+        yield* dagCases[name](store);
+        dagReplay.push({
+          name,
+          tasks: yield* store.tasks(),
+          edges: yield* store.dependencies(),
+          history: yield* store.history(),
+        });
+      }),
+    ),
+  );
+}
+writeFileSync(
+  join(evidence, "dag-replay.json"),
+  JSON.stringify(dagReplay, null, 2),
+);
 proveProjectionTagSets();
 const tagLinkProof = await Effect.runPromise(
   proveTagLinks(join(directory, "tag-links.db")),

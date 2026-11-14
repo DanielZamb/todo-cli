@@ -55,3 +55,50 @@ AuthChanged from SSE and DatabaseRestored from the scratch operation store.
 The latter checks the restore operation independently of global SSE fanout.
 `GeneratedContractTests` also round-trips the checked-in fixture of every
 effect-port event kind. Native applications and Keychain remain held.
+
+## Dependency event compatibility
+
+Unit A adds compact DependencyAdded/Removed and lifecycle v2 events. Run
+GeneratedContractTests through the shared Swift slot. The reusable
+API/Fixtures/dag-operations.json fixture exercises both the generated
+CommittedOperation decoder and the production CommittedOperation decoder with
+AuthChanged, DependencyAdded and all four lifecycle v2 shapes.
+
+The OpenAPI normalizer groups equal kinds only when required entity_version
+constants prove their variants disjoint. Its tests reject overlapping versions.
+Never edit generated Swift by hand.
+
+Set TODO_DAG_CONTRACT_TESTS=1 when running verify-history-unions.sh through the
+Swift slot. The scratch HTTP driver observes both new edge events over SSE,
+decodes every observed operation with Electron's production ChangeEvent schema,
+and runs all GeneratedContractTests with its live scratch server. This removes
+the optional HTTP test's skip. generated-tests-result.json and cleanup.json
+retain real exits and owned child termination. Both client handlers already
+refresh for ordinary committed operations after decoding. This proof adds no
+Dependency controls or renderer and does not launch Todo or touch Keychain.
+
+## Typed lifecycle versions
+
+Roundtrip equality alone does not prove that a generated oneOf selects the
+correct typed branch. testLifecycleVersionsSelectTypedCasesAndRejectContradictions
+asserts each v1/v2 branch and literal typed edge/Version fields, then rejects
+unknown, missing and malformed versions and contradictory dependency shapes.
+Legacy nullable fields and unrelated additional fields survive encoding.
+
+The pinned Swift generator represents numeric enums as unchecked Double fields.
+The existing preserve-null generation step now reads component schema constants
+and emits numeric-version checks in generated Decodable initializers. A v1
+payload therefore cannot consume a v2 value. Optional false-schema properties
+become explicit x-todo-forbidden-properties metadata during normalization;
+generated checks reject those keys without banning unrelated additional fields.
+The checks run in the generated CommittedOperation and History decoders used by
+production. No handwritten client wrapper or branch reordering is involved.
+Operation-local non-component schemas retain their prior generation behavior;
+all lifecycle cases live in the component schemas covered by these checks.
+
+G11 extends the existing live GeneratedContractTests case with a branching
+graph created through generated API methods. Typed graph decoding and encoding
+must retain topo ancestors/descendants and lightest_next by own energy, unknown
+last, then topo position. Every node must have exactly eight fields. The branch
+has Ready energies 4,1,unknown in topo order and requires next 1,4,unknown. Run the history-unions scratch drive through swift-slot
+with TODO_DAG_CONTRACT_TESTS=1 so this live case cannot be skipped.

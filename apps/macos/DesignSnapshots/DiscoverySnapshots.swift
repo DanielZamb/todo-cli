@@ -9,8 +9,12 @@ import TodoAPI
 @MainActor struct DiscoverySnapshots {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DISCOVERY_ONLY"] == "1"))
     func renderDiscoveryScreens() async throws {
-        NSApplication.shared.setActivationPolicy(.prohibited)
         let directory = URL(fileURLWithPath: try #require(ProcessInfo.processInfo.environment["TODO_SNAPSHOT_DIR"]))
+        let files = try await Self.render(directory: directory)
+        try JSONSerialization.data(withJSONObject: ["files": files], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("manifest.json"))
+    }
+    static func render(directory: URL) async throws -> [String] {
+        NSApplication.shared.setActivationPolicy(.prohibited)
         var files: [String] = []
         var geometry: [String: [String: [Double]]] = [:]
         let profile = DiscoveryName(id: "work", name: "Work")
@@ -154,8 +158,7 @@ import TodoAPI
                         #expect(frame.minX >= 0 && frame.maxX <= width && frame.minY >= 0 && frame.maxY <= height, "\(file) \(key) \(frame)")
                     }
                     geometry[file] = frames.frames.merging(frames.reportFrames, uniquingKeysWith: { _, next in next }).mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
-                    let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-                    host.cacheDisplay(in: host.bounds, to: bitmap)
+                    let bitmap = try await settledSnapshotBitmap(host, name: file)
                     try #require(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent(file))
                     files.append(file)
                     window.close()
@@ -163,7 +166,7 @@ import TodoAPI
             }
         }
         #expect(files.count == 116)
-        try JSONSerialization.data(withJSONObject: ["files": files], options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("manifest.json"))
         try JSONSerialization.data(withJSONObject: geometry, options: [.prettyPrinted, .sortedKeys]).write(to: directory.appendingPathComponent("discovery-layout.json"))
+        return files
     }
 }

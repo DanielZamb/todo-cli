@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import {
+  type ChildProcess,
+  execFileSync,
+  spawn,
+  spawnSync,
+} from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -123,6 +128,9 @@ try {
       },
     }),
   );
+  execFileSync("sh", [join(root, "scripts/disk-guard.sh")], {
+    stdio: ["inherit", process.stderr.fd, process.stderr.fd],
+  });
   const bundle = await build({
     configFile: join(root, "apps/electron/vite.config.ts"),
     root: join(root, "apps/electron"),
@@ -285,17 +293,23 @@ try {
     .getByRole("button", { name: "Attach to 2 Tasks", exact: true })
     .click();
   await expect(
-    page.getByText("Task changed. Read its current Version and retry.", {
-      exact: true,
-    }),
+    page.getByText(
+      "Task changed. Read its current Version and retry.\nerror 4 - Conflict",
+      {
+        exact: true,
+      },
+    ),
   ).toHaveCount(2);
   assert.equal(cli("show", a.id).task.row_version, 2);
   await capture("conflict");
   await page.getByRole("button", { name: "Reload Tasks", exact: true }).click();
   await expect(
-    page.getByText("Task changed. Read its current Version and retry.", {
-      exact: true,
-    }),
+    page.getByText(
+      "Task changed. Read its current Version and retry.\nerror 4 - Conflict",
+      {
+        exact: true,
+      },
+    ),
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Preview", exact: true }).click();
   await expect(page.getByText("Already attached", { exact: true })).toHaveCount(

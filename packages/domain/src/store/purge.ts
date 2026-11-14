@@ -1,6 +1,7 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
-import type { Task, TaskDetails } from "../entities.ts";
+import { emptyDependencies } from "../dependencies.ts";
+import { Task, type TaskDetails } from "../entities.ts";
 import { Event, type OpLogEntry, TaskHistoryRedacted } from "../events.ts";
 import { type SeriesId, TaskId } from "../ids.ts";
 import { changes, metadata, Snapshot } from "./projection.ts";
@@ -10,12 +11,13 @@ const resolved = (entry: OpLogEntry) =>
     ? entry.event.replay
     : Schema.is(Event)(entry.event)
       ? {
-          ...changes(entry.event),
+          ...changes(entry.event, entry.profile),
           ...metadata(entry.event),
           versions: [],
           series_versions: [],
         }
       : {
+          dependencies: emptyDependencies(),
           tasks: [],
           series: [],
           projects: [],
@@ -25,6 +27,33 @@ const resolved = (entry: OpLogEntry) =>
         };
 
 const taskReference = Schema.Struct({ id: TaskId });
+const quote = (value: string) => `"${value.replaceAll('"', '""')}"`;
+const totalChanges = (db: Database) =>
+  db.query<{ count: number }, []>("SELECT total_changes() AS count").get()
+    ?.count ?? 0;
+
+function deleteTaskReferences(db: Database, id: TaskId) {
+  for (const { name } of db
+    .query<{ name: string }, []>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+    )
+    .all()) {
+    for (const reference of db
+      .query<{ table: string; from: string; to: string | null }, []>(
+        `PRAGMA foreign_key_list(${quote(name)})`,
+      )
+      .all()) {
+      if (
+        reference.table === "tasks" &&
+        (reference.to === "id" || reference.to === null)
+      )
+        db.query(
+          `DELETE FROM ${quote(name)} WHERE ${quote(reference.from)}=?`,
+        ).run(id);
+    }
+  }
+}
+
 const references = (value: unknown, id: TaskId): boolean =>
   Array.isArray(value)
     ? value.some((value) => references(value, id))
@@ -32,9 +61,12 @@ const references = (value: unknown, id: TaskId): boolean =>
 const mentions = (value: unknown, id: TaskId): boolean => {
   if (Array.isArray(value)) return value.some((value) => mentions(value, id));
   if (value === null || typeof value !== "object") return false;
+  if (Schema.is(Task)(value) && value.id === id) return true;
   return Object.entries(value).some(
     ([key, value]) =>
-      (key === "task_id" && value === id) ||
+      (key === "path" && Array.isArray(value) && value.includes(id)) ||
+      (["task_id", "dependent_id", "blocker_id"].includes(key) &&
+        value === id) ||
       (["task", "before", "after", "next_occurrences"].includes(key) &&
         references(value, id)) ||
       mentions(value, id),
@@ -46,6 +78,7 @@ export function redactTaskHistory(
   history: readonly OpLogEntry[],
   id: TaskId,
 ) {
+  const beforeChanges = totalChanges(db);
   const snapshots = db
     .query<{ seq: number; payload: string }, []>(
       "SELECT seq,payload FROM snapshots",
@@ -131,12 +164,21 @@ export function redactTaskHistory(
   const keepSeries = (change: ReturnType<typeof changes>["series"][number]) =>
     !removedSeries.has((change.after ?? change.before)?.id ?? "");
 
-  db.exec("DROP TRIGGER op_log_no_update; DROP TRIGGER snapshots_no_update;");
+  let historyWritable = false;
+  const allowHistoryUpdates = () => {
+    if (historyWritable) return;
+    db.exec("DROP TRIGGER op_log_no_update; DROP TRIGGER snapshots_no_update;");
+    historyWritable = true;
+  };
   for (const entry of history) {
     const event = entry.event;
     const value = resolved(entry);
     const concernsTarget =
       (event.kind === "TaskHistoryRedacted" && event.task_ids.includes(id)) ||
+      [
+        ...(value.dependencies?.added ?? []),
+        ...(value.dependencies?.removed ?? []),
+      ].some((edge) => edge.dependent_id === id || edge.blocker_id === id) ||
       value.tasks.some(
         ({ before, after }) => before?.id === id || after?.id === id,
       ) ||
@@ -181,7 +223,7 @@ export function redactTaskHistory(
         );
     const redacted = Schema.decodeUnknownSync(TaskHistoryRedacted)({
       kind: "TaskHistoryRedacted",
-      entity_version: event.entity_version,
+      entity_version: 1,
       occurred_at: event.occurred_at,
       original_kind:
         event.kind === "TaskHistoryRedacted" ? event.original_kind : event.kind,
@@ -197,6 +239,7 @@ export function redactTaskHistory(
         ]),
       ],
       replay: {
+        dependencies: value.dependencies ?? emptyDependencies(),
         tasks: value.tasks.filter(keepTask),
         series: value.series.filter(keepSeries),
         projects: value.projects.filter(
@@ -210,32 +253,49 @@ export function redactTaskHistory(
         })),
       },
     });
-    db.query("UPDATE op_log SET event=? WHERE seq=?").run(
-      JSON.stringify(redacted),
-      entry.seq,
-    );
+    const content = JSON.stringify(redacted);
+    const stored = db
+      .query<{ event: string; entity_version: number }, [number]>(
+        "SELECT event,entity_version FROM op_log WHERE seq=?",
+      )
+      .get(entry.seq);
+    if (content !== stored?.event || stored.entity_version !== 1) {
+      allowHistoryUpdates();
+      db.query("UPDATE op_log SET event=?,entity_version=1 WHERE seq=?").run(
+        content,
+        entry.seq,
+      );
+    }
   }
-  for (const { seq, value } of snapshots)
-    db.query("UPDATE snapshots SET payload=? WHERE seq=?").run(
-      JSON.stringify({
-        ...value,
-        tasks: value.tasks.filter((task) => task.id !== id),
-        series: value.series.filter((value) => !removedSeries.has(value.id)),
-        projects: value.projects.filter(
-          (value) => !removedProjects.has(value.id),
-        ),
-        tags: value.tags.filter((value) => !removedTags.has(value.id)),
-      }),
-      seq,
-    );
+  for (const { seq, value, payload } of snapshots) {
+    const content = JSON.stringify({
+      ...value,
+      edges: (value.edges ?? []).filter(
+        (edge) => edge.dependent_id !== id && edge.blocker_id !== id,
+      ),
+      tasks: value.tasks.filter((task) => task.id !== id),
+      series: value.series.filter((value) => !removedSeries.has(value.id)),
+      projects: value.projects.filter(
+        (value) => !removedProjects.has(value.id),
+      ),
+      tags: value.tags.filter((value) => !removedTags.has(value.id)),
+    });
+    if (content !== payload) {
+      allowHistoryUpdates();
+      db.query("UPDATE snapshots SET payload=? WHERE seq=?").run(content, seq);
+    }
+  }
+  deleteTaskReferences(db, id);
   db.query("DELETE FROM tasks WHERE id=?").run(id);
   for (const id of removedSeries)
     db.query("DELETE FROM series WHERE id=?").run(id);
   for (const id of removedProjects)
     db.query("DELETE FROM projects WHERE id=?").run(id);
   for (const id of removedTags) db.query("DELETE FROM tags WHERE id=?").run(id);
-  db.exec(`CREATE TRIGGER op_log_no_update BEFORE UPDATE ON op_log
+  if (historyWritable)
+    db.exec(`CREATE TRIGGER op_log_no_update BEFORE UPDATE ON op_log
     BEGIN SELECT RAISE(ABORT, 'op_log is append-only'); END;
     CREATE TRIGGER snapshots_no_update BEFORE UPDATE ON snapshots
     BEGIN SELECT RAISE(ABORT, 'snapshots are immutable'); END;`);
+  return totalChanges(db) !== beforeChanges;
 }

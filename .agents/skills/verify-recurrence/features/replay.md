@@ -22,3 +22,8 @@ the stale rejection, but there is no task with the rejected candidate ID.
 Replay imports projection code, which applies event facts. It does not import
 recurrence code. The fault injection proves this at runtime in the compiled
 artifact and is restored even when an assertion fails.
+
+TaskCreated v2 can resolve initial Dependency edges with the first Occurrence
+at Version 1. The compiled [verify-dag](../../verify-dag/SKILL.md) seriesInitial
+case proves a blocked completion creates no successor and a cancellation's
+successor inherits no edges, including through both replay modes.

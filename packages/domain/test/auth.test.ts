@@ -957,7 +957,7 @@ describe("database boundary", () => {
           }
           const store = yield* openStore({ path });
           try {
-            expect((yield* store.settings()).user_version).toBe(6);
+            expect((yield* store.settings()).user_version).toBe(7);
             expect(
               (yield* store.history()).map((entry) => [
                 entry.seq,

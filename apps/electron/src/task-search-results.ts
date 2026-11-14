@@ -42,9 +42,20 @@ export const identityKey = (identity: SearchIdentity) =>
       Object.entries(identity.filters).sort(([a], [b]) => a.localeCompare(b)),
     ),
   });
-export function searchGroups(catalog: TaskCatalog) {
+export function searchGroups(
+  catalog: TaskCatalog,
+  order?: TaskFilters["order"],
+) {
   const matching: readonly TaskRead[] = catalog.matching_tasks ?? catalog.tasks;
-  if (!catalog.planning) return priorityGroups(matching);
+  if (!catalog.planning)
+    return order === "topo" || order === "lightest"
+      ? [
+          {
+            name: order === "topo" ? "Dependency order" : "Lightest first",
+            tasks: matching,
+          },
+        ]
+      : priorityGroups(matching);
   const byId = new Map(matching.map((task) => [task.id, task]));
   return catalog.planning.groups.map((group) => ({
     ...group,

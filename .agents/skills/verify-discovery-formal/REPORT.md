@@ -111,8 +111,10 @@ It is not arbitrary network or budget-refusal liveness.
 | Real-code sensitivity | Fresh independent copied Electron7 and Swift4 controls below, each behavioral failure, restoration and clean rerun. Parser/compiler/hash-drift/timeout/resource failures never count. |
 | Generated matcher properties | Real immutable matcher source, bounded corpus/seed, five behavioral mutants and immediate clean property reruns. No unbounded Unicode/matcher-completeness proof. |
 
-Discovery.tla SHA-256 remains
-`76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24`.
+Discovery.tla SHA-256 was
+`76ae9ac6c338dd206deea6bb71194b11916b5f3e794949b6db665f4f33246e24` until the sign-out split (18799cb8,
+2026-11-11); since then it is
+`a15c042b6a0c40b6`… (the check hashes the model at each run and never pins it).
 The original approved safety/restored runs each generated 4,001,603 successors,
 found 381,738 distinct states, depth 29, queue 0. Bounds remain two credential
 scopes/dialog kinds/prefixes/source Profiles, at most two outstanding discovery

@@ -1,6 +1,6 @@
 {
-  "sourceCommit": "26367043daf92787fc128ac23544afcb5709a791",
-  "status": "Current main4c composition: bounded safety/liveness, intended controls/restoration, fresh matcher properties and compiled full/query client drives passed",
+  "sourceCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "status": "Reviewed integrated DAG clients and contract metadata, with current matcher controls and preserved full/query catalog debt. Complete bounded command and client drives follow.",
   "files": [
     {
       "path": "apps/electron/src/renderer.tsx",
@@ -19,7 +19,7 @@
         "endAuthentication",
         "changed/connection/reload notice handlers"
       ],
-      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4"
+      "sha256": "8dbb97b37d928f6e0544bfe806f958c4a0736cdb321af1f7c834f62441dd77c1"
     },
     {
       "path": "apps/electron/src/task-search-results.ts",
@@ -30,7 +30,7 @@
         "searchGroups",
         "taskSearchQuery"
       ],
-      "sha256": "764b89fbeaca10894d7346a916719453416d8aff1c89608e3411ec674265c0ae"
+      "sha256": "fc80b01efa9710fec3a02133545d1fe52fa904c47020a156732487afa80cec8a"
     },
     {
       "path": "apps/electron/src/task-client.ts",
@@ -38,7 +38,7 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04"
+      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6"
     },
     {
       "path": "apps/electron/src/protocol.ts",
@@ -48,7 +48,7 @@
         "Reply tasks TaskRead decoder",
         "Reply error code decoder"
       ],
-      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a"
+      "sha256": "70876d227da2a0f638bad7f1a8572582a22153d8d3c10b2ea7c300b6ed4c8aa8"
     },
     {
       "path": "apps/macos/Sources/TodoModel.swift",
@@ -67,9 +67,17 @@
         "catalogStale",
         "readSearchRows",
         "readSearchPlanning",
-        "readSearchCatalog"
+        "readSearchCatalog",
+        "performRefresh(generation:scope:)",
+        "appliedCatalogGeneration",
+        "appliedCatalogCursor",
+        "healthy ready predicate and quiet end retry",
+        "catalogEnvironmentChanged",
+        "scheduleEnvironmentRefresh",
+        "catalogSignalRevision and full-read debt",
+        "lastCatalogReadAt and activation age"
       ],
-      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52"
+      "sha256": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -91,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6"
+      "sha256": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -99,7 +107,7 @@
         "TaskSnapshot",
         "TaskSearchMatch"
       ],
-      "sha256": "3aeaf11c97f30c7788b36b8f0bb6ac4deecaae237eecd6cb7f3538fbde7a9a31"
+      "sha256": "67adbee42434eeeb5179f521763375f032a84aff3bbeec62242688e10f44c67e"
     },
     {
       "path": "packages/domain/src/task-search.ts",
@@ -133,14 +141,14 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "8cd2744d66656987286a0d179b37ec41f1424f9d4dce13418d8d6f3c5bdec890"
+      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
     },
     {
       "path": "packages/domain/src/task-read.ts",
       "functions": [
         "TaskRead"
       ],
-      "sha256": "615f8ff950f34bbd0c8ffc34caf21f8879b2036adc7bcf4c748e0750df8cf89f"
+      "sha256": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5"
     },
     {
       "path": "packages/domain/src/limits.ts",
@@ -155,7 +163,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "7639e50a4a0213173c0b2f297eec637879bb1fd4325b534d0aa7cd9eb7fb3e2d"
+      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -163,7 +171,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "6d4c1e4b478d4fc62e9c1c115ddb693cf28f09558cc0260610b1682be9e47e12"
+      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -198,9 +206,9 @@
   "productionMatcher": "Immutable real source with generated properties, behavioral mutations and byte restoration; final-tip command uses its explicit full SHA.",
   "recovery": "Transient errors offer Retry; search_too_broad hides Retry and retains text/snapshot. Current-Profile SSE op/reconnect remains available. Liveness requires a later affordable successful response and a fair available recovery source.",
   "clientRefinement": "Mapped full/query publication, catalog retention and bootstrap fallback with compiled regressions; no mechanical TypeScript/Swift refinement theorem.",
-  "previousSourceCommit": "c14371075593a4a163f15797c495ac821510a449",
-  "productCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
-  "integrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "previousSourceCommit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+  "productCommit": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+  "integrationCommit": "eca430bf1f3b5b9aeeb69a82c0086e3dab364249",
   "securityBase": "9de893454cb6e3f5729407e9313c73e56bfd0481",
   "integrationComponents": {
     "refresh": "f1c5f22115c361ff0dda48c2e277b9547a2208a5",
@@ -211,14 +219,248 @@
     "agentDiscoveryMain": "4c904d96277853c60692c685c6d4ea3b3e655bc4"
   },
   "integrationReview": {
-    "base": "7c1326bd5ecd1d84cdd9a6426b18e8c380e5d336",
-    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "status": "Covered bodies reviewed; current matcher controls and both compiled client drives passed before hash renewal"
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "changed": [
+      "apps/electron/src/task-client.ts",
+      "packages/domain/src/task-filters.ts",
+      "packages/domain/src/task-read.ts",
+      "packages/domain/src/presentation.ts",
+      "packages/domain/src/commands.ts"
+    ],
+    "review": "Renderer and TodoModel R1/catalog debt, credential epoch and Profile-keyed names equal main. task-client runtime functions unchanged; Client type derives the getter factory. Domain graph/read fields and exit formatting do not alter matcher spans or publication identity; shared generator keeps preparation in slot4, graph slot5 and finally cleanup.",
+    "controls": [
+      "docs/evidence/task-search-formal/matcher-fysWyG/result.json",
+      "docs/evidence/perf-cache/verify-H6N3Re/result.json",
+      "docs/evidence/discovery-formal/electron-iSJeVr/result.json"
+    ],
+    "scope": "Real matcher5 and cache7/observer3 intended failures restored; separate model and current client proofs not conflated."
   },
   "fixtureIntegration": {
     "commit": "26367043daf92787fc128ac23544afcb5709a791",
     "productDiffFromMerge": "git diff dc43db3f..26367043 -- apps/**/src packages = empty; only Swift fixture changes among app source trees",
     "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
     "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
-  }
+  },
+  "fixtureMaintenance": {
+    "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "productSource": "3e530071721413535ef357664fb33b386bb7479e",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog",
+    "productDiff": "Application sources unchanged from3e530071; only the discovery fixture and its verification mode changed.",
+    "trace": "docs/evidence/discovery-formal/swift-8RiUYl/trace-result.json",
+    "consecutive": "docs/evidence/discovery-formal/swift-FMsyV6/result.json",
+    "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
+    "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+    "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
+  },
+  "clientIntegrationReview": {
+    "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
+    "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+    "controls": [
+      "docs/evidence/dag-formal/amendment-controls-y3IVaZ/result.json",
+      "docs/evidence/dag-formal/error-contract-U2kg7W/result.json",
+      "docs/evidence/discovery-formal/electron-AcJPVT/result.json",
+      "docs/evidence/discovery-formal/swift-lzXNKY/result.json",
+      "docs/evidence/task-search-formal/matcher-AFRja2/result.json",
+      "docs/evidence/perf-cache/generated-jAQHPo/behavior-result.json"
+    ],
+    "sourceReview": "docs/evidence/task-dag/integration-7d947f91/source-body-audit.json",
+    "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+    "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
+    "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "previousProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
+  "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "sessionRetirementReview": {
+    "product": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+    "previousRenewal": "6b976262",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "6feeee8a2c1d68d990ae6eb3eb7fae581206662a236eb1f6a11526867fb52210",
+        "to": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d"
+      }
+    ],
+    "review": "performRefresh captures one scoped Client per refresh and passes it to its search reads; generation, requestedIdentity and canPublishSearch guards are unchanged. followChanges checks generation before the health result and adds generation guards after dependency reads and the operation refresh; healthy-ready predicate unchanged. refreshAfterWrite adds an epoch guard after publication. Other changes are session ownership, epoch-owned busy cleanup, sign-out and diagnostics scoping, outside the search model."
+  },
+  "messageOwnershipReview": {
+    "product": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d",
+        "to": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338"
+      }
+    ],
+    "review": "Only message ownership in the stream ready path and restore/signIn cancellation handling changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "messageRuleReview": {
+    "product": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338",
+        "to": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e"
+      }
+    ],
+    "review": "Only message kinds, sequence marks and surfaces changed: the stream ready path notes a mark per attempt and clears older connection messages; the Snapshot reload handler ends the message before its existing reset; refreshAfterWrite takes an optional kind and mark for its clear. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "surfaceInstanceReview": {
+    "product": "566cc16c5a79f8105f0018a03cda2307de150728",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e",
+        "to": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f"
+      }
+    ],
+    "review": "Only message surfaces (instance identity, importInstance), runImport and deleteTask completion guards changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "completionOrderReview": {
+    "product": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f",
+        "to": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656"
+      },
+      {
+        "path": "apps/macos/Sources/TaskSnapshot.swift",
+        "from": "8502de3358af711ba47c20790d32214caaacd3ed6c6ad1655367a93149feb9e6",
+        "to": "67adbee42434eeeb5179f521763375f032a84aff3bbeec62242688e10f44c67e"
+      }
+    ],
+    "review": "TodoModel: authorize(_:epoch:profile:), instance surfaces (editor opening, quickAdd, batch drafts), refreshAfterWrite(presenting:), quick-add create and parse, runImport, deleteTask and openSeries completion order changed. TaskSnapshot: TaskDraft.opening added. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "candidate7Review": {
+    "product": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656",
+        "to": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
+        "to": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6"
+      }
+    ],
+    "review": "TodoModel and AppViews changed for the completion order, messages (Dismiss, named hand-offs, sign-out wording), Profile switch readiness, quick-add completion gate and capsule, and the shared isCurrentEpoch helper. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged."
+  },
+  "surfaceMessagesReview": {
+    "product": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
+    "controls": "check-swift passed on 63fd7f95: docs/evidence/discovery-formal/swift-UQNxFe",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13",
+        "to": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850"
+      }
+    ],
+    "review": "MAC-C1-S1-15 moves every surface-local message onto SurfaceMessages (tickets per kind, newest of a kind presents, success clears its own kind from before its mark). TodoModel: main message storage is the same helper; Import, quick-add (create and parse), editor, History, Profile deletion and Snapshot messages take tickets. BatchEdit and AttachmentBatch: reload and apply take tickets; reports present only for the newest. AttachmentModel: input checks publish through editorError's setter. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "supersessionReview": {
+    "product": "16c59f74737043201861cebcfbf5f4dbdada154d",
+    "controls": "check-swift passed on 16c59f74: docs/evidence/discovery-formal/swift-s1NWYJ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850",
+        "to": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390"
+      }
+    ],
+    "review": "MAC-C1-S1-16: a ticket carries its instance's generation table, so supersession holds after a surface closes. TodoModel: handOff(_:kind:from:) is the only closed-surface hand-off and refuses a ticket that is not the newest; quick-add create gates its clear, capsule and hand-off on the newest ticket; refreshAfterWrite gains presents (false for a superseded action, read-back unchanged). refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "readBackOwnerReview": {
+    "product": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
+    "controls": "check-swift passed on 896f44a5: docs/evidence/discovery-formal/swift-rAa2cK",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390",
+        "to": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f"
+      }
+    ],
+    "review": "MAC-C1-S1-17: refreshAfterWrite takes a ReadBackOwner (main window or surface instance, each with a ticket) asked when it publishes; presents:/presenting: removed; create, Save and Delete choose the owner by branch before the read-back and ask the ticket after it; openSeries split into openSeries/loadSeries; reloadDependencyPicker split into reload/refresh; the editor write's transfer report and announcement check ticket and opening live; transition editor text only into an editor showing that Task. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "candidate8Review": {
+    "product": "e484efc6ee83d7bc475831761d184a11190ece35",
+    "controls": "check-swift passed on e484efc6: docs/evidence/discovery-formal/swift-AWZXtt",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f",
+        "to": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6",
+        "to": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54"
+      }
+    ],
+    "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
+  },
+  "renewalReviews": [
+    {
+      "product": "1f281291641fcef42301443f09d5f0f2651153ed",
+      "controls": "check-swift passed on 1f281291: docs/evidence/discovery-formal/swift-hcIIdS",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52",
+          "to": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
+          "to": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d"
+        }
+      ],
+      "review": "The Profile return fix (86549d65, coordinator ruling on the candidate 9 restore finding) changes TodoModel.swift and AppViews.swift. In TodoModel: replaceCredential gains a first line that drops the forced-leave record (no change to the credential epoch or its order); followChanges' reload branch reads whether the person acted before its resets and, after discoverProfiles, may return to a restored Profile through activateProfile, exactly as the existing profile-change branch beside it does; discoverProfiles says why when the shown Profile is gone; leaveDeletedProfile records the leave; the editor and quickAdd didSets, newTitle, setSearchText and changeProfile note a person's action. In AppViews: the notice capsule shows the offer's Switch button, and the list's selection notes a person's action. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
+      "controls": "check-swift passed on 5a359ca6: docs/evidence/discovery-formal/swift-gRn8hO",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
+          "to": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
+          "to": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
+        }
+      ],
+      "review": "Candidate 10 (d6df6719, item 8 at 5a359ca6) changes six mapped Swift files. Discovery.swift: DiscoveryState.dialog gains a didSet that, from hidden to shown only, calls the model's presented() closure (a person-action count, MAC-C1-S1-32); openDiscovery, closeDiscovery, requestDiscovery and every publication guard are unchanged. TodoModel.swift: notePersonActed() now advances PersonInput's content-free count; every write function's first line notes a person's action (a counter, before and independent of its guards); sheet and dialog state notes a presentation from hidden to shown; the notice timer moved from the view into the model (noticeHeld, restartNoticeTimer, holdNotice with a cancellation check) with 6 s and 10 s notices; ForcedProfileLeave records the person-input count, and a second deletion carries the first leave only when forcedLeaveToCarry, asked before the switch, finds no action; discoverProfiles and leaveDeletedProfile ask it before switching; the Profile notices use curly quotes. AppViews.swift: the notice capsule reports hover and focus to the model instead of running its own timer; Quick Add's chip region tells the Dependency line when it cuts chips. AttachmentModel.swift, BatchEdit.swift and AttachmentBatch.swift: each write function's first line notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged.",
+      "seatAcceptance": {
+        "seat": "MAC-C1-S1",
+        "review": "candidate 10 (5702b2bb)",
+        "date": "2026-11-13",
+        "verdict": "Renewal ACCEPTED",
+        "report": "reports/mac-c1-seat1/candidate-10-review.md"
+      }
+    },
+    {
+      "product": "718b016859f866ab37394ce191736f2a10b242db",
+      "controls": "check-swift passed on 718b0168: docs/evidence/discovery-formal/swift-ocyq2C",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d",
+          "to": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f"
+        }
+      ],
+      "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    }
+  ],
+  "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
 }

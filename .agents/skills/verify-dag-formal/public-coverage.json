@@ -1,0 +1,662 @@
+{
+  "confirmedCommit": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
+  "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
+  "gateCommit": "ca142014",
+  "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+  "modelSha256": "54254524caf9a30e95bc1e12b01018eafc28ea88c4a211a46228eb137a802c48",
+  "unchangedCore": [
+    {
+      "path": "packages/domain/src/graph-model.ts",
+      "sha256": "fa7c42485d9576e5e29dad921ad310008cf7cb2cb3a9aea425ee159d4395d6d0",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    },
+    {
+      "path": "packages/domain/src/graph-order.ts",
+      "sha256": "24c509a82fffad1c43176e1f307b296775702f2d3c182c04448c6edc561c3675",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    },
+    {
+      "path": "packages/domain/src/graph-energy.ts",
+      "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68",
+      "previousCommit": "f140c7b09bcb1db48ce4ccaee797ecfe60019ce4"
+    }
+  ],
+  "files": [
+    {
+      "path": "packages/domain/src/dependency-commands.ts",
+      "functions": [
+        "DependencyCommands.change",
+        "dependencyWarnings",
+        "edgeFailure",
+        "executeBatch",
+        "batchDepend"
+      ],
+      "sha256": "8b336d03ee7bdeac88c28a967c2a8c4ead82aa39bc93f54315a7613aa2517479"
+    },
+    {
+      "path": "packages/domain/src/dependency-contract.ts",
+      "functions": [
+        "DependRequest",
+        "EdgeReport",
+        "BatchEdgeReport"
+      ],
+      "sha256": "65cb160c6745d54bd05c5ed8db31247ea30785bd038092c07f28783ce4fa96eb"
+    },
+    {
+      "path": "packages/domain/src/task-filters.ts",
+      "functions": [
+        "TaskFilters",
+        "filterTaskRecords"
+      ],
+      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
+    },
+    {
+      "path": "packages/domain/src/dependency-delete.ts",
+      "functions": [
+        "dependencyFingerprint"
+      ],
+      "sha256": "a01a2bce5ce6faafa8dd0fa3d0cc6e23ffec48032a84d3fe7382120062738571"
+    },
+    {
+      "path": "packages/domain/src/commands.ts",
+      "functions": [
+        "TaskCommands.result",
+        "TaskCommands.change",
+        "cliResult",
+        "mutateTask"
+      ],
+      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
+    },
+    {
+      "path": "packages/domain/src/auth/auth.ts",
+      "functions": [
+        "requireCredential",
+        "mutate"
+      ],
+      "sha256": "0b743e8e5b245cf792118b20ff721e6f7fe38d59b12d34d2dc4676e4070c5982"
+    },
+    {
+      "path": "packages/domain/src/import-dependencies.ts",
+      "functions": [
+        "planImportDependencies"
+      ],
+      "sha256": "89ad5beaaea403b84d4b78de691e1133e21d4a14253746f133e84d6c8ae631a9"
+    },
+    {
+      "path": "packages/domain/src/import-tasks.ts",
+      "functions": [
+        "executeImport"
+      ],
+      "sha256": "a5da60d74d8d7b3ce9a11f936a60769c05f23525a45ff90b300d35547ecb65b2"
+    },
+    {
+      "path": "packages/domain/src/import.ts",
+      "functions": [
+        "ImportRow",
+        "ImportReport",
+        "parseImportText"
+      ],
+      "sha256": "6bfae374334bad4a8f065f3a67924a95b2c54f3c1cedd57cabd2557e74cd8780"
+    },
+    {
+      "path": "packages/domain/src/presentation.ts",
+      "functions": [
+        "encodeResponse",
+        "renderError"
+      ],
+      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
+    },
+    {
+      "path": "packages/domain/src/store/store.ts",
+      "functions": [
+        "transaction",
+        "recordRejection",
+        "appendSync",
+        "rebuild",
+        "takeSnapshot",
+        "graph"
+      ],
+      "sha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e"
+    },
+    {
+      "path": "packages/domain/src/store/purge.ts",
+      "functions": [
+        "redactTaskHistory"
+      ],
+      "sha256": "954c21af26d0332a063d603fa4b2e6794fa8b55c2427df3f03b0fd8679107e6f"
+    },
+    {
+      "path": "packages/domain/src/store/projection.ts",
+      "functions": [
+        "changes",
+        "applyChanges",
+        "Snapshot"
+      ],
+      "sha256": "dd0d3823bd6b9ecd8868ee0eaacdb8e3438aca1bf944f897cd2092eb137364b9"
+    },
+    {
+      "path": "packages/domain/src/store/dependencies.ts",
+      "functions": [
+        "incidentRemoval",
+        "applyDependencyVersions"
+      ],
+      "sha256": "b4e88ed38871bd93483a024b5ca45ba66c441b93f2aeec70ab60c8f97461f411"
+    },
+    {
+      "path": "packages/domain/src/graph-model.ts",
+      "functions": [
+        "indexGraph",
+        "dependencyState"
+      ],
+      "sha256": "fa7c42485d9576e5e29dad921ad310008cf7cb2cb3a9aea425ee159d4395d6d0"
+    },
+    {
+      "path": "packages/domain/src/graph-order.ts",
+      "functions": [
+        "topologicalOrder"
+      ],
+      "sha256": "24c509a82fffad1c43176e1f307b296775702f2d3c182c04448c6edc561c3675"
+    },
+    {
+      "path": "packages/domain/src/graph-energy.ts",
+      "functions": [
+        "graphEnergy"
+      ],
+      "sha256": "163f46423f38c733c4cf0a250231c0ee64a441177a2636e32c47a88e15656a68"
+    },
+    {
+      "path": "packages/domain/src/dependency-rules.ts",
+      "functions": [
+        "checkDependencyAddition",
+        "checkDependencyStatuses"
+      ],
+      "sha256": "38fbc8c86349775e6eced7404e924ba5a5ab8e5e08616169e378086fe4e5fb11"
+    },
+    {
+      "path": "packages/api/src/index.ts",
+      "functions": [
+        "Tasks",
+        "DependRequest",
+        "BatchEdgeRequest",
+        "TaskFilters"
+      ],
+      "sha256": "a5de96b535555f4368147d4e1fc5ff917cb5157cc02a0ce52ba808e857019152"
+    },
+    {
+      "path": "apps/server/src/server.ts",
+      "functions": [
+        "rejectUnknownQuery",
+        "TasksApi handlers: depend, undepend, batchDepend, importTasks"
+      ],
+      "sha256": "aef0cf33a4faa4572d26f0b23cf915bc833c06e734060396e9198a5115ce3ff8"
+    },
+    {
+      "path": "apps/cli/src/main.ts",
+      "functions": [
+        "dependencyCommand",
+        "batchDepend command",
+        "deletion Prompt.Confirm",
+        "false filter guard",
+        "malformed Version boundary finding"
+      ],
+      "sha256": "d935d13ffe26e9dee95c16db08a41c8cd8545c2dc1aec9a6300b98b7fe530de8"
+    },
+    {
+      "path": "apps/cli/src/schema.ts",
+      "functions": [
+        "registerCommandSchema"
+      ],
+      "sha256": "0bf917c6b657de434765b1b991a8fb7519265bb3c58f555c47c9235a8804d768"
+    },
+    {
+      "path": "apps/cli/src/input.ts",
+      "functions": [
+        "decodeInput"
+      ],
+      "sha256": "dcc3c99c7b723bbacf43548bbe9e9b3fdd1c9746a2580ae597b2fd04d992e1c6"
+    },
+    {
+      "path": "packages/domain/src/graph-contract.ts",
+      "functions": [
+        "GraphNode",
+        "GraphReport"
+      ],
+      "sha256": "6f9bf2f911ed240610d1f758b6fcfb1cc63fe2a3fc76ea7b3ac02a499770c7e5"
+    },
+    {
+      "path": "packages/domain/src/graph-queries.ts",
+      "functions": [
+        "queryGraph",
+        "readGraph"
+      ],
+      "sha256": "ff099b0484a16de21eb20ad9a27cb0366c7816061d65b7bca7d158303962babb"
+    },
+    {
+      "path": "packages/domain/src/graph-mermaid.ts",
+      "functions": [
+        "mermaidNodeIds",
+        "graphMermaid"
+      ],
+      "sha256": "2ed8c484956dd59c2e3f552043ce8657a4d6fe277fe08ab835066047658402cb"
+    },
+    {
+      "path": "apps/electron/src/http-client.ts",
+      "functions": [
+        "taskHttpClient"
+      ],
+      "sha256": "c32ca178690da09b9d2c738867c50e5462de84f05874bd6266e7a00b53599ef8"
+    },
+    {
+      "path": "apps/electron/src/main.ts",
+      "functions": [
+        "taskHttpClient caller"
+      ],
+      "sha256": "1407ddd56dba0cd9bb1599a8d1dd8e3590d42b56271bd19e9a0878e276079a90"
+    },
+    {
+      "path": "apps/electron/src/task-client.ts",
+      "functions": [
+        "taskHttpClient caller"
+      ],
+      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6"
+    },
+    {
+      "path": "packages/api/openapi.json",
+      "functions": [
+        "graph response schema"
+      ],
+      "sha256": "3d27257d2977cf8128175650fe7b548c1a1a204326cbf7b55e4d9cbb3873cd13"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "functions": [
+        "graph response schema"
+      ],
+      "sha256": "e6735ac9fa1d825ef0055ed604a2c8d555a077a51d18aff59ba9e98a53ad20ba"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "functions": [
+        "graph response decoder"
+      ],
+      "sha256": "90b7e1ad493f1b28ea3b02147acb99278c65fb358453a4576995d7e0fdde94a6"
+    },
+    {
+      "path": "apps/macos/Tests/GeneratedContractTests.swift",
+      "functions": [
+        "root-only graph contract decode"
+      ],
+      "sha256": "d57bd8b89c6c7edd344ce02099742021ebc3f26faf009c7efcc49bf963388de4"
+    },
+    {
+      "path": "apps/electron/scripts/verify-auth-sequence.ts",
+      "sha256": "a72a3e042437923b6ea023244e754ff85ef3d5aa62d119bb8ef08208b65e47fd",
+      "functions": [
+        "credential getter caller"
+      ]
+    },
+    {
+      "path": "apps/electron/scripts/write-host.ts",
+      "sha256": "d4e02bf6bc69016782749bf4d7b8cb299c5491b2805945e500a64393dbbb9ef3",
+      "functions": [
+        "credential getter caller"
+      ]
+    },
+    {
+      "path": "packages/api/src/contract.ts",
+      "sha256": "6dd6b5d5c06013e9f7f8cf7fb8e3f7bbba0be412a24d3daa63545375409eb928",
+      "functions": [
+        "contract identity"
+      ]
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+      "sha256": "2961b2686c8df0331495d260d6496970c28ae4bef47591b3c224054be3c21431",
+      "functions": [
+        "contract identity"
+      ]
+    },
+    {
+      "path": "apps/electron/src/dependency-state.ts",
+      "functions": [
+        "DependencyController direction, search notice ownership, pending dependent Versions and Reload"
+      ],
+      "sha256": "a0bcef165f6e5b59e29b9a35c70bce32f45a796cd9b9795cba231c4f6f56f56b"
+    },
+    {
+      "path": "apps/electron/src/dependency-delete-state.ts",
+      "functions": [
+        "DependencyDeleteController.preview",
+        "DependencyDeleteController.confirm"
+      ],
+      "sha256": "9bf1bb6b37af368c0001aea7541c8fcda099f03e04cfd5220b1f6d05db9ec0ce"
+    },
+    {
+      "path": "apps/electron/src/dependency-graph-state.ts",
+      "functions": [
+        "DependencyGraphController.load",
+        "setViewport",
+        "frame changes and refresh scope"
+      ],
+      "sha256": "843cdbae85c467e649e3170a38181617018639a450da8e6c33f013844fe88680"
+    },
+    {
+      "path": "apps/electron/src/dependency-presentation.ts",
+      "functions": [
+        "dependencyDeleteReview",
+        "dependencyRecovery",
+        "dependencyBatchFailure"
+      ],
+      "sha256": "937a694edf0b3735c476970c42284da7ecc4cfdc772726fb6eda5b75108cdbe4"
+    },
+    {
+      "path": "apps/electron/src/renderer.tsx",
+      "functions": [
+        "accepted Delete saved-draft cleanup",
+        "Dependency navigation and authentication fences",
+        "existing TaskSearch guarded publication"
+      ],
+      "sha256": "8dbb97b37d928f6e0544bfe806f958c4a0736cdb321af1f7c834f62441dd77c1"
+    },
+    {
+      "path": "apps/electron/src/protocol.ts",
+      "functions": [
+        "Request and Reply generated-schema boundary"
+      ],
+      "sha256": "70876d227da2a0f638bad7f1a8572582a22153d8d3c10b2ea7c300b6ed4c8aa8"
+    },
+    {
+      "path": "apps/macos/Sources/Dependencies.swift",
+      "functions": [
+        "Dependency picker generation, direction and search ownership"
+      ],
+      "sha256": "d514952a7c015b9bd8148ce933f0cc361e922ec1348e83982f2f42b292806e05"
+    },
+    {
+      "path": "apps/macos/Sources/DependencyDelete.swift",
+      "functions": [
+        "reloadDependencyDelete",
+        "confirmDependencyDelete"
+      ],
+      "sha256": "f8c702ccd0fcfaf9f06a8a1d3724bcc80b14960eb6812878a676704c9524b943"
+    },
+    {
+      "path": "apps/macos/Sources/DependencyGraphState.swift",
+      "functions": [
+        "automatic versus manual viewport",
+        "graph node state",
+        "search publication"
+      ],
+      "sha256": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71"
+    },
+    {
+      "path": "apps/macos/Sources/DependencyWebView.swift",
+      "functions": [
+        "setFrameSize",
+        "sendRender",
+        "current identity and reply checks"
+      ],
+      "sha256": "a59a603c51e34ca4a2f3b2f4a19ea8cd119f80f31c16c6c5db6d5533d21fde6d"
+    },
+    {
+      "path": "apps/macos/Sources/DependencyGraphView.swift",
+      "functions": [
+        "refresh status without diagram layout changes",
+        "graph search accessibility hint"
+      ],
+      "sha256": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d"
+    },
+    {
+      "path": "apps/macos/Sources/DependencyErrors.swift",
+      "functions": [
+        "DependencyNotice.project"
+      ],
+      "sha256": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002"
+    },
+    {
+      "path": "apps/macos/Sources/DependencyViews.swift",
+      "functions": [
+        "actual Delete review pair",
+        "existing picker state and row/menu UI"
+      ],
+      "sha256": "0427495cb1b5ad1df0b32271c29ec6156c8c9d4e7d95e9ef374d57c3c6ae2e8e"
+    },
+    {
+      "path": "packages/domain/src/task-read.ts",
+      "functions": [
+        "TaskWrite optional confirm_from_version"
+      ],
+      "sha256": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5"
+    },
+    {
+      "path": "apps/cli/src/help.ts",
+      "functions": [
+        "rm confirmation Version wording"
+      ],
+      "sha256": "83d9389036ed1ace8699fad3f27fe9439583228c2a692019c303fe6995bc1d0e"
+    },
+    {
+      "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
+      "functions": [
+        "TaskWrite confirm_from_version and EdgeFailure occ_conflict generated decoders"
+      ],
+      "sha256": "237c37ca8c3de4eb8cf7989ccb8912c9d3cd2078482cfb79ab6910837b43751b"
+    }
+  ],
+  "pending": [
+    "Full integrated qualification and grouped integration review",
+    "Owner native session, signing, Keychain, storage, clipboard and VoiceOver",
+    "Fresh Claude skill discovery"
+  ],
+  "knownFindings": [],
+  "orderingAmendment": "ancestors/descendants whole-Profile topo; lightest_next own energy ascending, unknown last, whole-Profile topo ties",
+  "rebaseReview": {
+    "main": "9de893454cb6e3f5729407e9313c73e56bfd0481",
+    "previousProduct": "0f7a19488f15ec1f8d4c4dad14749de7720f17d0",
+    "changedFiles": [
+      "packages/domain/src/task-filters.ts",
+      "packages/domain/src/commands.ts",
+      "packages/domain/src/presentation.ts",
+      "packages/api/src/index.ts",
+      "apps/server/src/server.ts",
+      "apps/cli/src/main.ts",
+      "apps/electron/src/main.ts",
+      "apps/electron/src/task-client.ts",
+      "packages/api/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "apps/macos/Tests/GeneratedContractTests.swift",
+      "apps/electron/scripts/write-host.ts",
+      "packages/api/src/contract.ts",
+      "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"
+    ],
+    "scope": "Core16 unchanged. Public changes are approved SEC/search base plus reviewed-by-L1 integration of typed yielding search, graph slot5, search-dialog draft and getter preservation. Fresh independent rebase review pending.",
+    "previousSensitivity": "Historical89executions on0f7; not relabelled as current-source sensitivity",
+    "handwrittenSwiftAdaptation": "Search refusal typed branch3 after DAG union regeneration; nil branches1 and2. No generated source edit."
+  },
+  "integrationReview": {
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "product": "97eb40021812cba9fdae76471328b890db239349",
+    "changed": [
+      "packages/domain/src/dependency-commands.ts",
+      "packages/domain/src/dependency-contract.ts",
+      "packages/domain/src/task-filters.ts",
+      "packages/domain/src/commands.ts",
+      "packages/domain/src/auth/auth.ts",
+      "packages/domain/src/import-tasks.ts",
+      "packages/domain/src/import.ts",
+      "packages/domain/src/presentation.ts",
+      "packages/domain/src/store/store.ts",
+      "packages/domain/src/store/projection.ts",
+      "packages/domain/src/dependency-rules.ts",
+      "packages/api/src/index.ts",
+      "apps/server/src/server.ts",
+      "apps/cli/src/main.ts",
+      "apps/cli/src/schema.ts",
+      "apps/electron/src/main.ts",
+      "apps/electron/src/task-client.ts",
+      "packages/api/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/openapi.json",
+      "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Operations.swift",
+      "apps/macos/Tests/GeneratedContractTests.swift",
+      "apps/electron/scripts/verify-auth-sequence.ts",
+      "apps/electron/scripts/write-host.ts",
+      "packages/api/src/contract.ts",
+      "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"
+    ],
+    "bodyReview": "Graph algorithms unchanged; refusals add exit pairs and stored History decoding defaults. Cache/read ordering and Tag-set projection reviewed against both parents. Client renderer and TodoModel equal main; getter retained.",
+    "controls": [
+      "docs/evidence/fv01/sensitivity-WnZxRk/result.json",
+      "docs/evidence/dag-formal/error-contract-ZeCDoN/result.json",
+      "docs/evidence/perf-cache/generated-tKwtxm/behavior-result.json",
+      "docs/evidence/perf-cache/hygiene-oj9OBZ/commands.json"
+    ],
+    "limits": "Actual intended controls and restores precede renewed hashes. Historical89 executions are not relabelled. Current F stages follow."
+  },
+  "fixtureMaintenance": {
+    "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "productSource": "3e530071721413535ef357664fb33b386bb7479e",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog",
+    "productDiff": "Application sources unchanged from3e530071; only the discovery fixture and its verification mode changed.",
+    "trace": "docs/evidence/discovery-formal/swift-8RiUYl/trace-result.json",
+    "consecutive": "docs/evidence/discovery-formal/swift-FMsyV6/result.json",
+    "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
+    "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+    "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
+  },
+  "clientIntegrationReview": {
+    "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
+    "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+    "controls": [
+      "docs/evidence/dag-formal/amendment-controls-y3IVaZ/result.json",
+      "docs/evidence/dag-formal/error-contract-U2kg7W/result.json",
+      "docs/evidence/discovery-formal/electron-AcJPVT/result.json",
+      "docs/evidence/discovery-formal/swift-lzXNKY/result.json",
+      "docs/evidence/task-search-formal/matcher-AFRja2/result.json",
+      "docs/evidence/perf-cache/generated-jAQHPo/behavior-result.json"
+    ],
+    "sourceReview": "docs/evidence/task-dag/integration-7d947f91/source-body-audit.json",
+    "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+    "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
+    "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "clientRuntimeBoundary": "Whole-file hashes fence the manually mapped client functions. The finite DAG model proves no React/Swift/WK/native behavior. Current state, protocol, SSE and offscreen drives are required separately.",
+  "integrationQualification": {
+    "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
+    "review": "docs/decisions/ui-speed/server-integration.md",
+    "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "streamWakeIntegration": {
+    "product": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495",
+    "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "review": "docs/decisions/ui-speed/stream-wake-integration.md",
+    "scope": "Merged immutable product of integ/server 2a840b55 and perf/stream-wake 21a4a52e. Covered-body review and actual-source controls precede renewal; the full command follows on this product. No model, invariant or bound changes.",
+    "certifies": "Finite DAG safety and production/public conformance of the covered bodies on this product. server.ts changes only by the wake wiring: rejectUnknownQuery and the importTasks, depend, undepend and batchDepend handlers are textually unchanged and now reach their commands through the decorated store, which signals open streams at the outermost exit."
+  },
+  "durableDenialCandidate": {
+    "product": "13ff84d64f4bb0fb8e206dcc700f11b2956e38ed",
+    "previous": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
+    "status": "candidate pending correctness-seat acceptance",
+    "review": "docs/decisions/ui-speed/durable-denial-formal.md",
+    "scope": "Only auth.ts whole file changes. Authentication.append/startSeries bodies and every other mapped file are identical. Auth recording is outside the finite DAG model. Advanced from the first candidate 1a018e9633bfa3fa841b7721a48f7ac6a9abe3c8 to include the unmapped rejection-history.ts later-stamp fix; every mapped file is byte-identical between the two. Advanced again to fb55ff7c83b968703634feb75f85c0e027142fa3 for the read-first refusal decision in Authentication.perform (ruling 2026-11-13): auth.ts whole-file hash only; startSeries, append, requireCredential and mutate bodies unchanged. Advanced again to 8061ae0098a1d4627e3b41f3f0cfaf4270616bf9 for the size-bounded walk in the unmapped auth/rejection-history.ts (seat review F1, F2); no mapped file changes. Advanced again to 13ff84d64f4bb0fb8e206dcc700f11b2956e38ed for the sampled large-row bound in that same unmapped file (seat review F6). Fresh full default follows; no old result is relabelled."
+  },
+  "c9ServerIntegration": {
+    "product": "0bd8476df7d7147ea355b418346b57d33f403aee",
+    "review": "docs/decisions/ui-speed/c9-server-integration.md",
+    "scope": "Merged immutable product of integ/server-wake f89b6693 and fix/durable-denial 366398fe. Every pinned row equals the product's bytes; the full command follows on this product. No model, invariant or bound changes.",
+    "certifies": "Finite DAG safety and production/public conformance on the merged product, with the wake's server.ts and the durable refusal's auth.ts. Authentication.startSeries, append, requireCredential and mutate bodies are textually identical to the stream-wake product; perform's catch and record now decide repeats from History, outside the finite model, as for 13ff84d6. This is the full default run the 13ff84d6 renewal did not have.",
+    "previous": {
+      "confirmedCommit": "a45ddeaa6d00b1fc62560f70be48c2e0e1202495"
+    }
+  },
+  "macLineClientReviews": [
+    {
+      "product": "2558b23e407ab2b9f4ca139faaec767b42bde463",
+      "previousConfirmedCommit": "0bd8476df7d7147ea355b418346b57d33f403aee",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "a484f1aab49343f66d70076975d131490a9b935b2f278b1468bbe8192f140d8d",
+          "to": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyDelete.swift",
+          "from": "989ec095bafd94d255dffaa7f238a7474ead4c2c2b4c7c14d29617e102e42b03",
+          "to": "f8c702ccd0fcfaf9f06a8a1d3724bcc80b14960eb6812878a676704c9524b943"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyGraphState.swift",
+          "from": "d92da0c040730e6035cd59627a19e1b626e705eed0e0548f00a33aae899980de",
+          "to": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyGraphView.swift",
+          "from": "d5287a6f734d3ffcf3e2e3fc88116f6620b58e6a3d2fb25ad518333dc9f0ae47",
+          "to": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyErrors.swift",
+          "from": "db9dbe5380df1d65da8073136e1e99f2fdf472cf88714db3495d5a195d2d8a97",
+          "to": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyViews.swift",
+          "from": "ba046217fe547918839fa3c490357dc05442f881fef98ff35ba5210171b9e87f",
+          "to": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be"
+        }
+      ],
+      "review": {
+        "summary": "The six Swift client fences were stale on the Mac line since the fenced bytes of 6e599b7b (2026-11-10), which the mapping's confirmed commit 0bd8476d (2026-11-13) carried. Review of each mapped function against its 0bd8476d version (delivery note mac-c9-delivery-2558b23e.md, section 7). Dependencies.swift differs in ways the model allows: a superseded link's occ_conflict no longer sets requiresReload (the server still refuses a stale Version); a committed edge's catalog read-back is no longer skipped when the picker closes (ownership is credential and Profile, S1-19); a closed picker's newest link failure is handed to the main window; a 401 is authorized first; pendingDependents is released only under the same credential epoch. DependencyGraphState.swift differs in a way the model allows: its background refresh calls refreshDependencyPicker, clears no message, and stops if the credential or the Dependency generation changed. DependencyDelete, DependencyGraphView, DependencyErrors and DependencyViews keep the mapped behaviour (message ownership, post-await guards, authorization first, diagnostics, heights). No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, candidate 9 (choice 1)",
+        "pendingSeat": false,
+        "seatAcceptance": {
+          "seat": "MAC-C1-S1",
+          "review": "delta c334462b",
+          "date": "2026-11-13",
+          "verdict": "Renewal ACCEPTED (hashes and conclusion correct)",
+          "report": "reports/mac-c1-seat1/candidate-9-review.md, section Delta c334462b",
+          "wordingCorrections": "applied here: Dependencies.swift's other allowed changes and DependencyGraphState.swift's change named; 0bd8476d is dated 2026-11-13, the fenced Swift bytes date from 6e599b7b (2026-11-10)"
+        }
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-M128ka"
+      ]
+    },
+    {
+      "product": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
+      "previousConfirmedCommit": "2558b23e407ab2b9f4ca139faaec767b42bde463",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "18d8ced382324e210cbdb09069b6c8a5ea8f9782c4af1f350948f6207fa45b58",
+          "to": "d514952a7c015b9bd8148ce933f0cc361e922ec1348e83982f2f42b292806e05"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyViews.swift",
+          "from": "f2812c7b611508320304f298e0c6842d4468f0bf35cb9a6a5e24c804c55b05be",
+          "to": "0427495cb1b5ad1df0b32271c29ec6156c8c9d4e7d95e9ef374d57c3c6ae2e8e"
+        }
+      ],
+      "review": {
+        "summary": "Candidate 10 changes two fenced Swift files. Dependencies.swift: DependencyState's graph, batch, picker and deletion gain didSets that, from nil to shown only, call the model's presented() closure (a person-action count for the forced Profile switch, MAC-C1-S1-32), and toggleDependency's first line notes a person's action, before and independent of its guards. Neither reads or changes Dependency data, messages, tickets, the credential epoch or the order of authorization, data and presentation. DependencyViews.swift: InitialDependencySelection's heading reads \"Depends on N Tasks\" (\"1 Task\") when Compact Quick Add's chip region cuts chips off (an environment value from AppViews), with the same text as its accessibility label and a bounds id for the captures; the initial Dependency chips, their removal and the Add button are unchanged. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, candidate 9 (choice 1); brief MAC-C10",
+        "pendingSeat": false,
+        "seatAcceptance": {
+          "seat": "MAC-C1-S1",
+          "review": "candidate 10 (5702b2bb)",
+          "date": "2026-11-13",
+          "verdict": "Renewal ACCEPTED",
+          "report": "reports/mac-c1-seat1/candidate-10-review.md"
+        }
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-mWseiY"
+      ]
+    }
+  ],
+  "macLineClientReviewsNote": "Append-only, oldest first (MAC-C1-S1-38): a renewal adds its record and never replaces an earlier one."
+}

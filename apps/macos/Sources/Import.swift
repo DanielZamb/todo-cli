@@ -67,8 +67,14 @@ struct ImportSummary: Codable, Sendable {
             let fields = changed_fields.filter { outcome != "created" || $0 != "external_id" }.map { names[$0] ?? $0.replacingOccurrences(of: "_", with: " ").capitalized }.joined(separator: ", ")
             return outcome == "created" ? "New Task" + (fields.isEmpty ? "" : " · \(fields)") : (fields.isEmpty ? "No changes" : fields)
         }
+        var dependencyNotice: DependencyNotice? {
+            guard let error, error.isDependencyFailure || error.code == "occ_conflict" else { return nil }
+            return .project(error, context: .link)
+        }
+        var reasonText: String? { dependencyNotice?.message ?? error?.primaryMessage }
+        var exitDetail: String? { dependencyNotice?.detail ?? error?.exitDetail }
         var rejectionDetail: String {
-            [error?.primaryMessage, error?.exitDetail, external_id].compactMap { $0 }.joined(separator: "\n")
+            [reasonText, exitDetail, external_id].compactMap { $0 }.joined(separator: "\n")
         }
         func accessibilityText(title: String) -> String { [title, rejectionDetail, outcomeText].joined(separator: "\n") }
         var outcomeText: String { error?.code == "occ_conflict" ? "Conflict" : outcome.capitalized }
@@ -154,8 +160,8 @@ struct ImportView: View {
                             }
                         }.padding(.trailing, 8)
                     }.scrollIndicators(.visible)
-                        .frame(minHeight: compact ? 224 : 240, maxHeight: compact ? 224 : .infinity).clipped()
-                        .importFrame(.viewport).reportErrorBounds("viewport").accessibilityIdentifier("import-preview-table")
+                        .frame(minHeight: compact ? 224 + model.compactExtraHeight : 240, maxHeight: compact ? 224 + model.compactExtraHeight : .infinity).clipped()
+                        .importFrame(.viewport).reportErrorBounds("viewport").background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview)).accessibilityIdentifier("import-preview-table")
                 }
             } else {
                 VStack(alignment: .leading, spacing: 12) {
@@ -170,6 +176,7 @@ struct ImportView: View {
             }
             if compact && model.importReport != nil { Spacer(minLength: 0) }
             if let error = model.importError { ClientErrorNotice(model: model, text: error, position: .importTasks).font(.callout).accessibilityIdentifier("import-error") }
+            if let error = model.importFollowUpError { ClientErrorNotice(model: model, text: error, position: .importTasks).font(.callout).accessibilityIdentifier("import-follow-up-error") }
             if !model.canWrite && !model.busy { Text("Offline. Reconnect to preview or apply.").font(.callout).foregroundStyle(.secondary) }
             VStack(alignment: .leading, spacing: compact ? 8 : 12) {
                 if let report = model.importReport {
@@ -190,19 +197,20 @@ struct ImportView: View {
                             .keyboardShortcut(.cancelAction).disabled(model.busy).importFrame(.cancel)
                     }
                     if model.importReport == nil {
-                        Button { Task { await model.previewImport() } } label: { Text(model.busy ? "Previewing…" : "Preview changes").frame(minHeight: 28) }
+                        Button { model.clientDiagnosticsUI.perform(.importPreview, surface: .importPreview) { await model.previewImport() } } label: { Text(model.busy ? "Previewing…" : "Preview changes").frame(minHeight: 28) }
                             .buttonStyle(.borderedProminent).disabled(model.importDocument == nil || !model.canWrite)
                             .keyboardShortcut(.defaultAction).accessibilityIdentifier("import-preview").importFrame(.primary)
                     } else if let report = model.importReport, report.dry_run {
                         let changes = report.totals.created + report.totals.updated
-                        Button { Task { await model.applyImport() } } label: { Text(model.busy ? "Applying…" : "Apply \(changes) \(changes == 1 ? "change" : "changes")").frame(minHeight: 28) }
+                        Button { model.clientDiagnosticsUI.perform(.applyImport, surface: .importPreview) { await model.applyImport() } } label: { Text(model.busy ? "Applying…" : "Apply \(changes) \(changes == 1 ? "change" : "changes")").frame(minHeight: 28) }
                             .buttonStyle(.borderedProminent).disabled(!model.canWrite || changes == 0)
                             .keyboardShortcut(.defaultAction).accessibilityIdentifier("import-apply").importFrame(.primary)
                     }
                 }.controlSize(compact ? .small : .regular)
             }.fixedSize(horizontal: false, vertical: true).importFrame(.footer)
         }.padding(compact ? 12 : 24)
-            .frame(width: compact ? 393 : 720, height: compact ? 426 : 620)
+            .frame(width: compact ? 393 : 720, height: compact ? 426 + model.compactExtraHeight : 620)
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .importPreview))
             .coordinateSpace(name: "import-layout")
             .fileImporter(isPresented: $choosingFile, allowedContentTypes: [.json, .plainText, .data]) { result in
                 do {
@@ -210,7 +218,7 @@ struct ImportView: View {
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     model.loadImport(data: try Data(contentsOf: url), name: url.lastPathComponent)
-                } catch { model.importError = "Cannot read this file. Choose a JSON array or NDJSON file." }
+                } catch { model.importMessages.publish("Cannot read this file. Choose a JSON array or NDJSON file.", kind: .file) }
             }
     }
     @ViewBuilder private func importRow(_ row: ImportSummary.Row, title: String, index: Int) -> some View {
@@ -223,10 +231,10 @@ struct ImportView: View {
                 }
                 if let error = row.error {
                     if compact {
-                        Text(error.primaryMessage).font(.caption)
+                        Text(row.reasonText ?? "").font(.caption)
                             .foregroundStyle(error.isTaskLookup ? Color.primary : TodoColors.color("destructive"))
                             .lineLimit(1).truncationMode(.tail).importFrame(.reason(index))
-                        if let detail = error.exitDetail {
+                        if let detail = row.exitDetail {
                             Text(detail).font(.caption).foregroundStyle(.secondary).lineLimit(1).importFrame(.exitPair(index))
                         }
                     } else {
@@ -247,10 +255,20 @@ struct ImportView: View {
                     .accessibilityLabel(row.accessibilityText(title: title))
                     .accessibilityHint("Actions available. Find Task by id.").focusable()
                     .contextMenu { Button("Find Task by id") { Task { await model.findTaskAfterLookupError(error) } } }
-                    .accessibilityAction(named: Text("Find Task by id")) { Task { await model.findTaskAfterLookupError(error) } }
+                    .accessibilityAction(named: Text("Find Task by id")) { model.notePersonActed(); Task { await model.findTaskAfterLookupError(error) } }
             } else {
                 content.help(row.rejectionDetail).accessibilityElement(children: .ignore)
                     .accessibilityLabel(row.accessibilityText(title: title))
+                    .contextMenu {
+                        if let notice = row.dependencyNotice {
+                            ForEach(notice.tasks) { task in
+                                Button(task.title) { Task { _ = await model.navigate(.edit(task)) } }
+                            }
+                            if let id = notice.followUp {
+                                Button("Create follow-up") { Task { await model.createDependencyFollowUp(id) } }
+                            }
+                        }
+                    }
             }
         } else { content }
     }

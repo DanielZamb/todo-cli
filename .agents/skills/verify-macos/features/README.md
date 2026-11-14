@@ -49,3 +49,9 @@ Profile/view text retention and full-id Copy in both layouts during HOLD.
 [Authorized discovery](discovery.md) covers the Profile-to-Project directory,
 explicit Task id-prefix submission, Copy and explicit Show with draft protection,
 credential/lifetime publication guards, compiled HTTP state and offscreen sheets.
+
+[Task Dependencies](dependencies.md) extends production state, reviewed Delete, typed graph protocol and offscreen coverage during HOLD.
+
+[Responsiveness](responsiveness.md) measures production model, request amplification,
+main-loop activity and offscreen layout on scratch data across three revisions.
+It remains headless evidence and does not satisfy the native responsiveness gate.

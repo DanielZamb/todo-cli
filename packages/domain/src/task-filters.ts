@@ -1,5 +1,8 @@
 import { Effect, Schema } from "effect";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
+import { graphEnergy } from "./graph-energy.ts";
+import { dependencyState, indexGraph, type TaskGraph } from "./graph-model.ts";
+import { topologicalOrder } from "./graph-order.ts";
 import { inputLimits, TaskIdPrefix } from "./limits.ts";
 import type { TaskRead } from "./task-read.ts";
 import {
@@ -21,6 +24,19 @@ const dateFilter = Schema.String.check(
     "A valid ISO calendar date (YYYY-MM-DD) in the Task's stored time zone, or none for a missing date.",
 });
 export const TaskFilters = Schema.Struct({
+  ready: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description:
+        "Only Ready Tasks. Use --blocked or --status for another set; false is invalid.",
+    }),
+  ),
+  blocked: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description:
+        "Only Blocked Tasks. Use --status for terminal Tasks; false is invalid.",
+    }),
+  ),
+  order: Schema.optionalKey(Schema.Literals(["topo", "lightest"])),
   text: Schema.optionalKey(
     Schema.String.check(Schema.isMaxLength(inputLimits.searchText)).annotate({
       description:
@@ -67,13 +83,31 @@ function* filterTaskRecordSteps(
   filters: TaskFilters,
   definitions: { projects: readonly Project[]; tags: readonly Tag[] },
   execution: TaskSearchExecution = taskSearchExecution(),
+  graph?: TaskGraph,
 ): Generator<void, TaskRead[]> {
   const search =
     filters.text === undefined ? undefined : parseTaskSearch(filters.text);
   const prefix = filters.prefix?.toLowerCase();
   const attachmentQuery = filters.attachment?.trim().toLowerCase();
-  const selected = tasks.filter(
+  const index = indexGraph(graph ?? { tasks, edges: [] });
+  const energy = graph ? graphEnergy(graph) : undefined;
+  const members = new Set(tasks.map((task) => task.id));
+  const ordered =
+    graph && filters.order
+      ? topologicalOrder(
+          graph,
+          filters.order === "lightest" ? energy?.values : undefined,
+        ).flatMap((id) => {
+          const task = index?.tasks.get(id);
+          return task && members.has(id) ? [task] : [];
+        })
+      : tasks;
+  const selected = ordered.filter(
     (task) =>
+      (filters.ready === undefined ||
+        (index && dependencyState(task, index).ready)) &&
+      (filters.blocked === undefined ||
+        (index && dependencyState(task, index).blocked)) &&
       (prefix === undefined || task.id.toLowerCase().startsWith(prefix)) &&
       (filters.project === undefined ||
         definitions.projects.some(
@@ -114,7 +148,20 @@ function* filterTaskRecordSteps(
         )),
   );
   const records: TaskRead[] = [];
-  for (const task of selected) {
+  for (const stored of selected) {
+    const task = graph
+      ? {
+          ...stored,
+          depends_on: index.upstream.get(stored.id) ?? [],
+          blocks: index.downstream.get(stored.id) ?? [],
+          ...dependencyState(stored, index),
+          remaining_energy: energy?.values.get(stored.id) ?? {
+            energy: 0,
+            unweighted: 0,
+          },
+        }
+      : stored;
+
     if (search === undefined) records.push(task);
     else {
       const result = yield* matchTaskSearchSteps(task, search, execution);

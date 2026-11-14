@@ -1,0 +1,498 @@
+import type { Task } from "@todo/domain";
+import { LoaderCircle, X } from "lucide-react";
+import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { Alert, AlertDescription } from "./components/ui/alert.tsx";
+import { Button } from "./components/ui/button.tsx";
+import { Checkbox } from "./components/ui/checkbox.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from "./components/ui/dialog.tsx";
+import { Empty, EmptyHeader, EmptyTitle } from "./components/ui/empty.tsx";
+import { Field } from "./components/ui/field.tsx";
+import { Input } from "./components/ui/input.tsx";
+import { ToggleGroup, ToggleGroupItem } from "./components/ui/toggle-group.tsx";
+import { moveDependencyChoice } from "./dependency-choice-keys.ts";
+import {
+  type DependencyContext,
+  dependencyRecovery,
+  dependencyWarning,
+} from "./dependency-presentation.ts";
+import type {
+  DependencyController,
+  DependencyDirection,
+} from "./dependency-state.ts";
+import { DependencyTaskLabel } from "./dependency-task-label.tsx";
+import type { Reply, Request } from "./protocol.ts";
+import type { FindTask } from "./task-lookup-status.tsx";
+import { SearchErrorMessage } from "./task-search-presentation.tsx";
+
+export function DependencySearchStatus({
+  failure,
+  appliedQuery,
+}: {
+  failure: Extract<Reply, { _tag: "error" }>;
+  appliedQuery: string;
+}) {
+  return (
+    <Alert
+      role="status"
+      aria-label="Dependency search failed"
+      data-testid="dependency-search-error"
+    >
+      <AlertDescription className="flex flex-col gap-1">
+        <SearchErrorMessage
+          kind={
+            failure.code === "search_too_broad"
+              ? "search_too_broad"
+              : "transient"
+          }
+          message={failure.message}
+          appliedText={appliedQuery}
+        />
+        {failure.exit_detail && (
+          <p className="text-muted-foreground">{failure.exit_detail}</p>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+export function DependencyErrorStatus({
+  failure,
+  context,
+  tasks,
+  reload,
+  followUp,
+  attempted,
+  attemptedAction = "add",
+  dismiss,
+  openTask,
+  onFindTask,
+}: {
+  failure: Extract<Reply, { _tag: "error" | "conflict" }>;
+  context: DependencyContext;
+  tasks: readonly Task[];
+  attempted?: Task | null;
+  attemptedAction?: "add" | "remove";
+  dismiss?: () => void;
+  openTask?: ((id: Task["id"], captured?: Task) => void) | undefined;
+  onFindTask?: FindTask | undefined;
+  reload?: () => void;
+  followUp?: ((id: Task["id"], captured?: Task) => void) | undefined;
+}) {
+  const projection =
+    failure._tag === "error" && failure.dependency
+      ? dependencyRecovery(failure.dependency, context, tasks)
+      : null;
+  const capturedTask = (id: Task["id"]) => {
+    if (failure._tag !== "error") return undefined;
+    const error = failure.dependency;
+    return error?.code === "blocked"
+      ? error.details.blockers.find((task) => task.id === id)
+      : error?.code === "blocks_done_task"
+        ? error.details.done_dependents.find((task) => task.id === id)
+        : undefined;
+  };
+  return (
+    <Alert
+      role="status"
+      data-testid="dependency-error"
+      className="dependency-error-region"
+    >
+      {dismiss && (
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="dependency-error-dismiss"
+          aria-label="Dismiss"
+          onClick={dismiss}
+        >
+          <X />
+        </Button>
+      )}
+      <AlertDescription className="flex flex-col gap-2 break-words">
+        <div className="dependency-error-content">
+          <p>
+            {attempted && (
+              <span
+                className="dependency-error-attempted"
+                title={attempted.title}
+              >{`Can't ${attemptedAction} ${attempted.title}. `}</span>
+            )}
+            <span className="dependency-error-reason">
+              {projection?.message ??
+                (failure._tag === "conflict"
+                  ? "This Task changed. Reload its Dependencies before trying again."
+                  : failure.message)}
+              {projection?.action === "choose" &&
+                (failure._tag === "error" &&
+                failure.dependency?.code === "dependency_profile_mismatch"
+                  ? " Choose a Task in this Profile."
+                  : " Choose another Task.")}
+            </span>
+          </p>
+
+          {projection?.advice && <p>{projection.advice}</p>}
+          {projection && projection.witnesses.length > 0 && (
+            <ol
+              className="dependency-witness"
+              data-loop={
+                failure._tag === "error" &&
+                failure.dependency?.code === "dependency_cycle"
+              }
+              aria-label={projection.witnesses
+                .map((task) => task.title)
+                .join(" blocks ")}
+            >
+              {projection.witnesses.map((task, index) => (
+                <li
+                  key={`${task.id}:${index === 0 ? "start" : "step"}`}
+                  title={task.title}
+                  aria-label={
+                    failure._tag === "error" &&
+                    failure.dependency?.code === "dependency_cycle"
+                      ? task.title
+                      : undefined
+                  }
+                >
+                  {index > 0 &&
+                    failure._tag === "error" &&
+                    failure.dependency?.code === "dependency_cycle" && (
+                      <span aria-hidden="true">→ </span>
+                    )}
+                  {projection.action === "openBlocker" && openTask ? (
+                    <Button
+                      variant="link"
+                      onClick={() => openTask(task.id, capturedTask(task.id))}
+                    >
+                      {task.title}
+                    </Button>
+                  ) : (
+                    task.title
+                  )}
+                  {task.status &&
+                    ` · ${task.status === "cancelled" ? "Cancelled" : task.status}`}
+                </li>
+              ))}
+            </ol>
+          )}
+          {failure._tag === "conflict" && (
+            <Button
+              variant="outline"
+              data-testid="dependency-reload"
+              onClick={reload}
+            >
+              Reload
+            </Button>
+          )}
+          {failure._tag === "error" && failure.details && (
+            <Button
+              variant="outline"
+              disabled={!onFindTask}
+              onClick={() => {
+                if (failure.details) onFindTask?.(failure.details);
+              }}
+            >
+              Find Task by id
+            </Button>
+          )}
+          {projection?.action === "followUp" && projection.followUp && (
+            <Button
+              variant="outline"
+              data-testid="dependency-follow-up"
+              onClick={() =>
+                projection.followUp &&
+                followUp?.(
+                  projection.followUp,
+                  capturedTask(projection.followUp),
+                )
+              }
+              disabled={!followUp}
+            >
+              Create follow-up
+            </Button>
+          )}
+        </div>
+        {(projection?.detail ?? failure.exit_detail) && (
+          <p className="text-muted-foreground">
+            {projection?.detail ?? failure.exit_detail}
+          </p>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+export type DependencyNavigation = Pick<
+  Parameters<typeof DependencyErrorStatus>[0],
+  "openTask" | "followUp" | "onFindTask"
+>;
+export function DependencyPicker({
+  controller,
+  request,
+  canWrite,
+  returnFocus,
+  onChanged,
+  projects,
+  onBatch,
+  onFindTask,
+}: {
+  controller: DependencyController;
+  request: (request: Request) => Promise<Reply>;
+  canWrite: boolean;
+  returnFocus: () => HTMLElement | null;
+  onChanged: () => void;
+  projects: readonly { id: string; name: string }[];
+  onBatch: (task: Task, direction: DependencyDirection) => void;
+  onFindTask?: FindTask | undefined;
+}) {
+  const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
+  const search = useRef<HTMLInputElement>(null);
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scroll = useRef<HTMLDivElement>(null);
+  const notices = useRef<HTMLDivElement>(null);
+  const failure = state.kind === "Open" ? state.failure : null;
+  const searchFailure = state.kind === "Open" ? state.searchFailure : null;
+  useLayoutEffect(() => {
+    if (failure && scroll.current) scroll.current.scrollTop = 0;
+    if (notices.current)
+      notices.current.scrollTop = searchFailure
+        ? notices.current.scrollHeight
+        : 0;
+  }, [failure, searchFailure]);
+  if (state.kind === "Closed") return null;
+  const tasks = state.graph?.nodes.map((node) => node.task) ?? [];
+  const root = tasks.find((task) => task.id === state.scope.root);
+  const choices = controller.choices();
+  const close = () => {
+    clearTimeout(debounce.current);
+    controller.close();
+  };
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+    >
+      <DialogContent
+        className="dependency-dialog"
+        data-testid="dependency-picker"
+        initialFocus={search}
+        finalFocus={returnFocus}
+        showCloseButton={false}
+      >
+        <DialogTitle
+          title={`${root?.title ?? state.scope.root} ${state.direction === "dependsOn" ? "depends on…" : "blocks…"}`}
+        >
+          {root?.title ?? state.scope.root}{" "}
+          {state.direction === "dependsOn" ? "depends on…" : "blocks…"}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          Choose Tasks in this Profile. Changes save immediately.
+        </DialogDescription>
+        <ToggleGroup
+          aria-label="Dependency direction"
+          data-testid="dependency-direction"
+          value={[state.direction]}
+          onValueChange={(value) => {
+            if (value[0] === "dependsOn" || value[0] === "blocks")
+              controller.direction(value[0]);
+          }}
+          variant="segment"
+          size="sm"
+          spacing={0}
+        >
+          <ToggleGroupItem
+            value="dependsOn"
+            data-testid="dependency-depends-on"
+          >
+            Depends on
+          </ToggleGroupItem>
+          <ToggleGroupItem value="blocks" data-testid="dependency-blocks">
+            Blocks
+          </ToggleGroupItem>
+        </ToggleGroup>
+        <Field>
+          <Input
+            ref={search}
+            id="dependency-search"
+            data-testid="dependency-search"
+            onKeyDown={moveDependencyChoice}
+            aria-label="Search Tasks in this Profile"
+            placeholder="Search Tasks in this Profile"
+            maxLength={200}
+            defaultValue={state.query}
+            onChange={(event) => {
+              const query = event.target.value;
+              clearTimeout(debounce.current);
+              debounce.current = setTimeout(
+                () => void controller.find(query, request),
+                250,
+              );
+            }}
+          />
+        </Field>
+        {(state.failure || state.searchFailure) && (
+          <div ref={notices} className="dependency-notices">
+            {state.failure && (
+              <DependencyErrorStatus
+                failure={state.failure}
+                attempted={state.attempted}
+                context="add"
+                tasks={tasks}
+                onFindTask={
+                  onFindTask
+                    ? (details) => {
+                        close();
+                        onFindTask(details);
+                      }
+                    : undefined
+                }
+                reload={() => void controller.reload(request)}
+                {...(state.failure._tag !== "conflict"
+                  ? {
+                      dismiss: () => {
+                        controller.dismissFailure();
+                        search.current?.focus();
+                      },
+                    }
+                  : {})}
+              />
+            )}
+            {state.searchFailure && (
+              <DependencySearchStatus
+                failure={state.searchFailure}
+                appliedQuery={state.appliedQuery}
+              />
+            )}
+          </div>
+        )}
+        <div ref={scroll} className="dependency-scroll">
+          {!canWrite && (
+            <p role="status">
+              Dependencies are read-only while offline or writes are
+              unavailable.
+            </p>
+          )}
+          {state.loading && (
+            <p role="status" className="flex items-center gap-2">
+              <LoaderCircle />
+              Loading Dependencies…
+            </p>
+          )}
+
+          {state.warnings.map((warning) => {
+            const projected = dependencyWarning(warning, tasks);
+            return (
+              <Alert
+                key={`${warning.code}:${warning.dependent_id}`}
+                data-testid="dependency-warning"
+              >
+                <AlertDescription>
+                  <p>{projected.message}</p>
+                  {projected.path.length > 0 && (
+                    <ol className="dependency-witness">
+                      {projected.path.map((task) => (
+                        <li key={task.id}>{task.title}</li>
+                      ))}
+                    </ol>
+                  )}
+                </AlertDescription>
+              </Alert>
+            );
+          })}
+          {state.notice && <p role="status">{state.notice}</p>}
+          {!state.loading && choices.length === 0 && (
+            <Empty>
+              <EmptyHeader>
+                <EmptyTitle>No matching Tasks</EmptyTitle>
+              </EmptyHeader>
+            </Empty>
+          )}
+          <div className="dependency-choices">
+            {choices.map(({ task, checked }) => {
+              const pending = state.pending.has(task.id);
+              const dependent =
+                state.direction === "dependsOn" ? state.scope.root : task.id;
+              return (
+                <label
+                  htmlFor={`dependency-choice-${task.id}`}
+                  aria-busy={pending}
+                  aria-label={pending ? `Updating ${task.title}` : undefined}
+                  className={
+                    pending
+                      ? "dependency-choice dependency-choice-pending"
+                      : "dependency-choice"
+                  }
+                  key={task.id}
+                >
+                  <span className="dependency-checkbox">
+                    <Checkbox
+                      onKeyDown={moveDependencyChoice}
+                      id={`dependency-choice-${task.id}`}
+                      data-testid={`dependency-choice-${task.id}`}
+                      checked={state.pending.get(task.id) ?? checked}
+                      disabled={
+                        !canWrite ||
+                        pending ||
+                        state.loading ||
+                        state.conflicts.has(dependent)
+                      }
+                      aria-busy={pending}
+                      aria-invalid={
+                        failure && state.attempted?.id === task.id
+                          ? true
+                          : undefined
+                      }
+                      onCheckedChange={(checked) => {
+                        void controller
+                          .toggle(task.id, checked, request)
+                          .then(onChanged);
+                      }}
+                    />
+                    {pending && (
+                      <LoaderCircle
+                        aria-label="Updating"
+                        data-testid={`dependency-pending-${task.id}`}
+                      />
+                    )}
+                  </span>
+                  <DependencyTaskLabel task={task} projects={projects} />
+                </label>
+              );
+            })}
+          </div>
+        </div>
+        <DialogFooter>
+          <p className="dependency-save-hint text-muted-foreground">
+            Changes save immediately.
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!canWrite || state.loading || !root}
+            onClick={() => {
+              if (root) {
+                close();
+                onBatch(root, state.direction);
+              }
+            }}
+          >
+            Batch…
+          </Button>
+          <Button
+            variant="outline"
+            data-testid="dependency-picker-close"
+            onClick={close}
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -23,6 +23,18 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `DELETE /auth/tokens/{name}`.
     /// - Remark: Generated from `#/paths//auth/tokens/{name}/delete(credentials.revokeToken)`.
     func credentials_period_revokeToken(_ input: Operations.credentials_period_revokeToken.Input) async throws -> Operations.credentials_period_revokeToken.Output
+    /// - Remark: HTTP `POST /profiles/{profile}/tasks/{task}/dependencies`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/dependencies/post(tasks.depend)`.
+    func tasks_period_depend(_ input: Operations.tasks_period_depend.Input) async throws -> Operations.tasks_period_depend.Output
+    /// - Remark: HTTP `POST /profiles/{profile}/tasks/{task}/dependencies/remove`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/dependencies/remove/post(tasks.undepend)`.
+    func tasks_period_undepend(_ input: Operations.tasks_period_undepend.Input) async throws -> Operations.tasks_period_undepend.Output
+    /// - Remark: HTTP `POST /profiles/{profile}/dependencies/batch`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/dependencies/batch/post(tasks.batchDepend)`.
+    func tasks_period_batchDepend(_ input: Operations.tasks_period_batchDepend.Input) async throws -> Operations.tasks_period_batchDepend.Output
+    /// - Remark: HTTP `GET /profiles/{profile}/tasks/{task}/graph`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/graph/get(tasks.graph)`.
+    func tasks_period_graph(_ input: Operations.tasks_period_graph.Input) async throws -> Operations.tasks_period_graph.Output
     /// - Remark: HTTP `POST /profiles/{profile}/attachments/batch`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/attachments/batch/post(tasks.attachMany)`.
     func tasks_period_attachMany(_ input: Operations.tasks_period_attachMany.Input) async throws -> Operations.tasks_period_attachMany.Output
@@ -59,6 +71,8 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `PATCH /profiles/{profile}/tasks/{task}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/patch(tasks.edit)`.
     func tasks_period_edit(_ input: Operations.tasks_period_edit.Input) async throws -> Operations.tasks_period_edit.Output
+    /// Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
+    ///
     /// - Remark: HTTP `DELETE /profiles/{profile}/tasks/{task}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/delete(tasks.delete)`.
     func tasks_period_delete(_ input: Operations.tasks_period_delete.Input) async throws -> Operations.tasks_period_delete.Output
@@ -178,6 +192,56 @@ extension APIProtocol {
         headers: Operations.credentials_period_revokeToken.Input.Headers = .init()
     ) async throws -> Operations.credentials_period_revokeToken.Output {
         try await credentials_period_revokeToken(Operations.credentials_period_revokeToken.Input(
+            path: path,
+            headers: headers
+        ))
+    }
+    /// - Remark: HTTP `POST /profiles/{profile}/tasks/{task}/dependencies`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/dependencies/post(tasks.depend)`.
+    public func tasks_period_depend(
+        path: Operations.tasks_period_depend.Input.Path,
+        headers: Operations.tasks_period_depend.Input.Headers = .init(),
+        body: Operations.tasks_period_depend.Input.Body
+    ) async throws -> Operations.tasks_period_depend.Output {
+        try await tasks_period_depend(Operations.tasks_period_depend.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /profiles/{profile}/tasks/{task}/dependencies/remove`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/dependencies/remove/post(tasks.undepend)`.
+    public func tasks_period_undepend(
+        path: Operations.tasks_period_undepend.Input.Path,
+        headers: Operations.tasks_period_undepend.Input.Headers = .init(),
+        body: Operations.tasks_period_undepend.Input.Body
+    ) async throws -> Operations.tasks_period_undepend.Output {
+        try await tasks_period_undepend(Operations.tasks_period_undepend.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /profiles/{profile}/dependencies/batch`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/dependencies/batch/post(tasks.batchDepend)`.
+    public func tasks_period_batchDepend(
+        path: Operations.tasks_period_batchDepend.Input.Path,
+        headers: Operations.tasks_period_batchDepend.Input.Headers = .init(),
+        body: Operations.tasks_period_batchDepend.Input.Body
+    ) async throws -> Operations.tasks_period_batchDepend.Output {
+        try await tasks_period_batchDepend(Operations.tasks_period_batchDepend.Input(
+            path: path,
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `GET /profiles/{profile}/tasks/{task}/graph`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/graph/get(tasks.graph)`.
+    public func tasks_period_graph(
+        path: Operations.tasks_period_graph.Input.Path,
+        headers: Operations.tasks_period_graph.Input.Headers = .init()
+    ) async throws -> Operations.tasks_period_graph.Output {
+        try await tasks_period_graph(Operations.tasks_period_graph.Input(
             path: path,
             headers: headers
         ))
@@ -334,6 +398,8 @@ extension APIProtocol {
             body: body
         ))
     }
+    /// Confirm with the Version you sent for the preview (confirm_from_version) and the returned fingerprint. The Task in a preview is the projected result; its Version is not the one to send.
+    ///
     /// - Remark: HTTP `DELETE /profiles/{profile}/tasks/{task}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tasks/{task}/delete(tasks.delete)`.
     public func tasks_period_delete(

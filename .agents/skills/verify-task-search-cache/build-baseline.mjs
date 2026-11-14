@@ -12,11 +12,13 @@ import {
 } from "node:fs";
 import { join, resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../../..");
+mkdirSync(join(root, "docs/evidence/perf-cache"), { recursive: true });
 const commit = process.argv[2];
 assert.match(commit ?? "", /^[a-f0-9]{40}$/);
-const projectionCommit = process.argv[3];
+const uncached = process.argv.includes("--uncached");
+const projectionCommit = process.argv[3] === "--uncached" ? undefined : process.argv[3];
 if (projectionCommit) assert.match(projectionCommit, /^[a-f0-9]{40}$/);
-const directory = join(root, ".scratch", `cache-baseline-${commit}${projectionCommit ? `-${projectionCommit}` : ""}`);
+const directory = join(root, ".scratch", `cache-baseline-${commit}${projectionCommit ? `-${projectionCommit}` : ""}${uncached ? "-uncached" : ""}`);
 mkdirSync(directory, { recursive: true });
 const archive = join(directory, "source.tar");
 if (!existsSync(archive)) {
@@ -72,6 +74,31 @@ assert.equal(
   realpathSync(join(directory, "apps/cli/node_modules/@todo/domain")),
   join(directory, "packages/domain"),
 );
+let cacheBypass = null;
+if (uncached) {
+  const path = join(directory, "packages/domain/src/commands.ts");
+  const original = readFileSync(path, "utf8");
+  const pattern = /prepare: \(text\) => (?:this\.)?store\.searchWords\.words\((?:read|search), text\)/g;
+  const prior = join(directory, "cache-bypass.json");
+  if (existsSync(prior)) {
+    cacheBypass = JSON.parse(readFileSync(prior, "utf8"));
+    assert.equal(createHash("sha256").update(original).digest("hex"), cacheBypass.instrumentedSha256);
+  } else {
+    const sites = [...original.matchAll(pattern)].map((match) => match[0]);
+    assert.equal(sites.length, 2, "Review both shared list and readTasks preparation hooks");
+    const instrumented = original.replace(pattern, "prepare: taskSearchExecution().prepare");
+    writeFileSync(path, instrumented);
+    cacheBypass = {
+      path: "packages/domain/src/commands.ts",
+      sites,
+      replacement: "prepare: taskSearchExecution().prepare",
+      originalSha256: createHash("sha256").update(original).digest("hex"),
+      instrumentedSha256: createHash("sha256").update(instrumented).digest("hex"),
+      scope: "Disable only memo preparation in the immutable merged candidate. Matcher, work meter, runner, graph, projection and public schemas stay unchanged. No timing claim.",
+    };
+    writeFileSync(prior, JSON.stringify(cacheBypass, null, 2) + "\n");
+  }
+}
 const hash = createHash("sha256");
 const files = [
   "apps/cli/src",
@@ -126,6 +153,7 @@ writeFileSync(
     {
       ...binaries,
       head: commit,
+      cacheBypass,
       projectionOverlay: projectionCommit ? {
         commit: projectionCommit,
         path: "packages/domain/src/store/projection.ts",

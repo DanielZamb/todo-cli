@@ -72,3 +72,45 @@ it("quotes recovery flags and preserves dash-leading values as flag values", () 
     "--profile 'owner'\\''s tasks'",
   );
 });
+
+it("keeps old Dependency rejection History readable while new errors require an exit pair", async () => {
+  const { DependencyError } = await import("../src/dependencies.ts");
+  const { TaskAttemptRejected } = await import("../src/events.ts");
+  const witness = {
+    generated_at: "2030-01-01T00:00:00Z",
+    code: "dependency_cycle",
+    message: "Remove a Dependency in this loop, then try again.",
+    details: { dependent_id: "B", blocker_id: "A", path: ["A", "B", "A"] },
+  };
+  expect(Schema.is(DependencyError)(witness)).toBe(false);
+  const event = Schema.decodeUnknownSync(TaskAttemptRejected)({
+    kind: "TaskAttemptRejected",
+    entity_version: 1,
+    occurred_at: "2030-01-01T00:00:00Z",
+    attempted_kind: "DependencyAdded",
+    task_id: "B",
+    violations: [],
+    details: { witness, truncated: false, total: 2 },
+  });
+  expect(event.kind).toBe("TaskAttemptRejected");
+  if (event.kind !== "TaskAttemptRejected") throw new Error("wrong event");
+  expect(event.details?.witness).toEqual({
+    ...witness,
+    exit_code: 2,
+    exit_meaning: "validation or usage",
+  });
+  expect(
+    Schema.is(DependencyError)({
+      ...witness,
+      exit_code: 2,
+      exit_meaning: "validation or usage",
+    }),
+  ).toBe(true);
+  expect(
+    Schema.is(DependencyError)({
+      ...witness,
+      exit_code: 2,
+      exit_meaning: "success",
+    }),
+  ).toBe(false);
+});

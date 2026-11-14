@@ -8,11 +8,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
 import { setAppearance } from "./appearance.ts";
+import { hiddenHostOptions } from "./hidden-host.ts";
 
 if (process.env.TODO_ELECTRON_VERIFY_HOST !== "1")
   throw new Error("Compiled host only");
@@ -142,12 +142,12 @@ try {
       return response;
     },
   });
-  desktop = await _electron.launch({
-    executablePath: createRequire(import.meta.url)("electron"),
-    args: [join(root, "apps/electron/dist/verification/write-host.mjs")],
-    env: { ...env, TODO_SERVER_URL: proxy.url.origin },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: { ...env, TODO_SERVER_URL: proxy.url.origin },
+      timeout: 60000,
+    }),
+  );
   await desktop.context().tracing.start({ screenshots: true, snapshots: true });
   const page = await desktop.firstWindow();
   page.setDefaultTimeout(60000);

@@ -12,6 +12,12 @@ import { eraseTaskAttachments } from "../attachment-store.ts";
 import { validAttachmentLocation } from "../attachments.ts";
 import { Authentication } from "../auth/auth.ts";
 import {
+  type AuthorizedRead,
+  type AuthorizedTerminalRead,
+  checkedRead,
+} from "../auth/authorized-read.ts";
+import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
+import {
   Profile,
   Project,
   seriesForTask,
@@ -20,6 +26,7 @@ import {
   type TaskDetails,
 } from "../entities.ts";
 import {
+  type AppendResult,
   Event,
   OpLogEntry,
   TaskAttemptRejected,
@@ -40,8 +47,15 @@ import {
 } from "../recurrence.ts";
 import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
+import { ClientProjection } from "./client-projection.ts";
+import { incidentRemoval, putEdge, readEdges } from "./dependencies.ts";
+import {
+  DependencyRefusal,
+  validateDependencies,
+} from "./dependency-validation.ts";
 import { Diagnostics } from "./diagnostics.ts";
 import { StoreError } from "./error.ts";
+import { committedHistory, terminalHistory } from "./history-reads.ts";
 import { redactTaskHistory } from "./purge.ts";
 import { ScheduledWork } from "./scheduled-work.ts";
 import { searchCacheEvents } from "./search-cache-events.ts";
@@ -71,7 +85,10 @@ declare module "bun:sqlite" {
 }
 
 class Rejection extends Error {
-  constructor(readonly reason: string) {
+  constructor(
+    readonly reason: string,
+    readonly witness?: DependencyError,
+  ) {
     super(reason);
   }
 }
@@ -93,12 +110,16 @@ const commandEnvelope = Schema.Struct({
 });
 const commandFacts = Schema.Record(Schema.String, Schema.Json);
 const attemptTarget = Schema.Union([
+  Schema.Struct({ dependent_id: TaskId }),
   Schema.Struct({ task_id: TaskId }),
   Schema.Struct({ task: Schema.Struct({ id: TaskId }) }),
   Schema.Struct({ before: Schema.Struct({ id: TaskId }) }),
 ]);
 const same = (a: unknown, b: unknown) =>
   JSON.stringify(a) === JSON.stringify(b);
+
+export type { AppendResult } from "../events.ts";
+
 type Append = {
   readonly actor: ActorId;
   readonly profile: ProfileId;
@@ -173,6 +194,7 @@ export class OperationStore {
         path,
         (run) => this.transaction(run),
         () => this.searchWords.clearAll(),
+        this.attachmentRoot,
       );
       this.transaction(() => {
         const version =
@@ -223,7 +245,8 @@ export class OperationStore {
       this.diagnostics = new Diagnostics(
         this.db,
         path,
-        (input) => this.auth.requireOwner(input),
+        (input, use) =>
+          this.auth.withOwnerRead(input, Schema.Struct({}), {}, use),
         this.snapshots,
         this.scheduled,
         this.attachmentRoot,
@@ -305,6 +328,7 @@ export class OperationStore {
     });
 
   private cleanupAttachmentsSync() {
+    if (this.isPreview) return;
     for (const row of this.db
       .query<{ profile_id: string; task_id: string }, []>(
         "SELECT profile_id,task_id FROM attachment_cleanup",
@@ -327,8 +351,9 @@ export class OperationStore {
     this.attachmentCleanupRequested = true;
     const tasks = this.historySync(0).flatMap((entry) =>
       Schema.is(Event)(entry.event)
-        ? changes(entry.event).tasks.flatMap(({ before, after }) =>
-            [before, after].filter((task) => task?.id === id),
+        ? changes(entry.event, entry.profile).tasks.flatMap(
+            ({ before, after }) =>
+              [before, after].filter((task) => task?.id === id),
           )
         : [],
     );
@@ -450,7 +475,9 @@ export class OperationStore {
       access_tokens_revoked: tokens.length,
     };
     if (options.dry_run || input.preview) return { outcome: "deleted", report };
-    for (const before of tasks) {
+    for (const target of tasks) {
+      const before = readTasks(this.db).find((task) => task.id === target.id);
+      if (!before) throw new Error("Profile Task disappeared");
       const result = this.appendSync({
         ...input,
         event: {
@@ -529,6 +556,28 @@ export class OperationStore {
     );
   readonly tasks = () => attempt(() => readTasks(this.db));
   readonly series = () => attempt(() => readSeries(this.db));
+  readonly dependencies = () => attempt(() => readEdges(this.db));
+  readonly graph = (profile: ProfileId) =>
+    attempt(() =>
+      this.db.transaction(() => ({
+        tasks: new ClientProjection(this.db).tasksForMutation(profile),
+        edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
+          this.db
+            .query(
+              "SELECT * FROM task_dependencies WHERE profile_id=? ORDER BY profile_id,dependent_id,blocker_id",
+            )
+            .all(profile),
+        ),
+      }))(),
+    );
+
+  readonly graphRead = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap((value) => this.graph(value.profile)),
+    );
+
+  readonly terminalChangesRead = (read: AuthorizedTerminalRead) =>
+    attempt(() => terminalHistory(this.db, read));
 
   private historySync(after: number): OpLogEntry[] {
     return this.db
@@ -567,6 +616,14 @@ export class OperationStore {
 
   readonly history = (after = 0) => attempt(() => this.historySync(after));
 
+  readonly committedHistory = (profile: ProfileId, after: number) =>
+    attempt(() => committedHistory(this.db, profile, after));
+
+  readonly changesRead = (read: AuthorizedRead, after: number) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap((value) => this.committedHistory(value.profile, after)),
+    );
+
   readonly searchCacheEvents = (cursor?: {
     readonly seq: number;
     readonly generation: string;
@@ -590,11 +647,12 @@ export class OperationStore {
   ): OpLogEntry {
     const result = this.db
       .query(
-        "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,1,?,?,?,?,?)",
+        "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,?,?,?,?,?,?)",
       )
       .run(
         input.actor,
         input.profile,
+        entry.event.entity_version,
         json(entry.event),
         entry.from_version,
         entry.to_version,
@@ -613,7 +671,8 @@ export class OperationStore {
     input: Append,
     reason: string,
     fromVersion: Version | null = null,
-  ): OpLogEntry {
+    witness?: DependencyError,
+  ): AppendResult {
     const payload: unknown = JSON.parse(json(input.event));
     const envelope = Schema.decodeUnknownSync(
       Schema.Struct({ kind: TaskMutationKind, occurred_at: Instant }),
@@ -625,16 +684,18 @@ export class OperationStore {
         ? envelope.occurred_at
         : Schema.decodeUnknownSync(Instant)(new Date().toISOString());
     const primary = Schema.is(Event)(payload)
-      ? changes(payload).tasks[0]
+      ? changes(payload, input.profile).tasks[0]
       : undefined;
     const target = Schema.decodeUnknownOption(attemptTarget)(payload);
     const taskId = Option.isNone(target)
       ? null
-      : "task_id" in target.value
-        ? target.value.task_id
-        : "task" in target.value
-          ? target.value.task.id
-          : target.value.before.id;
+      : "dependent_id" in target.value
+        ? target.value.dependent_id
+        : "task_id" in target.value
+          ? target.value.task_id
+          : "task" in target.value
+            ? target.value.task.id
+            : target.value.before.id;
     const event = Schema.decodeUnknownSync(TaskAttemptRejected)({
       kind: "TaskAttemptRejected",
       entity_version: 1,
@@ -646,6 +707,25 @@ export class OperationStore {
         id !== null && id.length <= inputLimits.id ? id : null)(
         (primary?.after ?? primary?.before)?.id ?? taskId,
       ),
+      ...(witness
+        ? {
+            details: Schema.decodeUnknownSync(RejectionDetails)(
+              JSON.stringify(witness).length +
+                JSON.stringify(rejectedInputForHistory(payload)).length <=
+                32768
+                ? {
+                    witness,
+                    truncated: false,
+                    total: JSON.stringify(witness).length,
+                  }
+                : {
+                    witness: null,
+                    truncated: true,
+                    total: JSON.stringify(witness).length,
+                  },
+            ),
+          }
+        : {}),
       violations: [
         {
           field: "event",
@@ -657,20 +737,33 @@ export class OperationStore {
     return this.transaction(() => {
       const entry = this.record(input, {
         event,
-        from_version: primary?.before?.row_version ?? fromVersion,
+        from_version:
+          primary?.before?.row_version ??
+          (Schema.is(Event)(payload)
+            ? changes(payload, input.profile).dependencies.versions[0]
+                ?.from_version
+            : undefined) ??
+          fromVersion,
         to_version: null,
         outcome: "rejected",
         reason,
       });
       for (const id of this.snapshots.purgedIdsSync())
         redactTaskHistory(this.db, this.historySync(0), id);
-      return this.historySync(entry.seq - 1)[0] ?? entry;
+      return {
+        ...(this.historySync(entry.seq - 1)[0] ?? entry),
+        ...(witness ? { dependency_error: witness } : {}),
+      };
     });
   }
 
   private validate(event: Event, profile: ProfileId) {
-    const resolved = changes(event);
-    if (resolved.tasks.length === 0) throw new Rejection("validation");
+    const resolved = changes(event, profile);
+    if (
+      resolved.tasks.length === 0 &&
+      resolved.dependencies.versions.length === 0
+    )
+      throw new Rejection("validation");
     const definitions = metadata(event);
     const checkDefinitions = (
       task: Task,
@@ -940,7 +1033,11 @@ export class OperationStore {
         throw new Rejection("validation");
       if (change.after) validateMetadata(change.after.task);
     }
+    validateDependencies(this.db, event, profile);
     switch (event.kind) {
+      case "DependencyAdded":
+      case "DependencyRemoved":
+        break;
       case "TaskMovedOut":
       case "TaskMovedIn":
         break;
@@ -1011,14 +1108,28 @@ export class OperationStore {
     input: Append,
     allowRevert = false,
     allowMove = false,
-  ): OpLogEntry {
+  ): AppendResult {
     Schema.decodeUnknownSync(identity)(input);
     const payload: unknown = JSON.parse(json(input.event));
     let purgeSnapshot: string | undefined;
     try {
       return this.transaction(() => {
         if (!Schema.is(Event)(payload)) throw new Rejection("validation");
-        const event = Schema.decodeUnknownSync(Event)(payload);
+        const decoded = Schema.decodeUnknownSync(Event)(payload);
+        const cleanup =
+          decoded.kind === "TaskDeleted"
+            ? incidentRemoval(this.db, decoded.before, decoded.occurred_at)
+            : null;
+        const event =
+          decoded.kind === "TaskDeleted" &&
+          decoded.entity_version === 1 &&
+          cleanup?.removed.length
+            ? Schema.decodeUnknownSync(Event)({
+                ...decoded,
+                entity_version: 2,
+                dependencies: cleanup,
+              })
+            : decoded;
         if (event.kind === "TaskReverted" && !allowRevert)
           throw new Rejection("invalid_revert");
         if (
@@ -1031,15 +1142,23 @@ export class OperationStore {
           purgeSnapshot = this.snapshots.createSync("pre-purge").id;
           this.snapshots.redactAllSync([event.task_id]);
         }
-        const primary = changes(event).tasks[0];
+        const primary = changes(event, input.profile).tasks[0];
         const entry = this.record(input, {
           event,
-          from_version: primary?.before?.row_version ?? null,
-          to_version: primary?.after?.row_version ?? null,
+          from_version:
+            event.kind === "DependencyAdded" ||
+            event.kind === "DependencyRemoved"
+              ? event.from_version
+              : (primary?.before?.row_version ?? null),
+          to_version:
+            event.kind === "DependencyAdded" ||
+            event.kind === "DependencyRemoved"
+              ? event.to_version
+              : (primary?.after?.row_version ?? null),
           outcome: "committed",
           reason: null,
         });
-        applyEvent(this.db, event);
+        applyEvent(this.db, event, input.profile);
         if (event.kind === "TaskPurged") {
           this.searchWords.clearAll();
           this.queueAttachmentCleanup(event.task_id);
@@ -1051,6 +1170,11 @@ export class OperationStore {
     } catch (error) {
       if (purgeSnapshot && !(error instanceof AttachmentCleanupError))
         this.snapshots.discardSync(purgeSnapshot);
+      if (error instanceof DependencyRefusal)
+        return {
+          ...this.recordRejection(input, error.reason, null, error.witness),
+          ...(error.witness ? { dependency_error: error.witness } : {}),
+        };
       if (!(error instanceof Rejection)) throw error;
       return this.recordRejection(input, error.reason);
     }
@@ -1103,13 +1227,25 @@ export class OperationStore {
               .get(after.profile_id)
           )
             throw new Rejection("validation");
+          const dependencies = incidentRemoval(
+            this.db,
+            before,
+            after.updated_at,
+          );
+          const departureEvent = dependencies.removed.length
+            ? { ...event, entity_version: 2, dependencies }
+            : event;
           const departure = this.appendSync(
-            { actor: input.actor, profile: before.profile_id, event },
+            {
+              actor: input.actor,
+              profile: before.profile_id,
+              event: departureEvent,
+            },
             false,
             true,
           );
           if (departure.outcome === "rejected")
-            throw new Rejection(departure.reason);
+            throw new Rejection(departure.reason, departure.dependency_error);
           const arrival = this.appendSync(
             {
               actor: input.actor,
@@ -1125,7 +1261,7 @@ export class OperationStore {
             true,
           );
           if (arrival.outcome === "rejected")
-            throw new Rejection(arrival.reason);
+            throw new Rejection(arrival.reason, arrival.dependency_error);
           return arrival;
         });
       } catch (error) {
@@ -1133,11 +1269,13 @@ export class OperationStore {
         return this.recordRejection(
           { actor: input.actor, profile: before.profile_id, event },
           error.reason,
+          null,
+          error.witness,
         );
       }
     });
 
-  private startSeriesSync(input: unknown): OpLogEntry {
+  private startSeriesSync(input: unknown): AppendResult {
     const facts = Schema.decodeUnknownSync(commandFacts)(
       JSON.parse(json(input)),
     );
@@ -1165,6 +1303,21 @@ export class OperationStore {
             entity_version: 1,
             occurred_at: value.occurred_at,
             task,
+            ...((value.depends_on?.length ?? 0) > 0
+              ? {
+                  entity_version: 2,
+                  dependencies: {
+                    added:
+                      value.depends_on?.map((blocker_id) => ({
+                        profile_id: value.profile,
+                        dependent_id: task.id,
+                        blocker_id,
+                      })) ?? [],
+                    removed: [],
+                    versions: [],
+                  },
+                }
+              : {}),
             series: value.series,
             project:
               value.project ??
@@ -1193,7 +1346,7 @@ export class OperationStore {
   readonly startSeries = (input: unknown) =>
     attempt(() => this.startSeriesSync(input));
 
-  private finishTaskSync(input: unknown): OpLogEntry {
+  private finishTaskSync(input: unknown): AppendResult {
     const facts = Schema.decodeUnknownSync(commandFacts)(
       JSON.parse(json(input)),
     );
@@ -1288,6 +1441,7 @@ export class OperationStore {
     input: Append & {
       readonly reason: string;
       readonly from_version?: Version;
+      readonly dependency_error?: DependencyError;
     },
   ) =>
     attempt(() => {
@@ -1302,6 +1456,9 @@ export class OperationStore {
         input.from_version === undefined
           ? null
           : Schema.decodeUnknownSync(Version)(input.from_version),
+        input.dependency_error === undefined
+          ? undefined
+          : Schema.decodeUnknownSync(DependencyError)(input.dependency_error),
       );
     });
 
@@ -1334,7 +1491,7 @@ export class OperationStore {
               .get()
           : null;
         this.db.exec(
-          "DROP TABLE IF EXISTS task_tags; DROP TABLE IF EXISTS tasks; DROP TABLE IF EXISTS series; DROP TABLE IF EXISTS task_versions; DROP TABLE IF EXISTS series_versions; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS tags;",
+          "DROP TABLE IF EXISTS task_dependencies; DROP TABLE IF EXISTS task_tags; DROP TABLE IF EXISTS tasks; DROP TABLE IF EXISTS series; DROP TABLE IF EXISTS task_versions; DROP TABLE IF EXISTS series_versions; DROP TABLE IF EXISTS projects; DROP TABLE IF EXISTS tags;",
         );
         createProjection(this.db);
         this.db.exec("DELETE FROM profile_deletions");
@@ -1366,6 +1523,7 @@ export class OperationStore {
               )
               .run(version.id, version.version);
           for (const task of decoded.tasks) putTask(this.db, task);
+          for (const edge of decoded.edges ?? []) putEdge(this.db, edge);
           for (const version of decoded.versions)
             this.db
               .query(
@@ -1379,17 +1537,17 @@ export class OperationStore {
             (Schema.is(Event)(entry.event) ||
               entry.event.kind === "TaskHistoryRedacted")
           )
-            applyEvent(this.db, entry.event);
+            applyEvent(this.db, entry.event, entry.profile);
         return readTasks(this.db);
       }),
     );
 
-  private revertSync(input: {
+  private resolveRevertSync(input: {
     readonly actor: ActorId;
     readonly profile: ProfileId;
     readonly seq: Sequence;
     readonly occurred_at: Instant;
-  }) {
+  }): AppendResult {
     Schema.decodeUnknownSync(Sequence)(input.seq);
     const occurredAt = Schema.decodeUnknownSync(Instant)(input.occurred_at);
     const entry = this.historySync(input.seq - 1).find(
@@ -1417,7 +1575,7 @@ export class OperationStore {
           ? "task_purged"
           : "invalid_revert",
       );
-    const original = changes(entry.event);
+    const original = changes(entry.event, entry.profile);
     const tasks = original.tasks.map((change) => {
       const before = change.after;
       if (!change.before) {
@@ -1443,6 +1601,16 @@ export class OperationStore {
         },
       };
     });
+    const dependencies = {
+      added: original.dependencies.removed,
+      removed: original.dependencies.added,
+      versions: original.dependencies.versions.map((version) => ({
+        id: version.id,
+        from_version: version.to_version,
+        to_version: version.to_version + 1,
+        updated_at: occurredAt,
+      })),
+    };
     const series = original.series.map((change) => ({
       before: change.after,
       after:
@@ -1467,15 +1635,22 @@ export class OperationStore {
         ...input,
         event: {
           kind: "TaskReverted",
-          entity_version: 1,
+          entity_version: 2,
           occurred_at: occurredAt,
           original_seq: input.seq,
+          dependencies,
           tasks,
           series,
         },
       },
       true,
     );
+  }
+
+  private revertSync(
+    input: Parameters<OperationStore["resolveRevertSync"]>[0],
+  ) {
+    return this.transaction(() => this.resolveRevertSync(input));
   }
 
   readonly revert = (input: Parameters<OperationStore["revertSync"]>[0]) =>

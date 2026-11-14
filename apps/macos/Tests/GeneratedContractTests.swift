@@ -7,6 +7,29 @@ import OpenAPIRuntime
 #endif
 
 final class GeneratedContractTests: XCTestCase {
+    func testDeletePreviewKeepsConfirmationVersionSeparateFromProjectedVersion() throws {
+        let json = #"{"id":"delete-preview","profile_id":"work","entity_version":1,"row_version":2,"title":"Projected delete","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":null,"created_at":"2026-11-10T00:00:00Z","updated_at":"2026-11-10T00:00:00Z","completed_at":null,"deleted_at":"2026-11-10T00:00:00Z","removed_dependencies":[],"affected_versions":[],"dependency_fingerprint":"reviewed","dry_run":true,"confirm_from_version":1}"#
+        let preview = try JSONDecoder().decode(Components.Schemas.TaskWrite.self, from: Data(json.utf8))
+        XCTAssertEqual(preview.confirm_from_version, 1)
+        XCTAssertEqual(preview.row_version, 2)
+        XCTAssertEqual(preview.dry_run, true)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
+        var deleted = preview
+        deleted.confirm_from_version = nil
+        deleted.dry_run = false
+        let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(deleted)) as? NSDictionary
+        XCTAssertNil(encoded?["confirm_from_version"])
+        XCTAssertEqual(encoded?["dry_run"] as? Bool, false)
+    }
+
+    func testBatchDependencyVersionConflictHasOnlyOccCode() throws {
+        typealias Report = Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload
+        let json = #"{"generated_at":"2026-11-10T00:00:00Z","dry_run":true,"results":[{"index":0,"exit_code":4,"error":{"generated_at":"2026-11-10T00:00:00Z","code":"occ_conflict","message":"Reload the current Version.","exit_code":4,"exit_meaning":"Conflict","details":{"current_version":2}}}]}"#
+        try roundTrip(Report.self, json)
+        let obsolete = json.replacingOccurrences(of: "occ_conflict", with: "conflict")
+        XCTAssertThrowsError(try JSONDecoder().decode(Report.self, from: Data(obsolete.utf8)))
+    }
+
     func testDiscoveryDirectoryAndLookupKeepFullIdsAndNullProject() throws {
         try roundTrip(Operations.reads_period_profiles.Output.Ok.Body.jsonPayload.self, #"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[{"id":"project-full-id","name":"Empty Project"}]}]"#)
         try roundTrip(Operations.reads_period_lookup.Output.Ok.Body.jsonPayload.self, #"[{"profile":{"id":"personal","name":"Personal"},"task_id":"aaaaaaaa-1111-4222-8333-444444444444","title":"Done Task","project":null}]"#)
@@ -20,8 +43,9 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Failure.self, json)
         let refusal = try JSONDecoder().decode(Failure.self, from: Data(json.utf8))
         XCTAssertNil(refusal.value1)
-        XCTAssertEqual(refusal.value2?.code.rawValue, "search_too_broad")
-        XCTAssertEqual(refusal.value2?.message, "Narrow the search with a Project, Tag or Status filter.")
+        XCTAssertNil(refusal.value2)
+        XCTAssertEqual(refusal.value3?.code.rawValue, "search_too_broad")
+        XCTAssertEqual(refusal.value3?.message, "Narrow the search with a Project, Tag or Status filter.")
         XCTAssertThrowsError(try JSONDecoder().decode(Failure.self, from: Data(json.replacingOccurrences(of: "search_too_broad", with: "different_code").utf8)))
     }
 
@@ -33,6 +57,131 @@ final class GeneratedContractTests: XCTestCase {
         let query = Operations.tasks_period_list.Input.Query(text: "cancion", prefix: "6AA2", priority: .P1)
         XCTAssertEqual(query.text, "cancion")
         XCTAssertEqual(query.prefix, "6AA2")
+    }
+
+    func testDependencyCommandsAndImportWitnessSurviveGeneratedCoding() throws {
+        try roundTrip(Operations.tasks_period_create.Input.Body.jsonPayload.self, #"{"title":"Dependent","depends_on":["blocker"]}"#)
+        try roundTrip(Operations.tasks_period_depend.Input.Body.jsonPayload.self, #"{"blocker_id":"blocker","from_version":7}"#)
+        try roundTrip(Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.self, #"{"generated_at":"2026-11-09T06:00:00Z","dry_run":false,"items":[{"external_id":"dependent","outcome":"rejected","task_id":"task","from_version":7,"changed_fields":[],"error":{"exit_code":2,"exit_meaning":"validation or usage","code":"dependency_cycle","message":"Remove a Dependency in this loop, then try again.","details":{"current_version":7,"dependency_error":{"exit_code":2,"exit_meaning":"validation or usage","generated_at":"2026-11-09T06:00:00Z","code":"dependency_cycle","message":"Remove a Dependency in this loop, then try again.","details":{"dependent_id":"task","blocker_id":"blocker","path":["task","blocker","task"]}}}}}],"totals":{"created":0,"updated":0,"unchanged":0,"rejected":1}}"#)
+    }
+
+    func testExistingAndDependencyOperationsDecodeAtTheLiveClientBoundary() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let fixture = root.appendingPathComponent("API/Fixtures/dag-operations.json")
+        let values = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as? [NSDictionary])
+        var kinds: [String] = []
+        for value in values {
+            let data = try JSONSerialization.data(withJSONObject: value)
+            let wire = try JSONDecoder().decode(Components.Schemas.CommittedOperation.self, from: data)
+            let encoded = try JSONEncoder().encode(wire)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSDictionary, value)
+            let operation = try JSONDecoder().decode(CommittedOperation.self, from: encoded)
+            XCTAssertEqual(operation.outcome, "committed")
+            kinds.append(operation.event.kind)
+        }
+        XCTAssertEqual(kinds, ["AuthChanged", "DependencyAdded", "TaskCreated", "TaskDeleted", "TaskMovedOut", "TaskReverted"])
+    }
+
+    func testLifecycleVersionsSelectTypedCasesAndRejectContradictions() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let entries = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("API/Fixtures/dag-operations.json"))) as? [[String: Any]])
+        let expected: [String: LifecycleFacts] = [
+            "TaskCreated": .init(version: 2, added: [["dag", "T", "B00"]], removed: [], versions: []),
+            "TaskDeleted": .init(version: 2, added: [], removed: [["dag", "B", "A"], ["dag", "C", "B"]], versions: [["C", "2", "3", "2026-11-09T06:00:00Z"]]),
+            "TaskMovedOut": .init(version: 2, added: [], removed: [["dag", "B", "A"], ["dag", "C", "B"]], versions: [["C", "2", "3", "2026-11-09T06:00:00Z"]]),
+            "TaskReverted": .init(version: 2, added: [["dag", "B", "A"], ["dag", "C", "B"]], removed: [], versions: [["C", "3", "4", "2026-11-09T06:00:00Z"]]),
+        ]
+        func decode(_ entry: [String: Any]) throws -> Components.Schemas.CommittedOperation {
+            try JSONDecoder().decode(Components.Schemas.CommittedOperation.self, from: JSONSerialization.data(withJSONObject: entry))
+        }
+        var checked: [String] = []
+        for entry in entries {
+            let event = try XCTUnwrap(entry["event"] as? [String: Any])
+            guard event["entity_version"] as? Int == 2 else { continue }
+            let kind = try XCTUnwrap(event["kind"] as? String)
+            XCTAssertEqual(lifecycleFacts(try decode(entry)), expected[kind], kind)
+            checked.append(kind)
+            var legacyEvent = event
+            legacyEvent["entity_version"] = 1
+            legacyEvent.removeValue(forKey: "dependencies")
+            legacyEvent["future_metadata"] = "preserved"
+            var legacy = entry
+            legacy["event"] = legacyEvent
+            let legacyWire = try decode(legacy)
+            XCTAssertEqual(lifecycleFacts(legacyWire), .init(version: 1, added: [], removed: [], versions: []), kind)
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: JSONEncoder().encode(legacyWire)) as? NSDictionary, legacy as NSDictionary)
+            for version: Any? in [nil, 3, "2", true, 2.5, NSNull()] {
+                var invalidEvent = event
+                invalidEvent["entity_version"] = version
+                var invalid = entry
+                invalid["event"] = invalidEvent
+                XCTAssertThrowsError(try decode(invalid), "Invalid version for \(kind): \(String(describing: version))")
+            }
+            for dependencies: Any? in [nil, NSNull(), [], "invalid", ["added": [], "removed": []]] {
+                var invalidEvent = event
+                invalidEvent["dependencies"] = dependencies
+                var invalid = entry
+                invalid["event"] = invalidEvent
+                XCTAssertThrowsError(try decode(invalid), "Invalid dependencies for \(kind)")
+            }
+            for dependencies in [try XCTUnwrap(event["dependencies"]), NSNull()] {
+                var invalidEvent = legacyEvent
+                invalidEvent["dependencies"] = dependencies
+                var invalid = legacy
+                invalid["event"] = invalidEvent
+                XCTAssertThrowsError(try decode(invalid), "v1 cannot carry dependencies: \(kind)")
+            }
+        }
+        XCTAssertEqual(checked.sorted(), ["TaskCreated", "TaskDeleted", "TaskMovedOut", "TaskReverted"])
+    }
+
+    private struct LifecycleFacts: Equatable {
+        let version: Int
+        let added: [[String]]
+        let removed: [[String]]
+        let versions: [[String]]
+    }
+
+    private func lifecycleFacts(_ operation: Components.Schemas.CommittedOperation) -> LifecycleFacts? {
+        switch operation.event {
+        case .TaskCreated(let value):
+            switch value {
+            case .case1(let payload):
+                XCTAssertEqual(payload.entity_version, 1)
+                return .init(version: 1, added: [], removed: [], versions: [])
+            case .case2(let payload):
+                XCTAssertEqual(payload.entity_version, 2)
+                return .init(version: 2, added: payload.dependencies.added.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, removed: payload.dependencies.removed.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, versions: payload.dependencies.versions.map { [$0.id, String($0.from_version), String($0.to_version), $0.updated_at] })
+            }
+        case .TaskDeleted(let value):
+            switch value {
+            case .case1(let payload):
+                XCTAssertEqual(payload.entity_version, 1)
+                return .init(version: 1, added: [], removed: [], versions: [])
+            case .case2(let payload):
+                XCTAssertEqual(payload.entity_version, 2)
+                return .init(version: 2, added: payload.dependencies.added.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, removed: payload.dependencies.removed.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, versions: payload.dependencies.versions.map { [$0.id, String($0.from_version), String($0.to_version), $0.updated_at] })
+            }
+        case .TaskMovedOut(let value):
+            switch value {
+            case .case1(let payload):
+                XCTAssertEqual(payload.entity_version, 1)
+                return .init(version: 1, added: [], removed: [], versions: [])
+            case .case2(let payload):
+                XCTAssertEqual(payload.entity_version, 2)
+                return .init(version: 2, added: payload.dependencies.added.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, removed: payload.dependencies.removed.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, versions: payload.dependencies.versions.map { [$0.id, String($0.from_version), String($0.to_version), $0.updated_at] })
+            }
+        case .TaskReverted(let value):
+            switch value {
+            case .case1(let payload):
+                XCTAssertEqual(payload.entity_version, 1)
+                return .init(version: 1, added: [], removed: [], versions: [])
+            case .case2(let payload):
+                XCTAssertEqual(payload.entity_version, 2)
+                return .init(version: 2, added: payload.dependencies.added.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, removed: payload.dependencies.removed.map { [$0.profile_id, $0.dependent_id, $0.blocker_id] }, versions: payload.dependencies.versions.map { [$0.id, String($0.from_version), String($0.to_version), $0.updated_at] })
+            }
+        default: return nil
+        }
     }
 
     func testBatchEditKeepsPerTaskVersionsAndSharedChange() throws {
@@ -89,7 +238,7 @@ final class GeneratedContractTests: XCTestCase {
         try roundTrip(Operations.tasks_period_move.Input.Body.jsonPayload.self, json)
         try roundTrip(Operations.tasks_period_copy.Input.Body.jsonPayload.self, json)
         let task = #"{"id":"copied-1","profile_id":"personal","entity_version":1,"row_version":1,"title":"Copied","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":null,"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"done","occurrence":null,"created_at":"2020-01-01T00:00:00Z","updated_at":"2026-10-29T00:00:00Z","completed_at":"2020-01-02T00:00:00Z","deleted_at":null}"#
-        try roundTrip(Operations.tasks_period_copy.Output.Ok.Body.jsonPayload.self, task)
+        try roundTrip(Components.Schemas.TaskWrite.self, task)
     }
     func testGeneratedStreamSendsResumeHeader() async throws {
         let client = Client(serverURL: URL(string: "http://127.0.0.1:4310")!, transport: ResumeTransport())
@@ -129,8 +278,8 @@ final class GeneratedContractTests: XCTestCase {
 
     func testResponseAndNestedNullableOccurrenceSurviveGeneratedCoding() throws {
         let json = #"{"id":"task-1","profile_id":"work","entity_version":1,"row_version":7,"title":"Nested fields","description":null,"project_id":null,"priority":"P3","scheduled_at":null,"due_at":{"kind":"date","date":"2026-10-28"},"energy":null,"estimate_min":null,"source":"manual","tags":[],"status":"open","occurrence":{"id":"occ-1","series_id":"series-1","date":"2026-10-27","time":null},"created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","completed_at":null,"deleted_at":null}"#
-        try roundTrip(Operations.tasks_period_create.Output.Ok.Body.jsonPayload.self, json)
-        try roundTrip(Operations.tasks_period_edit.Output.Ok.Body.jsonPayload.self, json)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
+        try roundTrip(Components.Schemas.TaskWrite.self, json)
         try roundTrip(Operations.tasks_period_show.Output.Ok.Body.jsonPayload.self, json)
     }
 
@@ -149,7 +298,7 @@ final class GeneratedContractTests: XCTestCase {
 #endif
         }
         let anonymous = todoClient(server: url, credential: "")
-        let session = try await anonymous.signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json
+        let session = try await anonymous.signIn_period_signIn(body: .json(.init(passphrase: ProcessInfo.processInfo.environment["TODO_W06_PASSPHRASE"] ?? "scratch verification passphrase"))).ok.body.json
         let client = todoClient(server: url, credential: session.credential)
         let create = Data(#"{"title":"Generated nullable HTTP","description":"Keep these notes","project_id":null,"priority":"P2","scheduled_at":{"kind":"instant","utc":"2099-10-27T12:00:00Z","time_zone":"America/Bogota"},"due_at":{"kind":"date","date":"2099-10-28"},"energy":4,"estimate_min":25,"source":"manual","tags":[]}"#.utf8)
         let payload = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: create)
@@ -172,6 +321,38 @@ final class GeneratedContractTests: XCTestCase {
         for key in ["description", "project_id", "due_at", "scheduled_at", "energy", "estimate_min"] { XCTAssertTrue(clearedFields[key] is NSNull, key) }
         XCTAssertEqual(clearedFields["row_version"] as? Int, 3)
         XCTAssertEqual(clearedFields["title"] as? String, "Omitted fields preserved")
+        func graphTask(_ title: String, _ priority: String, _ energy: Int?, _ blockers: [String] = []) async throws -> Components.Schemas.TaskWrite {
+            var fields: [String: Any] = ["title": title, "priority": priority, "depends_on": blockers]
+            if let energy { fields["energy"] = energy }
+            let data = try JSONSerialization.data(withJSONObject: fields)
+            let input = try JSONDecoder().decode(Operations.tasks_period_create.Input.Body.jsonPayload.self, from: data)
+            return try await client.tasks_period_create(path: .init(profile: "work"), body: .json(input)).ok.body.json
+        }
+        let a = try await graphTask("Swift graph A", "P1", 4)
+        let b = try await graphTask("Swift graph B", "P2", 1)
+        let unknown = try await graphTask("Swift graph unknown", "P3", nil)
+        let root = try await graphTask("Swift graph root", "P4", 2, [a.id, b.id, unknown.id])
+        let c = try await graphTask("Swift graph C", "P1", 4, [root.id])
+        let d = try await graphTask("Swift graph D", "P2", 1, [root.id])
+        let graph = try await client.tasks_period_graph(path: .init(profile: "work", task: root.id)).ok.body.json
+        let typed = try XCTUnwrap(graph.value1)
+        XCTAssertEqual(typed.orientation, .mixed)
+        XCTAssertEqual(typed.topological_order, [a.id, b.id, unknown.id, root.id, c.id, d.id])
+        XCTAssertEqual(typed.ancestors, [a.id, b.id, unknown.id])
+        XCTAssertEqual(typed.descendants, [c.id, d.id])
+        XCTAssertEqual(typed.lightest_next, [b.id, a.id, unknown.id])
+        for node in typed.nodes {
+            XCTAssertEqual(Set(try fields(node).keys), Set(["mermaid_id", "task", "in_degree", "out_degree", "ready", "blocked", "depth", "remaining_energy"]))
+        }
+        let graphFields = try fields(graph)
+        XCTAssertEqual(graphFields["ancestors"] as? [String], [a.id, b.id, unknown.id])
+        XCTAssertEqual(graphFields["descendants"] as? [String], [c.id, d.id])
+        XCTAssertEqual(graphFields["lightest_next"] as? [String], [b.id, a.id, unknown.id])
+        let singleGraph = try await client.tasks_period_graph(path: .init(profile: "work", task: cleared.id)).ok.body.json
+        let single = try XCTUnwrap(singleGraph.value2)
+        XCTAssertEqual(single.ancestors, [])
+        XCTAssertEqual(single.descendants, [])
+        XCTAssertEqual(single.lightest_next, [cleared.id])
     }
 
     func testEveryHistoryEventKindSurvivesGeneratedCoding() throws {
@@ -183,7 +364,7 @@ final class GeneratedContractTests: XCTestCase {
         let expected = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [NSDictionary])
         XCTAssertEqual(try JSONSerialization.jsonObject(with: encoded) as? NSArray, expected as NSArray)
         let kinds = Set(expected.compactMap { ($0["event"] as? NSDictionary)?["kind"] as? String })
-        XCTAssertEqual(kinds, ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "ReminderFired", "ProfileDeleted", "ProfileDeletionRejected", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
+        XCTAssertEqual(kinds, ["AuthAttemptRejected", "AuthChanged", "DatabaseRestored", "DependencyAdded", "DependencyRemoved", "ReminderFired", "ProfileDeleted", "ProfileDeletionRejected", "TaskAttemptRejected", "TaskCancelled", "TaskCompleted", "TaskCreated", "TaskDeleted", "TaskEdited", "TaskHistoryRedacted", "TaskMovedIn", "TaskMovedOut", "TaskPurged", "TaskReopened", "TaskReverted"])
         XCTAssertTrue(expected.contains { ($0["event"] as? NSDictionary)?["original_kind"] as? String == "TaskPurged" })
         XCTAssertTrue(expected.contains { $0["outcome"] as? String == "rejected" })
     }

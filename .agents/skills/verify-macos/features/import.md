@@ -56,6 +56,12 @@ the filename in both layouts, leaving Cancel and Apply in the preview footer.
 `import-layout.json` records complete/partial row counts, summary height and
 button targets; renders assert at least four whole rows and 28 pt targets.
 
+Nested Dependency and Conflict refusals keep their structured human reason on
+the caption line and their actual exit pair on the last line. The mixed-refusal
+preview captures an ordinary rejection beside a nested Dependency rejection.
+Its literal projection test excludes agent copy. Blocker and follow-up recovery
+remain available through the row's context menu in Compact.
+
 External ids survive Move and are cleared by Copy into another Profile. A live
 TodoModel test attempts a Move into an existing external id, requires the server's
 named Profile and id message in the focused transfer feedback, preserves the

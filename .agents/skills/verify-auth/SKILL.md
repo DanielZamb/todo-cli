@@ -9,6 +9,25 @@ Generated with `create-verification-skill`.
 C04 exposes a domain library. CLI and HTTP adapters belong to later units.
 Read the [feature map](features/README.md) before selecting coverage.
 
+## Read lease exit window
+
+`pnpm --filter @todo/domain test read-lifetime.test.ts` covers retained query
+authorities in a new native transaction before the prior transaction runner
+returns. Commit, rollback, thrown callback, attachment cleanup and grouped
+Discovery nesting must all refuse the old value with StoreError and no Task.
+Inner scopes remain usable until the outer callback ends. Failed admission
+still runs final cleanup, and a new request on the same tick has a fresh lease.
+The root lease closes in the checked callback's finally, before native COMMIT
+or any post-commit work; the final fallback also handles failed admission.
+
+With exclusive use of this checkout, run
+`bun .agents/skills/verify-auth/scripts/check-read-lease-window.mjs <evidence>`.
+It temporarily restores the late-close defect in auth.ts: all five exit-window
+cases must fail their literal StoreError/no-row expectation. A separate mutation
+removes failed-admission cleanup and must fail its literal clear-count assertion.
+The helper restores exact source bytes in finally and reruns all scope controls.
+No compiler, test, or builder may read this checkout during those mutations.
+
 ## Launch
 
 Resolve the checkout with `git rev-parse --show-toplevel`. From that checkout:
@@ -34,7 +53,7 @@ account (`apps/cli/test/macos-password.test.ts`), never with a real password.
 
 Run `bun --version`, `command -v sqlite3`, and
 `pnpm --filter @todo/domain typecheck` in the checkout. The driver's first
-public `openStore` call requires schema version 6, WAL, a 5000ms busy timeout,
+public `openStore` call requires schema version 7, WAL, a 5000ms busy timeout,
 and literal `0600` modes on the database, WAL and SHM files. It refuses a
 preexisting database or a path outside its own temporary directory.
 When anything fails, inspect `commands.log` in the selected evidence directory.
@@ -127,3 +146,58 @@ serialized seed clone, preserving per-minute rejection policy.
 [verify-discovery](../verify-discovery/SKILL.md) additionally compiles and drives
 real CLI/HTTP action-attribution parity. No public read/profiles call is nested
 inside resolution, and no caller learns foreign metadata.
+
+## Bound read requests
+
+`pnpm --filter @todo/domain test read-authorization.test.ts` drives mutation of
+caller-owned Profile, Task id and filter fields during the real credential-use
+callback and graph read. It also proves owned frozen fields, nominal query-port
+types and a Profile inserted between discovery and count reads. Counts must use
+the checked Profile set. The HTTP and overlapping-request controls are documented
+in [verify-server-api](../verify-server-api/SKILL.md).
+
+`pnpm --filter @todo/domain test authority-runtime.test.ts` attempts clone,
+spread, assignment, prototype and JSON copies, subclasses, a Proxy and mutation
+at every query port. Each must fail before returning rows. Genuine authorities
+also carry their originating database identity. Creation is private to the
+credential-check module; ports inspect private fields, kind and database before
+using any Profile or parsed field. Optional `TODO_AUTHORITY_EVIDENCE` writes the
+complete attempt matrix to an ignored local JSON path.
+
+## Durable repeated refusals
+
+The normal Launch command also runs scripts/verify-durable.sh. Set
+TODO_CLI_BINARY, TODO_SERVER_BINARY and optionally TODO_AUTH_DENIAL_BINARY to
+source-matching scratch binaries to reuse builds. Run that helper independently
+with a fresh absolute evidence directory for a focused proof. It builds
+packages/domain/scripts/verify-durable-denial.ts and drives the real domain API,
+then check-cross-process.mjs drives the compiled CLI/server process matrix.
+Both use only fresh scratch data; HTTP ports come from owned listen logs.
+
+The literal process counts are [1,1,1,1,1,1] for CLI/CLI, server/server,
+CLI/server, server/CLI, server restart and two ready CLI processes plus a server
+request released over an IPC barrier. Every CLI refusal exits 3 and HTTP returns
+401. The domain driver proves Snapshot restore re-recording, four key changes,
+ten wrong-passphrase rows and one locked row, Profile deletion/name reuse and
+Purge retention. Its two race workers read clocks 50 ms apart; a later-clock
+process committing first must not let the earlier-clock refusal append (one
+row in race.json and clock-skew.json). Its barrier proves 5,000
+preceding-minute rows do not hide the first refusal. An older-than-horizon row
+deliberately permits a second refusal; a single large row (over 4,096 bytes)
+in the same place does not, because only every 257th large row the walk meets
+is read (the domain tests pin 256 and 257). verify-walk-sqlite.ts
+(TODO_WALK_SQLITE_BINARY to reuse) zeroes every overflow page of 20 large rows
+in the SQLite the compiled binary loads: octet_length() and the production walk
+still answer, while length() and any column stored after event fail as
+malformed. A second phase zeroes 598 of 600 large rows, all but the two the
+walk samples: the walk still answers; zeroing a sampled row too fails. The process matrix starts a case in the
+next minute when fewer than 15 seconds remain. Bench mode
+(`driver bench <dir> <evidence> <scenario>`) times the first refusal, a burst
+of 1,000 and each rejection transaction for quiet, null, whole-window,
+prior-before/after and import-before/after; it is a measurement, not a gate.
+See features/history.md and docs/decisions/ui-speed/durable-denial.md.
+
+Doctor requires both compiled --version contracts to match this checkout.
+Evidence contains domain/proof.json, processes/parity.json and commands.log.
+Cleanup removes only newly created scratch state and awaits owned children;
+evidence survives. No native app, Keychain or launchd is needed.

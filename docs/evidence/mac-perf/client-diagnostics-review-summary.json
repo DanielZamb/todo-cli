@@ -1,0 +1,150 @@
+{
+  "result": {
+    "result": "PASS",
+    "errors": 0,
+    "refreshes": 30,
+    "requests_recorded": 120,
+    "tasks": 178,
+    "keychain_called": false,
+    "app_launched": false,
+    "signed": false,
+    "pushed": false,
+    "native_input_proven": false,
+    "scratch_removed": true,
+    "owned_server_stopped": true
+  },
+  "watchdog-rate": {
+    "active_ticks": 76,
+    "hidden_ticks": 2,
+    "inactive_ticks": 2,
+    "window_ms": 1200
+  },
+  "journal-day-retention": {
+    "active_hour_bytes": 2565472,
+    "active_seconds": 3600,
+    "completed_actions": 241,
+    "diagnostics_open": false,
+    "diagnostics_polls_per_minute": 0,
+    "dropped": 0,
+    "evening_interaction_preserved": true,
+    "health_polls_per_minute": 0,
+    "idle_hour_bytes": 18005.333333333332,
+    "idle_seconds": 43200,
+    "journal_limit_per_file": 67108864,
+    "refreshes": 120,
+    "requests": 960,
+    "superseded": 300,
+    "workload": "synthetic metadata replay, not UI latency or an observed owner hour"
+  },
+  "journal-day-retention-open": {
+    "active_hour_bytes": 2619996,
+    "active_seconds": 3600,
+    "completed_actions": 241,
+    "diagnostics_open": true,
+    "diagnostics_polls_per_minute": 52,
+    "dropped": 0,
+    "evening_interaction_preserved": true,
+    "health_polls_per_minute": 93,
+    "idle_hour_bytes": 18006.666666666668,
+    "idle_seconds": 43200,
+    "journal_limit_per_file": 67108864,
+    "refreshes": 120,
+    "requests": 9660,
+    "superseded": 300,
+    "workload": "synthetic metadata replay, not UI latency or an observed owner hour"
+  },
+  "live": {
+    "enabled_refreshes": 15,
+    "enabled_requests": 120,
+    "errors": 0,
+    "keychain_called": false,
+    "refreshes": 30,
+    "tasks": 178,
+    "timings": [
+      {
+        "enabled": 0,
+        "iteration": 0,
+        "layout_ms": 285.6117916664971,
+        "load": 8.97314453125,
+        "ms": 167.4742083334877
+      },
+      {
+        "enabled": 1,
+        "iteration": 0,
+        "layout_ms": 179.49483333336502,
+        "load": 8.97314453125,
+        "ms": 162.13358333334327
+      },
+      {
+        "enabled": 1,
+        "iteration": 1,
+        "layout_ms": 215.29612500012263,
+        "load": 8.49462890625,
+        "ms": 191.0674166665558
+      },
+      {
+        "enabled": 0,
+        "iteration": 1,
+        "layout_ms": 173.59891666660587,
+        "load": 8.49462890625,
+        "ms": 158.10108333334938
+      },
+      {
+        "enabled": 0,
+        "iteration": 2,
+        "layout_ms": 182.15870833341796,
+        "load": 8.49462890625,
+        "ms": 149.05362500007868
+      },
+      {
+        "enabled": 1,
+        "iteration": 2,
+        "layout_ms": 196.23329166665826,
+        "load": 8.49462890625,
+        "ms": 207.3422500000106
+      },
+      {
+        "enabled": 1,
+        "iteration": 3,
+        "layout_ms": 177.31454166664662,
+        "load": 8.49462890625,
+        "ms": 150.4035833334001
+      },
+      {
+        "enabled": 0,
+        "iteration": 3,
+        "layout_ms": 202.61116666688395,
+        "load": 8.49462890625,
+        "ms": 146.80266666664465
+      },
+      {
+        "enabled": 0,
+        "iteration": 4,
+        "layout_ms": 172.99404166669774,
+        "load": 8.49462890625,
+        "ms": 194.06883333340375
+      },
+      {
+        "enabled": 1,
+        "iteration": 4,
+        "layout_ms": 177.73712500002148,
+        "load": 8.49462890625,
+        "ms": 164.64937500018095
+      }
+    ],
+    "ui_input_proven": false
+  },
+  "scope": "Release headless production model, transport, journal and unordered Diagnostics content; no native pointer or presentation proof",
+  "cap": {
+    "files": 2,
+    "bytes_per_file": 67108864,
+    "preallocated": false,
+    "routine_records_cannot_rotate": true
+  },
+  "capture_names": [
+    "client-full-light.png",
+    "client-full-dark.png",
+    "client-compact-light.png",
+    "client-compact-dark.png"
+  ]
+}

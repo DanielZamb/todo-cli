@@ -21,7 +21,7 @@ const evidence = mkdtempSync(join(base, "sensitivity-"));
 writeFileSync(join(evidence, "store-original.ts"), original);
 const guard =
   'if (!same(current, change.before)) throw new Rejection("conflict");';
-const apply = "        applyEvent(this.db, event);";
+const apply = "        applyEvent(this.db, event, input.profile);";
 assert.equal(
   original.split(guard).length,
   3,
@@ -39,7 +39,7 @@ const variants = [
     name: "missing-edit-projection",
     source: original.replace(
       apply,
-      '        if (event.kind !== "TaskEdited") applyEvent(this.db, event);',
+      '        if (event.kind !== "TaskEdited") applyEvent(this.db, event, input.profile);',
     ),
     expectedFailure: /ERR_ASSERTION|AssertionError/,
   },

@@ -1,3 +1,7 @@
+## Current integrated mapping
+
+Immutable product `7d947f917d1895df45c78f9f9df31638a9f3f2b8` includes both DAG clients, the two-part Delete/batch contract amendment and main PR #12 at `2c488fc72fe264741d5d8db8f90b441bf426af32`. The contract is `78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289`. Core graph and AtomicCAS source is unchanged. Pre-renewal compiled mutation, matcher, cache and Discovery controls passed with exact restores. The complete integrated qualification is still pending at this mapping commit. Model bounds and native holds are unchanged.
+
 # Ready/retry fixture review
 
 The original final-clean failure and the actual HTTP/SSE reproduction are kept.
@@ -154,8 +158,9 @@ and invalidates more aggressively than the model's optional Editing state.
 Renderer request invalidates on signIn/signOut, signedIn notices invalidate,
 and endAuthentication handles signedOut replies/notices, clears discovery and
 editor/list state. A reload notice also invalidates discovery. Model SignOut is
-the accepted authentication-invalidating event; native Session persistence and
-server-side sign-out completion are outside it.
+the committed authentication-invalidating event. SignOutStart and SignOutFail
+model the request window and a failed or cancelled sign-out. Native Session
+persistence and the server's revocation itself are outside the model.
 
 `show` checks the *same object* is the current applied snapshot, that it is a
 lookup reply and that it contains the exact match object. It captures Profile/id
@@ -215,8 +220,11 @@ or reads.lookup(prefix). Encoding/decoding constructs a local snapshot. Both
 success and catch call canPublishDiscovery before changing visible state.
 That guard checks signedIn, live connection, cancellation, credentialEpoch,
 generation, dialog, requestedIdentity and the current Lookup prefix. Success
-assigns snapshot then phase without suspension. Catch assigns human error/phase
-and passes the captured epoch to handleAuthorization without suspension.
+assigns snapshot then phase without suspension. Catch first passes the captured
+epoch to handleAuthorization when it is still current (a 401 ends the Session
+even for a closed or superseded dialog), then calls canPublishDiscovery before
+assigning human error/phase, all without suspension. An expired Session fails
+that guard, so nothing is published.
 Retry requires Error/Offline and the exact saved submitted identity/prefix;
 an edit invalidates it. Directory Retry needs no prefix.
 
@@ -224,7 +232,8 @@ showDiscoveryMatch accepts only a current snapshot and a contained match. It
 creates DiscoveryShowIntent with a fresh UUID and calls navigate. The UUID
 prevents an old cancelled callback becoming valid after another Show on the
 same row. This is stricter than the finite model. canShowDiscovery checks that
-same intent, epoch, signedIn/live state and cancellation.
+same intent, epoch, signedIn/live state and cancellation. Its catch hands a
+current-epoch 401 to handleAuthorization before that guard.
 
 The actual `DiscoveryView.swift` alert and the fallback `AppViews.swift` alert
 both use `presenting: model.pendingNavigation`. Their false isPresented setter
@@ -266,16 +275,25 @@ replaceCredential calls discovery.credentialChanged, disconnects, increments
 importGeneration, parseGeneration, historyGeneration and seriesGeneration,
 clears structured errors, then installs the credential. disconnect increments
 the Profile lifecycle generation and invalidates search. signedIn=false also
-invalidates discovery. signOut invalidates before its network await and uses
-its captured epoch before deleting the vault or clearing state afterward.
+invalidates discovery. signOut calls closeDiscovery and disconnect before its
+network await (model SignOutStart) and keeps the credential epoch. Only after
+the server confirms revocation, and only while its captured epoch is current,
+does it delete the vault, call replaceCredential("") and set signedIn=false
+(model SignOut). This completes even if the Task was cancelled after the
+reply. A failed or cancelled request (model SignOutFail) changes no epoch and
+reconnects the still-signed-in model; a 401 reply goes through expireSession
+(model SignOut). Restore and signIn cannot start during sign-out because it
+holds busy.
 restore and signIn re-capture after installing their new credential and check
 before final publication.
 
-`isCurrentCredential` compares the one discovery credentialEpoch and Task
-cancellation. `handleAuthorization(error, credentialEpoch:)` requires its caller's
-captured epoch. `expireSession(credentialEpoch:)` checks it before disconnect,
-vault deletion, signedIn=false, credential replacement or the Session-ended
-notice. There is no epoch-less authorization overload. RootView displays TaskListView
+`isCurrentEpoch` compares the one discovery credentialEpoch; `isCurrentCredential`
+adds Task cancellation. `handleAuthorization(error, credentialEpoch:)` requires its caller's
+captured epoch. `expireSession(credentialEpoch:)` compares that epoch alone (`isCurrentEpoch`)
+(candidate 7: not Task cancellation, since a 401 already on its way to a
+cancelled task still refuses the current credential, and retiring a
+credential changes the epoch) before disconnect, vault deletion,
+signedIn=false, credential replacement or the Session-ended notice. There is no epoch-less authorization overload. RootView displays TaskListView
 only while signedIn; otherwise it displays SignInView. Model openedTask is
 visible authorized navigation, not a claim that all private editor/draft memory
 is erased when the authentication view changes.
@@ -285,11 +303,11 @@ is erased when the authentication view changes.
 | followChanges | Captures epoch once; lifecycle/cancellation guards on stream and frames. SSE Unauthorized frame and thrown401 both pass that epoch to expireSession. Nested404-recovery and sleep catches also check it. |
 | refresh | Captures epoch, guards catch before human error/authorization, then also checks lifecycle, latest request and complete search identity. Credential replacement invalidates lifecycle/search generations for success. The c488 checkpoint held TaskSearch renewal; the final merged renewal is recorded above. |
 | discoverProfiles and refreshConflictDefinitions | Capture epoch before profiles or Project/Tag awaits; check before metadata publication and before error handling. |
-| parseDraft | Captures parseGeneration before sleep/parse awaits; replacement increments it. Both parsed result and error check the captured generation and cancellation. It does not call expireSession. |
+| parseDraft | Captures parseGeneration before sleep/parse awaits; replacement increments it. Both parsed result and error check the captured generation and cancellation. Its catch calls authorize(_:epoch:profile:) first, so a 401 under the still-current epoch and Profile reaches expireSession; nothing else in it does. |
 | loadHistory | Captures historyGeneration, lifecycle generation, Profile and editor id before the read; checks on both branches. Replacement increments both generations. It does not call expireSession. |
-| openSeries | Captures epoch and seriesGeneration before Task/History traversal; final success uses lifecycle-related series/Profile/editor guards, catch checks epoch then those guards before handleAuthorization. |
+| openSeries | Captures epoch and seriesGeneration before Task/History traversal; final success uses lifecycle-related series/Profile/editor guards, catch calls authorize(_:epoch:profile:) (current epoch and Profile) first, then checks epoch and the series/Profile/editor-opening guards before publishing editorError. |
 | runImport | Captures epoch/importGeneration/Profile before HTTP; replacement increments importGeneration; success checks Profile/importGeneration, catch checks epoch as well before structured error/authorization. |
-| create/save/write/transition/deleteTask/saveSeries/deleteProfile | Capture epoch before network operations; catches check it and pass it explicitly to handleAuthorization. The awaited Save-to-Show path additionally rechecks the exact Show intent after save. This mapping does not claim all unrelated write-success state is modeled. |
+| create/save/write/transition/deleteTask/saveSeries/deleteProfile | Capture epoch before network operations; catches pass it explicitly to handleAuthorization, through authorize(_:epoch:profile:) where the completion belongs to a surface instance (quick-add, Import, Delete, Batch edit, Attachment batch, Dependency batch, editor Attachment), before the instance guard. The awaited Save-to-Show path additionally rechecks the exact Show intent after save. This mapping does not claim all unrelated write-success state is modeled. |
 | AttachmentModel, BatchEdit, AttachmentBatch | Capture epoch before reads/writes; check it in publication/catch alongside Profile/editor/draft guards; pass it to handleAuthorization. |
 | load/create/preview/confirm Snapshots | Capture epoch; check after network awaits and before error publication. Snapshot reload is outside the finite discovery model. |
 
@@ -337,3 +355,11 @@ for L1's final integration. That checkpoint made no future-SEC coverage claim.
 The final merged review and single renewal are recorded at the top of this map
 and in verify-task-search-formal. AtomicCAS closure at 81c remains parent-owned.
 Final same-SHA E seats remain parent-owned after actual frozen checks.
+
+## Reconnect retry from Offline
+
+When the stream's ready event follows an Offline period, followChanges calls
+requestDiscovery(retry: true) if the discovery phase is Offline. It issues the
+same requestedIdentity through the same generation, dialog and credential
+guards as Retry. For publication, model Retry covers it, with the Offline
+phase treated as the model's Error phase.

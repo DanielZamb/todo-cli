@@ -25,3 +25,8 @@ A connected owner Session receives ProfileDeleted for its current Profile before
 the next authorization check closes that stream. A reconnect to the deleted
 Profile returns the shared 404. Scoped Tokens fail after revocation. The compiled
 verify-profiles helper captures the notice in profile-deleted.sse.
+
+Task dependency event compatibility is also driven by the headless
+[contract recipe](../../verify-macos/features/contract.md#dependency-event-compatibility).
+It observes DependencyAdded and DependencyRemoved from compiled domain writes
+alongside existing operations on the real scratch SSE connection.

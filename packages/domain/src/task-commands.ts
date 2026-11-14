@@ -1,7 +1,7 @@
 import { Schema, Struct } from "effect";
 import { AttachmentInput } from "./attachments.ts";
-import { Recurrence, TaskDetails } from "./entities.ts";
-import { ProfileId, Sequence, TagId, Version } from "./ids.ts";
+import { Recurrence, Task, TaskDetails } from "./entities.ts";
+import { ProfileId, Sequence, TagId, type TaskId, Version } from "./ids.ts";
 import {
   DescriptionInput,
   ExternalIdInput,
@@ -9,9 +9,11 @@ import {
   limitedItems,
   NameInput,
   TagNamesInput,
+  TaskIdInput,
   TaskTimeInput,
   TitleInput,
 } from "./limits.ts";
+import type { Instant } from "./time.ts";
 
 const TaskInput = Schema.Struct({
   ...TaskDetails.fields,
@@ -27,6 +29,15 @@ const TaskInput = Schema.Struct({
 });
 export const TaskPatch = TaskInput.mapFields(Struct.map(Schema.optionalKey));
 export const CreateTask = Schema.Struct({
+  depends_on: Schema.optionalKey(
+    limitedItems(TaskIdInput, 13).check(
+      Schema.makeFilter(
+        (ids) =>
+          new Set(ids).size === ids.length ||
+          "Each Dependency must occur once.",
+      ),
+    ),
+  ),
   attachments: Schema.optionalKey(
     limitedItems(AttachmentInput, inputLimits.attachmentsPerTask),
   ),
@@ -81,3 +92,36 @@ export const EditSeries = Schema.Struct({
   recurrence: RecurrenceEditInput,
 });
 export type EditSeries = typeof EditSeries.Type;
+
+export function resolveTaskCreation(
+  input: CreateTask,
+  profile: ProfileId,
+  id: TaskId,
+  occurred_at: Instant,
+  attachments?: Task["attachments"],
+): Task {
+  const { attachments: _references, ...facts } = input;
+  return Schema.decodeUnknownSync(Task)({
+    description: null,
+    project_id: null,
+    priority: "P3",
+    scheduled_at: null,
+    due_at: null,
+    energy: null,
+    estimate_min: null,
+    source: "manual",
+    tags: [],
+    ...facts,
+    ...(attachments === undefined ? {} : { attachments }),
+    id,
+    profile_id: profile,
+    entity_version: 1,
+    row_version: 1,
+    status: "open",
+    occurrence: null,
+    created_at: occurred_at,
+    updated_at: occurred_at,
+    completed_at: null,
+    deleted_at: null,
+  });
+}

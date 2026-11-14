@@ -71,8 +71,8 @@ seven failing mutants and restored safety. It is not a source-refinement theorem
 The compiled lifecycle drive warms HTTP search, edits through the second-process
 CLI, Reverts over authenticated HTTP, restores Version 1, writes different text at
 Version 2, Deletes, Purges and restores again. Every query compares full ordered
-public Task JSON with the immutable uncached CLI. The current CLI has no Revert
-command. The final restore requires no surviving Task. The owned server must exit
+public Task JSON with the immutable uncached CLI. Revert is exercised through authenticated HTTP here; verify-dag also covers
+the CLI revert command. The final restore requires no surviving Task. The owned server must exit
 before the PASS receipt is written.
 
 ## Storage and mapping
@@ -163,3 +163,53 @@ finite model tracks epoch equality bits rather than integer lifetime counters.
 It is not an unbounded source-refinement theorem. Frozen latency evidence remains
 measured cc5777/source2eb2, never relabeled as the later fixed source. No retiming
 is authorized for this review-fix round.
+
+## DAG merge oracle
+
+When a merged candidate adds graph-aware Task filtering, prepare its uncached
+oracle with `build-baseline.mjs <full-merged-SHA> --uncached`. The capture changes
+only the two preparation callbacks in shared list/readTasks to the existing
+uncached taskSearchExecution preparation. Its manifest records both original
+and instrumented hashes and refuses a different number of sites. Matching,
+budget charging, yielding, graph ordering, Tag projection and schemas retain
+the exact merged source. No performance measurement or timing claim is made.
+The legacy SEC-plus-Tag preparation mode remains available for historical checks.
+
+The cabf4866/DAG merge renews only reviewed graph-aware read and observer
+composition after the seven cache and three observer source controls fail their
+literal assertions and restored copies pass. CLI defect classification is
+separately driven through the compiled artifact. Historical cache timing results
+remain on their original inputs and are not remeasured or relabelled here.
+
+The SERVER-READS authorization revision retains epoch capture before auth in
+both list helpers. Their preparation token is now named `search`; the immutable
+uncached oracle bypass recognizes exactly those same two callbacks. Caller
+Profile/filter ownership changes around the token do not change the matcher,
+runner, admission model, accounting or erasure/observer bodies. Fresh generated
+and observer controls plus strict restoration precede the reviewed source-map
+renewal; the complete command must then pass for the named product.
+
+The full immutable 219749f2 command exited 0; its receipt is
+`docs/evidence/perf-cache/verify-Xh1k3D/result.json`. This includes the finite
+admission model and real-code controls, compiled lifecycle, erasure and CLI
+defect/refusal drives. It makes no new native or unbounded-safety claim.
+
+## Stream wake integration renewal
+
+Immutable merged product a45ddeaa6d00b1fc62560f70be48c2e0e1202495 renews only the
+two hygiene rows. server.ts adds the wake: cache hygiene still receives the
+undecorated store and is still forked before the scheduler. The hygiene
+observer's parameter narrows to CacheHygieneReads; its body is byte-identical.
+Before renewal, check-hygiene.mjs on a74f66c0 (same product bytes) passed clean,
+failed all three observer controls with their witnesses, restored, typechecked
+and stopped only at the stale hash. The uncached oracle is rebuilt for this
+product. The complete command's exit is in
+docs/decisions/ui-speed/stream-wake-integration.md.
+
+## c9 server integration renewal
+
+Immutable merged product 0bd8476df7d7147ea355b418346b57d33f403aee. No covered or
+hygiene file changed from a45ddeaa: the durable refusal touches only auth.ts and
+the new rejection-history.ts, neither mapped here. The uncached oracle is rebuilt
+for this product, and the complete command's exit is in
+docs/decisions/ui-speed/c9-server-integration.md.

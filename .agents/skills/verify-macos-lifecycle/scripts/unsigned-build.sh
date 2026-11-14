@@ -9,6 +9,7 @@ mkdir -p "$evidence"
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/todo-w03-build-XXXXXX")
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 xcodebuild -project "$root/apps/macos/Todo.xcodeproj" -scheme Todo -configuration Debug -destination platform=macOS -derivedDataPath "$scratch/DerivedData" -disableAutomaticPackageResolution build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO EXPANDED_CODE_SIGN_IDENTITY=- > "$evidence/build.log" 2>&1
+node "$root/apps/macos/scripts/graph-resources.mjs" "$scratch/DerivedData/Build/Products/Debug/Todo.app/Contents/Resources/graph-browser" --check-only > "$evidence/graph-resources.json"
 python3 - "$scratch" "$evidence" <<'PY'
 import json
 from pathlib import Path
@@ -30,7 +31,7 @@ assert "runtime" not in metadata.stderr.lower()
     buildSucceeded=True, codeSigningAllowed=False, explicitIdentity="-", codeSignBuildActions=0,
     helperPath="Contents/Resources/Server/todo-server", helperCount=len(helpers),
     helperBytes=helpers[0].stat().st_size, helperHardened=False, appLaunched=False,
-    xctestRan=False, scratchRemovedByShell=True), indent=2))
+    xctestRan=False, scratchRemovedByShell=True, graphResources=json.loads((evidence / 'graph-resources.json').read_text())), indent=2))
 PY
 rm -rf "$scratch"
 [ ! -e "$scratch" ]

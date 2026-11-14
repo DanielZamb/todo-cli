@@ -13,6 +13,7 @@ struct CommittedOperation: Decodable {
     struct OperationPayload: Decodable {
         var profile: ProfileName? = nil
         let kind: String
+        var original_kind: String? = nil
         let task_id: String?
         let title: String?
         let due_at: String?

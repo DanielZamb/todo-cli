@@ -15,7 +15,7 @@ import time
 import urllib.request
 
 root = Path(__file__).resolve().parents[3]
-resolved_paths = subprocess.check_output(['git', 'ls-files', '--', ':(glob)**/Package.resolved', 'Package.resolved'], cwd=root, text=True).splitlines()
+resolved_paths = subprocess.check_output(['git', 'ls-files', '--', ':(glob)**/Package.resolved', 'Package.resolved', 'pnpm-lock.yaml'], cwd=root, text=True).splitlines()
 evidence = Path(sys.argv[1])
 snapshots_only = '--snapshots-only' in sys.argv[2:]
 shared_receipt = os.environ.get('TODO_F13_SERVER_RECEIPT')
@@ -24,13 +24,17 @@ if not evidence.is_absolute() or evidence.exists():
     raise SystemExit('Pass a fresh absolute evidence directory')
 subprocess.run([str(root / 'scripts/disk-guard.sh')], check=True)
 evidence.mkdir(parents=True)
-source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift'] for path in (root / 'apps/macos').glob(pattern))
+source_files = sorted(path for pattern in ['Sources/*.swift', 'StateTests/*.swift', 'Tests/*.swift', 'DesignSnapshots/*.swift', 'API/Sources/TodoAPI/*.swift', 'API/Sources/TodoAPI/GeneratedSources/*.swift', 'scripts/*.py', 'scripts/*.mjs', 'scripts/*.ts', 'scripts/*.rb'] for path in (root / 'apps/macos').glob(pattern))
 (evidence / 'source-provenance.json').write_text(json.dumps({
     'head': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
     'sources': {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest() for path in source_files}
 }, indent=2) + '\n')
 sys.path.insert(0, str(root / '.agents/skills/verify-macos-lifecycle/scripts'))
 from owned_process import OwnedCommands
+sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import state_package  # the state package with the in-memory vault, and the Keychain guard
+sys.path.insert(0, str(root / '.agents/skills/verify-macos/isolation'))
+import isolation  # candidate 10, group C: compiled Todo binaries run under the reference profile
 
 unsafe = evidence / 'command-unsafe'
 owned = OwnedCommands(unsafe)
@@ -61,7 +65,9 @@ def scratch_directory():
     finally:
         with deferring_cancellation():
             if not unsafe.exists():
+                retired = [{'path': str(path.relative_to(directory)), 'bytes': path.stat().st_size} for path in directory.rglob('*') if path.is_file() and not path.is_symlink() and (path.name in ['todo', 'server', 'seed', 'search-recovery-seed'] or path.name.endswith('.bun-build'))]
                 shutil.rmtree(directory)
+                (evidence / 'retired-runtime.json').write_text(json.dumps({'removed': not directory.exists(), 'files': retired, 'logicalBytes': sum(row['bytes'] for row in retired)}, indent=2) + '\n')
 
 def stop(process):
     with deferring_cancellation():
@@ -87,6 +93,8 @@ with scratch_directory() as temporary:
         return result.returncode
 
     def run(command, name, environment=env, timeout=600):
+        if command[0] in ['swift', 'xcrun', 'bun']:
+            subprocess.run(['sh', str(root / 'scripts/disk-guard.sh')], cwd=root, check=True)
         swift = command[:2] in [['swift', 'build'], ['swift', 'run'], ['swift', 'test']]
         if swift:
             if '--disable-automatic-resolution' not in command:
@@ -109,9 +117,12 @@ with scratch_directory() as temporary:
         if code or packages:
             raise RuntimeError(f'{name} failed: command exit {code}, Package.resolved diff exit {packages}')
 
+    isolated = {}
     try:
         if shared:
             url = shared['url']
+            # A shared server (snapshots only) was started, and isolated, by its own runner.
+            isolation.write_receipt(evidence, {}, None, reason='a shared server from another runner; this run spawns no Todo binary')
         else:
             for override, name, source in [('TODO_SERVER_BINARY', 'server', 'apps/server/src/main.ts'), ('TODO_SEED_BINARY', 'seed', 'apps/server/scripts/seed-verification.ts')]:
                 if binary := (os.environ.get(override) or (os.environ.get('TODO_PROVISIONER_BINARY') if name == 'seed' else None)):
@@ -123,11 +134,23 @@ with scratch_directory() as temporary:
                     (evidence / 'commands.json').write_text(json.dumps(actions, indent=2) + '\n')
                 else:
                     run(['bun', 'build', '--compile', str(root / source), '--outfile', str(scratch / name)], f'compile-{name}.log')
-            run([str(scratch / 'seed'), str(scratch), 'diagnostics'], 'seed.log')
             if os.environ.get('TODO_CLI_BINARY'):
                 shutil.copy2(os.environ['TODO_CLI_BINARY'], scratch / 'todo')
             else:
                 run(['bun', 'build', '--compile', str(root / 'apps/cli/src/main.ts'), '--outfile', str(scratch / 'todo')], 'compile-cli.log')
+            # Candidate 10, group C: the server, seed and CLI run under the reference isolation profile
+            # (briefs/ISOLATION.md), after its five node controls. Each binary moves to real/ and a
+            # wrapper takes its name, so every spawn (here, and TODO_F10_CLI / TODO_W06_PROVISIONER in
+            # the tests) goes through the profile.
+            isolation_controls = isolation.controls(evidence)
+            for name in ['server', 'seed', 'todo']:
+                real = scratch / 'real' / name
+                real.parent.mkdir(exist_ok=True)
+                (scratch / name).rename(real)
+                isolation.wrap(real, scratch / name)
+                isolated[name] = {'real': real.resolve(), 'wrapper': scratch / name}
+            isolation.write_receipt(evidence, isolated, isolation_controls)
+            run([str(scratch / 'seed'), str(scratch), 'diagnostics'], 'seed.log')
             if not snapshots_only:
                 run([str(scratch / 'todo'), '--profile', 'zzz-c11-import', '--format', 'json', 'init'], 'import-profile.log', dict(env, TODO_DB=str(scratch / 'scratch.db')))
             server_env = dict(env, TODO_DB=str(scratch / 'scratch.db'), TODO_PORT='0')
@@ -153,8 +176,11 @@ with scratch_directory() as temporary:
             assert health == {'service': 'todo-server', 'contract': contract, 'build': health['build']}
         recovery_seed = os.environ.get('SEC_SEARCH_RECOVERY_SEED')
         if not recovery_seed and not snapshots_only:
-            run(['bun', 'build', '--compile', str(root / '.agents/skills/verify-task-search/seed-recovery.ts'), '--outfile', str(scratch / 'search-recovery-seed')], 'compile-search-recovery-seed.log')
-            recovery_seed = str(scratch / 'search-recovery-seed')
+            run(['bun', 'build', '--compile', str(root / '.agents/skills/verify-task-search/seed-recovery.ts'), '--outfile', str(scratch / 'real' / 'search-recovery-seed')], 'compile-search-recovery-seed.log')
+            # The recovery seed (a compiled Todo driver) runs under the profile too.
+            recovery_seed = str(isolation.wrap(scratch / 'real' / 'search-recovery-seed', scratch / 'search-recovery-seed'))
+            isolated['search-recovery-seed'] = {'real': (scratch / 'real' / 'search-recovery-seed').resolve(), 'wrapper': Path(recovery_seed)}
+            isolation.write_receipt(evidence, isolated, isolation_controls)
         test_env = dict(env, TODO_DB=str(scratch / "scratch.db"), TODO_F10_CLI=str(scratch / "todo"), TODO_W06_SERVER=url, TODO_W06_RECEIPT=str(evidence / 'http-receipt.json'), TODO_W06_PROVISIONER=str(scratch / 'seed'), TODO_W06_SCRATCH=str(scratch))
         if recovery_seed:
             test_env['SEC_SEARCH_RECOVERY_SEED'] = recovery_seed
@@ -163,11 +189,16 @@ with scratch_directory() as temporary:
         build_path = Path(os.environ.get('TODO_SWIFT_BUILD_PATH', str(root / 'apps/macos/DerivedData/StateProof'))).resolve()
         if not build_path.is_relative_to(root / 'apps/macos'):
             raise RuntimeError('TODO_SWIFT_BUILD_PATH must stay under apps/macos')
-        run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--disable-automatic-resolution'] + (['--filter', 'snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer|generatedSnapshotRestoreCodingKeepsLiteralReportAndDryRun|snapshotHumanReasonsAndTaskPluralization|snapshotReloadResetsAndScopesReminderReceipts|snapshotHistoryIncludesEveryEventKindWithoutAnyOfRecursion'] if snapshots_only else []), 'state-tests.log', test_env)
+        # No test run links or calls the Keychain: build the mirrored package (in-memory vault),
+        # check its products, then run them (coordinator ruling, 2026-11-13).
+        package = state_package.prepare()
+        run(['swift', 'build', '--build-tests', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution'], 'state-build.log')
+        keychain = state_package.checked(build_path, evidence / 'keychain-guard.json')
+        run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution'] + (['--filter', 'snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer|generatedSnapshotRestoreCodingKeepsLiteralReportAndDryRun|snapshotHumanReasonsAndTaskPluralization|snapshotReloadResetsAndScopesReminderReceipts|snapshotHistoryIncludesEveryEventKindWithoutAnyOfRecursion'] if snapshots_only else []), 'state-tests.log', test_env)
         if not snapshots_only:
             diagnostics_env = dict(env, TODO_DB=str(scratch / 'scratch.db'), TODO_F10_CLI=str(scratch / 'todo'), TODO_DIAGNOSTICS_SERVER=url, TODO_DIAGNOSTICS_SNAPSHOT=str(evidence / 'diagnostics-live.json'))
-            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'DiagnosticsStateTests'], 'diagnostics-state-tests.log', diagnostics_env)
-            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', 'apps/macos', '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'GeneratedContractTests/testDiagnosticsReadPreservesNullableMetadata|GeneratedContractTests/testGeneratedStreamSendsResumeHeader'], 'diagnostics-contract-tests.log')
+            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'DiagnosticsStateTests'], 'diagnostics-state-tests.log', diagnostics_env)
+            run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'GeneratedContractTests/testDiagnosticsReadPreservesNullableMetadata|GeneratedContractTests/testGeneratedStreamSendsResumeHeader'], 'diagnostics-contract-tests.log')
         database_path = Path(shared['database']) if shared else scratch / 'scratch.db'
         if snapshots_only:
             receipt = json.loads((evidence / 'snapshots-http.json').read_text())
@@ -232,5 +263,5 @@ with scratch_directory() as temporary:
             (evidence / 'cleanup.json').write_text(json.dumps(dict(serverStopped=server.poll() is not None, scratchRemoved=True)) + '\n')
 assert not scratch.exists()
 assert (evidence / 'http-receipt.json').is_file()
-(evidence / 'result.json').write_text(json.dumps(dict(status='PASS', nativeAppLaunched=False, keychainAccessed=False, scratchRemoved=True)) + '\n')
+(evidence / 'result.json').write_text(json.dumps(dict(status='PASS', nativeAppLaunched=False, keychainLinked=keychain['keychainLinked'], keychainAccessed=keychain['keychainLinked'], keychainGuard='keychain-guard.json', scratchRemoved=True)) + '\n')
 print('PASS; headless Swift state and compiled scratch HTTP; evidence survived cleanup')

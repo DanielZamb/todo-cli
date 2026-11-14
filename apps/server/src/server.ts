@@ -19,17 +19,26 @@ import {
 } from "@todo/api";
 import {
   type AuthAction,
+  authorizedTaskLookupError,
+  batchDepend,
   batchEditTasks,
   ClientReads,
+  DependencyCommands,
+  type DependencyError,
   Discovery,
+  type EdgeCommandResult,
+  type EdgeReport,
   ExpectedVersion,
   exitStatus,
+  Instant,
   ProfileId,
   parseQuickAdd,
+  QuickAddInput,
+  readGraphQuery,
   SnapshotError,
-  type Task,
   TaskId,
   type TaskMutationKind,
+  type TaskWrite,
   taskLookupError,
 } from "@todo/domain";
 import { AttachmentCommands } from "@todo/domain/attachments";
@@ -64,14 +73,21 @@ import {
 import { translate } from "./errors.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
+import { StreamWake } from "./stream-wake.ts";
+import { streamWakeStore } from "./stream-wake-store.ts";
 import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
 
 const taskResult = (
   result: TaskCommandResult,
-): Effect.Effect<Task, NotFound | Conflict | InvalidTask> => {
+): Effect.Effect<
+  TaskWrite,
+  NotFound | Conflict | InvalidTask | DependencyError
+> => {
   switch (result.outcome) {
-    case "committed":
-      return Effect.succeed(result.task);
+    case "committed": {
+      const { outcome: _outcome, task, ...report } = result;
+      return Effect.succeed({ ...task, ...report });
+    }
     case "not-found":
       return Effect.fail(
         new NotFound({
@@ -82,6 +98,7 @@ const taskResult = (
         }),
       );
     case "rejected":
+      if (result.dependency_error) return Effect.fail(result.dependency_error);
       return result.reason === "conflict"
         ? Effect.fail(new Conflict({ latest: result.latest }))
         : Effect.fail(
@@ -92,6 +109,22 @@ const taskResult = (
           );
   }
 };
+
+const dependencyResult = (
+  result: EdgeCommandResult,
+): Effect.Effect<EdgeReport, Conflict | InvalidTask | DependencyError> =>
+  result.outcome === "success"
+    ? Effect.succeed(result.report)
+    : result.dependency_error
+      ? Effect.fail(result.dependency_error)
+      : result.reason === "conflict"
+        ? Effect.fail(new Conflict({ latest: result.latest }))
+        : Effect.fail(
+            new InvalidTask({
+              message:
+                "Dependency change rejected. Check the Task ids and current Version, then retry.",
+            }),
+          );
 
 const knownRoutes = Object.keys(OpenApi.fromApi(TodoApi).paths ?? {}).map(
   (path) => ({
@@ -141,6 +174,23 @@ export const rejectUnknownQuery = <E, R>(
     const unknown = [...new Set(url.searchParams.keys())].filter(
       (name) => !route?.parameters.has(name),
     );
+    const invalidDependencyFilter = ["ready", "blocked"].find(
+      (name) =>
+        url.searchParams.has(name) &&
+        (url.searchParams.getAll(name).length !== 1 ||
+          url.searchParams.get(name) !== "true"),
+    );
+    if (invalidDependencyFilter)
+      return Effect.succeed(
+        HttpServerResponse.jsonUnsafe(
+          {
+            generated_at: new Date().toISOString(),
+            code: "invalid_args",
+            message: `${invalidDependencyFilter} accepts true only. Use --blocked or --status for another set of Tasks.`,
+          },
+          { status: 400 },
+        ),
+      );
     return unknown.length
       ? Effect.succeed(
           HttpServerResponse.jsonUnsafe(
@@ -241,14 +291,17 @@ export const serverLayer = (options: {
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
-      const store = yield* Effect.acquireRelease(
+      const rawStore = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
-      const cacheHygiene = yield* taskSearchCacheHygiene(store);
+      const wake = new StreamWake();
+      const store = streamWakeStore(rawStore, wake);
+      const cacheHygiene = yield* taskSearchCacheHygiene(rawStore);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
       yield* scheduler(store).pipe(Effect.forkScoped);
       const commands = new TaskCommands(store);
+      const dependencies = new DependencyCommands(store);
       const missingTask = (
         params: { profile: ProfileId; task: TaskId },
         action: AuthAction,
@@ -267,6 +320,26 @@ export const serverLayer = (options: {
             ),
           );
         });
+      const missingBoundTask = (
+        selection: {
+          readonly profileInfo: {
+            readonly id: ProfileId;
+            readonly name: string;
+          } | null;
+          readonly fields: { readonly task_id: string };
+        } & (
+          | { readonly kind: "read"; readonly profile: ProfileId }
+          | { readonly kind: "absent" }
+        ),
+      ) =>
+        new NotFound(
+          authorizedTaskLookupError(
+            selection.profileInfo ?? undefined,
+            selection.fields.task_id,
+            "http",
+            selection.kind === "read" ? selection.profile : "",
+          ),
+        );
       const taskResultFor =
         (params: { profile: ProfileId; task?: TaskId }, action: AuthAction) =>
         (result: TaskCommandResult) =>
@@ -296,6 +369,8 @@ export const serverLayer = (options: {
         (error, { endpoint }) =>
           Effect.gen(function* () {
             const kinds = new Map<string, TaskMutationKind>([
+              ["depend", "DependencyAdded"],
+              ["undepend", "DependencyRemoved"],
               ["create", "TaskCreated"],
               ["createSeries", "TaskCreated"],
               ["edit", "TaskEdited"],
@@ -465,8 +540,12 @@ export const serverLayer = (options: {
             }),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
-              const image = yield* translate(
-                attachments.image(
+              const {
+                selection: authority,
+                image,
+                taskExists,
+              } = yield* translate(
+                attachments.imageRead(
                   {
                     credential: yield* BearerCredential,
                     profile: params.profile,
@@ -476,16 +555,9 @@ export const serverLayer = (options: {
                 ),
               );
               if (image) return image;
-              const task = yield* translate(
-                commands.get({
-                  credential: yield* BearerCredential,
-                  profile: params.profile,
-                  task_id: params.task,
-                }),
-              );
               return yield* Effect.fail(
-                task === null
-                  ? yield* missingTask(params, "read")
+                !taskExists
+                  ? missingBoundTask(authority)
                   : new NotFound({ message: "Managed image not found" }),
               );
             }),
@@ -521,6 +593,51 @@ export const serverLayer = (options: {
                 ),
               );
             }),
+          depend: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                dependencies.change(
+                  { credential, profile: params.profile, task_id: params.task },
+                  payload,
+                  "depend",
+                ),
+              ).pipe(Effect.flatMap(dependencyResult));
+            }),
+          undepend: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                dependencies.change(
+                  { credential, profile: params.profile, task_id: params.task },
+                  payload,
+                  "undepend",
+                ),
+              ).pipe(Effect.flatMap(dependencyResult));
+            }),
+          batchDepend: ({ params, payload }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* translate(
+                batchDepend(
+                  store,
+                  { credential, profile: params.profile },
+                  payload,
+                ),
+              );
+            }),
+          graph: ({ params }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              const { selection: authority, graph } = yield* translate(
+                readGraphQuery(
+                  store,
+                  { credential, profile: params.profile, task_id: params.task },
+                  Schema.decodeUnknownSync(Instant)(new Date().toISOString()),
+                ),
+              );
+              return graph ?? (yield* Effect.fail(missingBoundTask(authority)));
+            }),
           list: ({ params, query }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -551,16 +668,14 @@ export const serverLayer = (options: {
           show: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
-              const task = yield* translate(
-                commands.get({
-                  credential,
-                  profile: params.profile,
-                  task_id: params.task,
-                }),
+              const { selection: authority, task } = yield* translate(
+                commands.readOne(
+                  { credential, profile: params.profile },
+                  Schema.Struct({ task_id: TaskId }),
+                  { task_id: params.task },
+                ),
               );
-              return (
-                task ?? (yield* Effect.fail(yield* missingTask(params, "read")))
-              );
+              return task ?? (yield* Effect.fail(missingBoundTask(authority)));
             }),
           create: ({ params, payload }) =>
             Effect.gen(function* () {
@@ -753,14 +868,20 @@ export const serverLayer = (options: {
             }),
           quickAdd: ({ params, payload }) =>
             Effect.gen(function* () {
-              yield* translate(
-                store.auth.authenticate({
-                  credential: yield* BearerCredential,
-                  profile: params.profile,
-                  access: "read",
-                }),
+              const authority = yield* translate(
+                store.auth.withRead(
+                  {
+                    credential: yield* BearerCredential,
+                    profile: params.profile,
+                  },
+                  QuickAddInput,
+                  payload,
+                  (read) => store.auth.checkRead(read, "read"),
+                  "authenticate",
+                  (selection) => Effect.succeed(selection),
+                ),
               );
-              return yield* parseQuickAdd(payload).pipe(
+              return yield* parseQuickAdd(authority.fields).pipe(
                 Effect.catchTag("QuickAddError", (error) =>
                   Effect.fail(
                     new InvalidTask({
@@ -842,6 +963,30 @@ export const serverLayer = (options: {
             }),
         }),
       );
+      const snapshotResult = <A>(
+        operation: Effect.Effect<
+          A,
+          | import("@todo/domain/store").StoreError
+          | import("@todo/domain").AuthError
+        >,
+      ) =>
+        operation.pipe(
+          Effect.catchTag("AuthError", (error) =>
+            translate(Effect.fail(error)),
+          ),
+          Effect.catchTag("StoreError", (error) => {
+            const cause = error.cause;
+            return Effect.fail(
+              cause instanceof SnapshotError && cause.code === "not_found"
+                ? new NotFound({ message: cause.message })
+                : cause instanceof SnapshotError
+                  ? new InvalidTask({ message: cause.message })
+                  : new InternalError({
+                      message: "Snapshot operation failed",
+                    }),
+            );
+          }),
+        );
       const snapshotOwner = <A>(
         operation: Effect.Effect<A, import("@todo/domain/store").StoreError>,
       ) =>
@@ -849,31 +994,39 @@ export const serverLayer = (options: {
           yield* translate(
             store.auth.requireOwner({ credential: yield* BearerCredential }),
           );
-          return yield* operation.pipe(
-            Effect.catchTag("StoreError", (error) => {
-              const cause = error.cause;
-              return Effect.fail(
-                cause instanceof SnapshotError && cause.code === "not_found"
-                  ? new NotFound({ message: cause.message })
-                  : cause instanceof SnapshotError
-                    ? new InvalidTask({ message: cause.message })
-                    : new InternalError({
-                        message: "Snapshot operation failed",
-                      }),
-              );
-            }),
-          );
+          return yield* snapshotResult(operation);
         });
       const SnapshotsLive = HttpApiBuilder.group(
         TodoApi,
         "snapshots",
         (handlers) =>
           handlers.handleAll({
-            list: () => snapshotOwner(store.snapshots.list()),
+            list: () =>
+              Effect.gen(function* () {
+                const credential = yield* BearerCredential;
+                return yield* snapshotResult(
+                  store.auth.withOwnerRead(
+                    { credential },
+                    Schema.Struct({}),
+                    {},
+                    (read) => store.snapshots.listRead(read),
+                  ),
+                );
+              }),
             create: ({ payload }) =>
               snapshotOwner(store.snapshots.create(payload.reason)),
             show: ({ params }) =>
-              snapshotOwner(store.snapshots.show(params.snapshot)),
+              Effect.gen(function* () {
+                const credential = yield* BearerCredential;
+                return yield* snapshotResult(
+                  store.auth.withOwnerRead(
+                    { credential },
+                    Schema.Struct({ snapshot: Schema.String }),
+                    { snapshot: params.snapshot },
+                    (read) => store.snapshots.showRead(read),
+                  ),
+                );
+              }),
             restore: ({ params, payload }) =>
               snapshotOwner(
                 store.snapshots.restore(params.snapshot, {
@@ -895,7 +1048,7 @@ export const serverLayer = (options: {
           SystemLive,
           DiagnosticsLive,
           SnapshotsLive,
-          changesLayer(store).pipe(Layer.provide(AuthorizationLive)),
+          changesLayer(rawStore, wake).pipe(Layer.provide(AuthorizationLive)),
         ]),
         Layer.provide(
           HttpApiMiddleware.layerSchemaErrorTransform(

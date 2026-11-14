@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import TodoAPI
 
 struct RootView: View {
     @Bindable var model: TodoModel
@@ -18,12 +19,14 @@ struct RootView: View {
         }
         .frame(
             minWidth: compactMode ? TaskWindowSizing.compactSize.width : 900,
+            maxWidth: compactMode ? TaskWindowSizing.compactSize.width : .infinity,
             minHeight: compactMode ? TaskWindowSizing.compactSize.height : 640)
-        .background(TaskWindowSizing(compact: compactMode))
+        .background(TaskWindowSizing(compact: compactMode) { model.compactWindowHeight = $0 })
+        .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .main, mode: compactMode ? .compact : .full))
         .toolbar {
             ToolbarItem {
                 Button {
-                    compactMode.toggle()
+                    model.clientDiagnosticsUI.performSync(.toggleCompact) { compactMode.toggle() }
                 } label: {
                     Label(
                         compactMode ? "Expand window" : "Compact mode",
@@ -38,24 +41,77 @@ struct RootView: View {
     }
 }
 
-struct TaskWindowSizing: NSViewRepresentable {
-    static let compactSize = NSSize(width: 393, height: 426)
-    let compact: Bool
+/// The Compact window's height (owner decision O34): 393 pt wide always, at least 426 pt tall,
+/// dragged taller by the person and remembered across launches and across switching to the full
+/// window and back. A stored value outside the range is clamped.
+struct CompactWindowHeight {
+    static let key = "compactWindowHeight"
+    static let minimum = TaskWindowSizing.compactSize.height
+    /// Where Compact opens when no height is remembered: tall enough to show the editor through
+    /// Estimate, or the screen's usable height if that is less (O34 follow-up, Mac UI review 2).
+    static let opening: CGFloat = 640
+    let defaults: UserDefaults
+    init(defaults: UserDefaults = .standard) { self.defaults = defaults }
+    static func clamp(_ height: CGFloat, maximum: CGFloat) -> CGFloat {
+        guard height.isFinite else { return minimum }
+        return min(max(height, minimum), max(minimum, maximum))
+    }
+    /// The height to open Compact at: the remembered one, clamped to what fits; with none,
+    /// min(640 pt, the screen's usable height), never below the 426 pt minimum.
+    func restored(maximum: CGFloat) -> CGFloat {
+        Self.clamp((defaults.object(forKey: Self.key) as? NSNumber).map { CGFloat($0.doubleValue) } ?? min(Self.opening, maximum), maximum: maximum)
+    }
+    func save(_ height: CGFloat, maximum: CGFloat) { defaults.set(Double(Self.clamp(height, maximum: maximum)), forKey: Self.key) }
+}
 
-    func makeNSView(context: Context) -> WindowView { WindowView() }
+struct TaskWindowSizing: NSViewRepresentable {
+    nonisolated static let compactSize = NSSize(width: 393, height: 426)
+    let compact: Bool
+    /// Where the Compact height is remembered (the app's defaults; a test passes its own).
+    var defaults: UserDefaults = .standard
+    /// The Compact content height whenever it changes (sheets size themselves from it).
+    var compactHeight: (CGFloat) -> Void = { _ in }
+
+    func makeNSView(context: Context) -> WindowView { WindowView(heights: CompactWindowHeight(defaults: defaults)) }
     func updateNSView(_ view: WindowView, context: Context) {
         view.compact = compact
+        view.compactHeight = compactHeight
         view.scheduleResize()
     }
 
     final class WindowView: NSView {
         var compact = false
+        var compactHeight: (CGFloat) -> Void = { _ in }
         private var appliedMode: Bool?
         private var expandedFrame: NSRect?
+        private var resizeObserver: NSObjectProtocol?
+        private let heights: CompactWindowHeight
+        init(heights: CompactWindowHeight) { self.heights = heights; super.init(frame: .zero) }
+        required init?(coder: NSCoder) { fatalError("not used") }
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
+            if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) }
+            resizeObserver = window.map { window in
+                NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.windowResized() }
+                }
+            }
             scheduleResize()
+        }
+        isolated deinit { if let resizeObserver { NotificationCenter.default.removeObserver(resizeObserver) } }
+
+        /// The tallest Compact content that fits the screen the window is on.
+        private var maximumHeight: CGFloat {
+            guard let window, let screen = window.screen ?? NSScreen.main else { return .greatestFiniteMagnitude }
+            return window.contentRect(forFrameRect: screen.visibleFrame).height
+        }
+        /// Remembers the height the person dragged Compact to.
+        private func windowResized() {
+            guard appliedMode == true, compact, let window else { return }
+            let height = window.contentRect(forFrameRect: window.frame).height
+            heights.save(height, maximum: maximumHeight)
+            compactHeight(CompactWindowHeight.clamp(height, maximum: maximumHeight))
         }
 
         func scheduleResize() {
@@ -69,13 +125,27 @@ struct TaskWindowSizing: NSViewRepresentable {
             window.contentMinSize = compact ? TaskWindowSizing.compactSize : NSSize(width: 900, height: 640)
             if compact {
                 if previousMode != nil { expandedFrame = window.frame }
-                setContentSize(TaskWindowSizing.compactSize, on: window)
+                let height = heights.restored(maximum: maximumHeight)
+                setContentSize(NSSize(width: TaskWindowSizing.compactSize.width, height: height), on: window)
+                compactHeight(height)
             } else if previousMode != nil {
-                if let expandedFrame {
-                    window.setFrame(expandedFrame, display: true)
-                } else {
-                    setContentSize(NSSize(width: 1100, height: 760), on: window)
-                }
+                restoreExpanded(window, attempts: 100)
+            }
+        }
+        /// The full window comes back once the content no longer limits the width to Compact's. A
+        /// layout pass applies the full content's limits now; a frame set while Compact's 393 pt limit
+        /// still stands would be clamped to it.
+        private func restoreExpanded(_ window: NSWindow, attempts: Int) {
+            guard appliedMode == false else { return }
+            window.contentView?.layoutSubtreeIfNeeded()
+            if window.contentMaxSize.width <= TaskWindowSizing.compactSize.width, attempts > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) { [weak self, weak window] in if let window { self?.restoreExpanded(window, attempts: attempts - 1) } }
+                return
+            }
+            if let expandedFrame {
+                window.setFrame(expandedFrame, display: true)
+            } else {
+                setContentSize(NSSize(width: 1100, height: 760), on: window)
             }
         }
 
@@ -141,10 +211,11 @@ struct CompactLayoutKey: PreferenceKey {
     }
 }
 extension View {
-    func compactBounds(_ id: String) -> some View {
-        background(GeometryReader { geometry in Color.clear.preference(key: CompactLayoutKey.self, value: [id: geometry.frame(in: .global)]) })
+    func compactBounds(_ id: String, when active: Bool = true) -> some View {
+        background(GeometryReader { geometry in Color.clear.preference(key: CompactLayoutKey.self, value: active ? [id: geometry.frame(in: .global)] : [:]) })
     }
 }
+
 
 private struct TaskListClip: Shape {
     let top: CGFloat
@@ -192,10 +263,16 @@ struct TaskListView: View {
     var compactMode = false
     var referenceDate: Date? = nil
     @FocusState private var searchFocused: Bool
-    private var searchBinding: Binding<String> { Binding(get: { model.searchText }, set: { model.setSearchText($0) }) }
+    private var searchBinding: Binding<String> {
+        Binding(get: { model.searchText }, set: { value in
+            model.clientDiagnosticsUI.deferred(.search, predicate: { model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity && !model.searchPending }) { model.setSearchText(value) }
+        })
+    }
     @State private var selection: String?
-    @State private var pendingDelete: TaskSnapshot?
     @State private var showingTaskFilters = false
+    /// The notice holds while the pointer is over it or its button has keyboard focus (UI check, c10).
+    @State private var noticeHovered = false
+    @FocusState private var noticeButtonFocused: Bool
     @Environment(\.defaultMinListRowHeight) private var minimumRowHeight
     private var destination: Binding<SidebarDestination?> {
         Binding(
@@ -207,6 +284,9 @@ struct TaskListView: View {
             },
             set: { value in
                 guard !model.busy else { return }
+                let category: ClientDiagnosticAction
+                switch value { case .project: category = .projectFilter; case .tag: category = .tagFilter; default: category = .viewSwitch }
+                model.clientDiagnosticsUI.deferred(category, predicate: { model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity && !model.searchPending }) {
                 switch value {
                 case .view(let name): model.selectView(name)
                 case .project(let id):
@@ -216,6 +296,7 @@ struct TaskListView: View {
                     model.selectView("all")
                     model.selectedTag = id
                 case nil: break
+                }
                 }
             })
     }
@@ -230,6 +311,7 @@ struct TaskListView: View {
     var taskGroups: [PlanningResult.Group] {
         let tasks = visibleTasks
         if model.selectedView == "all" {
+            if !model.taskFilters.order.isEmpty { return [.init(name: model.taskFilters.order == "topo" ? "Dependency order" : "Lightest first", tasks: tasks)] }
             return ["P1", "P2", "P3", "P4"].compactMap { priority in
                 let rows = tasks.filter { $0.priority == priority }
                 return model.searchActive && rows.isEmpty ? nil : .init(name: priority, tasks: rows)
@@ -249,7 +331,7 @@ struct TaskListView: View {
     private func clearFilters() {
         model.selectedProject = nil
         model.selectedTag = nil
-        model.applyTaskFilters(.init())
+        model.applyTaskFilters(.init(order: model.taskFilters.order))
     }
     private var selectedTask: TaskSnapshot? { visibleTasks.first { $0.id == selection } }
     private var inspectorPresented: Binding<Bool> {
@@ -269,19 +351,19 @@ struct TaskListView: View {
         .sheet(item: $model.batchEdit) { _ in BatchEditView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $model.showingImport) { ImportView(model: model, compact: compactMode).interactiveDismissDisabled(model.busy) }
         .sheet(isPresented: $showingTaskFilters) {
-            TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: model.applyTaskFilters, close: { showingTaskFilters = false })
+            TaskFilterView(draft: model.taskFilters, compact: compactMode, planning: model.selectedView != "all", apply: { filters in
+                model.clientDiagnosticsUI.deferred(filters.order != model.taskFilters.order ? .order : .applyFilters, predicate: { model.appliedSearchSnapshot?.appliedIdentity == model.requestedIdentity && !model.searchPending }) { model.applyTaskFilters(filters) }
+            }, close: { showingTaskFilters = false })
         }
-        .confirmationDialog(
-            "Delete this task?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
-            presenting: pendingDelete
-        ) { task in
-            Button("Delete task", role: .destructive) {
-                Task { await model.deleteTask(task) }
-                pendingDelete = nil
-            }
-            Button("Cancel", role: .cancel) { pendingDelete = nil }
-        } message: { task in
-            Text(task.title)
+        .sheet(item: Binding(get: { model.dependencies.batch }, set: { model.dependencies.batch = $0 })) { _ in DependencyBatchView(model: model, compact: compactMode) }
+        .sheet(isPresented: Binding(get: { model.dependencies.graph != nil }, set: { if !$0 { model.closeDependencyGraph() } })) {
+            DependencyGraphView(model: model, compact: compactMode)
+        }
+        .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in
+            DependencyPickerView(model: model, compact: compactMode)
+        }
+        .sheet(item: Binding(get: { model.dependencies.deletion }, set: { if $0 == nil { model.closeDependencyDelete() } })) { _ in
+            DependencyDeleteView(model: model, compact: compactMode)
         }
         .sheet(item: $model.transferRequest) { request in TaskTransferPicker(model: model, request: request) }
         .alert(
@@ -298,6 +380,8 @@ struct TaskListView: View {
         .onChange(of: model.selectedView) { _, _ in showingTaskFilters = false; selection = nil }
         .background {
             Button("Find a task") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden()
+            Button("Add dependency") { if let task = selectedTask ?? model.editor?.base { Task { await model.openDependencyPicker(task) } } }
+                .keyboardShortcut("k", modifiers: [.command, .shift]).disabled(!model.canWrite || (selectedTask == nil && model.editor == nil)).hidden()
         }
         .onExitCommand { model.setSearchText("") }
     }
@@ -316,15 +400,15 @@ struct TaskListView: View {
                         if model.searchPending { ProgressView().controlSize(.small).accessibilityLabel("Searching") }
                     }
                     ToolbarItem {
-                        Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.disabled(!model.canWrite).accessibilityIdentifier("batch-edit-tasks")
+                        Button("Edit Tasks…") { model.clientDiagnosticsUI.perform(.openBatch, surface: .batch) { await model.beginBatchEdit() } }.disabled(!model.canWrite).accessibilityIdentifier("batch-edit-tasks")
                     }
                     ToolbarItem {
-                        Button("Import…") { model.resetImport(); model.showingImport = true }
+                        Button("Import…") { model.clientDiagnosticsUI.performSync(.openImport, surface: .importPreview) { model.resetImport(); model.showingImport = true } }
                             .disabled(!model.canWrite).accessibilityIdentifier("import-tasks")
                     }
                     ToolbarItem {
                         Button {
-                            model.quickAdd = true
+                            model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true }
                         } label: {
                             Label("Add task", systemImage: "plus").frame(width: 28, height: 28)
                         }
@@ -367,7 +451,7 @@ struct TaskListView: View {
                     compactNavigation
                     Spacer(minLength: 0)
                     if !model.quickAdd && !visibleTasks.isEmpty && model.connection != .offline && model.taskLoadError == nil {
-                        Button { model.quickAdd = true } label: {
+                        Button { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } } label: {
                             Label("Add task", systemImage: "plus")
                         }.labelStyle(.iconOnly).buttonStyle(.borderedProminent).controlSize(.large)
                             .frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
@@ -376,13 +460,17 @@ struct TaskListView: View {
                 }
             }.padding(.horizontal, 16).padding(.vertical, 8).compactBounds("header")
             Divider()
-            searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+            // The Find field belongs to the list; while the editor is shown it would take the
+            // editor's room (candidate 8 ruling 5). The search text is kept for Back to tasks.
+            if model.editor == nil || model.quickAdd {
+                searchField.padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+            }
             if model.editor != nil, let result = model.transferResult {
                 TaskTransferResultView(model: model, result: result)
                 Divider()
             }
             if model.quickAdd {
-                ScrollView { QuickAddView(model: model, floating: true, compact: true, referenceDate: referenceDate) }
+                QuickAddView(model: model, floating: true, compact: true, referenceDate: referenceDate)
             } else if model.editor != nil {
                 EditorView(model: model, compact: true)
             } else {
@@ -455,7 +543,8 @@ struct TaskListView: View {
         }
     }
     private func requestProfile(_ profile: String) {
-        Task { await model.navigate(.profile(profile)) }
+        guard model.profileSwitchStarts(profile) else { return }
+        model.clientDiagnosticsUI.perform(.profileSwitch, ready: { model.profileSwitchSettled(profile) }) { _ = await model.navigate(.profile(profile)) }
     }
     var sidebar: some View {
         VStack(spacing: 0) {
@@ -515,6 +604,17 @@ struct TaskListView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }.pickerStyle(.menu).controlSize(.large)
             HStack {
+                if !compactMode {
+                    Button("Add dependency", systemImage: "link") { if let task = selectedTask { Task { await model.openDependencyPicker(task) } } }
+                        .disabled(!model.canWrite || selectedTask == nil).accessibilityIdentifier("dependency-add")
+                }
+                if model.selectedView == "all" {
+                    Picker("Order", selection: Binding(get: { model.taskFilters.order }, set: { order in var filters = model.taskFilters; filters.order = order; model.applyTaskFilters(filters) })) {
+                        Text("Priority").tag("")
+                        Text("Dependency order").tag("topo").accessibilityIdentifier("task-order-topo")
+                        Text("Lightest first").tag("lightest").accessibilityIdentifier("task-order-lightest")
+                    }.pickerStyle(.menu).labelsHidden().accessibilityLabel("Order")
+                }
                 Button(model.taskFilters.isEmpty ? "Filters" : "Filters · \(model.taskFilters.count)") { showingTaskFilters = true }
                     .accessibilityLabel("More filters").accessibilityIdentifier("more-task-filters").compactBounds("more-task-filters")
             if hasFilters {
@@ -532,6 +632,7 @@ struct TaskListView: View {
     var taskContent: some View {
         VStack(spacing: 0) {
             if let result = model.transferResult { TaskTransferResultView(model: model, result: result) }
+            ForEach(model.dependencies.latestWarnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: model.dependencies.latestWarnings[$0], warning: true).padding(.horizontal, 12) }
             taskFilters
             if let error = model.searchError {
                 HStack(alignment: .top) {
@@ -563,21 +664,13 @@ struct TaskListView: View {
                 }.padding(12)
             }
             if let message = model.message {
-                if model.lookupError(at: .message, text: message) != nil {
-                    ClientErrorNotice(model: model, text: message, position: .message).padding()
-                } else {
-                    HStack {
-                        Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
-                        Spacer()
-                        Button("Retry") { model.connect() }
-                    }.padding()
-                }
+                MessageBanner(model: model, message: message, sequence: model.messageSequence, control: (model.messageKind ?? .general).bannerControl)
             }
             if model.loading && model.appliedSearchSnapshot == nil {
                 ProgressView("Loading tasks…").frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if visibleTasks.isEmpty && model.searchActive {
                 compactState("No matching tasks.", action: "Clear search") { model.setSearchText("") }
-            } else if visibleTasks.isEmpty && model.selectedView != "all" {
+            } else if visibleTasks.isEmpty && (model.selectedView != "all" || hasFilters) {
                 if hasFilters {
                     if compactMode {
                         compactState("No matching tasks.", action: "Clear filters", perform: clearFilters)
@@ -592,14 +685,14 @@ struct TaskListView: View {
                     }
                 } else if compactMode {
                     compactState(model.searchText.isEmpty ? "No tasks yet." : "No matching tasks.", action: model.searchText.isEmpty ? "Add task" : "Clear search") {
-                        if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
+                        if model.searchText.isEmpty { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } } else { model.setSearchText("") }
                     }
                 } else { ContentUnavailableView {
                     Label(model.searchText.isEmpty ? "No tasks yet" : "No matching tasks", systemImage: "checkmark.circle")
                 } description: {
                     Text(model.searchText.isEmpty ? "Add a task in \(model.profileName)." : "Try different words.")
                 } actions: {
-                    if model.searchText.isEmpty { Button("Add task") { model.quickAdd = true }.disabled(!model.canWrite) }
+                    if model.searchText.isEmpty { Button("Add task") { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } }.disabled(!model.canWrite) }
                 } }
             } else {
                 List(selection: $selection) {
@@ -632,9 +725,12 @@ struct TaskListView: View {
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
                     .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
+                        if let id { model.clientDiagnosticsUI.selected(id); model.notePersonActed() }
                         if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
                             Task {
-                                if !(await model.navigate(.edit(task))) { selection = model.editor?.id ?? old }
+                                await ClientDiagnosticContext.$actionID.withValue(model.clientDiagnosticsUI.selectionAction) {
+                                    if !(await model.navigate(.edit(task))) { selection = model.editor?.id ?? old }
+                                }
                             }
                         }
                     }
@@ -644,10 +740,10 @@ struct TaskListView: View {
                         transition(task, action: task.status == "open" ? "complete" : "reopen")
                         return .handled
                     }
-                    .onDeleteCommand { if model.canWrite { pendingDelete = selectedTask } }
+                    .onDeleteCommand { if model.canWrite, let task = selectedTask { Task { await model.openDependencyDelete(task) } } }
                 if visibleTasks.isEmpty {
                     Button(hasFilters ? "Clear filters" : model.searchText.isEmpty ? "Add task" : "Clear search") {
-                        if hasFilters { clearFilters() } else if model.searchText.isEmpty { model.quickAdd = true } else { model.setSearchText("") }
+                        if hasFilters { clearFilters() } else if model.searchText.isEmpty { model.clientDiagnosticsUI.performSync(.openQuickAdd, surface: .quickAdd) { model.quickAdd = true } } else { model.setSearchText("") }
                     }.buttonStyle(.borderedProminent).controlSize(.large).disabled(!model.canWrite && !hasFilters && model.searchText.isEmpty)
                         .frame(minHeight: 28).padding(12).compactBounds("state-action")
                 }
@@ -666,15 +762,23 @@ struct TaskListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay(alignment: .bottom) {
             if let notice = model.deletionNotice {
-                Text(notice).padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(.regularMaterial, in: Capsule()).padding(16).accessibilityIdentifier("task-notice")
+                HStack(spacing: 12) {
+                    Text(notice)
+                    // A restored Profile the person has moved on from: offered, never forced (ruling on
+                    // the candidate 9 restore finding).
+                    if let offer = model.restoredProfileOffer, notice == TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) {
+                        Button("Switch to \(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name)") { model.goToRestoredProfile() }
+                            .buttonStyle(.borderless).disabled(model.editor != nil || model.busy).focused($noticeButtonFocused)
+                            .accessibilityIdentifier("restored-profile-switch").compactBounds("restored-profile-switch")
+                    }
+                }.padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule()).onHover { noticeHovered = $0 }.onDisappear { noticeHovered = false }
+                    .padding(16).accessibilityIdentifier("task-notice").compactBounds("task-notice")
             }
         }
-        .task(id: model.deletionNotice) {
-            guard model.deletionNotice != nil else { return }
-            defer { model.deletionNotice = nil }
-            try? await Task.sleep(for: .seconds(3))
-        }
+        // The notice's timer (TodoModel.noticeHeld) waits while the pointer is over the capsule or its
+        // button has keyboard focus, and starts its full time again when both have left (UI check, c10).
+        .onChange(of: noticeHovered || noticeButtonFocused) { _, held in model.noticeHeld = held }
     }
     private func compactState(_ message: String, action: String, perform: @escaping () -> Void) -> some View {
         VStack(spacing: 12) {
@@ -683,8 +787,10 @@ struct TaskListView: View {
         }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity).compactBounds("state")
     }
     private func closeInspector() {
-        model.editor = nil
-        model.conflict = nil
+        model.clientDiagnosticsUI.performSync(.closeInspector) {
+            model.editor = nil
+            model.conflict = nil
+        }
     }
     private func openSelection() -> KeyPress.Result {
         guard !model.busy, let task = selectedTask else { return .ignored }
@@ -694,17 +800,25 @@ struct TaskListView: View {
     private func sidebarRow(_ title: String, icon: String, count: Int, tint: Color = .primary) -> some View {
         Label(title, systemImage: icon).foregroundStyle(tint).badge(count == 0 ? nil : Text(String(count)).foregroundStyle(.secondary))
     }
-    private func transition(_ task: TaskSnapshot, action: String) { Task { await model.transition(task, action: action) } }
+    private func transition(_ task: TaskSnapshot, action: String) {
+        let category: ClientDiagnosticAction = action == "complete" ? .complete : action == "cancel" ? .cancel : action == "reopen" ? .reopen : .taskTransition
+        model.clientDiagnosticsUI.perform(category) { await model.transition(task, action: action) }
+    }
     private func row(_ task: TaskSnapshot, overdue: Bool = false) -> some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
+            let _ = ClientObservedActivity.timelineTick()
             TaskRow(
                 task: task, now: referenceDate ?? context.date, canWrite: model.canWrite, overdue: overdue, compact: compactMode,
                 projectName: model.projects.first { $0.id == task.project_id }?.name,
                 tagNames: task.tagNames(from: model.tags),
                 searchActive: model.appliedSearchSnapshot?.appliedIdentity.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
+                dependencyBadge: task.dependencyBadge(catalog: model.tasks),
+                metadataOverride: model.dependencies.dropTarget == task.id ? model.dependencies.dropStatus : nil,
                 complete: { transition(task, action: task.status == "open" ? "complete" : "reopen") }
             )
         }
+        .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, task: task.id))
+        .modifier(DependencyDragModifier(model: model, task: task))
         .listRowInsets(compactMode ? EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4) : nil)
         .listRowSeparator(compactMode ? .hidden : .automatic)
         .tag(task.id)
@@ -716,8 +830,9 @@ struct TaskListView: View {
                 }
                 Button("Cancel task") { transition(task, action: "cancel") }.disabled(task.status != "open")
                 TaskTransferActions(model: model, task: task)
+                Button("Add dependency…") { Task { await model.openDependencyPicker(task) } }
                 Divider()
-                Button("Delete…", role: .destructive) { pendingDelete = task }
+                Button("Delete…", role: .destructive) { Task { await model.openDependencyDelete(task) } }
             }.disabled(!model.canWrite)
         }.disabled(model.busy)
     }
@@ -732,36 +847,44 @@ struct TaskRow: View {
     let projectName: String?
     let tagNames: [String]
     var searchActive = false
+    var dependencyBadge: String? = nil
+    var showsCompletion = true
+    var relation = false
+    var showsMetadata = true
+    var metadataOverride: DependencyDropStatus? = nil
     let complete: () -> Void
     private var presentation: TaskRowPresentation { TaskRowPresentation(task: task, tagNames: tagNames, now: now) }
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            Button(action: complete) { Image(systemName: presentation.completionSymbol).font(.system(size: 16)).frame(width: 28, height: 28) }
+            if showsCompletion { Button(action: complete) { Image(systemName: presentation.completionSymbol).font(.system(size: 16)).frame(width: 28, height: 28) }
                 .buttonStyle(.plain).disabled(!canWrite).foregroundStyle(.secondary)
                 .accessibilityLabel(task.status == "open" ? "Complete \(task.title)" : "Reopen \(task.title)")
-                .accessibilityIdentifier("transition-\(task.id)").compactBounds("complete-\(task.id)")
+                .accessibilityIdentifier("transition-\(task.id)").compactBounds("complete-\(task.id)") }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(TaskSearchPresentation.highlighted(task.title, spans: searchActive ? task.search_matches ?? [] : [], field: .title)).lineLimit(1).strikethrough(presentation.isDone).foregroundStyle(
-                        presentation.isDone ? .secondary : .primary)
+                        presentation.isDone ? .secondary : .primary).help(task.title).compactBounds("title-\(task.id)")
                     Spacer(minLength: 8)
-                    if compact && ["cancelled", "snoozed"].contains(task.status) {
+                    if compact && !relation && ["cancelled", "snoozed"].contains(task.status) {
                         Text(task.status).font(.caption).foregroundStyle(.secondary).fixedSize()
                             .compactBounds("status-\(task.id)")
                     }
-                    JiraAttachmentMarker(task: task)
-                    if let priority = presentation.priority {
+                    if !relation { JiraAttachmentMarker(task: task) }
+                    if !relation, let priority = presentation.priority {
                         Label(priority, systemImage: "flag.fill").font(.caption.weight(.medium)).foregroundStyle(
                             TodoColors.color("priority-\(priority.dropFirst())"))
                     }
                 }
-                if searchActive, let excerpt = TaskSearchPresentation.descriptionExcerpt(task) {
+                if !relation && searchActive, let excerpt = TaskSearchPresentation.descriptionExcerpt(task) {
                     Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                         .accessibilityIdentifier("search-excerpt-\(task.id)")
                 }
-                if compact {
-                    CompactRowMetadata(items: compactMetadata).compactBounds("metadata-\(task.id)")
+                Group {
+                if !showsMetadata { EmptyView() }
+                else if compact || relation {
+                    HStack(spacing: 6) { dependencyState; CompactRowMetadata(items: compactMetadata) }.compactBounds("metadata-\(task.id)")
                 } else { HStack(spacing: 4) {
+                    dependencyState
                     if let projectName { Label(projectName, systemImage: "folder").help(projectName) }
                     if projectName != nil && !tagNames.isEmpty { Text("·") }
                     ForEach(compact ? Array(presentation.tags.prefix(1)) : presentation.tags, id: \.self) { name in
@@ -781,14 +904,45 @@ struct TaskRow: View {
                         Label(scheduled, systemImage: "calendar").help("Scheduled \(scheduled)")
                     }
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                }.compactBounds("metadata-\(task.id)")
+                    .compactBounds("metadata-text-\(task.id)", when: hasMetadataText && metadataOverride == nil)
+                    .opacity(metadataOverride == nil ? 1 : 0).accessibilityHidden(metadataOverride != nil)
+                    .overlay(alignment: .leading) {
+                        if hasMetadataLine, let metadataOverride { dropStatus(metadataOverride) }
+                    }
             }.fixedSize(horizontal: false, vertical: true)
-        }.padding(.vertical, 8).frame(height: compact ? (searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
+                .overlay(alignment: .topLeading) {
+                    if !hasMetadataLine, let metadataOverride {
+                        GeometryReader { geometry in
+                            dropStatus(metadataOverride).fixedSize(horizontal: false, vertical: true).offset(y: geometry.size.height)
+                        }
+                    }
+                }
+        }.padding(.vertical, relation ? 4 : 8).frame(height: compact ? (relation ? (showsMetadata ? 48 : 24) : searchActive && TaskSearchPresentation.descriptionExcerpt(task) != nil ? 76 : 56) : nil)
             .overlay(alignment: .bottom) {
-                if compact { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
+                if compact && showsMetadata { Divider().frame(height: 1).compactBounds("separator-\(task.id)").padding(.leading, 36) }
             }
             .contentShape(Rectangle()).opacity(presentation.isDone ? 0.7 : 1).compactBounds("row-\(task.id)")
     }
+    @ViewBuilder private var dependencyState: some View {
+        if let dependencyBadge { Text(dependencyBadge).font(.caption).foregroundStyle(task.blocked == true ? TodoColors.color("warning") : .secondary).fixedSize().accessibilityIdentifier("dependency-state-\(task.id)") }
+    }
+    private func dropStatus(_ status: DependencyDropStatus) -> some View {
+        Text(status.text).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            .frame(maxWidth: .infinity, alignment: .leading).accessibilityValue(status.accessibilityValue).help(status.accessibilityValue)
+            .accessibilityIdentifier("dependency-drop-status").compactBounds("dependency-drop-status")
+    }
+    private var hasMetadataLine: Bool {
+        showsMetadata && (compact || relation || hasMetadataText)
+    }
+    private var hasMetadataText: Bool {
+        guard showsMetadata else { return false }
+        if dependencyBadge != nil { return true }
+        if compact || relation { return !compactMetadata.isEmpty }
+        return projectName != nil || !tagNames.isEmpty || presentation.due != nil || task.external_id != nil || presentation.scheduled != nil
+    }
     private var compactMetadata: [CompactRowMetadata.Item] {
+        if relation { return [.init(text: task.status.capitalized)] + (projectName.map { [.init(text: $0)] } ?? []) }
         var items: [CompactRowMetadata.Item] = []
         if let date = presentation.compactDate { items.append(.init(text: date, overdue: overdue && presentation.due != nil)) }
         if let projectName { items.append(.init(text: projectName)) }
@@ -819,8 +973,8 @@ struct CompactRowMetadata: View {
 struct CompactUtilityActions: View {
     @Bindable var model: TodoModel
     var body: some View {
-        Button("Edit Tasks…") { Task { await model.beginBatchEdit() } }.controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-batch-edit-tasks")
-        Button("Import…") { model.resetImport(); model.showingImport = true }
+        Button("Edit Tasks…") { model.clientDiagnosticsUI.perform(.openBatch, surface: .batch) { await model.beginBatchEdit() } }.controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-batch-edit-tasks")
+        Button("Import…") { model.clientDiagnosticsUI.performSync(.openImport, surface: .importPreview) { model.resetImport(); model.showingImport = true } }
             .controlSize(.large).frame(minHeight: 28).disabled(!model.canWrite).accessibilityIdentifier("compact-import-tasks")
         SettingsLink { Text("Settings…").frame(minHeight: 28) }.controlSize(.large)
     }
@@ -835,14 +989,19 @@ struct QuickAddView: View {
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
+    @State private var completions = QuickAddCompletionGate()
     var body: some View {
         content
+            .onAppear { completions.renew() }
+            .onDisappear { completions.renew() }
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .quickAdd))
             .defaultFocus($focused, true)
             .task(id: model.profile + "\u{0}" + model.newTitle) { await model.parseDraft() }
             .onExitCommand { if floating { model.quickAdd = false } else { dismiss() } }
             .preferredColorScheme(model.configuration.resolvedColorScheme(storedAppearance: appearance))
     }
     var content: some View {
+        QuickAddContentAnchor(compact: compact, limit: model.compactWindowHeight, identity: model.newTitle + String(model.dependencies.initial.count) + (model.quickAddError ?? "")) { maximumRows in
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("New task").font(.headline)
@@ -865,7 +1024,8 @@ struct QuickAddView: View {
                 Text("Try: Pay rent tomorrow p1 #bills @\"Client Project\"")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {
+            QuickAddMetadataRegion(maximumRows: maximumRows, parsedFirst: compact, dependencies: InitialDependencySelection(tasks: Binding(get: { model.dependencies.initial }, set: { model.dependencies.initial = $0 }), enabled: model.canWrite, add: { Task { await model.openInitialDependencyPicker() } })) {
+                if let parsed = model.parsedTask?.displayingTokens(in: model.parsedInput).removing(model.removedQuickAddFields) {
                 VStack(alignment: .leading, spacing: 8) {
                     if compact {
                         QuickAddFlow {
@@ -877,10 +1037,11 @@ struct QuickAddView: View {
                         dateChips(parsed)
                     }
                 }
+                }
             }
             if let error = model.parseError { Text(error).font(.caption).foregroundStyle(TodoColors.color("destructive")) }
             if !model.canWrite { Text("Reconnect to add. Your draft stays here.").foregroundStyle(.secondary) }
-            if let error = model.quickAddError { Text(error).foregroundStyle(TodoColors.color("destructive")) }
+            if let error = model.quickAddError { ClientErrorNotice(model: model, text: error, position: .quickAdd) }
             HStack {
                 Spacer()
                 if compact {
@@ -898,10 +1059,14 @@ struct QuickAddView: View {
                     Text(model.busy ? "Adding…" : "Add task").frame(minHeight: 28)
                 }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).accessibilityIdentifier("add-task")
                     .background(measure("control:add"))
+                    .compactBounds("quick-add-add")
             }.disabled(!model.canWrite || model.newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .compactBounds("quick-add-actions")
         }.padding(compact ? 16 : 24).frame(minWidth: compact ? nil : 540, maxWidth: compact ? .infinity : 540)
             .coordinateSpace(name: "quick-add-chips")
             .disabled(model.busy)
+            .compactBounds("quick-add-sheet")
+        }
     }
 
     @ViewBuilder private func metadataChips(_ parsed: ParsedTask) -> some View {
@@ -926,22 +1091,224 @@ struct QuickAddView: View {
                 Image(systemName: "xmark").font(.caption2)
             }.frame(minHeight: 28).contentShape(Rectangle())
         }.lineLimit(1).buttonStyle(.bordered).tint(nil as Color?).controlSize(.small).help(title).accessibilityLabel("Clear \(title)")
-            .background(measure(field)).preference(key: QuickAddChipLabels.self, value: [field: title])
+            .background(measure(field)).compactBounds("chip-" + field).preference(key: QuickAddChipLabels.self, value: [field: title])
     }
 
     private func measure(_ field: String) -> some View {
         GeometryReader { geometry in
             Color.clear.preference(key: QuickAddChipFrames.self, value: [field: geometry.frame(in: .named("quick-add-chips"))])
-        }
+        }.background(field.hasPrefix("control:") ? nil : QuickAddRegionRow())
     }
     private func add(edit: Bool) {
-        Task {
-            if await model.create(openEditor: edit) {
+        let opening = completions.opening
+        model.clientDiagnosticsUI.perform(floating ? .quickAdd : .sheetAdd) {
+            if await model.create(openEditor: edit), completions.owns(opening) {
                 if !floating { dismiss() }
                 if edit { openWindow(id: "tasks") }
             }
         }
     }
+}
+
+/// The main window's message banner. Connection messages keep one button, Reconnect; every other
+/// kind has a trailing Dismiss button, because a reconnect would not clear it. The message reads as
+/// one accessibility element and is announced when it appears. No time limit for errors.
+struct MessageBanner: View {
+    let model: TodoModel
+    let message: String
+    let sequence: Int
+    let control: TodoModel.MessageBannerControl
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if model.lookupError(at: .message, text: message) != nil {
+                // Keeps its own elements, so "Find Task by id" stays reachable.
+                ClientErrorNotice(model: model, text: message, position: .message)
+            } else if let notice = dependencyNotice {
+                // A Dependency refusal reads as it does in the editor: the Tasks it names and Create
+                // follow-up, without the exit-code line (Mac UI review 2, item 3).
+                DependencyNoticeContent(model: model, notice: notice, showsDetail: false)
+                    .accessibilityLabel(spoken).compactBounds("message-dependency-notice")
+            } else {
+                Label(message, systemImage: "exclamationmark.triangle").foregroundStyle(TodoColors.color("destructive"))
+                    .accessibilityElement(children: .combine).accessibilityLabel(spoken)
+            }
+            Spacer()
+            switch control {
+            case .reconnect:
+                Button("Reconnect") { model.connect() }.accessibilityIdentifier("message-reconnect")
+            case .dismiss:
+                Button { model.dismissMessage(sequence) } label: {
+                    Image(systemName: "xmark").frame(minWidth: 28, minHeight: 28).contentShape(Rectangle())
+                }
+                    .buttonStyle(.borderless).foregroundStyle(.secondary).help("Dismiss").accessibilityLabel("Dismiss message").accessibilityIdentifier("message-dismiss").compactBounds("message-dismiss")
+            }
+        }.padding()
+            .onAppear { announce() }
+            .onChange(of: sequence) { _, _ in announce() }
+    }
+    /// The Dependency failure this message was described from, if it is one.
+    private var dependencyNotice: DependencyNotice? {
+        guard let failure = model.serverError(at: .message, text: message), failure.isDependencyFailure else { return nil }
+        return .project(failure, context: model.dependencyErrorContexts[.message] ?? .link)
+    }
+    /// Connection messages describe a state ("… The live view is reconnecting."); the others are errors.
+    /// A Dependency refusal is spoken without its exit-code line, as it is shown.
+    private var spoken: String {
+        let text = dependencyNotice?.message ?? message
+        return control == .dismiss ? "Error. " + text : text
+    }
+    /// Once per message: the banner reappearing with the same message announces nothing.
+    private func announce() { if model.takeAnnouncement(sequence) { AccessibilityNotification.Announcement(spoken).post() } }
+}
+
+/// The view side of quick-add's instance rule. The menu-bar window has no model instance, so its
+/// view keeps an opening token, renewed whenever it appears or disappears: a create that outlives
+/// the view that started it (closed, or closed and reopened) cannot dismiss or open windows for it.
+@MainActor final class QuickAddCompletionGate {
+    private(set) var opening = UUID()
+    func renew() { opening = UUID() }
+    func owns(_ token: UUID) -> Bool { token == opening }
+}
+
+struct QuickAddMetadataRegion<Content: View>: View {
+    let maximumRows: Int
+    /// Compact puts the parsed Priority, Project, Tags and dates ahead of the Dependency chips, so
+    /// they are the rows shown first (Mac UI review 2, item 2).
+    var parsedFirst = false
+    let dependencies: InitialDependencySelection
+    let content: Content
+    @State private var parsedHeight: CGFloat = 0
+    @State private var contentHeight: CGFloat = 0
+    @State private var chipFrames: [CGRect] = []
+    init(maximumRows: Int, parsedFirst: Bool = false, dependencies: InitialDependencySelection, @ViewBuilder content: () -> Content) {
+        self.maximumRows = maximumRows
+        self.parsedFirst = parsedFirst
+        self.dependencies = dependencies
+        self.content = content()
+    }
+    private var parsed: some View {
+        content.background(GeometryReader { geometry in Color.clear.preference(key: QuickAddParsedMetadataHeight.self, value: geometry.size.height) })
+    }
+    var body: some View {
+        if parsedFirst {
+            // Compact: the region takes the height Quick Add has left (the parent's layout decides
+            // it, so nothing feeds back) and shows the whole rows that fit in it; the actions stay
+            // at the bottom, like the other Compact sheets (Mac UI review 2, item 2).
+            GeometryReader { geometry in
+                // When the cut leaves any row out of view (the Dependency chips come last), the
+                // "Depends on" line says how many there are (UI check, c10).
+                let height = fitted(geometry.size.height)
+                scroll.environment(\.quickAddDependenciesCut, max(contentHeight, 24) > height + 0.5)
+                    .frame(height: height).frame(maxWidth: .infinity, alignment: .topLeading)
+            }.frame(minHeight: rows.first.map { $0.bottom } ?? 24, maxHeight: .infinity)
+        } else {
+            scroll.frame(height: visibleHeight)
+        }
+    }
+    private var scroll: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                if parsedFirst { parsed; dependencies.environment(\.quickAddHeaderIsRow, true) } else { dependencies; parsed }
+            }.frame(maxWidth: .infinity, alignment: .leading)
+                .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionContentHeight.self, value: geometry.size.height) })
+                .coordinateSpace(name: QuickAddRegionRow.space)
+        }.scrollIndicators(.visible).compactBounds("quick-add-metadata")
+            .onPreferenceChange(QuickAddRegionContentHeight.self) { contentHeight = $0 }
+            .onPreferenceChange(QuickAddRegionRows.self) { chipFrames = $0 }
+            .preference(key: QuickAddAddedMetadataHeight.self, value: Optional(visibleHeight - max(24, parsedHeight)))
+            .onPreferenceChange(QuickAddParsedMetadataHeight.self) { parsedHeight = $0 }
+    }
+    /// The "Depends on" line, then up to `maximumRows` whole rows of chips, counting Dependency
+    /// chips and parsed-metadata chips alike, each row at its measured position and height, so the
+    /// region never ends partway into a row; more content scrolls, with visible scroll bars. The
+    /// Dependency chips are rows like any other: a long Dependency list scrolls too.
+    private var rows: [(top: CGFloat, bottom: CGFloat)] {
+        var rows: [(top: CGFloat, bottom: CGFloat)] = []
+        for frame in chipFrames.sorted(by: { $0.minY < $1.minY }) {
+            if let last = rows.last, abs(frame.minY - last.top) < 2 { rows[rows.count - 1].bottom = max(last.bottom, frame.maxY) } else { rows.append((frame.minY, frame.maxY)) }
+        }
+        return rows
+    }
+    /// Compact: all of the content when it fits `offered`, else the whole rows that fit (at least one).
+    private func fitted(_ offered: CGFloat) -> CGFloat {
+        let content = max(contentHeight, 24)
+        guard content > offered + 0.5, let first = rows.first else { return content }
+        return min(content, rows.last(where: { $0.bottom <= offered + 0.5 })?.bottom ?? first.bottom)
+    }
+    private var visibleHeight: CGFloat {
+        let content = max(contentHeight, 24)
+        let rows = rows
+        guard rows.count > maximumRows, maximumRows > 0 else { return content }
+        return min(content, rows[maximumRows - 1].bottom)
+    }
+}
+
+/// One chip's frame in its quick-add metadata region, for the region's whole-row height.
+struct QuickAddRegionRow: View {
+    static let space = "quick-add-region"
+    var body: some View {
+        GeometryReader { geometry in Color.clear.preference(key: QuickAddRegionRows.self, value: [geometry.frame(in: .named(Self.space))]) }
+    }
+}
+struct QuickAddRegionRows: PreferenceKey {
+    static let defaultValue: [CGRect] = []
+    static func reduce(value: inout [CGRect], nextValue: () -> [CGRect]) { value += nextValue() }
+}
+
+struct QuickAddContentAnchor<Content: View>: View {
+    let compact: Bool
+    /// The Compact window's height (O34); 426 at its minimum.
+    var limit: CGFloat = TaskWindowSizing.compactSize.height
+    let identity: String
+    @ViewBuilder let content: (Int) -> Content
+    @State private var addedHeight: CGFloat = 0
+    @State private var maximumRows = 2
+    var body: some View {
+        if compact {
+            // Compact is top-aligned under the Find field: no offset (it drew the header over the
+            // field at 640 pt). Quick Add takes the height the Compact screen gives it; its chip
+            // region takes what is left of that (Mac UI review 2, item 2).
+            content(maximumRows)
+                .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
+        } else {
+            content(maximumRows)
+                .background(GeometryReader { geometry in Color.clear.preference(key: QuickAddContentHeight.self, value: geometry.size.height) })
+                .offset(y: -addedHeight / 2)
+                .onPreferenceChange(QuickAddAddedMetadataHeight.self) { addedHeight = $0 ?? 0 }
+                .onAppear { maximumRows = 2 }
+                .onChange(of: identity) { _, _ in maximumRows = 2 }
+        }
+    }
+}
+private struct QuickAddHeaderIsRowKey: EnvironmentKey { static let defaultValue = false }
+private struct QuickAddDependenciesCutKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    /// Compact Quick Add counts the "Depends on" line as a row of its chip region.
+    var quickAddHeaderIsRow: Bool {
+        get { self[QuickAddHeaderIsRowKey.self] }
+        set { self[QuickAddHeaderIsRowKey.self] = newValue }
+    }
+    /// Compact Quick Add's chip region cut off rows, so some Dependency chips are out of view.
+    var quickAddDependenciesCut: Bool {
+        get { self[QuickAddDependenciesCutKey.self] }
+        set { self[QuickAddDependenciesCutKey.self] = newValue }
+    }
+}
+struct QuickAddAddedMetadataHeight: PreferenceKey {
+    static let defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) { if let next = nextValue() { value = next } }
+}
+struct QuickAddContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+struct QuickAddRegionContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+struct QuickAddParsedMetadataHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 struct QuickAddChipFrames: PreferenceKey {

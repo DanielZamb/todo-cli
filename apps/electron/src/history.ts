@@ -1,4 +1,5 @@
 import type {
+  Edge,
   OpLogEntry,
   Recurrence,
   Sequence,
@@ -7,6 +8,8 @@ import type {
 } from "@todo/domain";
 
 const labels = {
+  DependencyAdded: "Dependency added",
+  DependencyRemoved: "Dependency removed",
   AttachmentAdded: "Attachment added",
   AttachmentRemoved: "Attachment removed",
   TaskCreated: "Created",
@@ -82,6 +85,8 @@ export function canRevertHistory(
     [
       "AttachmentAdded",
       "AttachmentRemoved",
+      "DependencyAdded",
+      "DependencyRemoved",
       "TaskEdited",
       "TaskCompleted",
       "TaskCancelled",
@@ -91,6 +96,32 @@ export function canRevertHistory(
       "TaskReverted",
     ].includes(entry.event.kind)
   );
+}
+export function historyDependencies(entry: OpLogEntry): {
+  added: readonly Pick<Edge, "dependent_id" | "blocker_id">[];
+  removed: readonly Pick<Edge, "dependent_id" | "blocker_id">[];
+} {
+  const event = entry.event;
+  if (event.kind === "DependencyAdded" || event.kind === "DependencyRemoved") {
+    const edge = {
+      dependent_id: event.dependent_id,
+      blocker_id: event.blocker_id,
+    };
+    return event.kind === "DependencyAdded"
+      ? { added: [edge], removed: [] }
+      : { added: [], removed: [edge] };
+  }
+  switch (event.kind) {
+    case "TaskCreated":
+    case "TaskDeleted":
+    case "TaskMovedOut":
+    case "TaskReverted":
+      return event.entity_version === 2
+        ? event.dependencies
+        : { added: [], removed: [] };
+    default:
+      return { added: [], removed: [] };
+  }
 }
 
 export function rejectionReason(reason: string | null): string {

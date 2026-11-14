@@ -1,9 +1,9 @@
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { _electron, type ElectronApplication, expect } from "@playwright/test";
+import { hiddenHostOptions } from "./hidden-host.ts";
 import { verifyImport } from "./verify-import.ts";
 
 const binaries = process.argv[2];
@@ -57,17 +57,16 @@ try {
       },
     );
   cli("login");
-  const executablePath: string = createRequire(import.meta.url)("electron");
-  desktop = await _electron.launch({
-    executablePath,
-    args: [resolve(import.meta.dirname, "../dist/verification/write-host.mjs")],
-    env: {
-      ...env,
-      TODO_SERVER_URL: url,
-      TODO_ELECTRON_DATA: join(scratch, "electron"),
-    },
-    timeout: 60000,
-  });
+  desktop = await _electron.launch(
+    hiddenHostOptions({
+      env: {
+        ...env,
+        TODO_SERVER_URL: url,
+        TODO_ELECTRON_DATA: join(scratch, "electron"),
+      },
+      timeout: 60000,
+    }),
+  );
   const page = await desktop.firstWindow({ timeout: 60000 });
   await expect(
     page.getByRole("button", { name: "Import…", exact: true }),

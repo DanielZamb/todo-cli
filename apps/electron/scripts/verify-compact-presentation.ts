@@ -5,6 +5,19 @@ import { Task } from "@todo/domain";
 import { Schema } from "effect";
 import { setAppearance } from "./appearance.ts";
 
+export async function requestCompact(page: Page) {
+  const control = page.getByRole("button", {
+    name: "Compact mode",
+    exact: true,
+  });
+  try {
+    await control.waitFor({ state: "visible", timeout: 1000 });
+  } catch (cause) {
+    throw new Error("Compact control not visible", { cause });
+  }
+  await control.click();
+}
+
 export async function verifyCompactPresentation({
   page,
   desktop,
@@ -34,14 +47,7 @@ export async function verifyCompactPresentation({
   const plainTask = Schema.decodeUnknownSync(Task)(
     await api("/profiles/work/tasks", "POST", { title: "U02 plain row" }),
   );
-  if (
-    await page
-      .getByRole("button", { name: "Compact mode", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Compact mode", exact: true })
-      .click();
+  await requestCompact(page);
   await expect
     .poll(() =>
       desktop.evaluate(({ BrowserWindow }) =>

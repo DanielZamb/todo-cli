@@ -1,12 +1,27 @@
 export * from "./attachments.ts";
+export type {
+  AuthorizedOwnerRead,
+  AuthorizedProfiles,
+  AuthorizedRead,
+} from "./auth/authorized-read.ts";
 export * from "./auth/model.ts";
 export * from "./batch-edit.ts";
 export * from "./client-reads.ts";
+export * from "./dependencies.ts";
+export * from "./dependency-commands.ts";
+export * from "./dependency-contract.ts";
+export * from "./dependency-rules.ts";
 export * from "./diagnostics.ts";
 export * from "./discovery.ts";
 export * from "./entities.ts";
 export * from "./events.ts";
 export * from "./exit-status.ts";
+export * from "./graph-contract.ts";
+export * from "./graph-energy.ts";
+export * from "./graph-mermaid.ts";
+export * from "./graph-model.ts";
+export * from "./graph-order.ts";
+export * from "./graph-queries.ts";
 export * from "./ids.ts";
 export * from "./import.ts";
 export * from "./limits.ts";

@@ -15,6 +15,9 @@ export async function nativeAttachmentRequest(input: unknown): Promise<Reply> {
   try {
     const request = Schema.decodeUnknownSync(NativeAttachmentRequest)(input);
     switch (request._tag) {
+      case "copyMermaid":
+        await clipboard.writeText(request.text);
+        return { _tag: "ok" };
       case "copyTaskId":
         if (
           request.task.length > 128 ||

@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { AttachmentInput } from "./attachments.ts";
+import { DependencyError } from "./dependencies.ts";
 import { TagId, TaskId, Version } from "./ids.ts";
 import {
   ExternalIdInput,
@@ -14,6 +15,15 @@ import { TaskLookupDetails } from "./task-lookup-error.ts";
 import { Instant } from "./time.ts";
 
 export const ImportItem = Schema.Struct({
+  depends_on: Schema.optionalKey(
+    limitedItems(ExternalIdInput, 13).check(
+      Schema.makeFilter(
+        (ids) =>
+          new Set(ids).size === ids.length ||
+          "Each Dependency external id must occur once.",
+      ),
+    ),
+  ),
   attachments: Schema.optionalKey(
     limitedItems(AttachmentInput, inputLimits.attachmentsPerTask),
   ),
@@ -67,6 +77,7 @@ export const ImportRow = Schema.Struct({
       details: Schema.optionalKey(
         Schema.Struct({
           current_version: Schema.NullOr(Version),
+          dependency_error: Schema.optionalKey(DependencyError),
           profile: Schema.optionalKey(TaskLookupDetails.fields.profile),
           task_id: Schema.optionalKey(Schema.String),
           recovery: Schema.optionalKey(Schema.String),

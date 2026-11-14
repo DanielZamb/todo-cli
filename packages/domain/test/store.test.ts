@@ -239,7 +239,7 @@ describe("transactional operation log", () => {
             expect(yield* store.settings()).toEqual({
               journal_mode: "wal",
               busy_timeout: 5000,
-              user_version: 6,
+              user_version: 7,
             });
             yield* store.putProfile(work);
             const first = yield* store.append({

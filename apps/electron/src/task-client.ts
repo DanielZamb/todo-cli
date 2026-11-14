@@ -1,9 +1,9 @@
-import { SearchTooBroadResponse, TodoApi } from "@todo/api";
+import { SearchTooBroadResponse } from "@todo/api";
 import { type PlanningView, seriesForTask, type TaskId } from "@todo/domain";
 import { Effect, Schema } from "effect";
 import type { HttpClient } from "effect/http";
-import { HttpApiClient } from "effect/http-api";
 import { errorReply, exitDetail } from "./error-reply.ts";
+import type { taskHttpClient } from "./http-client.ts";
 import type { NativeAttachmentRequest, Reply, Request } from "./protocol.ts";
 import { historyTaskIds, seriesFromHistory, seriesKey } from "./recurrence.ts";
 
@@ -23,8 +23,7 @@ export type TaskRequest = Exclude<
         | "snapshotReveal";
     }
 >;
-const makeClient = () => HttpApiClient.make(TodoApi);
-type Client = Effect.Success<ReturnType<typeof makeClient>>;
+type Client = Effect.Success<ReturnType<typeof taskHttpClient>>;
 export const taskRequest = (
   http: Client,
   request: TaskRequest,
@@ -36,6 +35,38 @@ export const taskRequest = (
     HttpClient.HttpClient
   > {
     switch (request._tag) {
+      case "graph":
+        return {
+          _tag: "graph",
+          report: yield* http.tasks.graph({
+            params: { profile: request.profile, task: request.task },
+          }),
+        };
+      case "dependencyCandidates":
+        return {
+          _tag: "dependencyCandidates",
+          tasks: yield* http.tasks.list({
+            params: { profile: request.profile },
+            query: request.filters,
+          }),
+        };
+      case "depend":
+      case "undepend":
+        return {
+          _tag: "edge",
+          report: yield* http.tasks[request._tag]({
+            params: { profile: request.profile, task: request.task },
+            payload: request.payload,
+          }),
+        };
+      case "batchDepend":
+        return {
+          _tag: "batchDepend",
+          report: yield* http.tasks.batchDepend({
+            params: { profile: request.profile },
+            payload: request.payload,
+          }),
+        };
       case "diagnostics":
         return {
           _tag: "diagnostics",

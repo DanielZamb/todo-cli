@@ -1,0 +1,50 @@
+html,
+body,
+#graph {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+#graph {
+  background: var(--pele-bg, #f7f8f5);
+  color: var(--pele-fg, #161d19);
+  touch-action: none;
+}
+.graph-content {
+  transform-origin: 0 0;
+  width: max-content;
+}
+.graph-content svg {
+  max-width: none !important;
+  height: auto;
+}
+.graph-hidden {
+  display: none;
+}
+.pele-node {
+  cursor: pointer;
+}
+.pele-node[data-state="blocked"] > :first-child {
+  stroke: var(--pele-critical);
+}
+.pele-node[data-state="done"] > :first-child,
+.pele-node[data-state="cancelled"] > :first-child {
+  stroke: var(--pele-muted);
+}
+.pele-node[data-state="done"] text,
+.pele-node[data-state="cancelled"] text {
+  fill: var(--pele-muted);
+}
+.pele-node[data-root="true"] > :first-child {
+  stroke: var(--pele-accent);
+  stroke-width: 3;
+}
+.pele-node:focus-visible {
+  outline: 2px solid var(--pele-accent);
+  outline-offset: 4px;
+}
+#graph[data-reduced-motion="true"] * {
+  animation: none !important;
+  transition: none !important;
+}

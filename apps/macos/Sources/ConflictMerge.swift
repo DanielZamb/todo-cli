@@ -45,6 +45,7 @@ extension TaskDraft {
 
     func merging(_ latest: TaskSnapshot, choices: [String: Bool]) -> Self {
         var merged = Self(latest)
+        merged.opening = opening
         for field in changedFields where choices[field] != false {
             switch field {
             case "title": merged.title = title
@@ -70,9 +71,10 @@ extension TaskDraft {
         try JSONSerialization.data(withJSONObject: ["from_version": base.row_version, "changes": fieldValues(changedFields), "recurrence": JSONSerialization.jsonObject(with: JSONEncoder().encode(recurrence))])
     }
 
-    func newSeriesData(_ recurrence: Recurrence) throws -> Data {
+    func newSeriesData(_ recurrence: Recurrence, dependsOn: [String] = []) throws -> Data {
         var fields = try fieldValues(Self.fields)
         fields["source"] = "manual"
+        if !dependsOn.isEmpty { fields["depends_on"] = dependsOn }
         return try JSONSerialization.data(withJSONObject: ["task": fields, "recurrence": JSONSerialization.jsonObject(with: JSONEncoder().encode(recurrence))])
     }
 

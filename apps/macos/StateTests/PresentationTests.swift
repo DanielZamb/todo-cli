@@ -6,6 +6,19 @@ import UserNotifications
 @testable import TodoState
 
 struct PresentationTests {
+    @Test func compactImportProjectsNestedDependencyAndConflictReasons() throws {
+        let json = #"{"code":"invalid_args","message":"AGENT ONLY outer copy","exit_code":2,"exit_meaning":"validation or usage","details":{"dependency_error":{"generated_at":"2026-11-10T00:00:00Z","message":"AGENT ONLY nested copy","exit_code":2,"exit_meaning":"validation or usage","code":"dependency_cycle","details":{"dependent_id":"a","blocker_id":"b","path":["a","b","a"]}}}}"#
+        let failure = try JSONDecoder().decode(ServerFailure.self, from: Data(json.utf8))
+        let row = ImportSummary.Row(external_id: "repository:dependency", outcome: "rejected", task_id: "a", from_version: 1, changed_fields: [], error: failure)
+        #expect(row.reasonText == "This Dependency would create a loop.")
+        #expect(row.exitDetail == "error 2 - validation or usage")
+        #expect(row.rejectionDetail == "This Dependency would create a loop.\nerror 2 - validation or usage\nrepository:dependency")
+        #expect(!row.accessibilityText(title: "Dependency candidate").contains("AGENT ONLY"))
+        let conflict = ServerFailure(message: "AGENT ONLY conflict", code: "occ_conflict", exitCode: 4, exitMeaning: "Conflict")
+        let stale = ImportSummary.Row(external_id: "repository:stale", outcome: "rejected", task_id: "b", from_version: 1, changed_fields: [], error: conflict)
+        #expect(stale.reasonText == "This Task changed. Reload its Dependencies before trying again.")
+        #expect(stale.exitDetail == "error 4 - Conflict")
+    }
     @Test func compactImportRejectionDetails() {
         let failure = ServerFailure(message: "New Tasks need a title. Add a title and import again.", code: "title_required", exitCode: 2, exitMeaning: "validation or usage")
         let row = ImportSummary.Row(external_id: "repository:review", outcome: "rejected", task_id: nil, from_version: nil, changed_fields: [], error: failure)
@@ -135,6 +148,7 @@ struct CompactFormattingTests {
         #expect([0, 1, 2].map { TaskCount.text($0) } == ["0 tasks", "1 task", "2 tasks"])
         #expect(TaskCount.text(1, capitalized: true) == "1 Task")
         #expect([0, 1, 2].map { TaskCount.text($0, capitalized: true) } == ["0 Tasks", "1 Task", "2 Tasks"])
+        #expect([0, 1, 2].map { TaskCount.text($0, singular: "Dependency", plural: "Dependencies") } == ["0 Dependencies", "1 Dependency", "2 Dependencies"])
     }
     @Test func foreignZoneIsVisible() {
         var calendar = Calendar(identifier: .gregorian)

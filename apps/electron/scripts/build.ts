@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { sign } from "@electron/osx-sign";
 import { CONTRACT_ID } from "@todo/api";
+import { buildGraphBrowser } from "./build-graph-browser.ts";
 
 const {
   values: { sign: signed, output },
@@ -49,6 +50,9 @@ writeFileSync(
   "dist/identity.json",
   `${JSON.stringify({ build, contract: CONTRACT_ID })}\n`,
 );
+execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
+  stdio: "inherit",
+});
 execFileSync(
   "bun",
   [
@@ -63,6 +67,9 @@ execFileSync(
   ],
   { stdio: "inherit" },
 );
+execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
+  stdio: "inherit",
+});
 execFileSync(
   "bun",
   [
@@ -75,9 +82,16 @@ execFileSync(
   ],
   { stdio: "inherit" },
 );
+execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
+  stdio: "inherit",
+});
 execFileSync("pnpm", ["exec", "vite", "build"], { stdio: "inherit" });
+await buildGraphBrowser();
 
 if (process.env.TODO_ELECTRON_VERIFY_HOST === "1") {
+  execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
+    stdio: "inherit",
+  });
   execFileSync(
     "bun",
     [
@@ -109,7 +123,7 @@ if (
   ]);
   const resources = `${bundle}/Contents/Resources/app`;
   mkdirSync(`${resources}/dist`, { recursive: true });
-  for (const file of ["main.cjs", "preload.cjs", "renderer"])
+  for (const file of ["main.cjs", "preload.cjs", "renderer", "graph-browser"])
     cpSync(`dist/${file}`, `${resources}/dist/${file}`, { recursive: true });
   cpSync("package.json", `${resources}/package.json`);
   cpSync("dist/identity.json", `${resources}/identity.json`);
@@ -142,6 +156,9 @@ if (
     plist,
   ]);
   rmSync(`${bundle}/Contents/Resources/electron.icns`);
+  execFileSync(resolve(import.meta.dirname, "../../../scripts/disk-guard.sh"), {
+    stdio: "inherit",
+  });
   execFileSync("xcrun", [
     "actool",
     resolve("../../design/icon/Todo.icon"),

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   appendFileSync,
@@ -25,6 +25,11 @@ const skill = import.meta.dirname;
 const root = verificationRoot(skill);
 const commit = process.argv[2] ?? coverage.candidateCommit;
 assert.match(commit, /^[a-f0-9]{40}$/, "Pass the full reviewed candidate SHA");
+const repeatClean = process.argv[4] === "--repeat-clean=20";
+assert.ok(
+  process.argv[4] === undefined || repeatClean,
+  "Use --repeat-clean=20 for twenty consecutive clean discovery suites",
+);
 const inputs = discoveryInputs(root, commit);
 const base = join(root, "docs/evidence/discovery-formal");
 mkdirSync(base, { recursive: true });
@@ -147,10 +152,13 @@ const mutations = [
     witness: "model.discovery.showIntent?.id",
   },
   {
+    // Candidate 7: expireSession compares the epoch without Task cancellation, so the epoch
+    // comparison is one helper used by both isCurrentCredential and expireSession; the mutant
+    // removes it from both layers at once.
     name: "authorization-epoch",
     path: modelFile,
-    from: "discovery.credentialEpoch == credentialEpoch && !Task.isCancelled",
-    to: "!Task.isCancelled",
+    from: "func isCurrentEpoch(_ credentialEpoch: Int) -> Bool { discovery.credentialEpoch == credentialEpoch }",
+    to: "func isCurrentEpoch(_ credentialEpoch: Int) -> Bool { true }",
     filter:
       "oldUnauthorizedCannotExpireReplacementSessionAndCurrentUnauthorizedStillExpires",
     witness: "replacementSurvived",
@@ -284,8 +292,17 @@ try {
     backend: inputs.backend,
     dependencyPins,
     nativeApp: false,
-    keychain: false,
+    // Not a claim yet: the build has not run. The result records the guard's answer.
+    keychain: "read from the guard after the build (see result)",
   });
+  // Candidate 10, item 8: the Keychain answer comes from the guard (state_package.py guard, `nm -u`
+  // over the built products), never a constant; null when the guard wrote no receipt.
+  const keychainFromGuard = (): boolean | null => {
+    const receipt = join(evidence, "keychain-guard.json");
+    spawnSync("python3", [join(root, "apps/macos/scripts/state_package.py"), "guard", build, receipt], { stdio: "inherit" });
+    if (!existsSync(receipt)) return null;
+    return JSON.parse(readFileSync(receipt, "utf8")).keychainLinked ?? null;
+  };
   const proofHashes = () =>
     originals.map(({ path, hash }) => ({
       path,
@@ -463,6 +480,37 @@ try {
       );
     }
   }
+  if (repeatClean) {
+    const runs = [];
+    for (let index = 1; index <= 20; index += 1) {
+      const label = `clean-${String(index).padStart(2, "0")}`;
+      const result = await test(
+        label,
+        "DiscoveryStateTests|DiscoveryReportStateTests",
+      );
+      runs.push({ label, actualExit: result.exit });
+      record("clean-repetitions", { commit, runs });
+      assert.equal(
+        result.exit,
+        0,
+        "Every consecutive suite must pass without a retry",
+      );
+      restoreProof(label);
+    }
+    record("result", {
+      passed: true,
+      commit,
+      evidence,
+      consecutiveSuites: 20,
+      runs,
+      nativeApp: false,
+      keychain: keychainFromGuard(),
+    });
+    console.log(
+      JSON.stringify({ passed: true, commit, evidence, consecutiveSuites: 20 }),
+    );
+    process.exit(0);
+  }
   const baseline = await test(
     "clean",
     "DiscoveryStateTests|DiscoveryReportStateTests|AuthEpochTests",
@@ -526,7 +574,7 @@ try {
     outcomes,
     memorySessionVault: true,
     nativeApp: false,
-    keychain: false,
+    keychain: keychainFromGuard(),
     liveSourceUnchanged: true,
   });
   console.log(JSON.stringify({ passed: true, commit, evidence }));

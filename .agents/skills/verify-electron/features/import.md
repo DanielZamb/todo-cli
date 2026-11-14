@@ -32,6 +32,14 @@ at Version 4 with its concurrent title, and the report must show a Conflict.
 records the real task_deleted rejection for a stale Task before Preview, then
 uses an explicitly typed not-found UI fixture to verify structured recovery.
 
+The DAG mixed-refusal preview keeps PR #12's Compact row geometry for ordinary,
+nested Dependency and Conflict errors. Human reasons come from the shared
+Dependency projector, with the actual pair on the muted last line. Existing
+blocker and follow-up navigation uses the same row menu as Find Task by id.
+The focused import driver uses `hiddenHostOptions`, including the common
+entry/runtime preflight. The verification host exits with
+`VERIFY_HOST_BOOT_FAILED` on a bootstrap failure.
+
 For import-only proof, compile the server, CLI and verification seed into a
 worktree-local binary directory, build the unsigned verification host, then run
 `TODO_ELECTRON_VERIFY_HOST=1 pnpm --filter @todo/electron exec bun scripts/verify-import-focused.ts <absolute-binary-directory> <fresh-absolute-evidence-directory>`.

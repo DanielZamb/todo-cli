@@ -271,8 +271,67 @@ feedback, and Error recovery through actual SSE reconnect/operations.
 stream for this proof; production cursor persistence and native HOLD remain
 separate limits.
 
+Unit B's shared-contract alignment extracts taskFilterDraft/applyTaskFilterDraft
+in src/task-filter-draft.ts. Run `pnpm --filter @todo/electron test task-filter-draft.test.ts`.
+It drives the same draft initialization/Apply/Clear boundary used by the existing
+dialog, with prefix/text, true-or-absent readiness, false rejection and exact
+other filter values. This is contract proof only, with no new controls or native
+client parity claim. L1 reapplies this correction to the final search dialog and
+reruns the actual filter feature after its own rebase.
+
+G11 protocol proof uses scripts/verify-graph-contract.ts against the compiled
+scratch server through taskHttpClient, the production Electron HttpApiClient
+factory also used by main.ts. It asserts topo ancestors/descendants and
+lightest_next by own energy, unknown last, then topo position. The literal
+branch distinguishes all orders and checks eight decoded node fields and encoding. The shared
+verify-history-unions.sh drive invokes it with TODO_DAG_CONTRACT_TESTS=1.
+No Electron/native UI, safeStorage or Keychain starts for this decoder proof.
+
+The transport factory reads a credential getter inside every request mapping.
+Run scripts/verify-auth-sequence.ts as a compiled proof against scratch binaries;
+one client is created signed out, signs in, reads Profiles with a bearer, signs
+out, clears the credential, then reads without a bearer. The proxy records only
+header presence and statuses. The unsigned host write drive now reuses this
+production factory and verify-host-auth.ts signs out/in through the actual
+renderer. Native safeStorage/session.enc restoration remains held.
 ## Authorized discovery
 
 Read [Profiles, Projects and Find Task by id](features/discovery.md) for the
 Compact-first production-renderer scratch proof, explicit Show, draft retention,
 done Task reveal, response provenance, selectors and visual state matrix.
+
+## Task Dependencies
+
+Read [Task Dependencies](features/dependencies.md) for the current production-renderer
+scratch command, state coverage, selectors, capture receipt validation and pending
+proof boundaries. This checkpoint does not replace the full end-of-unit suites.
+The drag fixture asserts that every row keeps identical bounds for allowed,
+already-linked, self and foreign targets. Its visible target metadata is short;
+its accessible value keeps the full relation. Long-loop refusal geometry requires
+three whole witness lines and at least two whole candidate rows. Batch and nested
+Import fixtures use visibly different agent messages to catch projector leaks.
+The complete aggregate and both final client suites remain required separately.
+Search-owned notices use `dependency-search-error`; mutation refusals retain
+`dependency-error`. The dependency search helper proves narrow/clear recovery
+through actual HttpApi decoding, retains Conflict/Reload and rejects older errors
+after SDK delivery. Read its typed-fixture versus compiled-server boundary in the
+Dependency feature map. The recurring form and initial-chip fixtures assert whole
+visible controls and the existing fixed-footer geometry.
+
+The Series Skip Retry drive awaits the completed HTTP response for the same
+Occurrence and reviewed `from_version` before its original authoritative status
+assertion. It does not sleep or resend. Its failure-only sampler remains.
+For compile-only Xcode verification, `apps/electron/scripts/xcode-compiler-guards.ts`
+creates local compiler shims and copies the installed Swift feature metadata
+unchanged beside them. See `apps/electron/scripts/verify-design-all.md` for its
+command. Mac Python helpers still run plainly through the Swift slot.
+
+## Stream and write reply order
+
+Set `TODO_ELECTRON_VERIFY_HOST=1 TODO_VERIFY_STREAM_WAKE=1` on the helper to run
+`scripts/verify-stream-wake.ts` against a compiled scratch server. The proxy holds
+actual write replies, SSE chunks and Task reads to prove reply-first, stream-first
+and an event during the write refresh. The production renderer must retain the
+saved title at Version 2, with no busy state left behind. This unsigned host proof
+does not establish signed storage, native notifications or production main-process
+cursor persistence. The full unsigned write drive remains a separate recipe.

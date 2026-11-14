@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "A4BDE688D540965D08D555E8B413C8CB"
+               BlueprintIdentifier = "761413EEB9A80B1BD2280255AC42789A"
                BuildableName = "Todo.app"
                BlueprintName = "Todo"
                ReferencedContainer = "container:Todo.xcodeproj">
@@ -30,7 +30,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A4BDE688D540965D08D555E8B413C8CB"
+            BlueprintIdentifier = "761413EEB9A80B1BD2280255AC42789A"
             BuildableName = "Todo.app"
             BlueprintName = "Todo"
             ReferencedContainer = "container:Todo.xcodeproj">
@@ -90,7 +90,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A4BDE688D540965D08D555E8B413C8CB"
+            BlueprintIdentifier = "761413EEB9A80B1BD2280255AC42789A"
             BuildableName = "Todo.app"
             BlueprintName = "Todo"
             ReferencedContainer = "container:Todo.xcodeproj">
@@ -107,7 +107,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "A4BDE688D540965D08D555E8B413C8CB"
+            BlueprintIdentifier = "761413EEB9A80B1BD2280255AC42789A"
             BuildableName = "Todo.app"
             BlueprintName = "Todo"
             ReferencedContainer = "container:Todo.xcodeproj">

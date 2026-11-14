@@ -392,6 +392,7 @@ export async function verifyTaskFilters({
                 })
                 .click();
           }
+          await expect(calendar).toBeVisible();
           const popup = await calendar.evaluate((element) => {
             const rect = element.getBoundingClientRect();
             return {

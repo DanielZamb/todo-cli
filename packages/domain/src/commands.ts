@@ -2,8 +2,13 @@ import { Clock, Effect, Schema } from "effect";
 import { resolveAttachments } from "./attachment-input.ts";
 import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
+import { readRequest } from "./auth/authorized-read.ts";
 import { type AccessRequest, AuthError } from "./auth/model.ts";
 import { isInboxTask } from "./client-reads.ts";
+import type { DependencyError, Edge, VersionChange } from "./dependencies.ts";
+import { dependencyWarnings } from "./dependency-commands.ts";
+import type { DeleteTask, DependencyWarning } from "./dependency-contract.ts";
+import { dependencyFingerprint } from "./dependency-delete.ts";
 import {
   Profile,
   Project,
@@ -14,8 +19,9 @@ import {
   Task,
   TaskDetails,
 } from "./entities.ts";
-import { Event, type OpLogEntry, type TaskMutationKind } from "./events.ts";
-import type { ExitCode } from "./exit-status.ts";
+import type { AppendResult, OpLogEntry } from "./events.ts";
+import { Event, type TaskMutationKind } from "./events.ts";
+import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
 import {
@@ -43,14 +49,15 @@ import {
   type MoveTask,
   RecurrenceEditInput,
   RecurrenceInput,
-  type RevertTask,
+  RevertTask,
+  resolveTaskCreation,
   TaskPatch,
   type TransitionTask,
 } from "./task-commands.ts";
 import {
   filterTaskRecords,
   filterTaskRecordsEffect,
-  type TaskFilters,
+  TaskFilters,
 } from "./task-filters.ts";
 import type { TaskLookupDetails } from "./task-lookup-error.ts";
 import type { TaskRead } from "./task-read.ts";
@@ -66,6 +73,7 @@ export class CommandError extends Error {
     readonly latest?: TaskView,
     readonly details?: typeof TaskLookupDetails.Type,
     readonly task_id?: string,
+    readonly dependency_error?: DependencyError,
   ) {
     super(message);
   }
@@ -137,10 +145,45 @@ const numberValue = (value: string) => {
 export const readTasks = Effect.fn(function* (
   store: OperationStore,
   request: AccessRequest,
+  filters: TaskFilters = {},
 ) {
-  const data = yield* store.auth.read(request);
-  const tasks = data.tasks
-    .filter((t) => t.profile_id === request.profile && t.deleted_at === null)
+  const selected = Object.freeze({
+    credential: request.credential,
+    profile: request.profile,
+  });
+  const fields = { filters: { ...filters } };
+  const search = store.searchWords.read(selected.profile);
+  const {
+    selection: authority,
+    data,
+    graph,
+  } = yield* store.auth.withState(
+    selected,
+    Schema.Struct({ filters: TaskFilters }),
+    fields,
+    (read, data) =>
+      Effect.gen(function* () {
+        const selection = yield* store.auth.checkRead(read, "read");
+        const graph = yield* store.graphRead(read);
+        return { selection, data, graph };
+      }),
+    (selection) =>
+      Effect.succeed({
+        selection,
+        data: {
+          profiles: [],
+          tasks: [],
+          series: [],
+          projects: [],
+          tags: [],
+          history: [],
+        },
+        graph: { tasks: [], edges: [] },
+      }),
+  );
+  const checkedFilters = authority.fields.filters;
+  const ordered = graph.tasks
+    .filter((t) => t.deleted_at === null)
     .sort(
       (a, b) =>
         a.priority.localeCompare(b.priority) ||
@@ -159,6 +202,27 @@ export const readTasks = Effect.fn(function* (
         a.created_at.localeCompare(b.created_at) ||
         a.id.localeCompare(b.id),
     );
+  const context =
+    graph.edges.length ||
+    checkedFilters.ready ||
+    checkedFilters.blocked ||
+    checkedFilters.order
+      ? graph
+      : undefined;
+  const tasks = yield* checkedFilters.text === undefined
+    ? Effect.sync(() =>
+        filterTaskRecords(ordered, checkedFilters, data, undefined, context),
+      )
+    : filterTaskRecordsEffect(
+        ordered,
+        checkedFilters,
+        data,
+        {
+          ...taskSearchExecution(),
+          prepare: (text) => store.searchWords.words(search, text),
+        },
+        context,
+      );
   return {
     ...data,
     tasks,
@@ -254,16 +318,28 @@ type Definitions = {
   readonly tags: readonly Tag[];
 };
 type CommandOptions = {
+  readonly task_id?: TaskId;
   readonly definitions?: Definitions;
   readonly recurrence?: Recurrence | null;
+  readonly deletion?: DeleteTask;
 };
 type Target = AccessRequest & { readonly task_id: TaskId };
 export type TaskCommandResult =
   | { readonly outcome: "not-found"; readonly missing?: "attachment" }
-  | { readonly outcome: "committed"; readonly task: Task }
+  | {
+      readonly outcome: "committed";
+      readonly task: Task;
+      readonly dependency_warnings?: readonly DependencyWarning[];
+      readonly removed_dependencies?: readonly Edge[];
+      readonly affected_versions?: readonly VersionChange[];
+      readonly dependency_fingerprint?: string;
+      readonly confirm_from_version?: Task["row_version"];
+      readonly dry_run?: boolean;
+    }
   | {
       readonly outcome: "rejected";
       readonly reason: string;
+      readonly dependency_error?: DependencyError;
       readonly message?: string;
       readonly details?: ExternalIdConflictDetails;
       readonly latest: Task | null;
@@ -275,6 +351,10 @@ const now = Clock.currentTimeMillis.pipe(
     Schema.decodeUnknownSync(Instant)(new Date(time).toISOString()),
   ),
 );
+
+const TaskListFields = Schema.Struct({
+  filters: TaskFilters,
+});
 
 export class TaskCommands {
   constructor(private readonly store: OperationStore) {}
@@ -288,40 +368,159 @@ export class TaskCommands {
   ): Effect.Effect<TaskRead[], AuthError | StoreError | SearchTooBroad>;
   list(request: AccessRequest, filters: TaskFilters = {}) {
     return Effect.suspend(() => {
-      const read = this.store.searchWords.read(request.profile);
-      return this.store.auth.read(request).pipe(
-        Effect.flatMap((view) => {
-          const tasks = view.tasks.filter(
-            (task) =>
-              task.profile_id === request.profile && task.deleted_at === null,
-          );
-          return filters.text === undefined
-            ? Effect.sync(() => filterTaskRecords(tasks, filters, view))
-            : filterTaskRecordsEffect(tasks, filters, view, {
+      const selected = Object.freeze({
+        credential: request.credential,
+        profile: request.profile,
+      });
+      const fields = {
+        filters: { ...filters },
+      };
+      const search = this.store.searchWords.read(selected.profile);
+      return Effect.gen({ self: this }, function* () {
+        const {
+          selection: authority,
+          data: view,
+          graph,
+        } = yield* this.store.auth.withMetadata(
+          selected,
+          TaskListFields,
+          fields,
+          (read, data) =>
+            Effect.gen({ self: this }, function* () {
+              const selection = yield* this.store.auth.checkRead(read, "read");
+              const graph = yield* this.store.graphRead(read);
+              return { selection, data, graph };
+            }),
+          (selection) =>
+            Effect.succeed({
+              selection,
+              data: { projects: [], tags: [] },
+              graph: { tasks: [], edges: [] },
+            }),
+        );
+        const filters = authority.fields.filters;
+        const tasks = graph.tasks.filter((task) => task.deleted_at === null);
+        const context =
+          graph.edges.length ||
+          filters.ready ||
+          filters.blocked ||
+          filters.order
+            ? graph
+            : undefined;
+        const tasksRead = yield* filters.text === undefined
+          ? Effect.sync(() =>
+              filterTaskRecords(tasks, filters, view, undefined, context),
+            )
+          : filterTaskRecordsEffect(
+              tasks,
+              filters,
+              view,
+              {
                 ...taskSearchExecution(),
-                prepare: (text) => this.store.searchWords.words(read, text),
-              });
-        }),
-      );
+                prepare: (text) => this.store.searchWords.words(search, text),
+              },
+              context,
+            );
+        return tasksRead;
+      });
     });
   }
 
-  readonly get = (request: Target) =>
-    this.list(request).pipe(
-      Effect.map(
-        (tasks) =>
-          tasks.find(
-            (task) =>
-              task.profile_id === request.profile &&
-              task.id === request.task_id,
-          ) ?? null,
-      ),
+  readonly withOne = <
+    S extends Schema.ConstraintDecoder<{ readonly task_id: TaskId }>,
+    A,
+    B = never,
+  >(
+    request: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+    operation: (
+      read: import("./auth/authorized-read.ts").AuthorizedRead<
+        Readonly<S["Type"]>
+      >,
+      task: TaskRead | null,
+    ) => Effect.Effect<A, StoreError | AuthError>,
+    absent?: (
+      selection: import("./auth/auth.ts").AbsentRead<S["Type"]>,
+    ) => Effect.Effect<B, StoreError | AuthError>,
+  ) =>
+    this.store.auth.withMetadata(
+      request,
+      schema,
+      fields,
+      (read, data) =>
+        Effect.gen({ self: this }, function* () {
+          const authority = yield* this.store.auth.checkRead(read, "read");
+          const graph = yield* this.store.graphRead(read);
+          const tasks = filterTaskRecords(
+            graph.tasks.filter((task) => task.deleted_at === null),
+            {},
+            data,
+            undefined,
+            graph.edges.length ? graph : undefined,
+          );
+          const task =
+            tasks.find(
+              (task) =>
+                task.profile_id === authority.profile &&
+                task.id === authority.fields.task_id,
+            ) ?? null;
+          return yield* operation(read, task);
+        }),
+      absent,
     );
 
-  private result(entry: OpLogEntry, task: Task | null): TaskCommandResult {
+  readonly readOne = <
+    S extends Schema.ConstraintDecoder<{ readonly task_id: TaskId }>,
+  >(
+    request: AccessRequest,
+    schema: S,
+    fields: S["Type"],
+  ) =>
+    this.withOne(
+      request,
+      schema,
+      fields,
+      (read, task) =>
+        this.store.auth
+          .checkRead(read, "read")
+          .pipe(Effect.map((selection) => ({ selection, task }))),
+      (selection) => Effect.succeed({ selection, task: null }),
+    );
+
+  readonly get = (request: Target) =>
+    this.readOne(request, Schema.Struct({ task_id: TaskId }), {
+      task_id: request.task_id,
+    }).pipe(Effect.map((result) => result.task));
+
+  private result(entry: AppendResult, task: Task | null): TaskCommandResult {
     if (entry.outcome === "rejected")
-      return { outcome: "rejected", reason: entry.reason, latest: task };
+      return {
+        outcome: "rejected",
+        reason: entry.reason,
+        latest: task,
+        ...(entry.dependency_error
+          ? {
+              dependency_error: entry.dependency_error,
+              message: entry.dependency_error.message,
+            }
+          : {}),
+      };
     if (task === null) return { outcome: "not-found" };
+    if (entry.event.kind === "TaskDeleted") {
+      const dependencies = eventChanges(
+        entry.event,
+        task.profile_id,
+      ).dependencies;
+      return {
+        outcome: "committed",
+        task,
+        removed_dependencies: dependencies.removed,
+        affected_versions: dependencies.versions,
+        dependency_fingerprint: dependencyFingerprint(dependencies.removed),
+        dry_run: false,
+      };
+    }
     return { outcome: "committed", task };
   }
 
@@ -429,29 +628,13 @@ export class TaskCommands {
                 "Invalid Attachment URI or file path. Check every Attachment and retry.",
             } satisfies TaskCommandResult;
           }
-          const initial = Schema.decodeUnknownSync(Task)({
-            description: null,
-            project_id: null,
-            priority: "P3",
-            scheduled_at: null,
-            due_at: null,
-            energy: null,
-            estimate_min: null,
-            source: "manual",
-            tags: [],
-            ...input,
-            ...(attachments === undefined ? {} : { attachments }),
-            id: taskId(),
-            profile_id: identity.profile,
-            entity_version: 1,
-            row_version: 1,
-            status: "open",
-            occurrence: null,
-            created_at: time,
-            updated_at: time,
-            completed_at: null,
-            deleted_at: null,
-          });
+          const initial = resolveTaskCreation(
+            input,
+            identity.profile,
+            options.task_id ?? taskId(),
+            time,
+            attachments,
+          );
           const { task, definitions } = yield* this.resolveMetadata(
             initial,
             input,
@@ -480,6 +663,9 @@ export class TaskCommands {
                 ...(task.attachments === undefined
                   ? {}
                   : { attachments: task.attachments }),
+                ...(input.depends_on === undefined
+                  ? {}
+                  : { depends_on: input.depends_on }),
                 task_id: task.id,
                 occurrence_id: Schema.decodeUnknownSync(OccurrenceId)(
                   crypto.randomUUID(),
@@ -489,19 +675,55 @@ export class TaskCommands {
                 ...identity,
                 event: {
                   kind: "TaskCreated",
-                  entity_version: 1,
+                  entity_version: input.depends_on?.length ? 2 : 1,
+                  ...(input.depends_on?.length
+                    ? {
+                        dependencies: {
+                          added: input.depends_on.map((blocker_id) => ({
+                            profile_id: identity.profile,
+                            dependent_id: task.id,
+                            blocker_id,
+                          })),
+                          removed: [],
+                          versions: [],
+                        },
+                      }
+                    : {}),
                   occurred_at: time,
                   task,
                   series: null,
                   ...definitions,
                 },
               });
-          return this.result(
+          const result = this.result(
             entry,
             entry.outcome === "committed" && entry.event.kind === "TaskCreated"
               ? entry.event.task
               : null,
           );
+          if (result.outcome !== "committed" || !input.depends_on?.length)
+            return result;
+          const graph = yield* this.store.graph(identity.profile);
+          const warnings = input.depends_on.flatMap((blocker_id) =>
+            dependencyWarnings(
+              {
+                profile_id: identity.profile,
+                dependent_id: result.task.id,
+                blocker_id,
+              },
+              graph,
+            ),
+          );
+          return {
+            ...result,
+            dependency_warnings: warnings.filter(
+              (warning, index) =>
+                warning.code !== "many_dependencies" ||
+                warnings.findIndex(
+                  (other) => other.code === "many_dependencies",
+                ) === index,
+            ),
+          };
         }),
       );
     });
@@ -571,6 +793,55 @@ export class TaskCommands {
               },
             });
             return { outcome: "not-found" } satisfies TaskCommandResult;
+          }
+          if (kind === "TaskDeleted") {
+            const edges = (yield* this.store.graph(
+              identity.profile,
+            )).edges.filter(
+              (edge) =>
+                edge.dependent_id === before.id ||
+                edge.blocker_id === before.id,
+            );
+            const fingerprint = dependencyFingerprint(edges);
+            if (
+              (edges.length && !options.deletion?.with_dependencies) ||
+              (options.deletion?.dependency_fingerprint !== undefined &&
+                options.deletion.dependency_fingerprint !== fingerprint)
+            ) {
+              const dependency_error: DependencyError = {
+                ...exitStatus(2),
+                generated_at: time,
+                code: "has_dependencies",
+                message:
+                  options.deletion?.dependency_fingerprint !== undefined &&
+                  options.deletion.dependency_fingerprint !== fingerprint
+                    ? "The Dependency preview changed. Preview this Task again and confirm the current set before deleting it."
+                    : "Use --with-dependencies to delete this Task and remove these Dependencies. Review the current Dependencies and confirm again.",
+                details: {
+                  task_id: before.id,
+                  dependencies: edges,
+                  flag: "--with-dependencies",
+                },
+              };
+              yield* this.store.reject({
+                ...identity,
+                reason: dependency_error.code,
+                from_version: input.from_version,
+                dependency_error,
+                event: {
+                  kind,
+                  occurred_at: time,
+                  task_id: before.id,
+                  from_version: input.from_version,
+                },
+              });
+              return {
+                outcome: "rejected",
+                reason: dependency_error.code,
+                dependency_error,
+                latest: before,
+              } satisfies TaskCommandResult;
+            }
           }
           const seriesBefore =
             options.recurrence === undefined
@@ -755,8 +1026,36 @@ export class TaskCommands {
   ) => this.change(request, input, "TaskEdited", {}, {}, input.changes);
   readonly purge = (request: Target, input: ExpectedVersion) =>
     this.change(request, input, "TaskPurged", {});
-  readonly delete = (request: Target, input: ExpectedVersion) =>
-    this.change(request, input, "TaskDeleted", {});
+  readonly delete = (request: Target, input: DeleteTask) =>
+    input.dry_run
+      ? Effect.andThen(
+          this.store.auth.authenticate({ ...request, access: "write" }),
+          Effect.acquireUseRelease(
+            this.store.fork(),
+            (copy) =>
+              new TaskCommands(copy)
+                .change(
+                  request,
+                  input,
+                  "TaskDeleted",
+                  {},
+                  { deletion: { ...input, with_dependencies: true } },
+                )
+                .pipe(
+                  Effect.map((result) =>
+                    result.outcome === "committed"
+                      ? {
+                          ...result,
+                          dry_run: true,
+                          confirm_from_version: input.from_version,
+                        }
+                      : result,
+                  ),
+                ),
+            (copy) => Effect.orDie(copy.close()),
+          ),
+        )
+      : this.change(request, input, "TaskDeleted", {}, { deletion: input });
   readonly transition = (request: Target, input: TransitionTask) => {
     if (input.action === "reopen")
       return this.change(request, input, "TaskReopened", {});
@@ -893,15 +1192,21 @@ const cliResult = (
     return Effect.fail(
       new CommandError(
         result.reason === "conflict" ? 4 : 2,
-        result.reason === "conflict" ? "occ_conflict" : "update_failed",
+        result.dependency_error?.code ??
+          (result.reason === "conflict" ? "occ_conflict" : "update_failed"),
         result.reason === "conflict"
           ? result.latest
             ? `stale Version; retry with --expected-version ${result.latest.row_version}`
             : "stale Version; read the Task and pass --expected-version"
-          : (result.message ?? result.reason),
+          : (result.dependency_error?.message ??
+              result.message ??
+              result.reason),
         result.latest
           ? taskView(result.latest, data.projects, data.tags, data.series)
           : undefined,
+        undefined,
+        undefined,
+        result.dependency_error,
       ),
     );
   return Effect.succeed(result);
@@ -912,6 +1217,7 @@ export const createTask = Effect.fn(function* (
   input: TaskFlags,
   draft?: QuickAddDraft,
   attachments?: readonly AttachmentInput[],
+  depends_on?: readonly string[],
 ) {
   const data = yield* readTasks(store, request);
   const commands = new TaskCommands(store);
@@ -936,6 +1242,7 @@ export const createTask = Effect.fn(function* (
           : {}),
         ...prepared.fields,
         ...(attachments === undefined ? {} : { attachments }),
+        ...(depends_on === undefined ? {} : { depends_on }),
       }),
     );
     return { inputTask, options: prepared.options };
@@ -958,12 +1265,22 @@ export const mutateTask = Effect.fn(function* (
   expected: number,
   flags: TaskFlags = {},
   force = false,
+  deletion: Omit<DeleteTask, "from_version"> = {},
 ) {
   const data = yield* readTasks(store, request);
   if (!Number.isSafeInteger(expected) || expected < 1)
     return yield* Effect.gen(function* () {
-      const task = (yield* store.auth.read(request)).tasks.find(
-        (task) => task.profile_id === request.profile && task.id === id,
+      const { selection: authority, data: checked } =
+        yield* store.auth.readState(
+          request,
+          Schema.Struct({ id: Schema.String }),
+          { id },
+        );
+      const task = checked.tasks.find(
+        (task) =>
+          authority.kind === "read" &&
+          task.profile_id === authority.profile &&
+          task.id === authority.fields.id,
       );
       return yield* Effect.fail(
         new CommandError(
@@ -1019,8 +1336,26 @@ export const mutateTask = Effect.fn(function* (
   if (command === "rm")
     return yield* cliResult(
       yield* force
-        ? commands.purge(target, version)
-        : commands.delete(target, version),
+        ? deletion.dry_run
+          ? Effect.andThen(
+              store.auth.authenticate({ ...request, access: "write" }),
+              Effect.acquireUseRelease(
+                store.fork(),
+                (copy) =>
+                  new TaskCommands(copy)
+                    .purge(target, version)
+                    .pipe(
+                      Effect.map((result) =>
+                        result.outcome === "committed"
+                          ? { ...result, dry_run: true }
+                          : result,
+                      ),
+                    ),
+                (copy) => Effect.orDie(copy.close()),
+              ),
+            )
+          : commands.purge(target, version)
+        : commands.delete(target, { ...version, ...deletion }),
       data,
       id,
     );
@@ -1191,12 +1526,21 @@ const rejectClientWrite = (
 
 const transferMetadata = Effect.fn(function* (
   store: OperationStore,
-  task: Task,
-  destination: ProfileId,
-  request: AccessRequest,
+  sourceTask: Task,
+  destinationProfile: ProfileId,
+  source: AccessRequest,
 ) {
-  const data = yield* store.auth.read(request);
-  const target = yield* store.auth.read({ ...request, profile: destination });
+  const { selection: authority, data } = yield* store.auth.readState(
+    source,
+    Schema.Struct({ task: Task, destination: ProfileId }),
+    { task: sourceTask, destination: destinationProfile },
+  );
+  const { task, destination } = authority.fields;
+  const { data: target, selection: targetRead } = yield* store.auth.readState(
+    { credential: authority.credential, profile: destination },
+    Schema.Struct({}),
+    {},
+  );
   const project = data.projects.find((p) => p.id === task.project_id);
   return metadata(
     {
@@ -1205,7 +1549,7 @@ const transferMetadata = Effect.fn(function* (
         data.tags.filter((tag) => tag.id === id).map((tag) => tag.name),
       ),
     },
-    { ...request, profile: destination },
+    readRequest(targetRead),
     target,
   );
 });
@@ -1258,11 +1602,32 @@ export const moveTask = (
             original_seq: null,
             definitions,
           });
-          if (entry.outcome === "committed")
+          if (entry.outcome === "committed") {
+            const arrival = entry.event;
+            const departure =
+              arrival.kind === "TaskMovedIn"
+                ? (yield* store.history(entry.seq - 2)).find(
+                    (entry) =>
+                      entry.event.kind === "TaskMovedOut" &&
+                      entry.event.move_id === arrival.move_id,
+                  )
+                : undefined;
+            const dependencies =
+              departure?.event.kind === "TaskMovedOut"
+                ? eventChanges(departure.event, context.identity.profile)
+                    .dependencies
+                : null;
             return {
               outcome: "committed",
               task: after,
+              ...(dependencies?.removed.length
+                ? {
+                    removed_dependencies: dependencies.removed,
+                    affected_versions: dependencies.versions,
+                  }
+                : {}),
             } satisfies TaskCommandResult;
+          }
           const destination = (yield* store.profiles()).find(
             (profile) => profile.id === input.destination_profile,
           );
@@ -1271,6 +1636,12 @@ export const moveTask = (
           return {
             outcome: "rejected",
             reason: entry.reason,
+            ...(entry.dependency_error
+              ? {
+                  dependency_error: entry.dependency_error,
+                  message: entry.dependency_error.message,
+                }
+              : {}),
             latest: context.before,
             ...(entry.reason === "external_id_conflict" &&
             context.before.external_id != null
@@ -1448,11 +1819,21 @@ export const skipOccurrence = (
 
 export const revertTask = (
   store: OperationStore,
-  request: Target,
-  input: RevertTask,
-) =>
+  source: Target,
+  options: RevertTask,
+): Effect.Effect<TaskCommandResult, StoreError | AuthError> =>
   Effect.gen(function* () {
-    const data = yield* store.auth.read(request);
+    const { selection: authority, data } = yield* store.auth.readState(
+      source,
+      Schema.Struct({ task_id: TaskId, input: RevertTask }),
+      { task_id: source.task_id, input: options },
+    );
+    const request = Object.freeze({
+      credential: authority.credential,
+      profile: readRequest(authority).profile,
+      task_id: authority.fields.task_id,
+    });
+    const input = authority.fields.input;
     const entry = data.history.find((entry) => entry.seq === input.seq);
     if (
       entry?.event.kind === "TaskHistoryRedacted" &&
@@ -1547,6 +1928,12 @@ export const revertTask = (
                 : {
                     outcome: "rejected",
                     reason: result.reason,
+                    ...(result.dependency_error
+                      ? {
+                          dependency_error: result.dependency_error,
+                          message: result.dependency_error.message,
+                        }
+                      : {}),
                     latest: context.before,
                   };
             }),
@@ -1562,10 +1949,13 @@ export const revertTask = (
         Effect.gen(function* () {
           if (
             !event ||
-            !eventChanges(event).tasks.some(
-              (change) =>
-                (change.after ?? change.before)?.id === request.task_id,
-            )
+            !(event.kind === "DependencyAdded" ||
+            event.kind === "DependencyRemoved"
+              ? event.dependent_id === request.task_id
+              : eventChanges(event, request.profile).tasks.some(
+                  (change) =>
+                    (change.after ?? change.before)?.id === request.task_id,
+                ))
           )
             return yield* rejectClientWrite(
               store,
@@ -1589,8 +1979,26 @@ export const revertTask = (
             : {
                 outcome: "rejected",
                 reason: result.reason ?? "invalid_revert",
+                ...(result.dependency_error
+                  ? {
+                      dependency_error: result.dependency_error,
+                      message: result.dependency_error.message,
+                    }
+                  : {}),
                 latest,
               };
         }),
     );
   });
+
+export function revertTarget(entry: OpLogEntry): TaskId | null {
+  if (entry.outcome !== "committed") return null;
+  if (
+    entry.event.kind === "DependencyAdded" ||
+    entry.event.kind === "DependencyRemoved"
+  )
+    return entry.event.dependent_id;
+  if (!Schema.is(Event)(entry.event)) return null;
+  const primary = eventChanges(entry.event, entry.profile).tasks[0];
+  return (primary?.after ?? primary?.before)?.id ?? null;
+}

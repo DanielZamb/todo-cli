@@ -99,8 +99,8 @@ function instrument(source: string) {
   );
   body = once(
     body,
-    "applyEvent(this.db, event);",
-    '{ __fv01("recorded"); applyEvent(this.db, event); __fv01("projected"); }',
+    "applyEvent(this.db, event, input.profile);",
+    '{ __fv01("recorded"); applyEvent(this.db, event, input.profile); __fv01("projected"); }',
   );
   body = once(
     body,

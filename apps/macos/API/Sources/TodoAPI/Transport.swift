@@ -29,6 +29,9 @@ public struct BearerMiddleware: ClientMiddleware {
             var data: Data?
             if let responseBody { data = try await Data(collecting: responseBody, upTo: 65_536) }
             let detail = data.flatMap { try? JSONDecoder().decode(ServerFailure.self, from: $0) }
+            if let detail, ServerFailure.dependencyCodes.contains(detail.code ?? ""), detail.dependencyError == nil {
+                throw RequestFailure(status: status, message: "The server response could not be read. Your draft is preserved.", code: "incompatible_response")
+            }
             throw RequestFailure(status: status, body: detail ?? ServerFailure(message: "The server rejected this request (HTTP \(status))."))
         }
         return (response, responseBody)
@@ -42,11 +45,46 @@ public struct OutdatedServer: Error, Sendable {
 }
 
 public func todoClient(server: URL, credential: String) -> Client {
+    todoClient(server: server, credential: credential, diagnostics: .disabled, requestTimeout: 60)
+}
+
+public func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder) -> Client {
+    todoClient(server: server, credential: credential, diagnostics: diagnostics, requestTimeout: 60)
+}
+
+func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> Client {
+    makeTodoClient(server: server, credential: credential, diagnostics: diagnostics, session: makeTodoSession(diagnostics: diagnostics, requestTimeout: requestTimeout)).client
+}
+
+public final class TodoClientSession: Sendable {
+    public let client: Client
+    private let scope: ScopedTransport
+
+    public init(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder = .disabled) {
+        let session = makeTodoSession(diagnostics: diagnostics, requestTimeout: 60)
+        let built = makeTodoClient(server: server, credential: credential, diagnostics: diagnostics, session: session)
+        scope = built.scope
+        client = built.client
+    }
+    public func invalidate() { scope.retire() }
+    deinit { invalidate() }
+}
+
+private func makeTodoSession(diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> URLSession {
     let configuration = URLSessionConfiguration.default
-    configuration.timeoutIntervalForRequest = 60
+    configuration.timeoutIntervalForRequest = requestTimeout
     configuration.timeoutIntervalForResource = 86_400
     configuration.urlCache = nil
-    return Client(serverURL: server, transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))), middlewares: [BearerMiddleware(credential: credential)])
+    return diagnostics.isEnabled
+        ? URLSession(configuration: configuration, delegate: ClientRequestMetrics(diagnostics), delegateQueue: nil)
+        : URLSession(configuration: configuration)
+}
+
+private func makeTodoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, session: URLSession) -> (client: Client, scope: ScopedTransport) {
+    let base = StreamTransport(ordinary: URLSessionTransport(configuration: .init(session: session)), diagnostics: diagnostics)
+    let transport: any ClientTransport = diagnostics.isEnabled ? DiagnosticTransport(transport: base, recorder: diagnostics) : base
+    let scope = ScopedTransport(session: session, base: transport)
+    return (Client(serverURL: server, transport: scope, middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()]), scope)
 }
 
 public struct FailureDetails: Codable, Sendable {
@@ -70,6 +108,9 @@ public struct FailureDetails: Codable, Sendable {
         current_version = try values.decodeIfPresent(Int.self, forKey: .current_version)
         raw = try OpenAPIValueContainer(from: decoder)
     }
+    public func decoded<Value: Decodable>(_ type: Value.Type) throws -> Value {
+        try JSONDecoder().decode(type, from: JSONEncoder().encode(self))
+    }
     public func encode(to encoder: Encoder) throws {
         if let raw { try raw.encode(to: encoder); return }
         var values = encoder.container(keyedBy: CodingKeys.self)
@@ -80,6 +121,7 @@ public struct FailureDetails: Codable, Sendable {
 }
 
 public struct ServerFailure: Error, Codable, Sendable {
+    public var generated_at: String? = nil
     public let message: String
     public let code: String?
     public let exit_code: Int?
@@ -87,6 +129,11 @@ public struct ServerFailure: Error, Codable, Sendable {
     public let details: FailureDetails?
     public init(message: String, code: String? = nil, exitCode: Int? = nil, exitMeaning: String? = nil, details: FailureDetails? = nil) {
         self.message = message; self.code = code; exit_code = exitCode; exit_meaning = exitMeaning; self.details = details
+    }
+    public static let dependencyCodes: Set<String> = ["dependency_cycle", "too_many_dependencies", "blocked", "blocks_done_task", "has_dependencies", "dependency_profile_mismatch"]
+    public var dependencyError: Components.Schemas.DependencyError? {
+        guard Self.dependencyCodes.contains(code ?? ""), exit_code == 2, exit_meaning == "validation or usage", let data = try? JSONEncoder().encode(self) else { return nil }
+        return try? JSONDecoder().decode(Components.Schemas.DependencyError.self, from: data)
     }
     public var isTaskLookup: Bool { details?.profile != nil && details?.task_id != nil }
     public var primaryMessage: String {

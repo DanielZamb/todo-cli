@@ -214,7 +214,7 @@ for (const version of [2, 3]) {
           ]);
           db.close();
           const store = yield* openStore({ path });
-          expect((yield* store.settings()).user_version).toBe(6);
+          expect((yield* store.settings()).user_version).toBe(7);
           const snapshots = (yield* store.snapshots.list()).snapshots;
           expect(snapshots.map((s) => [s.reason, s.schema_version])).toEqual([
             ["pre-migration", version],
@@ -595,7 +595,7 @@ it.effect(
             snapshot.schema_version,
             snapshot.task_counts.map((profile) => profile.count),
           ]),
-        ).toEqual([["before import repository-sync.json", 6, [0]]]);
+        ).toEqual([["before import repository-sync.json", 7, [0]]]);
         const directory = store.snapshots.directory;
         rmSync(directory, { recursive: true, force: true });
         writeFileSync(directory, "Not a directory");
@@ -648,7 +648,7 @@ it.effect(
         db.exec("PRAGMA user_version=4");
         db.close();
         const migrated = yield* openStore({ path });
-        expect((yield* migrated.settings()).user_version).toBe(6);
+        expect((yield* migrated.settings()).user_version).toBe(7);
         expect(
           (yield* migrated.snapshots.list()).snapshots.map((snapshot) => [
             snapshot.reason,

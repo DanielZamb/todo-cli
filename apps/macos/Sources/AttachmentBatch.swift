@@ -22,7 +22,13 @@ struct AttachmentBatchDraft: Identifiable {
   var targets: [TaskSnapshot] = []
   var selected: Set<String> = []
   var loading = true
-  var error: String?
+  enum MessageKind: Hashable { case reload, apply }
+  /// This dialog instance's messages under the one message rule (SurfaceMessages).
+  var messages = SurfaceMessages<MessageKind, String>()
+  var error: String? {
+    get { messages.value }
+    set { if let newValue { messages.publish(newValue, kind: .apply) } else { messages.end() } }
+  }
   var report: AttachmentBatchReport?
 }
 
@@ -36,26 +42,30 @@ extension TodoModel {
     let credentialEpoch = discovery.credentialEpoch
     guard let draft = attachmentBatch, canWrite else { return }
     attachmentBatch?.loading = true
-    attachmentBatch?.error = nil
+    guard let messageTicket = attachmentBatch?.messages.beginClean(.reload) else { return }
     do {
       let values = try await client.tasks_period_list(path: .init(profile: draft.profile)).ok.body.json.map(TaskSnapshot.decode)
-      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile else { return }
+      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile, attachmentBatch?.messages.succeed(messageTicket) == true else { return }
       attachmentBatch?.targets = values
       attachmentBatch?.selected.formIntersection(Set(values.map(\.id)))
       attachmentBatch?.report = nil
     } catch {
+      authorize(error, epoch: credentialEpoch, profile: draft.profile)
       guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error, at: .attachmentBatch)
-      handleAuthorization(error, credentialEpoch: credentialEpoch)
+      let failureNotice = describe(error, at: .attachmentBatch)
+      attachmentBatch?.messages.fail(failureNotice, messageTicket)
     }
-    if attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
+    if isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id { attachmentBatch?.loading = false }
   }
   func applyAttachmentBatch(dryRun: Bool) async {
+    notePersonActed() // a write the person started (MAC-C1-S1-32)
     let credentialEpoch = discovery.credentialEpoch
     guard canWrite, let draft = attachmentBatch, !draft.loading, !draft.selected.isEmpty else { return }
+    let client = self.client
     busy = true
-    attachmentBatch?.error = nil
-    defer { busy = false }
+    guard let messageTicket = attachmentBatch?.messages.beginClean(.apply) else { return }
+    defer { if discovery.credentialEpoch == credentialEpoch { busy = false } }
+    var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
     do {
       let encoded = try JSONEncoder().encode(draft.reference)
       var reference = try JSONDecoder().decode([String: String].self, from: encoded)
@@ -67,20 +77,35 @@ extension TodoModel {
       let items: [[String: Any]] = draft.targets.filter { draft.selected.contains($0.id) }.map { ["task_id": $0.id, "from_version": $0.row_version, "attachments": [reference]] }
       let payload = try JSONDecoder().decode(Operations.tasks_period_attachMany.Input.Body.jsonPayload.self, from: JSONSerialization.data(withJSONObject: ["items": items, "dry_run": dryRun]))
       let value = try await client.tasks_period_attachMany(path: .init(profile: draft.profile), body: .json(payload)).ok.body.json
+      if !dryRun { committed = true }
       let report = try JSONDecoder().decode(AttachmentBatchReport.self, from: JSONEncoder().encode(value))
-      guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id, profile == draft.profile else { return }
-      attachmentBatch?.report = report
+      guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+      // Once this sheet has closed, a committed apply still reaches the editor and the list, and nothing is shown.
+      if attachmentBatch?.id == draft.id, attachmentBatch?.messages.succeed(messageTicket) == true { attachmentBatch?.report = report }
       if !dryRun {
+        // The open editor's extra read is secondary: its failure cannot skip the committed apply's
+        // catalog read-back, and the stream repairs the editor.
         if let editor, draft.selected.contains(editor.id) {
-          let latest = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json)
-          self.editor = self.editor?.acceptingAttachmentChange(latest)
+          do {
+            let wire = try await client.tasks_period_show(path: .init(profile: draft.profile, task: editor.id)).ok.body.json
+            guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+            if self.editor?.opening == editor.opening { self.editor = self.editor?.acceptingAttachmentChange(try TaskSnapshot.decode(wire)) }
+          } catch {
+            authorize(error, epoch: credentialEpoch, profile: draft.profile)
+            guard isCurrentCredential(credentialEpoch), profile == draft.profile else { return }
+          }
         }
-        await refreshAfterWrite("Attachments updated")
+        await refreshAfterWrite("Attachments updated", owner: .surface(.attachmentBatch(draft.id), .init(messageTicket)))
       }
     } catch {
+      authorize(error, epoch: credentialEpoch, profile: draft.profile)
+      // A committed apply whose reply could not be used still reads the catalog back (S1-19).
+      if !dryRun, committed || committedBeforeFailure(error), isCurrentCredential(credentialEpoch), profile == draft.profile {
+        await refreshAfterWrite("Attachments updated", owner: .surface(.attachmentBatch(draft.id), .init(messageTicket)))
+      }
       guard isCurrentCredential(credentialEpoch), attachmentBatch?.id == draft.id else { return }
-      attachmentBatch?.error = describe(error, at: .attachmentBatch)
-      handleAuthorization(error, credentialEpoch: credentialEpoch)
+      let failureNotice = describe(error, at: .attachmentBatch)
+      attachmentBatch?.messages.fail(failureNotice, messageTicket)
     }
   }
 }

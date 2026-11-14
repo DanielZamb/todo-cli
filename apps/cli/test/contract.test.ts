@@ -119,6 +119,45 @@ afterAll(async () => {
     );
   rmSync(scratch, { recursive: true, force: true });
 });
+it("keeps typed search-budget refusals as CLI usage errors after graph reads", () => {
+  const home = mkdtempSync(join(tmpdir(), "todo-search-dag-contract-"));
+  try {
+    expect(
+      run(["init", "--password-stdin"], "scratch-budget-passphrase\n", home)
+        .code,
+    ).toBe(0);
+    expect(
+      run(["login", "--password-stdin"], "scratch-budget-passphrase\n", home)
+        .code,
+    ).toBe(0);
+    const file = join(home, "tasks.json");
+    writeFileSync(
+      file,
+      JSON.stringify(
+        Array.from({ length: 3 }, (_, index) => ({
+          external_id: `budget-${index}`,
+          title: `Budget probe ${index}`,
+          description: "\ufdfa".repeat(100000),
+        })),
+      ),
+    );
+    expect(run(["import", file, "--format", "json"], "", home).code).toBe(0);
+    const result = run(
+      ["list", "--text", "\ufdfa".repeat(200), "--format", "json"],
+      "",
+      home,
+    );
+    expect(result.code).toBe(2);
+    expect(JSON.parse(result.out)).toMatchObject({
+      code: "search_too_broad",
+      message:
+        "Search is too broad. Narrow the search with a Project, Tag or Status filter, use fewer or shorter words, or quote a phrase.",
+    });
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+}, 30000);
+
 it("publishes the Task and shared error schemas", () => {
   const task = run(["schema", "add"]);
   expect(task.code, task.err).toBe(0);
@@ -427,6 +466,57 @@ it("validates every command's single JSON object against its published JSON Sche
     ]);
     success(command, [command, transferTask, "--to", "transfer-target"]);
   }
+  const graphTaskId = (value: unknown) =>
+    Schema.decodeUnknownSync(
+      Schema.Struct({ task: Schema.Struct({ id: Schema.String }) }),
+    )(value).task.id;
+  const blocker = graphTaskId(success("add", ["add", "Dependency blocker"]));
+  const dependent = graphTaskId(
+    success("add", ["add", "Dependency dependent"]),
+  );
+  success("depend", [
+    "depend",
+    dependent,
+    "--on",
+    blocker,
+    "--expected-version",
+    "1",
+  ]);
+  success("graph", ["graph", dependent]);
+  const removed = Schema.decodeUnknownSync(Schema.Struct({ seq: Schema.Int }))(
+    success("undepend", [
+      "undepend",
+      dependent,
+      "--from",
+      blocker,
+      "--expected-version",
+      "2",
+    ]),
+  );
+  success("revert", ["revert", String(removed.seq), "--expected-version", "3"]);
+  success("undepend", [
+    "undepend",
+    dependent,
+    "--from",
+    blocker,
+    "--expected-version",
+    "4",
+  ]);
+  const edgesFile = join(home, "dependency-batch.json");
+  writeFileSync(
+    edgesFile,
+    JSON.stringify({
+      items: [
+        {
+          action: "depend",
+          dependent_id: dependent,
+          blocker_id: blocker,
+          from_version: 5,
+        },
+      ],
+    }),
+  );
+  success("batch-depend", ["batch-depend", "--file", edgesFile, "--dry-run"]);
   const created = success("add", [
     "add",
     "Conformance Task",
@@ -576,6 +666,16 @@ it("validates every command's single JSON object against its published JSON Sche
     success(name, [...name.split(" "), "--help"], "", "help");
   success("help", ["help"]);
   success("rm", ["rm", id, "--expected-version", "5"]);
+  expect(
+    success("rm", [
+      "rm",
+      id,
+      "--force",
+      "--dry-run",
+      "--expected-version",
+      "6",
+    ]),
+  ).toMatchObject({ status: "would_purge", dry_run: true });
   success("rm", ["rm", id, "--force", "--expected-version", "6"]);
   diagnosticsServer = spawn(serverBinary, [], {
     env: { ...process.env, HOME: home, TODO_DB: db, TODO_PORT: "0" },

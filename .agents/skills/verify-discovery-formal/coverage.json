@@ -1,11 +1,11 @@
 {
-  "status": "Reviewed main4c composition and synchronized real-SSE fixture; bounded model and real-code results remain separately recorded",
+  "status": "Reviewed integrated clients and PR12 structured row recovery after current Electron7 and Swift4 real-code controls, exact restores and clean reruns. Complete bounded command follows.",
   "contractCommit": "f85aef6faf7d93be80feef930554206e09d61be3",
   "contract": {
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "productionSyncCommit": "718b016859f866ab37394ce191736f2a10b242db",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -40,7 +40,7 @@
         "draftForTask",
         "same-key refresh and changed-navigation effect"
       ],
-      "sha256": "6aff737ee78fc37dda9127449a504ef984ba2228a1b2e0ef26d22ec190583eb4",
+      "sha256": "8dbb97b37d928f6e0544bfe806f958c4a0736cdb321af1f7c834f62441dd77c1",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -48,7 +48,7 @@
       "functions": [
         "IPC captured credential/generation and Unauthorized side effects"
       ],
-      "sha256": "4205be3241282869a730b753618934bb9ad4eb38875ff0f19e92d1e5c14d38b8",
+      "sha256": "1407ddd56dba0cd9bb1599a8d1dd8e3590d42b56271bd19e9a0878e276079a90",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -56,7 +56,7 @@
       "functions": [
         "unsigned IPC captured credential/generation and Unauthorized side effects"
       ],
-      "sha256": "ac7ee516e6ce9c3f8593c9f1889568474d587dc0cbad3f9bddad01dc3dbb6f78",
+      "sha256": "d4e02bf6bc69016782749bf4d7b8cb299c5491b2805945e500a64393dbbb9ef3",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -66,7 +66,7 @@
         "lookup",
         "showTask"
       ],
-      "sha256": "028faf302f5ca8c6ab9bc87e6e4825f02c59d328abed06ec1de0d85f6a66ab04",
+      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -74,7 +74,7 @@
       "functions": [
         "discovery Request/Reply decoders"
       ],
-      "sha256": "b5a43619a9e5c668df820cc9941e7b7d48fe8f3209416cbeafe1881fad4dba9a",
+      "sha256": "70876d227da2a0f638bad7f1a8572582a22153d8d3c10b2ea7c300b6ed4c8aa8",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -83,7 +83,7 @@
         "errorReply",
         "exitDetail"
       ],
-      "sha256": "9ca2afa2579d3516830038b304e4b77dd1b0892d00d1d6273d4d42f7afab3032",
+      "sha256": "81d3f0c6f92a94ea2e7c918bdb11ee2374138668d0fca9edfb206f53f61d2574",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -91,7 +91,7 @@
       "functions": [
         "TaskLookupStatus"
       ],
-      "sha256": "e08b8ab874d22e5d04919780a38d51c82e4530e0cb16be3e2700b461aa432007",
+      "sha256": "9ec40461865edc82d155fb20f56633c3db2b41e37f764d60a69f9cfd1cfa82f6",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -99,7 +99,7 @@
       "functions": [
         "structured recovery, generic exit pair and origin dismissal"
       ],
-      "sha256": "997fd7cfa8c22db6a3b86957fd5cddd543c22100b8be8808e90fac96595bd0fa",
+      "sha256": "9f45b2a543f73bb74bd4cb09b41170259dddf89c9d13da997c2eebede0255aa0",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -133,7 +133,7 @@
         "canShowDiscovery",
         "applyDiscoveryShow"
       ],
-      "sha256": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+      "sha256": "631e996fd45661d09c1dc45dbecc8bfe2076cf9e652f2dcb11f546050062851a",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -153,9 +153,11 @@
         "handleAuthorization",
         "expireSession",
         "followChanges Unauthorized",
-        "metadata/parse/History/Series/import invalidation"
+        "metadata/parse/History/Series/import invalidation",
+        "signOut start, failure and commit",
+        "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "8307d4d8305aa31b9d8ed0cb1d11107b7a1aee9fa01c5fcca8c27c450425ef52",
+      "sha256": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -165,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "0d2dd9d5eee717df7ace67df5546cd2ba5f79ea42cff29f1340694ca9c13fad6",
+      "sha256": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -173,7 +175,7 @@
       "functions": [
         "DiscoveryView alert binding, submit, Close and Show dispatch"
       ],
-      "sha256": "99d4fe04019a550269723afa21a2b47766242603ea8b393c14c33ce863a10de9",
+      "sha256": "00c2d0bdf06e0785200e53a1b22d3f6f61bf8de631c8e302c68525951cba083f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -183,7 +185,7 @@
         "TaskLookupErrorNotice",
         "ServerErrorNotice"
       ],
-      "sha256": "daa783cbaef15590f408665c79c7db986720aaf255ecfdd03be11f6247c5b712",
+      "sha256": "ff0b5d47a7a733442bad3917de2fe36a9613aebf921146f19fc3ab58d9da4402",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -191,7 +193,7 @@
       "functions": [
         "changeAttachment captured epoch and publication"
       ],
-      "sha256": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+      "sha256": "ca9e3b5ae612bdaaa1983761e620c0b573134240d2dd83658a2a37711d8b4f1b",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -200,7 +202,7 @@
         "reloadBatchEditTargets",
         "applyBatchEdit"
       ],
-      "sha256": "91693b636baeffda3d17128d573071d62932ee7d93fc7eb8b92db56e75693fef",
+      "sha256": "f1ed5d55dd6f66bdeb8a6ef4c850e073db5ee8354d4b7994922e198078bf1a0b",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -209,25 +211,35 @@
         "reloadAttachmentTargets",
         "applyAttachmentBatch"
       ],
-      "sha256": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+      "sha256": "ee879680f803f56ca92b25d986bcee99aeb697732f0eb4aa22d0dfb14447c1a4",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     }
   ],
   "mapping": "SOURCE-MAPPING.md",
-  "candidateCommit": "26367043daf92787fc128ac23544afcb5709a791",
+  "candidateCommit": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
   "classification": {
     "model": "bounded safety only; Discovery.tla bytes unchanged from500cdc38",
     "domain": "separate verify-discovery generated projection/snapshot properties, not model conclusions",
-    "regressions": "Fresh current prepare-JP0mLs runs domain/scope-removal and compiled discovery/credential/boundary/enrichment-history drives; no historical receipt is reopened",
-    "sensitivity": "All original Electron/Swift controls/restoration passed. Added deterministic ready/retry transport regression,20 consecutive8-test fresh runs and full113-state suite passed; final committed command receipts determine completion.",
+    "regressions": "Fresh prepare-ueS8p7 and current-inputs.json bind the current backend, compiled directory/lookup/auth/enrichment actions and source inventory at7d947f91.",
+    "sensitivity": "Fresh Electron7 controls at electron-AcJPVT and Swift4 at swift-lzXNKY reached intended assertions, restored source bytes and passed clean reruns. Initial Swift order30 setup1 is retained separately.",
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "c4882258d95bb8d8e80315d2f3d5f88fd5bd9901",
+  "previousProductionSyncCommit": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
   "integrationReview": {
-    "main": "4c904d96277853c60692c685c6d4ea3b3e655bc4",
-    "source": "dc43db3f16e3e1591793bf13b18127acd2be939d",
-    "scope": "Full/query catalog debt composed with Show and credential epochs; current controller/Swift controls and compiled state drives passed before hash renewal"
+    "main": "cabf4866835a49f23dc0fe44694740f122855e33",
+    "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "changed": [
+      "apps/electron/src/main.ts",
+      "apps/electron/scripts/write-host.ts",
+      "apps/electron/src/task-client.ts"
+    ],
+    "review": "Discovery and authorization runtime bodies remain main except Electron factory extraction. main and unsigned host read the live credential getter per request and retain credentialGeneration; task-client changes only its derived Client type. Renderer and TodoModel match main byte-for-byte. Fresh compiled discovery/authorization/enrichment drives and production getter protocol passed; Electron7 and Swift4 intended source controls restored before this renewal.",
+    "controls": [
+      "docs/evidence/discovery-formal/electron-iSJeVr/result.json",
+      "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+      "docs/evidence/task-dag/merge-main-cabf-f7r4k8/auth-sequence/result.json"
+    ]
   },
   "fixtureIntegration": {
     "commit": "26367043daf92787fc128ac23544afcb5709a791",
@@ -235,5 +247,396 @@
     "newNamedRegression": "readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog",
     "proof": "Frozen fixture matches26367043;20consecutive8-test runs0 and full113-state suite0; final immutable command results recorded separately"
   },
-  "limits": "Native/Keychain/persistence and unbounded or mechanical refinement unproved; full Import geometry fails identically on main and is an owner follow-up."
+  "limits": "Native/Keychain/persistence and unbounded or mechanical refinement unproved; full Import geometry fails identically on main and is an owner follow-up.",
+  "fixtureMaintenance": {
+    "commit": "ecee73d77b2d58e185d098fa3d836c78825f8325",
+    "productSource": "3e530071721413535ef357664fb33b386bb7479e",
+    "newNamedRegression": "readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog",
+    "productDiff": "Application sources unchanged from3e530071; only the discovery fixture and its verification mode changed.",
+    "trace": "docs/evidence/discovery-formal/swift-8RiUYl/trace-result.json",
+    "consecutive": "docs/evidence/discovery-formal/swift-FMsyV6/result.json",
+    "state": "docs/evidence/task-dag/merge-main-cabf-f7r4k8/swift-state-maintenance/result.json",
+    "controls": "docs/evidence/discovery-formal/swift-Fc98a6/result.json",
+    "proof": "20 consecutive7-test discovery suites0 with both named Show cases; full113-state suite0; all4 Swift controls compile/assert1/restore0 and final clean0. No new sleep, retry, deadline or product change."
+  },
+  "clientIntegrationReview": {
+    "product": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "main": "2c488fc72fe264741d5d8db8f90b441bf426af32",
+    "contract": "78a2be44ef613c16a8807eda28367fe07401cf6872b4124c360c67344dc68289",
+    "controls": [
+      "docs/evidence/dag-formal/amendment-controls-y3IVaZ/result.json",
+      "docs/evidence/dag-formal/error-contract-U2kg7W/result.json",
+      "docs/evidence/discovery-formal/electron-AcJPVT/result.json",
+      "docs/evidence/discovery-formal/swift-lzXNKY/result.json",
+      "docs/evidence/task-search-formal/matcher-AFRja2/result.json",
+      "docs/evidence/perf-cache/generated-jAQHPo/behavior-result.json"
+    ],
+    "sourceReview": "docs/evidence/task-dag/integration-7d947f91/source-body-audit.json",
+    "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
+    "changes": "Delete preview adds accepted request Version; batch item code/schema becomes occ_conflict only. Store, graph algorithms, events, transaction and matcher bodies unchanged. New clients retain request-time getters, source identities and catalog debt. PR12 exact56pt/px Import layout composes with the same structured Dependency projector.",
+    "limits": "Finite models and manual function mapping; native signing, storage, Keychain, Session persistence, real OS dispatch and VoiceOver remain held."
+  },
+  "signOutSplitReview": {
+    "product": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+    "previous": "7d947f917d1895df45c78f9f9df31638a9f3f2b8",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+        "to": "fca1231652bb3b7d471761e580e42c4c251e0f75bbc1bac96da4488e7b9291db"
+      },
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "e32b6f0ca0d53408aeb7624eabc52f55fc38f203c15fb7c18c6c0a2b82c33203",
+        "to": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "1abf621b6a576f217ea92d74353650c956a7bd255ea06f5b61e539066130bc43",
+        "to": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+        "to": "d5766ac527a50fcc3c2aaaba87671b81f9d517187003db77c3cc2d735287bfad"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "91693b636baeffda3d17128d573071d62932ee7d93fc7eb8b92db56e75693fef",
+        "to": "9019f543a17f357ef8c2fdfe2ade757926f9f12efe609684166eef96deacc903"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+        "to": "570fa7ad1fb5fcf265075b53105f34fbddbf05b90b83ab5361fafb88f1ae9405"
+      }
+    ],
+    "model": "Discovery.tla splits SignOut into SignOutStart (close, credential provenance kept), SignOutFail (no change) and SignOut (committed revocation or expiry). CredentialChanged cannot start during sign-out. New broken variant signout-start-clear must violate ClosedIsEmpty.",
+    "review": "Since 7d947f91: signOut calls closeDiscovery and keeps the epoch until a 204 revocation reply; failed or cancelled sign-out reconnects; Show and write busy cleanup is epoch-owned; checkServerContract rethrows CancellationError on epoch change; followChanges retries discovery from Offline on ready, mapped to Retry; Attachment, batch-edit and Series loading are released at replacement. No publication guard, Show acceptance or identity check is weakened.",
+    "controls": [
+      "docs/evidence/discovery-formal/electron-pfQcH2/result.json (18799cb8; Electron sources unchanged since)",
+      "docs/evidence/discovery-formal/swift-teol9Y/result.json (475726d3)"
+    ],
+    "housekeeping": "prepare-inputs compiles leave .bun-build temporaries in the new .scratch/bin cache; they were moved out of the checkout after lsof showed no holder, so check-swift could run its temporary guard. No file was deleted."
+  },
+  "messageOwnershipReview": {
+    "product": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+    "previous": "475726d3d81c382469375bd8ce51d687bdec4fa2",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "7866563dd9fc531c922477ded4ed92157a970018d82e2ac428e691a7ebdbc51d",
+        "to": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338"
+      }
+    ],
+    "review": "message gains an owner (general, connection, signOut); ready and successful writes clear only named owners; a credential or Profile change ends a sign-out notice; the saved signOutNotice restore is removed. restore and signIn use stillOwns(epoch) after each await: a superseded epoch returns without touching state, a cancelled same-epoch task throws to the existing cancellation cleanup. Discovery publication, Show acceptance, closeDiscovery at sign-out start and every epoch comparison are unchanged.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-tRAIuC/result.json (a91cb00c)",
+      "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
+  },
+  "messageRuleReview": {
+    "product": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+    "previous": "a91cb00cf2f5b844a01ef1278246f695836ba6f4",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "fca1231652bb3b7d471761e580e42c4c251e0f75bbc1bac96da4488e7b9291db",
+        "to": "ffb138ffd6ebe6490209f9dffa419b354d38f2668e9ba450305b19a99563dc82"
+      },
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1d6d18af0d0cdf4ba0e1ac6e02952675dceda4b7a29942ced22736b214a81338",
+        "to": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e"
+      }
+    ],
+    "review": "Messages carry a kind, a growing sequence and an optional raising surface; successes clear only their kinds and only messages older than their start; credential, Profile and Snapshot reload end any message; closing the picker, Import or Delete dialog ends its message. In Discovery, applyDiscoveryShow notes a mark after closeDiscovery and on success clears only an older discoveryShow message; its failure publishes kind discoveryShow to the main window. No discovery publication, Show acceptance, canShowDiscovery, closeDiscovery or epoch check changed.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-7Rz1or/result.json (5d347c7f)",
+      "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
+  },
+  "surfaceInstanceReview": {
+    "product": "566cc16c5a79f8105f0018a03cda2307de150728",
+    "previous": "5d347c7fb1e0a5af728b17271f89bdf5b74e9dfb",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "8daab56fd0d88ba8b1e84bb70daf5a6b928fff92215ac1270ff36d15b7b44f5e",
+        "to": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "d5766ac527a50fcc3c2aaaba87671b81f9d517187003db77c3cc2d735287bfad",
+        "to": "fb53f798c4b259d558de0824683da9410649b4fab8ec66197bca2b206e389ff6"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "9019f543a17f357ef8c2fdfe2ade757926f9f12efe609684166eef96deacc903",
+        "to": "6acf8b2115c0b0da7285d7977ac00f5ce7580788f7ba11fdac529f8b1e1065b9"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "570fa7ad1fb5fcf265075b53105f34fbddbf05b90b83ab5361fafb88f1ae9405",
+        "to": "2df58e0f3473c1455ba41cd11d993fc1c3130774b632bcafdb77b9c081f557f2"
+      }
+    ],
+    "review": "MessageSurface carries the instance (picker id, Import instance, Delete preview id); closing an instance ends only its message; createDependencyFollowUp applies nothing once its instance is gone. Batch edit, Attachment batch and editor Attachment completions keep their epoch and Profile guards and, when their instance is gone, run only the committed read-back. No discovery publication, Show acceptance, canShowDiscovery, closeDiscovery or epoch check changed.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-MZ5PJF/result.json (566cc16c)",
+      "Electron sources unchanged since docs/evidence/discovery-formal/electron-pfQcH2"
+    ]
+  },
+  "editorAttachmentReview": {
+    "product": "7f3bc6ac66933a1721d01af2063223f1c8871bd5",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "fb53f798c4b259d558de0824683da9410649b4fab8ec66197bca2b206e389ff6",
+        "to": "3d46dcdf480411b68d2f9fe385ca00986e516036cfa7b50630d337c938c4bb4c"
+      }
+    ],
+    "review": "The editor Attachment write failure now publishes editorError only while its editor instance is open; handleAuthorization still runs first. No discovery publication, Show or epoch check changed.",
+    "controls": [
+      "docs/evidence/discovery-formal/swift-pEWRyW/result.json (7f3bc6ac)"
+    ]
+  },
+  "completionOrderReview": {
+    "product": "05a54e6884b1bf7b727fc3159f25dab75a9da032",
+    "controls": "check-swift passed on e742127c (product sources identical to 05a54e68), docs/evidence/discovery-formal/swift-WG9lmJ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/Discovery.swift",
+        "from": "ffb138ffd6ebe6490209f9dffa419b354d38f2668e9ba450305b19a99563dc82",
+        "to": "c359acd66790aeeab8b8d12518336ac2ca9318e5604e765bae57d2a6e9c0eae9"
+      },
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "1e054d112b62d714efa7687e9134c4fc333152f30e2ad0ec12227daf0cef411f",
+        "to": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "3d46dcdf480411b68d2f9fe385ca00986e516036cfa7b50630d337c938c4bb4c",
+        "to": "249f45349335c45271bf2be13667caeb2968e646a5b309de4468d58e7611c39b"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "6acf8b2115c0b0da7285d7977ac00f5ce7580788f7ba11fdac529f8b1e1065b9",
+        "to": "f4febc1f885e141b6f7f0e014dbadda75d67e53eb4755f1c984a27e65f6d45ab"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "2df58e0f3473c1455ba41cd11d993fc1c3130774b632bcafdb77b9c081f557f2",
+        "to": "4e4dbfc9f8d23bf02152dc205675bcc5e436462e9fc4e7e4b982fde0e5541b95"
+      }
+    ],
+    "review": "requestDiscovery and showDiscoveryMatch catches now hand a 401 to handleAuthorization when the captured credential epoch is still current, before canPublishDiscovery/canShowDiscovery; publication still happens only behind those unchanged guards, and an expired Session fails them (signedIn false), so nothing is published. Batch edit, Attachment batch and the editor Attachment write call authorize(_:epoch:profile:) before their unchanged instance guards and read back with presenting: false after close. No discovery publication, Show or Close guard changed."
+  },
+  "candidate7Review": {
+    "product": "e2d58e4f9a82219a8acac9920a668a53ddf2829f",
+    "controls": "check-swift passed on e2d58e4f: docs/evidence/discovery-formal/swift-JEo1IZ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "34e1353dedd1519ce540fc31295f458d2ca231d8fe3dd65a7784bc9507e29656",
+        "to": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
+        "to": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "249f45349335c45271bf2be13667caeb2968e646a5b309de4468d58e7611c39b",
+        "to": "e51b0e6201f5f552c32108269dc4895bca6ad23cbda388e9b214ffa8558be149"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "f4febc1f885e141b6f7f0e014dbadda75d67e53eb4755f1c984a27e65f6d45ab",
+        "to": "b0002043c56ae8e68b122957ad7a66e4da0594613971915e27835cc03ad57f66"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "4e4dbfc9f8d23bf02152dc205675bcc5e436462e9fc4e7e4b982fde0e5541b95",
+        "to": "71769f13937b3ff9be1f6d8759294f021830df465f4255b98b399ed568c4d8b6"
+      }
+    ],
+    "review": "Candidate 7 changes no discovery publication, Show or Close guard. expireSession compares the credential epoch alone (not Task cancellation), through isCurrentEpoch, which isCurrentCredential also uses; the authorization-epoch mutant now replaces isCurrentEpoch so it removes the epoch comparison from both layers (caller ownership checks and expireSession) and still fails oldUnauthorizedCannotExpireReplacementSession with replacementSurvived. Other changes: owning-instance checks after awaits, committed read-backs, Save/Move/Copy openings, the message banner and Dismiss, named hand-offs, Import follow-up state, and This client wording."
+  },
+  "surfaceMessagesReview": {
+    "product": "63fd7f957368c82a22bc538b7feec73cbdc6fabc",
+    "controls": "check-swift passed on 63fd7f95: docs/evidence/discovery-formal/swift-UQNxFe",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "95873235d559a9228ef87be57ad8e1a6c377f12a471d2ddc63fb3d9aefa13c13",
+        "to": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "e51b0e6201f5f552c32108269dc4895bca6ad23cbda388e9b214ffa8558be149",
+        "to": "8cb348f0b03e6df8533aab9d8ddec3c9b5b763d92232dc7c881c6fbfb0c6124a"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "b0002043c56ae8e68b122957ad7a66e4da0594613971915e27835cc03ad57f66",
+        "to": "d07191cf5cd731020e293c622e9fa2c361ce5ef8648d6d83ba6792bfb50e9e3c"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "71769f13937b3ff9be1f6d8759294f021830df465f4255b98b399ed568c4d8b6",
+        "to": "71e0dc626b9b48a4a25e5bb786002e6cf8689d2087b488361b67e4262f7ff3b0"
+      }
+    ],
+    "review": "MAC-C1-S1-15 moves every surface-local message onto SurfaceMessages (tickets per kind, newest of a kind presents, success clears its own kind from before its mark). TodoModel: main message storage is the same helper; Import, quick-add (create and parse), editor, History, Profile deletion and Snapshot messages take tickets. BatchEdit and AttachmentBatch: reload and apply take tickets; reports present only for the newest. AttachmentModel: input checks publish through editorError's setter. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "supersessionReview": {
+    "product": "16c59f74737043201861cebcfbf5f4dbdada154d",
+    "controls": "check-swift passed on 16c59f74: docs/evidence/discovery-formal/swift-s1NWYJ",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c580a4296637b3e1cdbe7168b6e47701883eb92fd2486b1c6648e646e1b84850",
+        "to": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390"
+      }
+    ],
+    "review": "MAC-C1-S1-16: a ticket carries its instance's generation table, so supersession holds after a surface closes. TodoModel: handOff(_:kind:from:) is the only closed-surface hand-off and refuses a ticket that is not the newest; quick-add create gates its clear, capsule and hand-off on the newest ticket; refreshAfterWrite gains presents (false for a superseded action, read-back unchanged). No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "readBackOwnerReview": {
+    "product": "896f44a522c2059deab7fce95a3c9bcf17e6853f",
+    "controls": "check-swift passed on 896f44a5: docs/evidence/discovery-formal/swift-rAa2cK",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "ddae10742f25760596ae5ee2d25ecd3340798cb40976065844cdecbd42918390",
+        "to": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "8cb348f0b03e6df8533aab9d8ddec3c9b5b763d92232dc7c881c6fbfb0c6124a",
+        "to": "1f89b513ce7ce0d7858a6b4f849201a11ab6340825e53c963d5af2e2c0cedfed"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "d07191cf5cd731020e293c622e9fa2c361ce5ef8648d6d83ba6792bfb50e9e3c",
+        "to": "cfb66b139f0b8b163ecfe498f6e095d4063590ed5599df0be1ffbfc7afdf99c0"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "71e0dc626b9b48a4a25e5bb786002e6cf8689d2087b488361b67e4262f7ff3b0",
+        "to": "842b82cf442cb3e67b2bba1d50486ba4fb5bea8bd53e25495329eeebdc83c105"
+      }
+    ],
+    "review": "MAC-C1-S1-17: refreshAfterWrite takes a ReadBackOwner (main window or surface instance, each with a ticket) asked when it publishes; presents:/presenting: removed; create, Save and Delete choose the owner by branch before the read-back and ask the ticket after it; openSeries split into openSeries/loadSeries; reloadDependencyPicker split into reload/refresh; the editor write's transfer report and announcement check ticket and opening live; transition editor text only into an editor showing that Task. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "candidate8Review": {
+    "product": "e484efc6ee83d7bc475831761d184a11190ece35",
+    "controls": "check-swift passed on e484efc6: docs/evidence/discovery-formal/swift-AWZXtt",
+    "changed": [
+      {
+        "path": "apps/macos/Sources/TodoModel.swift",
+        "from": "c831e40778591eb9e762f705ccd661f2951aed16d148501a29b99dbed7b6a39f",
+        "to": "cc673221ba67c52266a00cfa8117d6d20e87f5a18d4dae0a0e871199ac12d248"
+      },
+      {
+        "path": "apps/macos/Sources/AppViews.swift",
+        "from": "f165beb65fe6eb60ab7eb036d5c58319af68ced2cd7026d8fbb05abb59f913d6",
+        "to": "34cae6befddf20d965075d685322beb3a2778f10fbb575221955dddd89df8f54"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentModel.swift",
+        "from": "1f89b513ce7ce0d7858a6b4f849201a11ab6340825e53c963d5af2e2c0cedfed",
+        "to": "9df4f107b7a55c575ef686d4f7cfea2b997c3b62358dc745dc6b203c0719709f"
+      },
+      {
+        "path": "apps/macos/Sources/BatchEdit.swift",
+        "from": "cfb66b139f0b8b163ecfe498f6e095d4063590ed5599df0be1ffbfc7afdf99c0",
+        "to": "c1dec82009160bc1da39bf6869beb4fcc3010d34213bc7f0088468f0972e0ddb"
+      },
+      {
+        "path": "apps/macos/Sources/AttachmentBatch.swift",
+        "from": "842b82cf442cb3e67b2bba1d50486ba4fb5bea8bd53e25495329eeebdc83c105",
+        "to": "7cd4d4bf9594e4c18dc652f95540ff7d59389156da6e91c4b44de7a78c92bb45"
+      }
+    ],
+    "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed; requestDiscovery, showDiscoveryMatch and discovery.error are untouched (discovery stays outside the helper, see docs/decisions/mac-session-retirement.md)."
+  },
+  "renewalReviews": [
+    {
+      "product": "1f281291641fcef42301443f09d5f0f2651153ed",
+      "controls": "check-swift passed on 1f281291: docs/evidence/discovery-formal/swift-hcIIdS",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52",
+          "to": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
+          "to": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d"
+        }
+      ],
+      "review": "The Profile return fix (86549d65, coordinator ruling on the candidate 9 restore finding) changes TodoModel.swift and AppViews.swift. In TodoModel: replaceCredential gains a first line that drops the forced-leave record (no change to the credential epoch or its order); followChanges' reload branch reads whether the person acted before its resets and, after discoverProfiles, may return to a restored Profile through activateProfile, exactly as the existing profile-change branch beside it does; discoverProfiles says why when the shown Profile is gone; leaveDeletedProfile records the leave; the editor and quickAdd didSets, newTitle, setSearchText and changeProfile note a person's action. In AppViews: the notice capsule shows the offer's Switch button, and the list's selection notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
+      "controls": "check-swift passed on 5a359ca6: docs/evidence/discovery-formal/swift-gRn8hO",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Discovery.swift",
+          "from": "c359acd66790aeeab8b8d12518336ac2ca9318e5604e765bae57d2a6e9c0eae9",
+          "to": "631e996fd45661d09c1dc45dbecc8bfe2076cf9e652f2dcb11f546050062851a"
+        },
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
+          "to": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
+          "to": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
+        },
+        {
+          "path": "apps/macos/Sources/AttachmentModel.swift",
+          "from": "a58d146e2cdc7a1f95be8c3c8f971c15def77627e7f738b507c543940131579e",
+          "to": "ca9e3b5ae612bdaaa1983761e620c0b573134240d2dd83658a2a37711d8b4f1b"
+        },
+        {
+          "path": "apps/macos/Sources/BatchEdit.swift",
+          "from": "2325eb5c4f4b7074e1c0042ce1604ebf74319750b5eb2a7bcf21f2d76c6aba1c",
+          "to": "f1ed5d55dd6f66bdeb8a6ef4c850e073db5ee8354d4b7994922e198078bf1a0b"
+        },
+        {
+          "path": "apps/macos/Sources/AttachmentBatch.swift",
+          "from": "7cd4d4bf9594e4c18dc652f95540ff7d59389156da6e91c4b44de7a78c92bb45",
+          "to": "ee879680f803f56ca92b25d986bcee99aeb697732f0eb4aa22d0dfb14447c1a4"
+        }
+      ],
+      "review": "Candidate 10 (d6df6719, item 8 at 5a359ca6) changes six mapped Swift files. Discovery.swift: DiscoveryState.dialog gains a didSet that, from hidden to shown only, calls the model's presented() closure (a person-action count, MAC-C1-S1-32); openDiscovery, closeDiscovery, requestDiscovery and every publication guard are unchanged. TodoModel.swift: notePersonActed() now advances PersonInput's content-free count; every write function's first line notes a person's action (a counter, before and independent of its guards); sheet and dialog state notes a presentation from hidden to shown; the notice timer moved from the view into the model (noticeHeld, restartNoticeTimer, holdNotice with a cancellation check) with 6 s and 10 s notices; ForcedProfileLeave records the person-input count, and a second deletion carries the first leave only when forcedLeaveToCarry, asked before the switch, finds no action; discoverProfiles and leaveDeletedProfile ask it before switching; the Profile notices use curly quotes. AppViews.swift: the notice capsule reports hover and focus to the model instead of running its own timer; Quick Add's chip region tells the Dependency line when it cuts chips. AttachmentModel.swift, BatchEdit.swift and AttachmentBatch.swift: each write function's first line notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed.",
+      "seatAcceptance": {
+        "seat": "MAC-C1-S1",
+        "review": "candidate 10 (5702b2bb)",
+        "date": "2026-11-13",
+        "verdict": "Renewal ACCEPTED",
+        "report": "reports/mac-c1-seat1/candidate-10-review.md"
+      }
+    },
+    {
+      "product": "718b016859f866ab37394ce191736f2a10b242db",
+      "controls": "check-swift passed on 718b0168: docs/evidence/discovery-formal/swift-ocyq2C",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d",
+          "to": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f"
+        }
+      ],
+      "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    }
+  ],
+  "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
 }

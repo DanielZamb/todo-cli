@@ -5,6 +5,11 @@ description: Verify the compiled Todo CLI in a scratch HOME. Use after changing 
 
 # Verify the CLI
 
+New DAG usage boundaries also require verify-dag/scripts/verify-closure.sh.
+Its matrix asserts actual exit 2, one invalid_args JSON object, flag-specific
+recovery and unchanged projection for malformed/zero/negative inputs, before
+no-op detection. Missing files retain runtime classification.
+
 Generated with `create-verification-skill`.
 Read [the feature map](features/README.md) before selecting coverage.
 
@@ -132,6 +137,11 @@ The install verifier requires --version to report build and contract without cha
 
 Read [Edit several Tasks](features/batch-edit.md) for the shared batch-edit contract and the compiled scratch proof. Both client flows retain selections and loaded Versions through preview, apply and Conflict reload.
 
+Dependency commands and graph responses also run through the compiled public
+[verify-dag](../verify-dag/SKILL.md) drive. The command registry publishes depend,
+undepend, graph, batch-depend and revert. contract.test.ts discovers their help,
+validates real responses against published schemas, and covers add --depends-on,
+list --ready/--blocked and ordering through the dedicated public drive.
 ## Exit meanings and empty lists
 
 `test/error-list.test.ts` drives cached compiled CLI and server binaries on its
@@ -163,6 +173,11 @@ CLI show/edit and HTTP GET/PATCH on fresh scratch databases. Each request must
 leave exactly one rejected auth History row for default, with read for show and
 mutate for edit, and keep the Task at Version 1. Profile selection calls the
 shared auth.resolveProfile with the operation's action before any Task pre-read.
+The expired HTTP fixture retains its expired credential row with a scratch-only
+delete guard. This tests expiry rather than a scheduler cleanup race that removes
+the credential before authentication. A forced cleanup interval reproduced the
+original invalid_credential result on the unchanged baseline; the retained-row
+fixture keeps the strict expired assertion and passes the same interval.
 The error-list test also requires a scoped credential to receive the same generic
 Profile-not-found response for a spaced foreign name and the absent name No Such.
 Neither case may expose another Profile's name or Task data.
@@ -188,3 +203,30 @@ and cross-Profile id-prefix lookup matrix, credential no-leak properties, WAL
 snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
+
+## Accepted flags and early refusals
+
+Read [the compiled flag inventory](features/flag-contract.md). The normal recipe
+also runs mutation-flags.test.ts against its selected compiled binary. It proves
+64 unsupported mutation flag pairs refuse without changing any table or database
+bytes, and 32 md/JSON refusals happen before opening a store. Its help discovery
+walks every command and checks the schema registry, then compares normalized
+help and response-schema hashes with the reviewed fixture. flag-inventory.json,
+flag-consumers.json, mutation-flags.json and mutation-flags-early.json retain the
+actual outputs and each accepted flag's consumer or explicit exception.
+
+Task editing flags belong only to add/edit. Delete/Purge flags belong only to
+rm. Changes to those registrations must preserve rm's dry run, Dependency
+preview/fingerprint and Purge through verify-dag's public and closure recipes.
+The inventory retains init/login username as explicit compatibility exceptions
+with their exact help text. Detach rejects label, which remains available on
+attach and label-attachment. The same compiled test preserves all table bytes
+and the external file, covers early md/JSON refusals, and checks label values.
+The flag contract also records the intentional --force compatibility change
+for edit/done/cancel/reopen, including before and after behavior.
+
+For the strict-read/Snapshot integration, also run
+`bun .agents/skills/verify-cli/scripts/check-integrated-early-flags.mjs <compiled-cli> <completed-cli-evidence> <fresh-evidence>`.
+It drives all 65 refused pairs in both md and JSON, with no credential or
+database present. It pre-seeds only the first-run disclaimer and requires the
+scratch tree and that file's bytes to remain unchanged after each refusal.

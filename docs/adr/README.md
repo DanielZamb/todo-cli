@@ -132,7 +132,7 @@ images and redacts paths from History. External files are never deleted.
 | [0004](0004-change-log-via-triggers-streamed-over-sse.md) | Change log filled by SQLite triggers, streamed over SSE | superseded by 0007 |
 | [0005](0005-single-owner-profiles-and-two-credential-kinds.md) | Single owner, Profiles, two credential kinds | accepted, amended 2026-11-06 |
 | [0006](0006-time-model-and-rfc5545-recurrence.md) | Time model and RFC 5545 recurrence | accepted |
-| [0007](0007-operation-log-is-the-source-of-truth.md) | Operation log is the source of truth | accepted, amended 2026-11-05 |
+| [0007](0007-operation-log-is-the-source-of-truth.md) | Operation log is the source of truth | accepted, amended 2026-11-05 and 2026-11-13 |
 | [0008](0008-purge-redacts-history-content.md) | Purge redacts History content | accepted |
 | [0009](0009-every-capability-is-native-to-agents-and-humans.md) | Every capability is native to agents and humans | accepted |
 | [0010](0010-profile-deletion.md) | Profile deletion preserves History and reserves IDs | accepted |
@@ -142,6 +142,12 @@ images and redacts paths from History. External files are never deleted.
 | [0013](0013-attachment-uri-and-atomic-inputs.md) | Attachment URI links and atomic input groups | accepted |
 | [0012](0012-owner-snapshots.md) | Owner Snapshots | accepted |
 | [0019](0019-authorized-read-only-discovery.md) | Authorized discovery is explicit and read-only | accepted; implementation in agent-discovery |
+
+The coordinator accepted the DAG records with corrections G1 through G10.
+
+- [0016. Task dependencies form a DAG](0016-task-dependencies-form-a-dag.md), accepted.
+- [0017. Pele renders Task graphs](0017-pele-renders-task-graphs.md), accepted.
+- [0018. Dependencies are replayable History](0018-dependencies-are-replayable-history.md), accepted.
 
 Track notes under [docs/decisions/](../decisions/) record how a port unit
 implemented one of these choices. They are not a second decision log.

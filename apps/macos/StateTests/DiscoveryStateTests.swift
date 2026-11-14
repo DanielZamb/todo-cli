@@ -70,8 +70,8 @@ private actor DiscoveryTransport: ClientTransport {
         throw URLError(.timedOut)
     }
 
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil))
-    func readyFullRefreshSupersedesRetryAndKeepsRevealDraftAndCatalog() async throws {
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TODO_W06_SERVER"] != nil), arguments: [false, true])
+    func readyFullRefreshSupersedesRetryAfterDirectOrConfirmedShowAndKeepsDraftAndCatalog(confirmDiscard: Bool) async throws {
         let server = try #require(ProcessInfo.processInfo.environment["TODO_W06_SERVER"].flatMap(URL.init(string:)))
         let credential = try await todoClient(server: server, credential: "").signIn_period_signIn(body: .json(.init(passphrase: "scratch verification passphrase"))).ok.body.json.credential
         let direct = todoClient(server: server, credential: credential)
@@ -86,11 +86,22 @@ private actor DiscoveryTransport: ClientTransport {
         model.replaceCredential(credential)
         model.signedIn = true
         model.connection = .live
+        if confirmDiscard {
+            let source = try await TaskSnapshot.decode(direct.tasks_period_create(path: .init(profile: "work"), body: .json(body)).ok.body.json)
+            model.beginEditing(source)
+            model.editor?.title = "Discarded source draft"
+        }
         await model.openDiscovery(.lookup)
         model.editDiscoveryPrefix(destination.id)
         await model.requestDiscovery()
         let match = try #require(model.discovery.appliedSnapshot?.matches.first)
-        #expect(await model.showDiscoveryMatch(match))
+        if confirmDiscard {
+            #expect(await model.showDiscoveryMatch(match) == false)
+            let target = try #require(model.pendingNavigation)
+            #expect(await model.discardAndNavigate(target))
+        } else {
+            #expect(await model.showDiscoveryMatch(match))
+        }
         await gate.awaitStreamHeld()
         await observeUntil { model.searchPhase == .showing && !model.loading }
         model.editor?.title = "Retained reveal draft"
@@ -243,7 +254,7 @@ private actor DiscoveryTransport: ClientTransport {
         #expect(await model.discardAndNavigate(cancelledTarget) == false)
         #expect(model.editor?.title == "Keep unsaved D draft")
         #expect(await model.discardAndNavigate(target))
-        try await wait { model.searchPhase == .showing && !model.loading }
+        await observeUntil { model.connection == .live && model.searchPhase == .showing && !model.loading }
         #expect(model.profile == "personal")
         #expect(model.selectedView == "all")
         #expect(model.taskFilters.prefix == done.id)
