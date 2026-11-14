@@ -133,21 +133,21 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27"
+      "sha256": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
     },
     {
       "path": "packages/domain/src/task-read.ts",
       "functions": [
         "TaskRead"
       ],
-      "sha256": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5"
+      "sha256": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6"
     },
     {
       "path": "packages/domain/src/limits.ts",
       "functions": [
         "inputLimits.searchText"
       ],
-      "sha256": "cd83a481987cf5e0b2edfd657a9ea5a599e8726e55d9b6fa11edcbca7fd17f17"
+      "sha256": "7a3b595b6a3114b028296c0bddc98056b2a16d8669552c7a19f223503234ada7"
     },
     {
       "path": "packages/domain/src/presentation.ts",
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
+      "sha256": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -277,5 +277,33 @@
     "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "catalogReview": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27",
+        "to": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      },
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5",
+        "to": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6"
+      },
+      {
+        "path": "packages/domain/src/limits.ts",
+        "from": "cd83a481987cf5e0b2edfd657a9ea5a599e8726e55d9b6fa11edcbca7fd17f17",
+        "to": "7a3b595b6a3114b028296c0bddc98056b2a16d8669552c7a19f223503234ada7"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3",
+        "to": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      }
+    ],
+    "review": "filterTaskRecordSteps: the Tag predicate calls tagNameMatches (tagKey on the stored name and the query) instead of comparing the lowercased stored name with the trimmed, lowercased query; search, prefix, ordering, yields and finalization are unchanged. readTasks: the inline comparator moves to compareTasks (code units instead of localeCompare; the same sign on all 802,816 pairs of real value shapes). task-read.ts changes only TaskWrite (optional operation_seq); limits.ts only the tag length check through tagKey; TaskRead and inputLimits are byte-identical. Matcher, models, bounds and client sources are unchanged.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

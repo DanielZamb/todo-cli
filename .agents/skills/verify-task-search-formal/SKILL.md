@@ -254,3 +254,16 @@ GET /diagnostics. Task list/search branches, publication identity, cancellation,
 ordering and atomicity are byte-identical. The source file is unchanged by U06.
 Only that file hash is renewed against immutable f25fbfc4; models, bounds and
 sensitivity controls are untouched. The recording report retains both command exits.
+
+## Catalog contract review, 2026-11-13
+
+Product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5). Four covered files
+move: task-filters.ts (filterTaskRecordSteps' Tag predicate calls
+tagNameMatches), commands.ts (readTasks sorts with compareTasks, the same sign
+on every pair of real value shapes), task-read.ts (only TaskWrite) and
+limits.ts (only the tag length check). Search, prefix, order, yields,
+finalization, the matcher and both clients are byte-identical. The pre-renewal
+check stopped only at the mapping; after renewing those hashes the one command
+passed, with every broken variant reaching its counterexample and the restored
+model exiting 0 (378,091 states). Models and bounds are unchanged. Candidate for
+the seats; `coverage.json` carries the record as catalogReview.
