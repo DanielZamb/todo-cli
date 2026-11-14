@@ -40,8 +40,10 @@ struct DependencyNoticeView: View {
     let model: TodoModel
     let notice: DependencyNotice
     var warning = false
+    /// The exit-code line; the picker leaves it out (UI seat, candidate 11).
+    var showsDetail = true
     var body: some View {
-        ClientErrorNotice(model: model, text: notice.message, position: .message, dependency: notice, dependencyWarning: warning)
+        ClientErrorNotice(model: model, text: notice.message, position: .message, dependency: notice, dependencyWarning: warning, dependencyShowsDetail: showsDetail)
     }
 }
 
@@ -53,8 +55,11 @@ struct DependencyNoticeContent: View {
     /// The exit-code line ("error 2 - validation or usage"); the main window's banner leaves it out.
     var showsDetail = true
     private var titles: [String] { notice.path.map { id in model.tasks.first { $0.id == id }?.title ?? id } }
-    private var headline: String {
-        let prefix = notice.attemptTitle.map { "Can't \(notice.attemptVerb) \($0). " } ?? ""
+    private var headline: String { Self.headline(notice) }
+    /// The notice's first line. The picker's refusal form (UI seat, candidate 11): "Couldn't add
+    /// “A”." with the title quoted, then why, then what to do next.
+    static func headline(_ notice: DependencyNotice) -> String {
+        let prefix = notice.attemptTitle.map { "Couldn't \(notice.attemptVerb) \u{201C}\($0)\u{201D}. " } ?? ""
         let guidance = notice.followUp == nil ? notice.recovery.map { " \($0)." } ?? "" : ""
         return prefix + notice.message + guidance
     }
@@ -131,6 +136,13 @@ struct DependencyPickerView: View {
     @State private var scrollTarget: String?
     /// Every row has this height (UI check: an honest scroll bar, no jumps while scrolling).
     static let rowHeight: CGFloat = 56
+    /// The count beside the search: "100 Tasks"; with search text "10 of 100 Tasks"; blank (not
+    /// "0 Tasks") while the first rows load.
+    static func countText(_ picker: DependencyPicker) -> String {
+        if picker.loading && picker.rowIDs.isEmpty { return " " }
+        if !picker.text.isEmpty, let total = picker.unfilteredCount { return TaskCount.text(picker.rowIDs.count, of: total, capitalized: true) }
+        return TaskCount.text(picker.rowIDs.count, capitalized: true)
+    }
     var body: some View {
         if let picker = model.dependencies.picker {
             VStack(alignment: .leading, spacing: 10) {
@@ -142,10 +154,10 @@ struct DependencyPickerView: View {
                     Text("Blocks").tag(DependencyDirection.blocks).disabled(picker.purpose != .edit).accessibilityIdentifier("dependency-blocks")
                 }.pickerStyle(.segmented).accessibilityIdentifier("dependency-direction")
                 // How many Tasks the list holds: with rows built on demand the scroll bar is the only
-                // other clue to its length (UI check). With search text, the matches. Under the
-                // search field; in Compact at its trailing end, so two whole rows still show under a
-                // long notice.
-                let count = Text(picker.loading && picker.rowIDs.isEmpty ? " " : TaskCount.text(picker.rowIDs.count, capitalized: true))
+                // other clue to its length (UI check). With search text, the matches out of all
+                // ("10 of 100 Tasks"). Under the search field; in Compact at its trailing end, so two
+                // whole rows still show under a long notice. Blank, not "0 Tasks", while loading.
+                let count = Text(Self.countText(picker))
                     .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dependency-count")
                 let search = TextField("Search Tasks in this Profile", text: Binding(get: { model.dependencies.picker?.text ?? "" }, set: { model.dependencies.picker?.text = $0 }))
                     .textFieldStyle(.roundedBorder).focused($searchFocused).accessibilityIdentifier("dependency-search")
@@ -161,14 +173,13 @@ struct DependencyPickerView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 4) { search; count }
                 }
-                if picker.loading { ProgressView("Loading Dependencies…").controlSize(.small) }
                 if let notice = picker.failure {
-                    DependencyNoticeView(model: model, notice: notice)
+                    DependencyNoticeView(model: model, notice: notice, showsDetail: false)
                     if picker.requiresReload {
                         Button("Reload") { Task { await model.reloadDependencyPicker() } }.accessibilityIdentifier("dependency-reload")
                     }
                 }
-                ForEach(picker.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: picker.warnings[$0], warning: true) }
+                ForEach(picker.warnings.indices, id: \.self) { DependencyNoticeView(model: model, notice: picker.warnings[$0], warning: true, showsDetail: false) }
                 if !model.canWrite { Text(model.connection == .offline ? "Offline · Read only" : "Dependencies are read only right now.").foregroundStyle(.secondary) }
                 ScrollViewReader { proxy in
                     // A native list (NSTableView-backed): only the rows in view are built, and each
@@ -185,7 +196,16 @@ struct DependencyPickerView: View {
                     }
                     .listStyle(.plain).scrollContentBackground(.hidden).contentMargins(.horizontal, 0, for: .scrollContent)
                     .environment(\.defaultMinListRowHeight, Self.rowHeight)
-                    .overlay { if !picker.loading && picker.rowIDs.isEmpty { Text("No matching Tasks").foregroundStyle(.secondary) } }
+                    // The loading state sits over the list, like "No matching Tasks", so the top
+                    // block never changes height and the rows never jump (UI seat, candidate 11).
+                    .overlay {
+                        if picker.loading {
+                            ProgressView("Loading Dependencies…").controlSize(.small).padding(10)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8)).accessibilityIdentifier("dependency-loading")
+                        } else if picker.rowIDs.isEmpty {
+                            Text("No matching Tasks").foregroundStyle(.secondary)
+                        }
+                    }
                     .onChange(of: scrollTarget) { _, target in
                         guard let target else { return }
                         proxy.scrollTo(target)

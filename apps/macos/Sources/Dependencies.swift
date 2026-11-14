@@ -85,19 +85,38 @@ struct DependencyPicker: Identifiable {
     /// The person asked for a read (open, direction, Reload, search): whichever read publishes the
     /// candidates next sorts linked first again, even if a background read superseded the person's.
     var resortPending = false
+    /// A background read stood aside (the person's read was in flight, or a toggle was pending when
+    /// the stream asked), so one read is owed (MAC-C11-S1-1 ruling). It runs once the picker is idle,
+    /// that is when the person's read has ended and nothing is pending. However many stood aside, it
+    /// is one read, and it carries the latest reason: every background read reads the root, its
+    /// linked Tasks and the candidates again.
+    var owedRead = false
+    /// How many rows the list showed without search text, for "10 of 100 Tasks" while searching (UI
+    /// seat, candidate 11). Set by every read that publishes candidates for an empty search.
+    var unfilteredCount: Int?
     /// Candidate 11 ruling: a read never undoes a toggle in flight. Each toggle notes its row (and,
     /// for "Depends on", the root, whose Version it advances) when it starts and when its reply
     /// arrives; a read that started before that keeps the row's checked state and Task, and the
-    /// root, as they are, and the toggle's own read-back settles them.
+    /// root, as they are, and the toggle's own read-back settles them. Rows are noted per direction
+    /// (MAC-C11-S1-1, P3): a "Depends on" toggle never keeps a row in the "Blocks" list. The root is
+    /// one Task in both directions.
     private(set) var writeClock = 0
     private(set) var rowWrittenAt: [String: Int] = [:]
     static let rootKey = "\u{0}root"
-    mutating func noteRowWrite(_ ids: [String]) {
+    private static func clockKey(_ id: String, _ direction: DependencyDirection) -> String { id == rootKey ? id : direction.rawValue + "\u{0}" + id }
+    mutating func noteRowWrite(_ ids: [String], direction: DependencyDirection) {
         writeClock += 1
-        for id in ids { rowWrittenAt[id] = writeClock }
+        for id in ids { rowWrittenAt[Self.clockKey(id, direction)] = writeClock }
     }
-    /// The rows (and the root key) written since `clock`.
-    func writtenSince(_ clock: Int) -> Set<String> { Set(rowWrittenAt.filter { $0.value > clock }.keys) }
+    /// The rows of `direction` (and the root key) written since `clock`.
+    func writtenSince(_ clock: Int, direction: DependencyDirection) -> Set<String> {
+        let prefix = direction.rawValue + "\u{0}"
+        return Set(rowWrittenAt.compactMap { key, at -> String? in
+            guard at > clock else { return nil }
+            if key == Self.rootKey { return key }
+            return key.hasPrefix(prefix) ? String(key.dropFirst(prefix.count)) : nil
+        })
+    }
     /// The memberwise initializer, written out because the row index's properties are private; the
     /// index is built here because property observers do not run in an initializer.
     init(reloadRequest: Int = 0, profile: String, root: TaskSnapshot, direction: DependencyDirection, purpose: DependencyPickerPurpose = .edit, text: String = "",
@@ -238,11 +257,23 @@ extension TodoModel {
     /// success it clears an earlier reload or link notice, asked after the read (S1-17), only while
     /// this reload is still the newest of its picker.
     func reloadDependencyPicker() async {
-        guard let ticket = await readDependencyPicker(.person) else { return }
-        if dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link, .followUp], since: ticket.mark) }
+        let id = dependencies.picker?.id
+        if let ticket = await readDependencyPicker(.person), dependencies.picker?.messages.isNewest(ticket) == true {
+            dependencies.picker?.messages.clear([.reload, .link, .followUp], since: ticket.mark)
+        }
+        await runOwedPickerRead(id)
     }
     /// Refreshes the picker's data for a link's read-back or a background refresh; clears nothing.
     func refreshDependencyPicker() async { _ = await readDependencyPicker(.background) }
+    /// The read owed by a background read that stood aside (MAC-C11-S1-1), once the picker is idle:
+    /// no person's read in flight and no toggle pending. The read starts after whatever it waited
+    /// for has ended, so it carries every change that read could have missed. When nothing is in
+    /// flight and nothing is owed, the picker shows what the server has.
+    private func runOwedPickerRead(_ id: UUID?) async {
+        guard let picker = dependencies.picker, picker.id == id, picker.owedRead, !picker.loading, picker.pending.isEmpty else { return }
+        dependencies.picker?.owedRead = false
+        await refreshDependencyPicker()
+    }
     /// The root and its linked Tasks, read and decoded off the main actor (candidate 11).
     /// A failure of the root's own read, so a 404 there can disable the list.
     private struct PickerRootRead: Error { let error: Error }
@@ -274,9 +305,11 @@ extension TodoModel {
     private func readDependencyPicker(_ kind: PickerRead) async -> SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket? {
         guard let picker = dependencies.picker else { return nil }
         guard connection == .live else { dependencies.picker?.loading = false; return nil }
-        // While the person's own read is in flight a background read stands aside: that read will
-        // publish fresh data, and superseding it would leave its loading state behind.
-        if kind == .background && picker.loading { return nil }
+        // While the person's own read is in flight a background read stands aside, so as not to
+        // leave that read's loading state behind. The person's read may not carry what this one was
+        // for (a search reads only candidates; an open may have read the root before the change), so
+        // a read is owed and runs when the person's read ends (MAC-C11-S1-1).
+        if kind == .background && picker.loading { dependencies.picker?.owedRead = true; return nil }
         if picker.purpose != .edit { await searchDependencyCandidates(kind); return nil }
         dependencies.picker?.reloadRequest += 1
         if kind == .person { dependencies.picker?.resortPending = true }
@@ -286,6 +319,7 @@ extension TodoModel {
         let client = self.client
         let id = picker.id
         let clock = picker.writeClock
+        let direction = picker.direction
         // Candidate 11 ruling: only the person's own read shows loading and disables the list.
         if kind == .person { dependencies.picker?.loading = true }
         guard let ticket = dependencies.picker?.messages.begin(.reload) else { return nil }
@@ -295,11 +329,11 @@ extension TodoModel {
         let profileID = picker.profile, searchText = picker.text
         async let candidates = Self.readCandidates(client, profile: profileID, text: searchText)
         do {
-            let (root, linked) = try await Self.readRootAndLinked(client, profile: picker.profile, root: picker.root.id, direction: picker.direction)
+            let (root, linked) = try await Self.readRootAndLinked(client, profile: picker.profile, root: picker.root.id, direction: direction)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             let read = await candidates
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
-            let written = dependencies.picker?.writtenSince(clock) ?? []
+            let written = dependencies.picker?.writtenSince(clock, direction: direction) ?? []
             if !written.contains(DependencyPicker.rootKey) { dependencies.picker?.root = root }
             if let current = dependencies.picker?.linked {
                 // A row toggled since this read began keeps its current membership and Task.
@@ -313,22 +347,37 @@ extension TodoModel {
             let error = (caught as? PickerRootRead)?.error ?? caught
             authorize(error, epoch: epoch, profile: picker.profile)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
-            if caught is PickerRootRead, failure(error)?.status == 404 { dependencies.picker?.rootGone = true }
-            let failureNotice = dependencyNotice(error, context: .link)
+            var failureNotice = dependencyNotice(error, context: .link)
+            if caught is PickerRootRead, failure(error)?.status == 404 {
+                dependencies.picker?.rootGone = true
+                // Which Task is gone and what to do (UI seat, candidate 11), not "Task not found."
+                failureNotice = DependencyNotice(message: "\u{201C}\(picker.root.title)\u{201D} was deleted or moved. Close this window to continue.")
+            }
             dependencies.picker?.messages.fail(failureNotice, ticket)
-            if kind == .person { dependencies.picker?.loading = false }
+            if kind == .person {
+                dependencies.picker?.loading = false
+                dependencies.picker?.resortPending = false // a failed read clears what it set (MAC-C11-S1-2)
+            }
             return nil
         }
     }
     /// The person's search (and a picker that only selects): the candidates for the current text.
-    func searchDependencyCandidates() async { await searchDependencyCandidates(.person) }
+    func searchDependencyCandidates() async {
+        let id = dependencies.picker?.id
+        await searchDependencyCandidates(.person)
+        await runOwedPickerRead(id)
+    }
     private func searchDependencyCandidates(_ kind: PickerRead) async {
         guard let picker = dependencies.picker else { return }
-        if kind == .background && picker.loading { return }
+        if kind == .background && picker.loading { dependencies.picker?.owedRead = true; return }
         if kind == .person { dependencies.picker?.resortPending = true }
         dependencies.searchRequest += 1
         if picker.text.isEmpty { dependencies.picker?.searchFailure = nil }
-        guard connection == .live else { dependencies.picker?.loading = false; return }
+        guard connection == .live else {
+            dependencies.picker?.loading = false
+            if kind == .person { dependencies.picker?.resortPending = false }
+            return
+        }
         let request = dependencies.searchRequest
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
@@ -344,7 +393,7 @@ extension TodoModel {
         switch read {
         case .success(let rows):
             // A row toggled since this read began keeps the Task it shows now.
-            let written = dependencies.picker?.writtenSince(clock) ?? []
+            let written = dependencies.picker?.writtenSince(clock, direction: picker.direction) ?? []
             let shown = dependencies.picker?.tasksByID ?? [:]
             dependencies.picker?.candidates = rows.filter { $0.id != picker.root.id }.map { row in written.contains(row.id) ? shown[row.id] ?? row : row }
             dependencies.picker?.searchFailure = nil
@@ -352,8 +401,12 @@ extension TodoModel {
                 dependencies.picker?.freezeOrder()
                 dependencies.picker?.resortPending = false
             }
+            if text.isEmpty { dependencies.picker?.unfilteredCount = dependencies.picker?.rowIDs.count }
         case .failure(let error):
             dependencies.picker?.searchFailure = dependencyNotice(error, context: .search)
+            // A failed person's read clears what it set: the next read-back must not re-sort and
+            // move a ticked row (MAC-C11-S1-2).
+            if kind == .person { dependencies.picker?.resortPending = false }
         }
         if kind == .person { dependencies.picker?.loading = false }
     }
@@ -366,6 +419,12 @@ extension TodoModel {
         let dependentVersion: Int
     }
     func toggleDependency(_ candidate: TaskSnapshot, drawn: DrawnPickerRow? = nil) async {
+        let id = dependencies.picker?.id
+        await performToggleDependency(candidate, drawn: drawn)
+        // The toggle's own read-back, or the stream's, may have stood aside (MAC-C11-S1-1).
+        await runOwedPickerRead(id)
+    }
+    private func performToggleDependency(_ candidate: TaskSnapshot, drawn: DrawnPickerRow?) async {
         notePersonActed() // a write the person started (MAC-C1-S1-32)
         guard canWrite, let picker = dependencies.picker, !picker.requiresReload, !picker.loading, !picker.rootGone, candidate.profile_id == picker.profile else { return }
         if picker.purpose != .edit {
@@ -383,12 +442,13 @@ extension TodoModel {
         let remove = drawn?.checked ?? picker.checked(candidate.id)
         let fromVersion = drawn?.dependentVersion ?? dependent.row_version
         let written = picker.direction == .dependsOn ? [candidate.id, DependencyPicker.rootKey] : [candidate.id]
+        let direction = picker.direction
         let mark = messageMark
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
         dependencies.pendingDependents.insert(dependent.id)
         dependencies.picker?.pending.insert(candidate.id)
-        dependencies.picker?.noteRowWrite(written)
+        dependencies.picker?.noteRowWrite(written, direction: direction)
         // The newest link action presents: it ends an earlier link or reload notice now.
         // The newest link action on this row presents: it ends this row's earlier link or follow-up
         // notice and a reload notice now. Another row's link is live and keeps its own (D1).
@@ -405,13 +465,13 @@ extension TodoModel {
             let report: DependencyEdgeReport
             if remove {
                 let response = try await client.tasks_period_undepend(path: .init(profile: picker.profile, task: dependent.id), body: .json(.init(blocker_id: blocker.id, from_version: fromVersion)))
-                if dependencies.picker?.id == picker.id { dependencies.picker?.noteRowWrite(written) }
+                if dependencies.picker?.id == picker.id { dependencies.picker?.noteRowWrite(written, direction: direction) }
                 if case .ok = response { committed = true }
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
             } else {
                 let response = try await client.tasks_period_depend(path: .init(profile: picker.profile, task: dependent.id), body: .json(.init(blocker_id: blocker.id, from_version: fromVersion)))
-                if dependencies.picker?.id == picker.id { dependencies.picker?.noteRowWrite(written) }
+                if dependencies.picker?.id == picker.id { dependencies.picker?.noteRowWrite(written, direction: direction) }
                 if case .ok = response { committed = true }
                 if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
                 report = try decode(DependencyEdgeReport.self, response.ok.body.json)
@@ -455,6 +515,14 @@ extension TodoModel {
                 handOff("Couldn't \(attempt). " + notice.message, kind: .dependencyLink, from: linkTicket, subject: candidate.title, reasonCode: notice.failure?.code ?? (error is URLError ? "connection" : nil), reasonText: notice.message,
                         attempt: LinkAttempt(verb: remove ? "remove" : "add", dependentID: dependent.id, dependent: dependent.title, blockerID: blocker.id, blocker: blocker.title))
                 return
+            }
+            // The picker's refusal form (UI seat, candidate 11): what failed, with the Task's title
+            // quoted ("Couldn't add “A”."), why, and what to do next; no exit-code line.
+            switch notice.failure?.code {
+            case "occ_conflict": notice.message = "The Tasks changed since this list loaded."; notice.recovery = "Reload and try again"
+            case "not_found": notice.message = "A Task in this link was deleted or moved."; notice.recovery = "Reload and try again"
+            default:
+                if notice.message == DependencyNotice.genericFailure { notice.message = error is URLError ? "The server couldn't be reached. Try again." : "Try again." }
             }
             // A transport failure has no server code; it is labelled "connection" so two can merge (D2).
             let reasonCode = notice.failure?.code ?? (error is URLError ? "connection" : nil)

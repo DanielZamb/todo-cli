@@ -70,7 +70,7 @@ private actor ParityDeleteTransport: ClientTransport {
                 _ = try await api.tasks_period_edit(path: .init(profile: "work", task: dependent.id), body: .json(edit)).ok.body.json
                 await model.toggleDependency(candidate)
                 #expect(model.dependencies.picker?.requiresReload == true)
-                #expect(model.dependencies.picker?.failure?.message == "This Task changed. Reload its Dependencies before trying again.")
+                #expect(model.dependencies.picker?.failure?.message == "The Tasks changed since this list loaded.")
                 if offline { model.connection = .offline }
                 let other: DependencyDirection = direction == .dependsOn ? .blocks : .dependsOn
                 for next in [other, direction] {
@@ -78,7 +78,7 @@ private actor ParityDeleteTransport: ClientTransport {
                     #expect(model.dependencies.picker?.direction == next)
                     if offline {
                         #expect(model.dependencies.picker?.requiresReload == true)
-                        #expect(model.dependencies.picker?.failure?.message == "This Task changed. Reload its Dependencies before trying again.")
+                        #expect(model.dependencies.picker?.failure?.message == "The Tasks changed since this list loaded.")
                         #expect(model.dependencies.picker?.failure?.detail == "error 4 - Conflict")
                     } else {
                         #expect(model.dependencies.picker?.requiresReload == false)
