@@ -141,20 +141,25 @@ struct DependencyPickerView: View {
                     Text("Depends on").tag(DependencyDirection.dependsOn).accessibilityIdentifier("dependency-depends-on")
                     Text("Blocks").tag(DependencyDirection.blocks).disabled(picker.purpose != .edit).accessibilityIdentifier("dependency-blocks")
                 }.pickerStyle(.segmented).accessibilityIdentifier("dependency-direction")
-                VStack(alignment: .leading, spacing: 4) {
-                    TextField("Search Tasks in this Profile", text: Binding(get: { model.dependencies.picker?.text ?? "" }, set: { model.dependencies.picker?.text = $0 }))
-                        .textFieldStyle(.roundedBorder).focused($searchFocused).accessibilityIdentifier("dependency-search")
-                        .onChange(of: picker.text) { _, text in
-                            Task {
-                                do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
-                                guard model.dependencies.picker?.id == picker.id, model.dependencies.picker?.text == text else { return }
-                                await model.searchDependencyCandidates()
-                            }
+                // How many Tasks the list holds: with rows built on demand the scroll bar is the only
+                // other clue to its length (UI check). With search text, the matches. Under the
+                // search field; in Compact at its trailing end, so two whole rows still show under a
+                // long notice.
+                let count = Text(picker.loading && picker.rowIDs.isEmpty ? " " : TaskCount.text(picker.rowIDs.count, capitalized: true))
+                    .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dependency-count")
+                let search = TextField("Search Tasks in this Profile", text: Binding(get: { model.dependencies.picker?.text ?? "" }, set: { model.dependencies.picker?.text = $0 }))
+                    .textFieldStyle(.roundedBorder).focused($searchFocused).accessibilityIdentifier("dependency-search")
+                    .onChange(of: picker.text) { _, text in
+                        Task {
+                            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+                            guard model.dependencies.picker?.id == picker.id, model.dependencies.picker?.text == text else { return }
+                            await model.searchDependencyCandidates()
                         }
-                    // How many Tasks the list holds: with rows built on demand the scroll bar is the
-                    // only other clue to its length (UI check). With search text, the matches.
-                    Text(picker.loading && picker.rowIDs.isEmpty ? " " : TaskCount.text(picker.rowIDs.count, capitalized: true))
-                        .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dependency-count")
+                    }
+                if compact {
+                    HStack(spacing: 8) { search; count.fixedSize() }
+                } else {
+                    VStack(alignment: .leading, spacing: 4) { search; count }
                 }
                 if picker.loading { ProgressView("Loading Dependencies…").controlSize(.small) }
                 if let notice = picker.failure {
