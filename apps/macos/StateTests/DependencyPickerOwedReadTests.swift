@@ -15,6 +15,10 @@ actor OwedReadServer: ClientTransport {
     private(set) var versions: [String: Int] = ["root": 1, "a": 1, "b": 1, "c": 1]
     private var failNextList = false
     private var cycleNext = false
+    private var goneNext = false
+    private var listed = ["root", "a", "b", "c"]
+    /// The Tasks the list read returns (another client creates or deletes Tasks).
+    func list(_ ids: [String]) { listed = ids }
     private(set) var ops: [String] = []
     private var holdNext: [(key: String, answered: Bool)] = []
     private var held: [String: CheckedContinuation<Void, Never>] = [:]
@@ -24,9 +28,10 @@ actor OwedReadServer: ClientTransport {
     func release(_ key: String) { held.removeValue(forKey: key)?.resume() }
     func failTheNextList() { failNextList = true }
     func refuseTheNextAsALoop() { cycleNext = true }
+    func refuseTheNextAsGone() { goneNext = true }
     /// Another client changes `dependent`'s Dependencies.
     func link(_ dependent: String, to blockers: [String]) { deps[dependent] = blockers; versions[dependent, default: 1] += 1 }
-    func version(_ id: String) -> Int { versions[id] ?? 0 }
+    func version(_ id: String) -> Int { versions[id] ?? 1 } // the Version its replies give a Task never written
     func dependsOn(_ id: String) -> [String] { deps[id] ?? [] }
     func dependents(of id: String) -> [String] { deps.filter { $0.value.contains(id) }.map(\.key).sorted() }
     func count(_ key: String) -> Int { ops.filter { $0 == key }.count }
@@ -50,7 +55,7 @@ actor OwedReadServer: ClientTransport {
         case "tasks.show": return json(.ok, task(segments.last ?? ""))
         case "tasks.list":
             if failNextList { failNextList = false; throw URLError(.networkConnectionLost) }
-            return json(.ok, "[" + ["root", "a", "b", "c"].map(task).joined(separator: ",") + "]")
+            return json(.ok, "[" + listed.map(task).joined(separator: ",") + "]")
         case "tasks.depend", "tasks.undepend":
             guard let body else { throw URLError(.badServerResponse) }
             let payload = try JSONSerialization.jsonObject(with: try await Data(collecting: body, upTo: 65_536)) as! [String: Any]
@@ -61,6 +66,10 @@ actor OwedReadServer: ClientTransport {
                 let error: [String: Any] = ["generated_at": "2026-11-14T00:00:00Z", "message": "agent copy", "code": "dependency_cycle", "exit_code": 2, "exit_meaning": "validation or usage",
                                             "details": ["dependent_id": dependent, "blocker_id": blocker, "path": [blocker, dependent, blocker]]]
                 return (HTTPResponse(status: .unprocessableContent, headerFields: [.contentType: "application/json"]), HTTPBody(try JSONSerialization.data(withJSONObject: error)))
+            }
+            if goneNext {
+                goneNext = false
+                return json(.notFound, #"{"message":"Task not found","code":"not_found","exit_code":3,"exit_meaning":"not found or auth missing"}"#)
             }
             guard from == versions[dependent] else { return json(.conflict, #"{"_tag":"Conflict","exit_code":4,"exit_meaning":"Conflict","latest":null}"#) }
             var current = deps[dependent] ?? []
@@ -255,6 +264,57 @@ actor OwedReadServer: ClientTransport {
         await model.toggleDependency(try #require(model.dependencies.picker?.tasksByID["b"]))
         let loop = try #require(model.dependencies.picker?.failure)
         #expect(DependencyNoticeContent.headline(loop) == "Couldn't add \u{201C}Task b\u{201D}. This Dependency would create a loop. Choose another Task.")
+    }
+
+    /// MAC-C11-S1-7: a link refused because one of its Tasks is gone says "Reload and try again.",
+    /// so it offers Reload, as a Conflict does (red on c9b21ed2: no Reload).
+    @Test func aLinkRefusedBecauseATaskIsGoneOffersReload() async throws {
+        let server = OwedReadServer()
+        let model = model(server)
+        await model.openDependencyPicker(task("root"))
+        await server.refuseTheNextAsGone()
+        await model.toggleDependency(try #require(model.dependencies.picker?.tasksByID["a"]))
+        let notice = try #require(model.dependencies.picker?.failure)
+        #expect(DependencyNoticeContent.headline(notice) == "Couldn't add \u{201C}Task a\u{201D}. One of these Tasks was deleted or moved. Reload and try again.")
+        #expect(model.dependencies.picker?.requiresReload == true, "the Reload the text asks for is offered")
+        await model.reloadDependencyPicker()
+        #expect(model.dependencies.picker?.requiresReload == false)
+        #expect(model.dependencies.picker?.failure == nil)
+    }
+
+    /// PR16-1: rows that arrive after the order was frozen keep the place they were first shown at.
+    /// The coordinator's schedule: open with a and b; a background read brings c and d; the person
+    /// ticks d. Red on c9b21ed2, where the rows became a, b, d, c.
+    @Test func aRowThatArrivedLaterDoesNotMoveWhenTicked() async throws {
+        let server = OwedReadServer()
+        await server.list(["root", "a", "b"])
+        let model = model(server)
+        await model.openDependencyPicker(task("root"))
+        try #require(model.dependencies.picker?.rowIDs == ["a", "b"])
+        await server.list(["root", "a", "b", "c", "d"]) // created by another client while the picker is open
+        await model.refreshDependencyPicker()
+        #expect(model.dependencies.picker?.rowIDs == ["a", "b", "c", "d"])
+        await model.toggleDependency(try #require(model.dependencies.picker?.tasksByID["d"]))
+        #expect(model.dependencies.picker?.checked("d") == true)
+        #expect(model.dependencies.picker?.rowIDs == ["a", "b", "c", "d"], "the ticked row moved")
+        try await expectShowsTheServer(model, server, "PR16-1")
+    }
+
+    /// PR16-1: a row that arrived later, leaves the data and comes back returns to its place; only
+    /// a person's read (here a search) sorts linked first again.
+    @Test func aLaterRowReturnsToItsPlaceAndOnlyThePersonsReadReSorts() {
+        let rows = ["a", "b", "c", "d"].map { task($0) }
+        var picker = DependencyPicker(profile: "work", root: task("root"), direction: .dependsOn, candidates: Array(rows.prefix(2)))
+        picker.freezeOrder()
+        picker.candidates = rows
+        picker.linked = [rows[3]]
+        #expect(picker.rowIDs == ["a", "b", "c", "d"])
+        picker.candidates = [rows[0], rows[1], rows[3]] // c leaves the data
+        #expect(picker.rowIDs == ["a", "b", "d"])
+        picker.candidates = rows // and comes back
+        #expect(picker.rowIDs == ["a", "b", "c", "d"], "c returns to its old place")
+        picker.freezeOrder() // the person's search
+        #expect(picker.rowIDs == ["d", "a", "b", "c"], "a person's read sorts linked first again")
     }
 
     /// When the picker's own Task is gone: which Task, and what to do (UI seat, candidate 11).

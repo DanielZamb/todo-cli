@@ -131,7 +131,7 @@ import Testing
         ("not_found", "These Tasks were deleted or moved.", "Task not found."),
         ("validation", "fallback", "Check this Dependency and try again."),
         ("invalid_args", "fallback", "Check this Dependency and try again."),
-        ("forbidden", "This credential can't change Dependencies.", "This credential can't update Dependencies."),
+        ("forbidden", "This credential can't change Dependencies.", "This credential can't change Dependencies."),
         ("unauthorized", "fallback", "Your Session ended. Sign in again."),
         ("connection", "The server couldn't be reached. Try again.", "Couldn't update Dependencies. Try again."),
         ("unavailable", "The server couldn't be reached. Try again.", "Couldn't update Dependencies. Try again."),
@@ -139,7 +139,11 @@ import Testing
     func aMergedReasonIsTheSeatsSentenceAndNeverItsCodesSingleTaskSentence(_ code: String, _ expected: String, _ single: String) {
         let reason = MergedFailureWording.reason(codes: [code, code], differing: "fallback")
         #expect(reason == expected, "\(code): \(reason)")
-        #expect(reason != single && !reason.contains(single), "\(code): the merged reason is not the single-Task sentence \(single)")
+        // forbidden is a fact about the credential, not one Task's outcome (see above): since
+        // candidate 12 its single sentence uses the merged notice's verb (UI seat) and so equals it.
+        if code != "forbidden" {
+            #expect(reason != single && !reason.contains(single), "\(code): the merged reason is not the single-Task sentence \(single)")
+        }
     }
 
     /// The banner's merged hand-offs (seat, 2026-11-12): one verb and one shared Task read as the

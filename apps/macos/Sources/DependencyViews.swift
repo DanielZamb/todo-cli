@@ -169,7 +169,15 @@ struct DependencyPickerView: View {
                         }
                     }
                 if compact {
-                    HStack(spacing: 8) { search; count.fixedSize() }
+                    // The count's width is reserved, so the field does not narrow when the count
+                    // appears after loading (UI seat, candidate 12); a longer count still fits.
+                    HStack(spacing: 8) {
+                        search
+                        ZStack(alignment: .trailing) {
+                            Text("000 of 000 Tasks").font(.caption).hidden().accessibilityHidden(true)
+                            count
+                        }.fixedSize()
+                    }
                 } else {
                     VStack(alignment: .leading, spacing: 4) { search; count }
                 }
