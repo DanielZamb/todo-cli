@@ -376,3 +376,18 @@ All 80 mutant anchors match once at the pin. The full default exits 0,
 broken 1 and restore 0 (conformance-kBGpMi), 53 public mutants and 53 restores
 (public-7vSYRf), clean recheck 19,784 distinct states. No model, invariant or
 bound change. Candidate for the seats.
+
+## Seat delta candidate, 2026-11-14
+
+Product 5da90607e8c5a19d7007174925c6b6253c0714d3 (seat F7 and F2b on top of
+de766e3c), pinned at cee500f063e321a9bbbfca65dbfc8919b052d632 (byte-identical
+product plus the task-search formal and cache renewals); contract
+dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797. Every listed
+production function is byte-identical. Two mapped public bodies change:
+`TaskFilters` (the Project name filter is a plain string again) and
+`rejectUnknownQuery` (it refuses only a blank tag). All 80 mutant anchors match
+once at the pin. The full default exits 0, "CONFORMANCE CHECKPOINT PASS"
+(check-KzDYEU): 36 production controls behave broken 1 and restore 0
+(conformance-kzKfpm), 53 public mutants and 53 restores (public-4ifApl), clean
+recheck 19,784 distinct states. No model, invariant or bound change. Candidate
+for the seats.
