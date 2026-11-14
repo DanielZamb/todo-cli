@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "ef67c4885e21dac90371b7d2cb9b5e5c1918ffaf",
+  "confirmedCommit": "0f643c52af563a6e4100dcb8836944e1e938f790",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "263dceef3ec1c3227f2f9985901cbe27be7ce06149a22dfea8968c77b1186dbe"
+      "sha256": "3776c223dd90e0a2955cc7dd4a84e2602ced44d3ebe837f7970fa556bb2abef5"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -411,7 +411,7 @@
       "functions": [
         "DependencyNotice.project"
       ],
-      "sha256": "b8425db2a5e439dc72461cb9b37f304bef558ebb91efa99935e0d09f43d58bcf"
+      "sha256": "327fcfa66b9f20c0fd64958b4173028eadcf439d67d9d0b97fe6bcd8b955bc7f"
     },
     {
       "path": "apps/macos/Sources/DependencyViews.swift",
@@ -419,7 +419,7 @@
         "actual Delete review pair",
         "existing picker state and row/menu UI"
       ],
-      "sha256": "9c1409b2b67d426d5f130fa8750229168007444b65c50c40dde8602428b5a3c4"
+      "sha256": "d00dbb1f523ce0f5f151286a8042f4c447e2f1351aa55d6a89423020d2d66fb6"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -740,6 +740,36 @@
       },
       "checkEvidence": [
         "docs/evidence/dag-formal/public-0tDzxT"
+      ]
+    },
+    {
+      "product": "0f643c52af563a6e4100dcb8836944e1e938f790",
+      "previousConfirmedCommit": "ef67c4885e21dac90371b7d2cb9b5e5c1918ffaf",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "263dceef3ec1c3227f2f9985901cbe27be7ce06149a22dfea8968c77b1186dbe",
+          "to": "3776c223dd90e0a2955cc7dd4a84e2602ced44d3ebe837f7970fa556bb2abef5"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyErrors.swift",
+          "from": "b8425db2a5e439dc72461cb9b37f304bef558ebb91efa99935e0d09f43d58bcf",
+          "to": "327fcfa66b9f20c0fd64958b4173028eadcf439d67d9d0b97fe6bcd8b955bc7f"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyViews.swift",
+          "from": "9c1409b2b67d426d5f130fa8750229168007444b65c50c40dde8602428b5a3c4",
+          "to": "d00dbb1f523ce0f5f151286a8042f4c447e2f1351aa55d6a89423020d2d66fb6"
+        }
+      ],
+      "review": {
+        "summary": "Candidate 12 (a7b0301e). Dependencies.swift: the per-row write clock of candidate 11 is removed (writeClock, rowWrittenAt, rootKey, noteRowWrite, writtenSince and every read of them); a read publishes the root, linked and candidates it read, under the same supersession guards (credential epoch, Dependency generation, picker id, reload and search request, search text). The correctness seat's mutant m3 (writtenSince always empty) gave the head's exact outcome over 82 tests in 27 suites, so the clock decided nothing; the invariant has one owner, the owed read. PR16-1: DependencyPicker.reindex() now appends rows that first appear after freezeOrder() to frozenOrder itself, so they keep their place; a row that leaves keeps its slot; only freezeOrder() (a person's read) resets the order. MAC-C11-S1-7: a link refused not_found sets requiresReload, as occ_conflict does. The picker's refusal text for not_found, an unreadable reply and forbidden is reworded (codes, tickets and hand-offs unchanged). DependencyErrors.swift: the unreadable-reply text is one constant; forbidden reads 'This credential can't change Dependencies.'. DependencyViews.swift: Compact reserves the count's width. Writes still send the drawn Version and are decided by the server's OCC; message ownership, per-target supersession, the committed-link read-back and pendingDependents release are unchanged. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, 2026-11-14 10:22 (remove the write clock; S1-7) and 10:37 (PR16-1)",
+        "pendingSeat": true
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-Y0uBDt"
       ]
     }
   ],
