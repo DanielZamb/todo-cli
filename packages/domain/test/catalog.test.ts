@@ -128,7 +128,7 @@ const withFixture = <A, E>(body: (fixture: Fixture) => Effect.Effect<A, E>) =>
               priority: "P2",
               depends_on: [ids.T2],
             });
-            const reads = new CatalogReads(store);
+            const reads = new CatalogReads(store, "UTC");
             return yield* body({
               store,
               credential,
@@ -188,7 +188,7 @@ it.effect("counts each open Task once per view and groups each Task once", () =>
       expect(today.profiles.map((p) => p.name)).toEqual(["Personal", "Work"]);
 
       // The regression controls: what the two apps compute on the same data today.
-      const reads = new ClientReads(fixture.store);
+      const reads = new ClientReads(fixture.store, "UTC");
       const view = yield* reads.view(fixture.request, "today", instant(start));
       expect(
         view.groups.flatMap((g) => g.tasks).filter((t) => t.status === "open")
@@ -470,9 +470,11 @@ it.effect("uses the client's day when a time zone is sent", () =>
             return [value.day, value.counts.today, value.counts.overdue];
           },
         );
-      // 18:59 and 19:01 in Bogota (UTC-5, no daylight saving).
-      expect(yield* at("2026-11-13T23:59:00Z")).toEqual(["2026-11-13", 2, 1]);
-      expect(yield* at("2026-11-14T00:01:00Z")).toEqual(["2026-11-14", 3, 2]);
+      // 18:59 and 19:01 in Bogota (UTC-5, no daylight saving). Without a
+      // zone, today is the reader's own zone's date (this fixture's is UTC);
+      // the instant falls on 13 November, its date in its own zone, either way.
+      expect(yield* at("2026-11-13T23:59:00Z")).toEqual(["2026-11-13", 3, 1]);
+      expect(yield* at("2026-11-14T00:01:00Z")).toEqual(["2026-11-14", 3, 3]);
       expect(yield* at("2026-11-13T23:59:00Z", zone("America/Bogota"))).toEqual(
         ["2026-11-13", 3, 1],
       );
@@ -487,7 +489,7 @@ it.effect("uses the client's day when a time zone is sent", () =>
         code: "invalid_args",
       });
       const view = yield* Effect.flip(
-        new ClientReads(fixture.store).view(
+        new ClientReads(fixture.store, "UTC").view(
           fixture.request,
           "today",
           instant(start),
@@ -543,13 +545,14 @@ it.effect("keeps the local day across a daylight-saving change", () =>
         3,
         0,
       ]);
-      // 23:30 EST on 1 November: all three are due today there; in UTC it is 2 November.
+      // 23:30 EST on 1 November: all three are due today there. In the
+      // fixture's own zone (UTC) it is 2 November, so all three are overdue.
       expect(yield* at("2026-11-02T04:30:00Z", "America/New_York")).toEqual([
         "2026-11-01",
         3,
         0,
       ]);
-      expect(yield* at("2026-11-02T04:30:00Z")).toEqual(["2026-11-02", 3, 2]);
+      expect(yield* at("2026-11-02T04:30:00Z")).toEqual(["2026-11-02", 3, 3]);
     }),
   ),
 );
@@ -570,7 +573,7 @@ it.effect(
             source: "agent",
             ...(title === "Three" ? { due_at: date("2026-11-13") } : {}),
           } as never);
-        const reads = new CatalogReads(fixture.store);
+        const reads = new CatalogReads(fixture.store, "UTC");
         const isObject = (value: unknown): value is Record<string, unknown> =>
           typeof value === "object" && value !== null;
         const decodes = (query: CatalogQuery, request = elsewhere) =>
@@ -655,7 +658,7 @@ it.effect(
             project_name: project,
             tag_names: [tag],
           } as never);
-        const reads = new ClientReads(fixture.store);
+        const reads = new ClientReads(fixture.store, "UTC");
         expect(
           (yield* reads.projects(fixture.request)).map((p) => p.name),
         ).toEqual([
@@ -783,7 +786,7 @@ it.effect(
           token: { name: "work only", profile: work.id, scope: "read-only" },
         });
         const fromScoped = changed(
-          yield* new CatalogReads(fixture.store).read(
+          yield* new CatalogReads(fixture.store, "UTC").read(
             { credential: scoped.credential, profile: work.id },
             { view: "today", now: instant(start) },
           ),

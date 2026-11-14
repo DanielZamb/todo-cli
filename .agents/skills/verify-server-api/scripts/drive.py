@@ -19,7 +19,7 @@ def redacted(value):
     return value
 
 with (evidence / 'server.log').open('w') as log:
-    server = subprocess.Popen([os.environ.get('TODO_SERVER_BINARY', str(scratch / 'server'))], env={**os.environ, 'TODO_DB': str(scratch / 'scratch.db'), 'TODO_PORT': '0', 'NO_COLOR': '1'}, stdout=log, stderr=log)
+    server = subprocess.Popen([os.environ.get('TODO_SERVER_BINARY', str(scratch / 'server'))], env={**os.environ, 'TODO_DB': str(scratch / 'scratch.db'), 'TODO_PORT': '0', 'NO_COLOR': '1', 'TZ': 'UTC'}, stdout=log, stderr=log)
     try:
         base = None
         for _ in range(1200):

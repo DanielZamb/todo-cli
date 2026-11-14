@@ -204,7 +204,11 @@ export const catalogQueryError = (
 };
 
 export class CatalogReads {
-  constructor(private readonly store: OperationStore) {}
+  /** timeZone: the reader's own zone, used when a read sends none. */
+  constructor(
+    private readonly store: OperationStore,
+    private readonly timeZone: string,
+  ) {}
 
   read(
     request: AccessRequest,
@@ -236,7 +240,7 @@ export class CatalogReads {
                   new Error("A Profile read lease carries its position"),
                 );
               const now = fields.now ?? clock;
-              const day = planningDay(now, fields.time_zone);
+              const day = planningDay(now, fields.time_zone, this.timeZone);
               const profiles = yield* this.store.auth.profileSummaries({
                 credential: authority.credential,
               });

@@ -25,6 +25,7 @@ import { Event, type TaskMutationKind } from "./events.ts";
 import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
+import type { PlanningClock } from "./planning-day.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -1353,41 +1354,42 @@ export type Filters = {
   readonly overdue?: boolean;
   readonly inbox?: boolean;
 };
+/** Today and Overdue take their day from clock (planning-day.ts). */
 export function filterTasks(
   tasks: readonly TaskView[],
   filters: Filters,
-  now: string,
+  clock: PlanningClock,
 ) {
-  const today = now.slice(0, 10);
-  return tasks.filter(
-    (t) =>
+  const today = clock.day.today;
+  return tasks.filter((t) => {
+    const due = clock.days.get(t.id)?.due ?? null;
+    const scheduled = clock.days.get(t.id)?.scheduled ?? null;
+    return (
       (!filters.status || t.status === filters.status) &&
       (!filters.project || t.project === filters.project) &&
       (!filters.tag || t.tags?.includes(tagKey(filters.tag))) &&
       (!filters.priority || t.priority === filters.priority) &&
-      (!filters.today ||
-        t.due_at?.slice(0, 10) === today ||
-        t.scheduled_at?.slice(0, 10) === today) &&
+      (!filters.today || due === today || scheduled === today) &&
       (!filters.overdue ||
-        Boolean(
-          t.status === "open" && t.due_at && t.due_at.slice(0, 10) < today,
-        )) &&
-      (!filters.inbox || isInboxTask(t)),
-  );
+        (t.status === "open" && due !== null && due < today)) &&
+      (!filters.inbox || isInboxTask(t))
+    );
+  });
 }
 export function exportScope(
   tasks: readonly TaskView[],
   scope: string,
   now: string,
+  clock: PlanningClock,
 ) {
   if (scope === "all") return tasks;
-  if (scope === "today") return filterTasks(tasks, { today: true }, now);
+  if (scope === "today") return filterTasks(tasks, { today: true }, clock);
   if (scope === "weekly")
     return tasks.filter(
       (t) => t.due_at && Date.parse(t.due_at) < Date.parse(now) + 7 * 86400000,
     );
   if (scope.startsWith("project:"))
-    return filterTasks(tasks, { project: scope.slice(8) }, now);
+    return filterTasks(tasks, { project: scope.slice(8) }, clock);
   if (scope.startsWith("id:") && scope.slice(3)) {
     const task = tasks.find((t) => t.id === scope.slice(3));
     if (!task)

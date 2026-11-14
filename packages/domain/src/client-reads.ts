@@ -42,7 +42,7 @@ export const PlanningViewQuery = Schema.Struct({
   time_zone: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        "The client's IANA time zone. Today is the date of now there, and an instant falls on its date in its own zone. Without it, today is the UTC date of now. An unknown zone is invalid_args.",
+        "The client's IANA time zone. Today is the date of now there. Without it, today is the date of now in the server's own zone. An instant falls on its date in the zone stored with it either way. An unknown zone is invalid_args.",
     }),
   ),
 });
@@ -83,7 +83,11 @@ export const profileTaskCounts = (tasks: readonly Task[]) => ({
 });
 
 export class ClientReads {
-  constructor(private readonly store: OperationStore) {}
+  /** timeZone: the reader's own zone, used when a read sends none. */
+  constructor(
+    private readonly store: OperationStore,
+    private readonly timeZone: string,
+  ) {}
 
   readonly profiles = (credential: string) =>
     this.store.auth.profileSummaries({ credential });
@@ -121,7 +125,7 @@ export class ClientReads {
         Schema.decodeUnknownSync(Instant)(
           new Date(yield* Clock.currentTimeMillis).toISOString(),
         );
-      const day = planningDay(now, selected.time_zone);
+      const day = planningDay(now, selected.time_zone, this.timeZone);
       const tasks = openTasks(data.tasks).map((task) => ({
         task,
         member: planningMembership(task, day),

@@ -236,9 +236,12 @@ view's candidates; `order` decodes the whole graph, as `GET /tasks` does). With
 `known_generation`, `known_seq`, `known_day` and `known_stamp` the reply is
 `unchanged: true` when the generation, day and stamp match and nothing
 committed since; the stamp digests what History does not record (the Profiles
-the credential sees, the schema version). `time_zone`
-(also on the planning views) makes today the client's date and an instant's
-day its date in its own zone; without it both stay UTC dates. One Task order
+the credential sees, the schema version). Today is the date of `now` in the
+`time_zone` the read sends (also on the planning views), or in the server's own
+zone when none is sent; the CLI, which reads the database directly, uses the
+machine's zone for `todo catalog` (unless `--time-zone`), `list --today` and
+`--overdue`, `review` and `export --scope today`. An instant falls on its date
+in the zone stored with it (ADR-0006). One Task order
 (`compareTasks`), one name order (`compareNames`) and one Tag-name rule
 (`tag-name.ts`) serve every read and writer. Write replies and writing CLI
 commands carry `operation_seq`: when present, everything the request committed

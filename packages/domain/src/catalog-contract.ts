@@ -58,7 +58,7 @@ export const CatalogQuery = Schema.Struct({
   time_zone: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        "The client's IANA time zone. Today is the date of now there, and an instant falls on its date in its own zone. Without it, today is the UTC date of now. An unknown zone is invalid_args.",
+        "The client's IANA time zone. Today is the date of now there. Without it, today is the date of now in the server's own zone. An instant falls on its date in the zone stored with it either way. An unknown zone is invalid_args.",
     }),
   ),
   known_generation: Schema.optionalKey(Schema.String),

@@ -513,6 +513,12 @@ export const serverLayer = (options: {
   readonly profiler?: DiagnosticRecorder;
   readonly allowedHosts?: ReadonlySet<string>;
   readonly wake?: StreamWake;
+  /**
+   * The server's own IANA zone: "today" for a planning read or Catalog that
+   * sends no time_zone (ADR-0006). main.ts passes processTimeZone(); a test
+   * names its zone.
+   */
+  readonly timeZone: string;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -631,8 +637,8 @@ export const serverLayer = (options: {
         }),
       );
       const attachments = new AttachmentCommands(store);
-      const reads = new ClientReads(store);
-      const catalogs = new CatalogReads(store);
+      const reads = new ClientReads(store, options.timeZone);
+      const catalogs = new CatalogReads(store, options.timeZone);
       const discovery = new Discovery(store);
       const ValidationHistoryLive = HttpApiMiddleware.layerSchemaErrorTransform(
         ValidationHistory,

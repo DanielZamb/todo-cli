@@ -34,6 +34,7 @@ import {
 } from "@todo/domain/store";
 import { Clock, Effect, Schema } from "effect";
 import { TestClock } from "effect/testing";
+import { planningClock, planningDay } from "../src/planning-day.ts";
 import { profile, time, work } from "./store-fixtures.ts";
 
 const usingStore = <A, E>(
@@ -730,7 +731,7 @@ it.effect("C05-9 normalizes an uppercase Tag filter", () =>
         filterTasks(
           (yield* readTasks(store, request)).views,
           { tag: "ALPHA" },
-          time,
+          planningClock([], planningDay(time, undefined, "UTC")),
         ).map((task) => task.title),
       ).toEqual(["Tagged"]);
     }),
@@ -754,12 +755,16 @@ it.effect("uses the shared Inbox predicate for filtering and Review", () =>
       });
       yield* mutateTask(store, request, "done", done.task.id, 1);
       const data = yield* readTasks(store, request);
+      const clock = planningClock(
+        data.tasks,
+        planningDay(time, undefined, "UTC"),
+      );
       expect(
-        filterTasks(data.views, { inbox: true }, time).map(
+        filterTasks(data.views, { inbox: true }, clock).map(
           (task) => task.title,
         ),
       ).toEqual(["Project Inbox"]);
-      const review = renderReview(data.views, "daily", "md", time);
+      const review = renderReview(data.views, "daily", "md", time, clock);
       expect(review).toContain("## Inbox\n- [ ] [P3] Project Inbox");
       expect(review).not.toContain("Due without Project");
       expect(review).not.toContain("Done without dates");

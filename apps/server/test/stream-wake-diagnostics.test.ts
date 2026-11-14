@@ -112,7 +112,7 @@ it.live(
       const cursor = (yield* store.history()).at(-1)?.seq ?? 0;
       const profiler = new DiagnosticRecorder();
       const context = yield* Layer.build(
-        serverLayer({ path, port: 0, profiler }),
+        serverLayer({ timeZone: "UTC", path, port: 0, profiler }),
       );
       const base = HttpServer.formatAddress(
         Context.get(context, HttpServer.HttpServer).address,

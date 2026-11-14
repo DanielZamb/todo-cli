@@ -66,7 +66,9 @@ it.live(
       // A pre-change reason survives the server's own daily retention.
       const saved = yield* store.snapshots.create("pre-pass-rate restore");
       const cursor = (yield* store.history()).at(-1)?.seq ?? 0;
-      const context = yield* Layer.build(serverLayer({ path, port: 0 }));
+      const context = yield* Layer.build(
+        serverLayer({ timeZone: "UTC", path, port: 0 }),
+      );
       const base = HttpServer.formatAddress(
         Context.get(context, HttpServer.HttpServer).address,
       );

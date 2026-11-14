@@ -33,6 +33,7 @@ it.live(
         const session = yield* store.auth.signIn("routing test passphrase");
         yield* Layer.build(
           serverLayer({
+            timeZone: "UTC",
             path,
             port: 0,
             wake: new StreamWake(Effect.never),
@@ -152,7 +153,12 @@ it.live(
         yield* ensureProfile(store, "work");
         const session = yield* store.auth.signIn("routing test passphrase");
         yield* Layer.build(
-          serverLayer({ path, port: 0, wake: new StreamWake(Effect.never) }),
+          serverLayer({
+            timeZone: "UTC",
+            path,
+            port: 0,
+            wake: new StreamWake(Effect.never),
+          }),
         );
         const binding = databaseBinding(path);
         if (!binding) throw new Error("No database binding");

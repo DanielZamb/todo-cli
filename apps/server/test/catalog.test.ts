@@ -32,7 +32,9 @@ const fixture = Effect.gen(function* () {
         updated_at: "2026-11-13T00:00:00Z",
       }),
     );
-  const context = yield* Layer.build(serverLayer({ path, port: 0 }));
+  const context = yield* Layer.build(
+    serverLayer({ timeZone: "UTC", path, port: 0 }),
+  );
   const base = HttpServer.formatAddress(
     Context.get(context, HttpServer.HttpServer).address,
   );

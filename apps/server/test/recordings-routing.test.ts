@@ -78,7 +78,7 @@ const serve = (
 ) =>
   Effect.gen(function* () {
     const context = yield* Layer.build(
-      serverLayer({ path, port: 0, ...options }),
+      serverLayer({ timeZone: "UTC", path, port: 0, ...options }),
     );
     return HttpServer.formatAddress(
       Context.get(context, HttpServer.HttpServer).address,

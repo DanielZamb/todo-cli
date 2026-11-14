@@ -329,7 +329,7 @@ const guides = {
       "--project-id <id> (default all)",
       "--tag-id <id> (default all)",
       "--project <name>, --tag <name> and every list filter (combine by AND)",
-      "--time-zone <IANA zone> (default UTC: today is the UTC date)",
+      "--time-zone <IANA zone> (default: this machine's zone)",
       "--now <instant> (default the current time)",
       "--known-generation <g> --known-seq <n> --known-day YYYY-MM-DD --known-stamp <s> (all four, from an earlier reply)",
     ],

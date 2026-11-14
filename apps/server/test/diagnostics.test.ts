@@ -36,7 +36,12 @@ const fixture = Effect.gen(function* () {
   });
   const profiler = new DiagnosticRecorder();
   const context = yield* Layer.build(
-    serverLayer({ path: join(directory, "scratch.db"), port: 0, profiler }),
+    serverLayer({
+      timeZone: "UTC",
+      path: join(directory, "scratch.db"),
+      port: 0,
+      profiler,
+    }),
   );
   const base = HttpServer.formatAddress(
     Context.get(context, HttpServer.HttpServer).address,

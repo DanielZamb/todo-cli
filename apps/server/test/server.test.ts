@@ -47,7 +47,9 @@ const fixture = Effect.gen(function* () {
         updated_at: "2026-10-27T00:00:00Z",
       }),
     );
-  const context = yield* Layer.build(serverLayer({ path, port: 0 }));
+  const context = yield* Layer.build(
+    serverLayer({ timeZone: "UTC", path, port: 0 }),
+  );
   const server = Context.get(context, HttpServer.HttpServer);
   const base = HttpServer.formatAddress(server.address);
   const request = (
