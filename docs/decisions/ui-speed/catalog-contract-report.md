@@ -103,14 +103,57 @@ other read gains a statement.
 
 **`operation_seq`, every write.** A per-request cell in the fiber's context
 (committed-operations.ts). The three places that insert a committed op_log row
-note it: `OperationStore.record`, `Authentication.record` and the restore in
-snapshots.ts. At the end, only rows still committed with the same actor and
-`occurred_at` count. That drops a dry run's rolled-back insert and a seq taken
-again afterwards; Purge keeps both fields. A preview (forked) store's
-connection is marked and never noted. The value is the highest seq the request
-committed, so everything it committed is at or below it, and a Catalog whose
-`position.seq` is at least that, in the same generation, reflects all of it.
-Absent when nothing committed.
+(`OperationStore.record`, `Authentication.record`, the restore in snapshots.ts)
+note its seq and the event text exactly as bound to the INSERT. Each computes
+that text once and binds it unchanged. A preview (forked) store's connection is
+marked in its constructor and never noted.
+
+When the request ends, a note counts only if a committed row at that seq has
+byte-identical event text. A false match needs the same bytes at the same seq,
+which is the same operation. A failed lookup counts as unconfirmed.
+
+**What the field means.**
+- Present: everything this request committed is at or below this seq. A
+  Catalog whose `position.seq` is at least that, in the same generation,
+  reflects all of it.
+- Absent: read to find out. It never means "nothing changed": a dry run, a
+  refusal, and History written outside the request all leave it out.
+
+The schema description and the CLI schema text say this.
+
+**Source review corrections** (the coordinator's review of `OperationStore.record`):
+- **The note is total.** `noteCommitted` does a `WeakSet.has`,
+  `Fiber.getCurrent()` (returns the running fiber or undefined), a context read
+  with an `undefined` default, and an array push. None of these throws on any
+  input the three call sites pass. It is still wrapped in `try`/`catch`, so
+  bookkeeping can only lose the note, never the commit.
+  - Test: a collector whose `push` throws (a frozen array); the write still
+    commits and its row is in History.
+  - Mutant: removing the guard turns that test red.
+- **Identity by the row's own bytes.**
+  - Test with a fixed clock: request A appends, its transaction rolls back, and
+    A itself succeeds. Meanwhile request B (its own fiber, the same actor, the
+    same `occurred_at`) commits another Task and takes the same seq. A reports
+    nothing.
+  - A mutant settle rule on seq and `outcome` alone turns it red. The earlier
+    actor-and-time rule would match B's row in exactly the same way.
+- **Whose fiber.** `Fiber.getCurrent()` inside a synchronous store call is the
+  request's own fiber on every server route and CLI command:
+  - Each HTTP request runs in its own fiber, and its write handler is wrapped
+    by `withOperationSeq`, which provides the cell to that fiber.
+  - Store and auth calls run synchronously inside `Effect.try`/`Effect.sync` in
+    that fiber, or inside `Effect.runSyncExitWith(context)` with the request's
+    captured context (`withRead`, `mutate`). That context holds the same cell.
+  - A synchronous call cannot yield, so no other fiber runs in between.
+  - The CLI provides the cell around the whole command in `withStore`.
+  - Where it is not the request's fiber, the note is dropped and the field is
+    absent. This covers the sign-in passphrase queue (a promise callback), the
+    scheduler's own fibers, the recordings worker (a separate file, not
+    History) and the stream and hygiene fibers (reads).
+  - Measured in a probe: in a timer, a microtask, and while another fiber runs,
+    `Fiber.getCurrent()` is undefined, so a note is dropped rather than given to
+    another request.
+  - Test: a note from inside a promise callback is dropped.
 
 | Write | Reply | Field |
 | --- | --- | --- |
@@ -125,8 +168,8 @@ Absent when nothing committed.
 | deleteProfile | ProfileDeletionReport | highest (Task Deletes and ProfileDeleted) |
 | snapshots restore | SnapshotRestoreReport | DatabaseRestored's seq, in the new `generation` the report carries |
 | issueToken | IssuedCredential | AuthChanged |
-| signIn | IssuedCredential | absent: the session is issued in the passphrase queue, outside the request |
-| signOut, revokeToken | 204, no body | none; AuthChanged changes no Catalog |
+| signIn | IssuedCredential | never carried: the session and its AuthChanged are issued in the passphrase queue, a promise callback outside the request's fiber |
+| signOut, revokeToken | 204, no body | never carried: no body to carry it; their AuthChanged changes no Catalog |
 | snapshots create, prune; local commands, nudge, proof; profiler ingest; quick-add parse | — | commit no History |
 
 CLI: the JSON object of the 23 committing commands (add, edit, done, cancel,
@@ -140,12 +183,12 @@ golden). Tested end to end: create, edit, Conflict, dry runs, a two-item import
 deleteProfile, batch edit, attachMany and the Series writes; they take the same
 path.
 
-**D8, not built.** Every Profile read lease is `BEGIN IMMEDIATE`. Measured below,
-a full refresh today holds the write lock for 28.95 ms in eight holds at 1,424
-Tasks (3.55 ms at 178); one Catalog read holds it for 14.16 ms in one hold
-(1.92 ms). A deferred lease would hold it for 0 ms: those 14 ms per refresh and
-15 ms per search keystroke are what that unit can save, and what a writer waits
-behind today.
+**D8, not built.** Every Profile read lease is `BEGIN IMMEDIATE`. Measured below
+(after correction 2), a full refresh today holds the write lock for 29.94 ms in
+eight holds at 1,424 Tasks (4.37 ms at 178); one Catalog read holds it for
+10.68 ms in one hold (1.81 ms), and a search refresh for 10.05 ms (1.68 ms). A
+deferred lease would hold it for 0 ms: about 10 ms per refresh and per search
+keystroke is what that unit can save, and what a writer waits behind today.
 
 **`time_zone` and ADR-0006.** Today's UTC rule contradicts ADR-0006 twice:
 - ADR-0006 keeps an instant with "the IANA time zone the user meant", but the
@@ -244,24 +287,38 @@ Fresh owner-shaped fixture built by
   done.
 
 Handler work in process. Median [min, max] of 15 alternating rounds after 3
-warmups. One-minute load 3.31 at 178 Tasks and 3.65 to 3.92 at 1,424.
+warmups. The search cell is the Today view with the text "invoice".
+
+**After correction 2** (product 55035069; one-minute load 3.88 at 178 Tasks and
+4.19 at 1,424):
 
 | ms | 178 Tasks | 1,424 Tasks |
 | --- | --- | --- |
-| Today's full refresh, 8 reads | 3.97 [3.51, 5.22] | 36.41 [34.13, 41.33] |
-| Catalog `tasks=all` | 2.25 [2.09, 3.21] | 26.78 [25.37, 65.14] |
-| Today's search refresh (list with text, and view) | 3.80 [3.29, 5.71] | 35.95 [32.78, 53.19] |
-| Catalog `matching` with text | 2.43 [2.20, 3.91] | 23.91 [21.34, 27.91] |
-| Write lock held: today's full / Catalog all | 3.55 / 1.92 | 28.95 / 14.16 |
-| Write lock held: today's search / Catalog matching | 1.34 / 1.93 | 11.30 / 15.19 |
+| Today's search refresh (list with text, and view) | 4.65 [3.70, 8.21] | 37.98 [35.37, 44.19] |
+| Catalog `matching` with text | **2.35** [2.16, 2.94] | **18.94** [17.15, 23.88] |
+| Write lock held: today's search / Catalog matching | 1.84 / **1.68** | 11.51 / **10.05** |
+| Today's full refresh, 8 reads | 4.94 [3.88, 7.10] | 38.62 [35.63, 43.48] |
+| Catalog `tasks=all` | 2.77 [2.30, 4.47] | 30.08 [27.11, 34.87] |
+| Write lock held: today's full / Catalog all | 4.37 / 1.81 | 29.94 / 10.68 |
 
-What the table shows:
-- On a search refresh the Catalog holds the lock longer than today's two reads
-  (15.19 against 11.30 ms at 1,424). With Dependencies in the Profile it
-  decodes the whole graph inside the lease, as `GET /tasks` does; today's list
-  search runs its matcher outside the lease.
-- Without Dependencies, `matching` decodes only the returned Tasks (tested
-  literally: 2 of 3 decoded).
+**Before correction 2** (f3039274; load 3.31 and 3.65 to 3.92):
+
+| ms | 178 Tasks | 1,424 Tasks |
+| --- | --- | --- |
+| Catalog `matching` with text | 2.43 | 23.91 |
+| Write lock held: Catalog matching | 1.93 | 15.19 |
+| Catalog `tasks=all` | 2.25 | 26.78 |
+| Write lock held: Catalog all | 1.92 | 14.16 |
+
+What the tables show:
+- A search refresh is now shorter than today's two reads in handler time and in
+  write-lock hold, at both sizes.
+- What remains in the lease at 1,424 Tasks (about 10 ms) is mostly the Profile,
+  Project and Tag summaries and the column rows with their per-row date
+  decoding, not Task decoding. Moving that decode after the lease is the next
+  saving; I have not built it.
+- The full refresh's handler time at 1,424 Tasks rose from 26.78 to 30.08 ms
+  under more load (4.19 against 3.65); its lock hold fell from 14.16 to 10.68 ms.
 - The requests per refresh fall from 8 or 9 (Mac) and 9 (Electron) to 1 once
   the apps move; that count is measured in 2b and C10-S3.
 
@@ -282,10 +339,12 @@ What the table shows:
 
 ## What I would check first
 
-1. The two OCC-covered lines (`OperationStore.record`, `OperationStore.constructor`)
-   and the settle rule in committed-operations.ts: a note that is only an upper
-   bound when it is not confirmed, and the preview mark.
-2. `tasks=matching` decoding the whole graph when the Profile has Dependencies,
-   and the longer lock hold that follows (15.19 against 11.30 ms at 1,424).
-3. The `known` rule: generation, day, and no commit after the seq, all
-   Profiles counted.
+1. The settle rule and its two tests in committed-operations.ts, and the three
+   insert sites binding the event text they note.
+2. `columnGraph` in catalog.ts: the graph functions read exactly id, status,
+   energy, priority, due_at, created_at and deleted_at. The equivalence test
+   against `GET /tasks` rows guards it; a new field read in the graph model
+   would turn it red.
+3. The decode rule for `matching`: exactly the returned Tasks; Ready and Blocked
+   narrowed from columns first; search decodes the view's candidates; `order`
+   decodes the whole graph.
