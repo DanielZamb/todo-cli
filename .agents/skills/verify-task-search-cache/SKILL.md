@@ -299,3 +299,15 @@ only at apps/server/src/server.ts. After renewal check.mjs and
 check-hygiene.mjs exit 0, build-baseline.mjs --uncached exits 0 and the full
 verify.mjs exits 0 (verify-7CjB25). Candidate until the seats accept it;
 `coverage.json` carries the record as seatFindings2.
+
+## Seat delta, 2026-11-14
+
+Product 5da90607e8c5a19d7007174925c6b6253c0714d3 (seat F7 and F2b on top of
+de766e3c). task-filters.ts (the Project name filter is a plain string again)
+and apps/server/src/server.ts (rejectUnknownQuery refuses only a blank tag)
+move; no cache, matcher, runner, admission, accounting or erasure body changes.
+Before renewal check.mjs stopped only at task-filters.ts and check-hygiene.mjs
+only at apps/server/src/server.ts. After renewal check.mjs and
+check-hygiene.mjs exit 0, build-baseline.mjs --uncached exits 0 and the full
+verify.mjs exits 0 (verify-Qd7WS0). Candidate until the seats accept it;
+`coverage.json` carries the record as seatDelta.

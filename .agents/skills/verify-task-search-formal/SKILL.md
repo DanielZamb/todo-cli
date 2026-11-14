@@ -282,3 +282,12 @@ at the mapping; after renewing those hashes the one command passed, with every
 broken variant reaching its counterexample and the restored model exiting 0
 (378,091 states). Models and bounds are unchanged. Candidate for the seats;
 `coverage.json` carries the record as seatFindingsReview.
+
+## Seat delta, 2026-11-14
+
+Product 5da90607e8c5a19d7007174925c6b6253c0714d3 (seat F7 and F2b on top of
+de766e3c). Only task-filters.ts moves: TaskFilters' project is a plain string
+again, compared exactly; tag keeps its blank refusal. Every filter body, the
+matcher and both clients are byte-identical. The pre-renewal check passed every
+model run (restored 378,091 states) and stopped only at the mapping. Candidate
+for the seats; `coverage.json` carries the record as seatDeltaReview.

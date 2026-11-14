@@ -133,7 +133,7 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      "sha256": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -328,6 +328,20 @@
       }
     ],
     "review": "TaskFilters: the project and tag fields refuse a blank value (a schema check, the seat's F4); filterTaskRecords, filterTaskRecordSteps, runTaskRecordSteps and filterTaskRecordsEffect are byte-identical. presentation.ts: TaskViewSchema and taskView are byte-identical; only renderReview takes a PlanningClock (Q9). commands.ts: readTasks and TaskCommands.list are byte-identical; readTasks' order follows compareTasks, now set to undated last inside a priority (Q8); filterTasks and exportScope take a PlanningClock (Q9). The matcher and both clients are byte-identical.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDeltaReview": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "previous": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b",
+        "to": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
+      }
+    ],
+    "review": "TaskFilters: the project field is a plain string again, compared exactly (seat F7); the tag field keeps its blank refusal. filterTaskRecords, filterTaskRecordSteps, runTaskRecordSteps and filterTaskRecordsEffect are byte-identical. The matcher and both clients are byte-identical.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }
