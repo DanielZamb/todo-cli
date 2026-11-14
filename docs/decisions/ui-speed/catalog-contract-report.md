@@ -719,7 +719,10 @@ statementNow with the exact lines).
     (public-0DGg5w); clean recheck 19,784 states.
   - verify-discovery-formal: TypeScript steps exit 0 (electron-fTEZpE); the
     Swift step and renewal belong to the next unit.
-- PIN_AUDIT_F8
+- **Pin audit** (`pin-audit.mjs HEAD` with the ledger, at 10b78f9d):
+  `filesScanned 488, occurrences 657, unknown 0`. The two new manifest rows
+  are compared pins and match. One problem, the base's known drift (the next
+  unit's): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
 
 ## What the clients inherit
 
