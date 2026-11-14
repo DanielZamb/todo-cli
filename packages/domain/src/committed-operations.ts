@@ -173,48 +173,20 @@ const standing = (db: Reader, row: NotedOperation): Standing => {
     return "unaccounted";
   }
 };
-// Whether a restore other than the request's own committed at or after its
-// first noted seq: the generation moved during the request. An index range
-// scan (op_log_profile_seq: profile IS NULL, seq >= first) over the rows
-// written since the request began, run after it, outside any transaction.
-// A restore whose DatabaseRestored lands below the first note took the seqs of
-// every note (the Snapshot predates them all), so none stands as committed.
-// A failed lookup counts as moved.
-const restoredSince = (db: Reader, notes: readonly NotedOperation[]) => {
-  try {
-    const first = Math.min(...notes.map((row) => row.seq));
-    const query = db.query(
-      "SELECT seq,event FROM op_log WHERE profile IS NULL AND seq>=? AND actor='snapshot-restore' AND outcome='committed'",
-    ) as unknown as {
-      readonly all: (...values: number[]) => { seq: number; event: string }[];
-    };
-    return query
-      .all(first)
-      .some(
-        (row) =>
-          !notes.some(
-            (note) => note.seq === row.seq && note.event === row.event,
-          ),
-      );
-  } catch {
-    return true;
-  }
-};
-
 // A seq is reported only when every note is accounted for: the highest
 // committed one, ignoring rolled-back inserts. One unaccounted note (a
 // redacted row, a failed lookup) means nothing is reported, never a lower seq.
-// A seq means something only inside one generation: when a restore moved the
-// generation after the request's first note, nothing is reported (a restore
-// reuses seqs, so a note would otherwise read as rolled back).
+// A seq means something only inside one generation: the settle reads the
+// current generation (generationOf, after the request, outside any
+// transaction) and reports nothing when it differs from the one the request
+// noted, or cannot be read. A restore reuses seqs, so a note in the old
+// generation could otherwise read as rolled back, and a later commit in the new
+// one would be named with the old generation (seat F2b, F9).
 const settled = (cell: Cell): OperationPosition | null => {
   if (cell.noted.length === 0) return null;
   for (const db of new Set(cell.noted.map((note) => note.db))) {
     const generation = cell.generations.get(db);
-    const notes = cell.noted
-      .filter((note) => note.db === db)
-      .map((note) => note.row);
-    if (generation == null || restoredSince(db, notes)) return null;
+    if (generation == null || generationOf(db) !== generation) return null;
   }
   let best: { readonly db: Reader; readonly seq: number } | null = null;
   for (const { db, row } of cell.noted) {

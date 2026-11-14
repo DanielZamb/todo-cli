@@ -489,6 +489,84 @@ it.effect(
     ),
 );
 
+it.effect(
+  "the seat's F9 schedule: a restore to an older Snapshot between two commits of one request reports nothing",
+  () =>
+    scratchStore((store, rows) =>
+      Effect.gen(function* () {
+        const { credential } = yield* store.auth.signIn("committed scratch");
+        const request = { credential, profile: work.id };
+        const commands = new TaskCommands(store);
+        const made = [];
+        for (const title of ["X", "Y"]) {
+          const created = yield* commands.create(request, {
+            title,
+            source: "agent",
+          } as never);
+          if (created.outcome !== "committed") throw new Error("create");
+          made.push(created.task);
+        }
+        const [x, y] = made;
+        if (!x || !y) throw new Error("fixture");
+        const other = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+          effect.pipe(
+            Effect.provideService(CommittedOperationsCell, undefined),
+          );
+        // An older Snapshot, then History grows past it.
+        const saved = yield* store.snapshots.create("older");
+        let current = x;
+        for (const title of ["X1", "X2", "X3", "X4", "X5", "X6"]) {
+          const edited = yield* commands.edit(
+            { ...request, task_id: current.id as TaskId },
+            { from_version: current.row_version, changes: { title } } as never,
+          );
+          if (edited.outcome !== "committed") throw new Error("edit");
+          current = edited.task;
+        }
+        const seqs: number[] = [];
+        let restoredAt = 0;
+        const reply = yield* collectCommitted(
+          Effect.gen(function* () {
+            // The request commits in the initial generation (seq 13 in the seat's run).
+            const first = yield* commands.edit(
+              { ...request, task_id: current.id as TaskId },
+              {
+                from_version: current.row_version,
+                changes: { title: "X7" },
+              } as never,
+            );
+            if (first.outcome !== "committed") throw new Error("edit");
+            seqs.push(rows().at(-1)?.seq ?? 0);
+            // Another request restores the older Snapshot: DatabaseRestored
+            // lands below that seq, in a new generation.
+            yield* other(store.snapshots.restore(saved.id));
+            restoredAt = rows().at(-1)?.seq ?? 0;
+            // The request commits again, now in the new generation.
+            const second = yield* commands.edit(
+              { ...request, task_id: y.id as TaskId },
+              {
+                from_version: y.row_version,
+                changes: { title: "Y1" },
+              } as never,
+            );
+            if (second.outcome !== "committed") throw new Error("edit");
+            seqs.push(rows().at(-1)?.seq ?? 0);
+          }),
+        );
+        const [first, second] = seqs;
+        expect([
+          restoredAt < (first ?? 0),
+          (second ?? 0) < (first ?? 0),
+          JSON.parse(
+            rows().find((row) => row.seq === restoredAt)?.event ?? "{}",
+          ).kind,
+        ]).toEqual([true, true, "DatabaseRestored"]);
+        // Never {initial, second}: the second commit is in the new generation.
+        expect(reply.position).toBe(null);
+      }),
+    ),
+);
+
 it.effect("a rolled-back insert leaves the request's committed seq", () =>
   scratchStore((store, rows) =>
     Effect.gen(function* () {
