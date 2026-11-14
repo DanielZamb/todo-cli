@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
+  "confirmedCommit": "04f0d7b1ca6366e6257bb2d11ed5b49a202ff156",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "d514952a7c015b9bd8148ce933f0cc361e922ec1348e83982f2f42b292806e05"
+      "sha256": "dca54761c168c07c066c9e361e9e0168d199bfdb5b773c7619f9e9a87d86ec6c"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -404,7 +404,7 @@
         "refresh status without diagram layout changes",
         "graph search accessibility hint"
       ],
-      "sha256": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d"
+      "sha256": "bf6ef065288e27fe13c50b9693acfc7e1a3610533b720fb38eafef4644acfe41"
     },
     {
       "path": "apps/macos/Sources/DependencyErrors.swift",
@@ -419,7 +419,7 @@
         "actual Delete review pair",
         "existing picker state and row/menu UI"
       ],
-      "sha256": "0427495cb1b5ad1df0b32271c29ec6156c8c9d4e7d95e9ef374d57c3c6ae2e8e"
+      "sha256": "b98e07c1b55d8c5e22ee54d81404976854d44092b93bcf70ab33feba6f357ded"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -655,6 +655,36 @@
       },
       "checkEvidence": [
         "docs/evidence/dag-formal/public-mWseiY"
+      ]
+    },
+    {
+      "product": "04f0d7b1ca6366e6257bb2d11ed5b49a202ff156",
+      "previousConfirmedCommit": "4b5d218b50f7ac05987b3e79b8450bc9ca0ad484",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "d514952a7c015b9bd8148ce933f0cc361e922ec1348e83982f2f42b292806e05",
+          "to": "dca54761c168c07c066c9e361e9e0168d199bfdb5b773c7619f9e9a87d86ec6c"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyGraphView.swift",
+          "from": "c52a60425897a0b9a45db1cf4afd1c3b5614f87817ba6df5c23feb8f3445937d",
+          "to": "bf6ef065288e27fe13c50b9693acfc7e1a3610533b720fb38eafef4644acfe41"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyViews.swift",
+          "from": "0427495cb1b5ad1df0b32271c29ec6156c8c9d4e7d95e9ef374d57c3c6ae2e8e",
+          "to": "b98e07c1b55d8c5e22ee54d81404976854d44092b93bcf70ab33feba6f357ded"
+        }
+      ],
+      "review": {
+        "summary": "Candidate 11 changes three fenced Swift files. Dependencies.swift: DependencyPicker gains a row index (linked ids, Tasks by id, row ids in a frozen order, positions) rebuilt on data changes, an explicit memberwise initializer, a write clock per row, and rootGone; the picker's root, linked and candidates reads run concurrently and decode off the main actor, published once, with the same supersession guards (credential epoch, Dependency generation, picker id, reload and search request, search text) checked after the awaits; a person's read freezes the order. The coordinator's ruled behaviour change (014d84ea): a background read (a link's read-back, a stream refresh) no longer sets loading and stands aside while the person's read is in flight; a read that began before a toggle's reply keeps that row and the root; a toggle carries the checked state and dependent Version its row showed (DrawnPickerRow); the list is disabled when the root's read answers 404. Writes still send the dependent's Version (the server's OCC refuses a stale one, and the row then asks for Reload, unchanged); message ownership, per-target supersession, hand-off on close, the committed-link read-back and pendingDependents release are unchanged. DependencyViews.swift: the picker is a native List with the same identifiers (dependency-count added), presented by DependencyPickerSheet; the arrow keys go through DependencyPickerView.next. DependencyGraphView.swift: its picker sheet is presented through DependencyPickerSheet. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, candidate 11 (design accepted; question 1 ruled)",
+        "pendingSeat": true
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-aGUYki"
       ]
     }
   ],
