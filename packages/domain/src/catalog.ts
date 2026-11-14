@@ -11,6 +11,8 @@ import {
   type CatalogTask,
 } from "./catalog-contract.ts";
 import { compareNames, compareTasks } from "./catalog-order.ts";
+import type { Task } from "./entities.ts";
+import { dependencyState, indexGraph, type TaskGraph } from "./graph-model.ts";
 import {
   checkTimeZone,
   type PlanningMembership,
@@ -18,7 +20,10 @@ import {
   planningMembership,
   type UnknownTimeZone,
 } from "./planning-day.ts";
-import type { CatalogRow } from "./store/catalog-projection.ts";
+import {
+  type CatalogRow,
+  decodeCatalogTasks,
+} from "./store/catalog-projection.ts";
 import type { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
 import {
@@ -94,6 +99,33 @@ const groupNames = (
         : view === "scheduled"
           ? ["Scheduled"]
           : ["Inbox"];
+
+/**
+ * The Dependency graph from stored columns, without decoding a Task. The
+ * graph functions read exactly id, status, energy, priority, due_at,
+ * created_at and deleted_at of a graph Task (indexGraph, dependencyState,
+ * unresolved, graphEnergy, topologicalOrder's compareGraphTasks); the rows a
+ * reply returns are still the decoded Tasks, so only those fields come from
+ * here. A test holds the result equal to the decoded graph's.
+ */
+const columnGraph = (light: {
+  readonly rows: readonly CatalogRow[];
+  readonly edges: TaskGraph["edges"];
+}): TaskGraph => ({
+  tasks: light.rows.map(
+    (row) =>
+      ({
+        id: row.id,
+        status: row.status,
+        energy: row.energy,
+        priority: row.priority,
+        due_at: row.due_at,
+        created_at: row.created_at,
+        deleted_at: null,
+      }) as unknown as Task,
+  ),
+  edges: light.edges,
+});
 
 const taskFilters = (query: CatalogQuery): TaskFilters => {
   const {
@@ -178,11 +210,10 @@ export class CatalogReads {
               const projects = yield* this.store.auth.projects(selected);
               const tags = yield* this.store.auth.tags(selected);
               const light = yield* this.store.catalogRows(read);
-              const graphNeeded =
-                light.dependencies ||
-                fields.ready !== undefined ||
-                fields.blocked !== undefined ||
-                fields.order !== undefined;
+              // Only a dependency order needs every Task decoded: its rows are
+              // the graph's own objects. Everything else reads the graph from
+              // columns (see columnGraph).
+              const wholeGraph = fields.order !== undefined;
               const view = fields.view ?? "all";
               const members = new Map(
                 light.rows.map((row) => [row.id, planningMembership(row, day)]),
@@ -208,15 +239,16 @@ export class CatalogReads {
                     return member && viewMember(view, member) ? [row.id] : [];
                   }),
               );
-              const graph = graphNeeded
+              const graph = wholeGraph
                 ? yield* this.store.graphRead(read)
                 : null;
-              const tasks =
-                graph?.tasks.filter((task) => task.deleted_at === null) ??
-                (yield* this.store.catalogTasks(
-                  read,
-                  fields.tasks === "matching" ? [...candidates] : null,
-                ));
+              // Payload text only: decoding happens after the lease.
+              const payloads = graph
+                ? null
+                : yield* this.store.catalogPayloads(
+                    read,
+                    fields.tasks === "matching" ? [...candidates] : null,
+                  );
               return {
                 kind: "changed" as const,
                 position,
@@ -232,7 +264,7 @@ export class CatalogReads {
                 members,
                 candidates,
                 graph,
-                tasks,
+                payloads,
               };
             }),
           (absent) =>
@@ -249,12 +281,42 @@ export class CatalogReads {
             position: lease.position,
             day: calendarDate(lease.day.today),
           } satisfies CatalogReply;
-        const { fields, view, metadata, graph, members } = lease;
+        const { fields, view, metadata, members } = lease;
+        const graph =
+          lease.graph ??
+          (lease.light.edges.length ||
+          fields.ready !== undefined ||
+          fields.blocked !== undefined
+            ? columnGraph(lease.light)
+            : null);
         const filters = taskFilters(fields);
-        const sorted = [...lease.tasks].sort(compareTasks);
-        const candidates = sorted.filter((task) =>
-          lease.candidates.has(task.id),
+        // Ready and Blocked are graph facts: narrow the candidates with the
+        // same dependencyState rule before decoding; filterTaskRecords applies
+        // it again to the decoded rows.
+        const index =
+          graph && (fields.ready !== undefined || fields.blocked !== undefined)
+            ? indexGraph(graph)
+            : null;
+        const wanted = new Set(
+          [...lease.candidates].filter((id) => {
+            const node = index?.tasks.get(id);
+            if (!index || !node) return true;
+            const state = dependencyState(node, index);
+            return (
+              (fields.ready === undefined || state.ready) &&
+              (fields.blocked === undefined || state.blocked)
+            );
+          }),
         );
+        const decoded =
+          lease.graph?.tasks.filter((task) => task.deleted_at === null) ??
+          decodeCatalogTasks(
+            (lease.payloads ?? []).filter(
+              (row) => fields.tasks !== "matching" || wanted.has(row.id),
+            ),
+          );
+        const sorted = [...decoded].sort(compareTasks);
+        const candidates = sorted.filter((task) => wanted.has(task.id));
         const matching = yield* filters.text === undefined
           ? Effect.sync(() =>
               filterTaskRecords(

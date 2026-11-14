@@ -612,13 +612,13 @@ export class OperationStore {
       ),
     );
 
-  readonly catalogTasks = (
+  readonly catalogPayloads = (
     read: AuthorizedRead,
     ids: readonly TaskId[] | null,
   ) =>
     checkedRead(read, "read", this.db).pipe(
       Effect.flatMap(() =>
-        attempt(() => new CatalogProjection(this.db).tasks(read, ids)),
+        attempt(() => new CatalogProjection(this.db).payloads(read, ids)),
       ),
     );
 

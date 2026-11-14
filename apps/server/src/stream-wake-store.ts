@@ -199,7 +199,7 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
       revert: "write",
       graphRead: "read",
       catalogRows: "read",
-      catalogTasks: "read",
+      catalogPayloads: "read",
       committedSince: "read",
       terminalChangesRead: "read",
       committedHistory: "read",

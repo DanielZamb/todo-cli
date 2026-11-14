@@ -543,7 +543,7 @@ it.effect("keeps the local day across a daylight-saving change", () =>
 );
 
 it.effect(
-  "decodes no History, and only the Tasks it returns without Dependencies",
+  "decodes no History, and only the Tasks it returns, with or without Dependencies",
   () =>
     withFixture((fixture) =>
       Effect.gen(function* () {
@@ -595,11 +595,32 @@ it.effect(
           tasks: 3,
           history: 0,
         });
-        // With a Dependency in the Profile, Ready and remaining energy need the
-        // whole graph, so every visible Task is decoded once, as GET /tasks does.
+        // With a Dependency in the Profile the graph comes from columns: still
+        // exactly the returned Tasks, with or without search or Ready.
         expect(
           yield* decodes({ view: "today", tasks: "matching" }, fixture.request),
-        ).toEqual({ returned: 2, tasks: 7, history: 0 });
+        ).toEqual({ returned: 2, tasks: 2, history: 0 });
+        // Search reads each candidate's title and description, so it decodes
+        // the view's candidates (here All: 7) and returns the matches.
+        expect(
+          yield* decodes(
+            { view: "all", tasks: "matching", text: "thing" },
+            fixture.request,
+          ),
+        ).toEqual({ returned: 1, tasks: 7, history: 0 });
+        expect(
+          yield* decodes(
+            { view: "today", tasks: "matching", text: "rent" },
+            fixture.request,
+          ),
+        ).toEqual({ returned: 1, tasks: 2, history: 0 });
+        expect(
+          yield* decodes({ tasks: "matching", ready: true }, fixture.request),
+        ).toEqual({ returned: 4, tasks: 4, history: 0 });
+        // A dependency order is the graph's own objects: every Task, once.
+        expect(
+          yield* decodes({ tasks: "matching", order: "topo" }, fixture.request),
+        ).toEqual({ returned: 7, tasks: 7, history: 0 });
       }),
     ),
 );
@@ -639,6 +660,80 @@ it.effect(
         expect(
           (yield* reads.profiles(fixture.credential)).map((p) => p.name),
         ).toEqual(["Personal", "Work"]);
+      }),
+    ),
+);
+
+it.effect(
+  "reads dependency fields from columns exactly as GET /tasks decodes them",
+  () =>
+    withFixture((fixture) =>
+      Effect.gen(function* () {
+        const commands = new TaskCommands(fixture.store);
+        let seed = 4242;
+        const next = (n: number) => {
+          seed = (seed * 1103515245 + 12345) % 2147483648;
+          return seed % n;
+        };
+        const ids: TaskId[] = [];
+        for (let i = 0; i < 40; i++) {
+          const blockers = [...new Set(ids.filter(() => next(5) === 0))].slice(
+            0,
+            3,
+          );
+          const created = yield* commands.create(fixture.request, {
+            title: `Graph ${i}`,
+            source: "agent",
+            priority: ["P1", "P2", "P3", "P4"][next(4)],
+            ...(next(3) === 0 ? { energy: 1 + next(5) } : {}),
+            ...(next(3) === 0
+              ? { due_at: date(`2026-11-${10 + next(9)}`) }
+              : {}),
+            ...(blockers.length ? { depends_on: blockers } : {}),
+          } as never);
+          if (created.outcome !== "committed") continue;
+          ids.push(created.task.id);
+          if (next(4) === 0 && !blockers.length) {
+            const closed = yield* commands.transition(
+              { ...fixture.request, task_id: created.task.id },
+              {
+                from_version: created.task.row_version,
+                action: next(2) ? "complete" : "cancel",
+              } as never,
+            );
+            expect(closed.outcome).toBe("committed");
+          }
+        }
+        const listed = new Map(
+          (yield* commands.list(fixture.request)).map((task) => [
+            task.id,
+            task,
+          ]),
+        );
+        const fields = (task: Record<string, unknown>) => ({
+          depends_on: task.depends_on,
+          blocks: task.blocks,
+          ready: task.ready,
+          blocked: task.blocked,
+          remaining_energy: task.remaining_energy,
+        });
+        let compared = 0;
+        for (const query of [
+          { tasks: "all" },
+          { tasks: "matching" },
+          { tasks: "matching", ready: true },
+          { tasks: "matching", blocked: true },
+          { tasks: "matching", text: "graph" },
+          { view: "today", tasks: "matching" },
+        ] as const) {
+          const reply = changed(yield* fixture.catalog(query));
+          for (const task of reply.tasks) {
+            const expected = listed.get(task.id);
+            expect(fields(task)).toEqual(fields(expected ?? {}));
+            compared++;
+          }
+        }
+        expect(compared).toBeGreaterThan(100);
       }),
     ),
 );

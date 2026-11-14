@@ -4,6 +4,7 @@
 import type { Database } from "bun:sqlite";
 import { Schema } from "effect";
 import { type AuthorizedRead, readAuthority } from "../auth/authorized-read.ts";
+import { Edge } from "../dependencies.ts";
 import { diagnosticSync } from "../diagnostic-context.ts";
 import { Task, TaskPriority, TaskStatus } from "../entities.ts";
 import { ProjectId, TagId, TaskId } from "../ids.ts";
@@ -16,6 +17,7 @@ export const CatalogRow = Schema.Struct({
   priority: TaskPriority,
   created_at: Instant,
   project_id: Schema.NullOr(ProjectId),
+  energy: Schema.NullOr(Schema.Int),
   due_at: StoredTime,
   scheduled_at: StoredTime,
 });
@@ -25,7 +27,7 @@ const TagLink = Schema.Struct({ task_id: TaskId, tag_id: TagId });
 export class CatalogProjection {
   constructor(private readonly db: Database) {}
 
-  /** Every visible Task's ordering and membership columns, its Tag links, and whether any Dependency exists. */
+  /** Every visible Task's ordering, membership and graph columns, its Tag links, and the Profile's Dependency edges. */
   readonly rows = (read: AuthorizedRead) => {
     const profile = readAuthority(read, "read", this.db).profile;
     return diagnosticSync(
@@ -34,7 +36,7 @@ export class CatalogProjection {
         rows: Schema.decodeUnknownSync(Schema.Array(CatalogRow))(
           this.db
             .query(
-              "SELECT id,status,priority,created_at,project_id,due_at,scheduled_at FROM tasks WHERE profile_id=? AND deleted_at IS NULL",
+              "SELECT id,status,priority,created_at,project_id,energy,due_at,scheduled_at FROM tasks WHERE profile_id=? AND deleted_at IS NULL",
             )
             .all(profile),
         ),
@@ -45,40 +47,37 @@ export class CatalogProjection {
             )
             .all(profile),
         ),
-        dependencies:
+        // The statement store.graph uses for the same Profile's edges.
+        edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
           this.db
-            .query<{ found: number }, [string]>(
-              "SELECT EXISTS(SELECT 1 FROM task_dependencies WHERE profile_id=?) AS found",
+            .query(
+              "SELECT * FROM task_dependencies WHERE profile_id=? ORDER BY profile_id,dependent_id,blocker_id",
             )
-            .get(profile)?.found === 1,
+            .all(profile),
+        ),
       }),
       { statement: "store.projection" },
     );
   };
 
-  /** The visible Tasks with these ids, decoded; every visible Task when ids is null. */
-  readonly tasks = (read: AuthorizedRead, ids: readonly TaskId[] | null) => {
+  /** The payload text of the visible Tasks with these ids; every visible Task when ids is null. */
+  readonly payloads = (read: AuthorizedRead, ids: readonly TaskId[] | null) => {
     const profile = readAuthority(read, "read", this.db).profile;
-    const rows = diagnosticSync(
+    return diagnosticSync(
       "database",
       () =>
         ids === null
           ? this.db
-              .query<{ payload: string }, [string]>(
-                "SELECT payload FROM tasks WHERE profile_id=? AND deleted_at IS NULL",
+              .query<{ id: TaskId; payload: string }, [string]>(
+                "SELECT id,payload FROM tasks WHERE profile_id=? AND deleted_at IS NULL",
               )
               .all(profile)
           : this.db
-              .query<{ payload: string }, [string, string]>(
-                "SELECT payload FROM tasks WHERE profile_id=? AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))",
+              .query<{ id: TaskId; payload: string }, [string, string]>(
+                "SELECT id,payload FROM tasks WHERE profile_id=? AND deleted_at IS NULL AND id IN (SELECT value FROM json_each(?))",
               )
               .all(profile, JSON.stringify(ids)),
       { statement: "store.read" },
-    );
-    return diagnosticSync("task_materialization", () =>
-      rows.map((row) =>
-        Schema.decodeUnknownSync(Task)(JSON.parse(row.payload)),
-      ),
     );
   };
 
@@ -98,3 +97,11 @@ export class CatalogProjection {
     );
   };
 }
+
+/** Owned payload text to Tasks, outside any lease. */
+export const decodeCatalogTasks = (
+  rows: readonly { readonly payload: string }[],
+) =>
+  diagnosticSync("task_materialization", () =>
+    rows.map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload))),
+  );
