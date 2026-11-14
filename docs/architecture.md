@@ -233,8 +233,10 @@ only the groups'). Counts, order, membership and the Dependency graph come
 from stored columns (`store/catalog-projection.ts`); payload text is read in the
 lease and only the returned Tasks are decoded after it (search decodes the
 view's candidates; `order` decodes the whole graph, as `GET /tasks` does). With
-`known_generation`, `known_seq` and `known_day` the reply is `unchanged: true`
-when the generation and day match and nothing committed since. `time_zone`
+`known_generation`, `known_seq`, `known_day` and `known_stamp` the reply is
+`unchanged: true` when the generation, day and stamp match and nothing
+committed since; the stamp digests what History does not record (the Profiles
+the credential sees, the schema version). `time_zone`
 (also on the planning views) makes today the client's date and an instant's
 day its date in its own zone; without it both stay UTC dates. One Task order
 (`compareTasks`), one name order (`compareNames`) and one Tag-name rule

@@ -224,6 +224,54 @@ keeps its code-unit order (its ADR and mapping): a follow-up.
 **Catalog** (the word the code and architecture.md already used) in its own
 commit, 8c79738c; the route, type and command follow it.
 
+## Seat findings at 9634a6e0 (CATALOG-S1), fixed on top
+
+**1. `known` answered "unchanged" after a Profile appeared without History**
+(d1a121e3). Everything a reply holds that a committed operation does not write:
+- the Profiles this credential sees: `todo init --profile` and
+  `todo login --profile` create one through `ensureProfile` with no History row,
+  and the set depends on the credential's scope;
+- the schema version: a migration at start-up.
+
+A restore already moves the generation, and `store.rebuild` has no production
+caller. The reply now carries `stamp`, a SHA-256 of the visible Profiles (id,
+name, created_at, updated_at) and `PRAGMA user_version`, read in the same
+lease. "Unchanged" needs all four known values (`known_stamp` added) and the
+stamp to match.
+
+Tests:
+- the seat's schedule in the domain: `ensureProfile` adds no History row, yet
+  the same known position now answers changed and lists the new Profile; red
+  without the stamp comparison;
+- the same schedule through the compiled CLI (`todo login --profile Errands`);
+- a Profile-scoped token gets a different stamp.
+
+Contract a49a9627…; the flag golden gains `--known-stamp` (1,041 pairs).
+
+**Follow-up 16 is not closed by this.** The Catalog now reports the new Profile
+on the next read, but nothing prompts that read: a Profile created from the CLI
+writes no History, so no stream operation reaches an open app. Closing it needs
+a History row or a stream notice for Profile creation.
+
+**2. `operation_seq` could be too low** (fdd8bec0, the commit before). Each note
+also carries the columns Purge never rewrites (actor, profile, `from_version`,
+`to_version`, `occurred_at`; Purge rewrites only `event` and `entity_version`).
+When the request ends, each note stands as one of:
+- **committed**: a committed row at that seq with byte-identical event text;
+- **rolled back**: no row at that seq, or a row whose kept columns differ (the
+  seq was taken by another operation after the rollback);
+- **unaccounted**: the same kept columns with other event bytes (a redaction,
+  or a same-shaped reuse that cannot be told apart), or a failed lookup.
+
+A seq is reported only when no note is unaccounted; otherwise nothing.
+
+Tests:
+- Purging the request's highest operation before it ends reports nothing,
+  never the lower seq; red on 9634a6e0's rule.
+- A rollback after a commit still reports the commit's seq; red if a rollback
+  counted as unaccounted.
+- The fixed-clock reuse case still reports nothing.
+
 ## Proof
 
 Each item below is "logic passes"; nothing here is "used for real".
