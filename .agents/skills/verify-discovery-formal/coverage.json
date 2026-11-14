@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "da48e7909520b433310f52e70d433a8d649380fa",
+  "productionSyncCommit": "26084932d8b191a421efc6dbe341a2428df930e1",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "bde3fa770a3faa645cd88413f4ff44547228acf9b145ade7649ab796b82f15ea",
+      "sha256": "92b1dc954e6c817edc66cfdef29f98fdf305b9b4e4b855051685f8e33be1d75a",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -238,7 +238,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "12c45efb03a285b6e8eb876fb8abaaefb20a9cb6",
+  "previousProductionSyncCommit": "da48e7909520b433310f52e70d433a8d649380fa",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -696,6 +696,18 @@
         }
       ],
       "review": "Candidate 12 (0f643c52, with its DAG public renewal on top). Of the mapped files only AppViews.swift changed: TaskListView gains the sidebar's scene-stored visibility bound to NavigationSplitView(columnVisibility:), setSidebar and the SidebarRoom rule (grow the window or close the inspector when the sidebar is asked for without room), the inspector moved inside detail: (unchanged content, toolbar button and inspectorColumnWidth), a WindowReader for the window, View > Hide/Show Sidebar through a focused scene value, and FlowLayout for the filter bar's buttons. The search field, searchBinding, searchFocused, taskFilters' pickers, taskContent's rows, closeInspector and openSelection are unchanged; no discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "26084932d8b191a421efc6dbe341a2428df930e1",
+      "controls": "check-swift passed on 26084932: docs/evidence/discovery-formal/swift-VcWTjX",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "bde3fa770a3faa645cd88413f4ff44547228acf9b145ade7649ab796b82f15ea",
+          "to": "92b1dc954e6c817edc66cfdef29f98fdf305b9b4e4b855051685f8e33be1d75a"
+        }
+      ],
+      "review": "Candidate 12's head after HOLD's person-input finding. Of the mapped files only AppViews.swift changed since fd26808a: SidebarControl carries the model's notePersonActed, and View > Hide/Show Sidebar calls it before toggling (MAC-C1-S1-32). The sidebar state, the room rule, the inspector inside detail: and FlowLayout are as recorded for fd26808a. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
