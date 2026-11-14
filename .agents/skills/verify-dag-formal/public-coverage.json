@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "c2359f293ebbaafed0401539f8137fbb25e82c39",
+  "confirmedCommit": "ef67c4885e21dac90371b7d2cb9b5e5c1918ffaf",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "dca54761c168c07c066c9e361e9e0168d199bfdb5b773c7619f9e9a87d86ec6c"
+      "sha256": "263dceef3ec1c3227f2f9985901cbe27be7ce06149a22dfea8968c77b1186dbe"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -387,7 +387,7 @@
         "graph node state",
         "search publication"
       ],
-      "sha256": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71"
+      "sha256": "61290e279da708975d85925463b8301e8068afdc816cda624676768ee4360f69"
     },
     {
       "path": "apps/macos/Sources/DependencyWebView.swift",
@@ -411,7 +411,7 @@
       "functions": [
         "DependencyNotice.project"
       ],
-      "sha256": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002"
+      "sha256": "b8425db2a5e439dc72461cb9b37f304bef558ebb91efa99935e0d09f43d58bcf"
     },
     {
       "path": "apps/macos/Sources/DependencyViews.swift",
@@ -419,7 +419,7 @@
         "actual Delete review pair",
         "existing picker state and row/menu UI"
       ],
-      "sha256": "c6731224de0c771e00b616a55d2d7236d58392ed9d3526096bdc5fdf21e4f290"
+      "sha256": "9c1409b2b67d426d5f130fa8750229168007444b65c50c40dde8602428b5a3c4"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -705,6 +705,41 @@
       },
       "checkEvidence": [
         "docs/evidence/dag-formal/public-J9FsG0"
+      ]
+    },
+    {
+      "product": "ef67c4885e21dac90371b7d2cb9b5e5c1918ffaf",
+      "previousConfirmedCommit": "c2359f293ebbaafed0401539f8137fbb25e82c39",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "dca54761c168c07c066c9e361e9e0168d199bfdb5b773c7619f9e9a87d86ec6c",
+          "to": "263dceef3ec1c3227f2f9985901cbe27be7ce06149a22dfea8968c77b1186dbe"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyGraphState.swift",
+          "from": "b31b5bc377a10d1dab39b7ecd2a5affa3c72eb9a003dc21d402c39ef8947ef71",
+          "to": "61290e279da708975d85925463b8301e8068afdc816cda624676768ee4360f69"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyErrors.swift",
+          "from": "1a6ae2602b40c33b63c20088cf8571ab4c0d0f086406d4e0fa031f3bf5eaa002",
+          "to": "b8425db2a5e439dc72461cb9b37f304bef558ebb91efa99935e0d09f43d58bcf"
+        },
+        {
+          "path": "apps/macos/Sources/DependencyViews.swift",
+          "from": "c6731224de0c771e00b616a55d2d7236d58392ed9d3526096bdc5fdf21e4f290",
+          "to": "9c1409b2b67d426d5f130fa8750229168007444b65c50c40dde8602428b5a3c4"
+        }
+      ],
+      "review": {
+        "summary": "The candidate 11 fix head (MAC-C11-S1-1, S1-2 and the UI seat's four items). Dependencies.swift: a background picker read that stands aside while the person's read is in flight now marks one read owed (owedRead), and the owed read runs once the picker is idle (the person's read ended and nothing pending), after reloadDependencyPicker, searchDependencyCandidates and toggleDependency (now a wrapper around performToggleDependency); it is an ordinary background read with the same supersession guards. The write clock records rows per direction (the root key stays one Task), and every read asks for the rows of the direction it read. A failed person's read clears resortPending. When the picker's own Task answers 404 the notice names it; in the picker a refusal's text is reworded (occ_conflict, not_found, the generic failure) without changing its code, its ticket, requiresReload or the hand-off on close. DependencyGraphState.swift: refreshDependencyReads, when a toggle is pending, marks the picker's read owed instead of skipping it. DependencyViews.swift: the count reads 'N of M Tasks' while searching, the loading state is an overlay in the list, the picker's notices hide the exit-code line, and the notice headline is a static function ('Couldn't add “A”.'). DependencyErrors.swift: the generic failure text is one constant. Writes still send the drawn Version and are decided by the server's OCC; message ownership, per-target supersession, the committed-link read-back and pendingDependents release are unchanged. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, candidate 11 correctness verdict (MAC-C11-S1-1 ruling: owed read, per-direction clock)",
+        "pendingSeat": true
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-0tDzxT"
       ]
     }
   ],
