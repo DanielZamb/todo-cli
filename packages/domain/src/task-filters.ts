@@ -46,8 +46,18 @@ export const TaskFilters = Schema.Struct({
     }),
   ),
   prefix: Schema.optionalKey(TaskIdPrefix),
-  project: Schema.optionalKey(Schema.String),
-  tag: Schema.optionalKey(Schema.String),
+  project: Schema.optionalKey(
+    Schema.String.check(Schema.isPattern(/\S/u)).annotate({
+      description:
+        "A Project name, compared exactly. A blank name is not a filter value and is refused as invalid_args.",
+    }),
+  ),
+  tag: Schema.optionalKey(
+    Schema.String.check(Schema.isPattern(/\S/u)).annotate({
+      description:
+        "A Tag name, compared by its stored form (trimmed, lowercase). A blank name is not a filter value and is refused as invalid_args.",
+    }),
+  ),
   status: Schema.optionalKey(
     Schema.Literals(["open", "done", "cancelled", "snoozed", "closed"]),
   ),

@@ -156,6 +156,18 @@ it.effect("serves the Catalog, its position and its refusals over HTTP", () =>
           "invalid_args",
         ],
         ["/profiles/never-created/catalog", 404, "not_found"],
+        // A blank Project or Tag name is not a filter value: refused before
+        // the Profile is resolved, on the Catalog and on the list alike.
+        ["/profiles/work/catalog?tag=", 400, "invalid_args"],
+        ["/profiles/work/catalog?tag=%20", 400, "invalid_args"],
+        ["/profiles/work/catalog?project=%E3%80%80", 400, "invalid_args"],
+        ["/profiles/work/catalog?tag=work&tag=%0A", 400, "invalid_args"],
+        ["/profiles/never-created/catalog?project=", 400, "invalid_args"],
+        ["/profiles/work/tasks?tag=", 400, "invalid_args"],
+        ["/profiles/work/tasks?project=%20%09", 400, "invalid_args"],
+        ["/profiles/never-created/tasks?tag=%20", 400, "invalid_args"],
+        ["/profiles/work/tasks?tag=%20work%20", 200, undefined],
+        ["/profiles/work/catalog?project=Inbox", 200, undefined],
       ] as const;
       const before = opLog();
       for (const [route, status, code] of refusals) {

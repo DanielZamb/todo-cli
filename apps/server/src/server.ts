@@ -274,6 +274,25 @@ export const rejectUnknownQuery = <E, R>(
           { status: 400 },
         ),
       );
+    // A blank Project or Tag name is not a filter value (CONTEXT.md: Catalog):
+    // refused like every other empty value, before any read.
+    const blankName = ["project", "tag"].find(
+      (name) =>
+        route?.parameters.has(name) &&
+        url.searchParams.getAll(name).some((value) => value.trim() === ""),
+    );
+    if (blankName && !unknown.length)
+      return Effect.succeed(
+        HttpServerResponse.jsonUnsafe(
+          {
+            ...exitStatus(2),
+            generated_at: new Date().toISOString(),
+            code: "invalid_args",
+            message: `${blankName} needs a name; leave the parameter out to match every ${blankName === "project" ? "Project" : "Tag"}.`,
+          },
+          { status: 400 },
+        ),
+      );
     return unknown.length
       ? Effect.succeed(
           HttpServerResponse.jsonUnsafe(

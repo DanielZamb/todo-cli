@@ -1,3 +1,4 @@
+import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   tagKey,
@@ -5,6 +6,7 @@ import {
   tagNameParts,
   tagNames,
 } from "../src/tag-name.ts";
+import { TaskFilters } from "../src/task-filters.ts";
 import {
   filterTagMatches,
   importTagNames,
@@ -117,4 +119,17 @@ describe("one Tag-name rule replaces the five copies", () => {
     expect(tagKey("\u0085Work")).toBe("\u0085work");
     expect(tagNameParts(["B,a", "a"])).toEqual(["b", "a", "a"]);
   });
+});
+
+it("refuses a blank Project or Tag name as a filter value, with one rule for both", () => {
+  const blank = ["", " ", "\t\n", "　", " ﻿"];
+  const named = ["a", " work ", "　x"];
+  const accepts = (value: string) => [
+    Schema.is(TaskFilters)({ project: value }),
+    Schema.is(TaskFilters)({ tag: value }),
+  ];
+  expect(blank.map(accepts)).toEqual(blank.map(() => [false, false]));
+  expect(named.map(accepts)).toEqual(named.map(() => [true, true]));
+  // The schema's blank is exactly the Tag rule's empty key.
+  expect(blank.map((value) => tagKey(value))).toEqual(blank.map(() => ""));
 });

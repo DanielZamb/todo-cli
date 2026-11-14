@@ -99,6 +99,9 @@ it("refuses every invalid catalog flag value with invalid_args before any store 
     invalid([`--${flag}`, ""], `--${flag} ""`);
   for (const flag of ["view", "tasks", "known-seq", "now", "priority"])
     invalid([`--${flag}`, "-x"], `--${flag} -x`);
+  for (const flag of ["project", "tag"])
+    for (const value of [" ", "\t", "\u3000"])
+      invalid([`--${flag}`, value], `--${flag} ${JSON.stringify(value)}`);
   // A refused catalog never opened the store for --profile Fresh.
   expect(profiles()).toEqual(before);
 });
@@ -110,4 +113,25 @@ it("answers a dash value or a repeated flag with a reply or the envelope, never 
   }
   handled(["--view", "today", "--view", "all"], "--view today --view all");
   handled(["--ready", "--ready"], "--ready --ready");
+});
+
+it("refuses a blank Project or Tag name on todo list, and keeps an empty one as the flag's absence", () => {
+  for (const flag of ["project", "tag"]) {
+    const blank = cli(["list", `--${flag}`, " "]);
+    expect([blank.status, JSON.parse(blank.stdout).code], flag).toEqual([
+      2,
+      "invalid_args",
+    ]);
+    // todo list gives every value flag the default "", which means absent.
+    const empty = cli(["list", `--${flag}`, ""]);
+    const absent = cli(["list"]);
+    const shape = (stdout: string) => {
+      const { generated_at: _, ...rest } = JSON.parse(stdout);
+      return rest;
+    };
+    expect([empty.status, shape(empty.stdout)], flag).toEqual([
+      0,
+      shape(absent.stdout),
+    ]);
+  }
 });

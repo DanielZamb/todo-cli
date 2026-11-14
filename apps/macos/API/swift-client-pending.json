@@ -1,7 +1,7 @@
 {
   "about": "The one place that names what stays red while the Swift client is not regenerated for the server's contract. packages/api/scripts/swift-contract.ts reads it; verify-dag-formal's contract properties accept a Swift identity that differs from the API identity only when this file names that exact pair. apps/macos/scripts/generate-api.sh (step 2) regenerates the Swift client, writes the identity and empties this file.",
   "swiftContract": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
-  "serverContract": "b6a92959c31b874f520357eddf4fc967000406e93f7d382c1a5fc3af534d2658",
+  "serverContract": "79eca1a5bffc7a4b1fb8b012cdf1d23a85862d00f5bc4beb1080dad6f52d580e",
   "evidence": "apps/macos/API/Sources/TodoAPI/openapi.json has the content of packages/api/openapi.json at d304589f normalized by normalize-openapi.py; that document's contract id is 55c6d138. The Swift sources were last generated there.",
   "expectedRed": [
     {

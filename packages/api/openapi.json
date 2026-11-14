@@ -5545,7 +5545,9 @@
             "name": "project",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "\\S",
+              "description": "A Project name, compared exactly. A blank name is not a filter value and is refused as invalid_args."
             },
             "required": false
           },
@@ -5553,7 +5555,9 @@
             "name": "tag",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "\\S",
+              "description": "A Tag name, compared by its stored form (trimmed, lowercase). A blank name is not a filter value and is refused as invalid_args."
             },
             "required": false
           },
@@ -30356,7 +30360,9 @@
             "name": "project",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "\\S",
+              "description": "A Project name, compared exactly. A blank name is not a filter value and is refused as invalid_args."
             },
             "required": false
           },
@@ -30364,7 +30370,9 @@
             "name": "tag",
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "pattern": "\\S",
+              "description": "A Tag name, compared by its stored form (trimmed, lowercase). A blank name is not a filter value and is refused as invalid_args."
             },
             "required": false
           },
