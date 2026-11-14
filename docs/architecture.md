@@ -223,6 +223,25 @@ immediate authorization transaction. Directory counts share its existing deferre
 read snapshot. Projection guards, generated Task columns, Version validation and
 atomic event/projection writes remain authoritative. Reads do not replay the log.
 
+The Catalog (`GET /profiles/:profile/catalog`, `todo catalog`, domain
+`catalog.ts`) answers a client refresh in one checked read lease: the History
+position the read reflects (`position {generation, seq}`, from the Profile
+classification the lease already runs), distinct open Tasks per view, Profiles,
+Projects and Tags in `compareNames` order, the view's groups as ordered Task ids
+with each Task once, and the Tasks (`tasks=all` every visible Task, `matching`
+only the groups'). Counts, order and membership come from stored columns
+(`store/catalog-projection.ts`); only returned Tasks are decoded, except that a
+Profile with Dependencies decodes its graph once, as `GET /tasks` does. With
+`known_generation`, `known_seq` and `known_day` the reply is `unchanged: true`
+when the generation and day match and nothing committed since. `time_zone`
+(also on the planning views) makes today the client's date and an instant's
+day its date in its own zone; without it both stay UTC dates. One Task order
+(`compareTasks`), one name order (`compareNames`) and one Tag-name rule
+(`tag-name.ts`) serve every read and writer. Write replies and writing CLI
+commands carry `operation_seq`, the highest seq the request committed
+(`committed-operations.ts`). The desktop clients still use the older reads
+until they move to the Catalog.
+
 Credential checks create read authorities inside the authentication module.
 Profile, scope, parsed fields and database identity live in ECMAScript private
 fields. Query ports validate the genuine instance, exact prototype, authority
