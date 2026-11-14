@@ -42,6 +42,14 @@ const record = (name: string, value: unknown) =>
     `${JSON.stringify(value, null, 2)}\n`,
   );
 
+/** Stops a step's whole process group (it runs in its own): check-swift, its lockf waiters, its
+ * Swift tests and its scratch server go with it (follow-up 68). SIGTERM first (check-swift stops
+ * its own step's group on it), SIGKILL for what is left 3 s later. */
+function stopGroup(pid: number | undefined) {
+  if (pid === undefined) return;
+  try { process.kill(-pid, "SIGTERM"); } catch { /* already gone */ }
+  setTimeout(() => { try { process.kill(-pid, "SIGKILL"); } catch { /* already gone */ } }, 3_000).unref();
+}
 async function execute(
   label: string,
   command: string,
@@ -52,28 +60,39 @@ async function execute(
   const child = spawn(command, args, {
     cwd,
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
   });
   record(`${label}-started`, { command, args, cwd, started, pid: child.pid });
-  const stop = () => {
-    child.kill("SIGTERM");
-  };
+  const stop = () => stopGroup(child.pid);
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   let out = "";
   let err = "";
+  // The 600 s limit counts only time the step is not waiting for the Swift slot (follow-up 68):
+  // check-swift reports each wait on its stderr (SWIFT-SLOT-WAITING, then SWIFT-SLOT-ACQUIRED).
+  let waiting = false;
   child.stdout.on("data", (chunk: Buffer) => {
     out += chunk.toString();
     appendFileSync(join(evidence, `${label}.stdout`), chunk);
   });
   child.stderr.on("data", (chunk: Buffer) => {
-    err += chunk.toString();
+    const text = chunk.toString();
+    for (const line of text.split("\n")) {
+      if (line.startsWith("SWIFT-SLOT-WAITING")) waiting = true;
+      if (line.startsWith("SWIFT-SLOT-ACQUIRED")) waiting = false;
+    }
+    err += text;
     appendFileSync(join(evidence, `${label}.stderr`), chunk);
   });
   let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    child.kill("SIGKILL");
-  }, 600_000);
+  let active = 0;
+  const timer = setInterval(() => {
+    if (!waiting) active += 1_000;
+    if (active >= 600_000 && !timedOut) {
+      timedOut = true;
+      stop();
+    }
+  }, 1_000);
   try {
     const result = await new Promise<{
       exit: number | null;
@@ -84,12 +103,12 @@ async function execute(
     });
     writeFileSync(join(evidence, `${label}.stdout`), out);
     writeFileSync(join(evidence, `${label}.stderr`), err);
-    record(label, { command, args, cwd, started, ...result, timedOut });
+    record(label, { command, args, cwd, started, ...result, timedOut, activeMilliseconds: active });
     assert.equal(timedOut, false, `${label}: timeout is incomplete proof`);
     assert.equal(result.signal, null, `${label}: interrupted proof`);
     return { ...result, out, err };
   } finally {
-    clearTimeout(timer);
+    clearInterval(timer);
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
   }
