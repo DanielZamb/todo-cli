@@ -45,8 +45,8 @@ struct DependencyPicker: Identifiable {
     var direction: DependencyDirection
     var purpose = DependencyPickerPurpose.edit
     var text = ""
-    var linked: [TaskSnapshot] = []
-    var candidates: [TaskSnapshot] = []
+    var linked: [TaskSnapshot] = [] { didSet { linkedIDs = Set(linked.map(\.id)); reindex() } }
+    var candidates: [TaskSnapshot] = [] { didSet { reindex() } }
     var loading = false
     var pending: Set<String> = []
     enum MessageKind: Hashable { case reload, link, followUp }
@@ -69,8 +69,52 @@ struct DependencyPicker: Identifiable {
     var warnings: [DependencyNotice] = []
     var feedback: String?
     var requiresReload = false
-    var rows: [TaskSnapshot] { linked + candidates.filter { candidate in !linked.contains { $0.id == candidate.id } } }
-    func checked(_ id: String) -> Bool { linked.contains { $0.id == id } }
+    // Candidate 11: the row index, built once per data change (never in a view body), so a row
+    // reads only its own entries and the list builds only the rows in view.
+    private(set) var linkedIDs: Set<String> = []
+    private(set) var tasksByID: [String: TaskSnapshot] = [:]
+    /// The rows in the order shown. The order is frozen when the person opens the picker, changes
+    /// direction, reloads or searches (`freezeOrder`), so a tick never moves a row; data that arrives
+    /// later keeps each row where it is and adds new rows at the end. Until it is frozen (and in
+    /// fixtures that set the arrays directly) linked Tasks come first.
+    private(set) var rowIDs: [String] = []
+    private(set) var rowIndex: [String: Int] = [:]
+    private var frozenOrder: [String]?
+    /// The person asked for a read (open, direction, Reload, search): whichever read publishes the
+    /// candidates next sorts linked first again, even if a background read superseded the person's.
+    var resortPending = false
+    /// The memberwise initializer, written out because the row index's properties are private; the
+    /// index is built here because property observers do not run in an initializer.
+    init(reloadRequest: Int = 0, profile: String, root: TaskSnapshot, direction: DependencyDirection, purpose: DependencyPickerPurpose = .edit, text: String = "",
+         linked: [TaskSnapshot] = [], candidates: [TaskSnapshot] = [], loading: Bool = false, pending: Set<String> = [], searchFailure: DependencyNotice? = nil,
+         warnings: [DependencyNotice] = [], feedback: String? = nil, requiresReload: Bool = false) {
+        self.reloadRequest = reloadRequest; self.profile = profile; self.root = root; self.direction = direction; self.purpose = purpose; self.text = text
+        self.linked = linked; self.candidates = candidates; self.loading = loading; self.pending = pending; self.searchFailure = searchFailure
+        self.warnings = warnings; self.feedback = feedback; self.requiresReload = requiresReload
+        linkedIDs = Set(linked.map(\.id))
+        reindex()
+    }
+    var rows: [TaskSnapshot] { rowIDs.compactMap { tasksByID[$0] } }
+    func checked(_ id: String) -> Bool { linkedIDs.contains(id) }
+    private var naturalOrder: [String] { linked.map(\.id) + candidates.filter { !linkedIDs.contains($0.id) }.map(\.id) }
+    mutating func freezeOrder() {
+        frozenOrder = naturalOrder
+        reindex()
+    }
+    private mutating func reindex() {
+        tasksByID = Dictionary(candidates.map { ($0.id, $0) } + linked.map { ($0.id, $0) }, uniquingKeysWith: { _, newer in newer })
+        let natural = naturalOrder
+        if let frozenOrder {
+            let present = Set(natural)
+            var ids = frozenOrder.filter { present.contains($0) }
+            let kept = Set(ids)
+            ids += natural.filter { !kept.contains($0) }
+            rowIDs = ids
+        } else {
+            rowIDs = natural
+        }
+        rowIndex = Dictionary(rowIDs.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+    }
 }
 
 struct DependencyDelete: Identifiable {
@@ -171,21 +215,49 @@ extension TodoModel {
         dependencies.picker?.direction = direction
         await reloadDependencyPicker()
     }
+    /// Who asked for a picker read (candidate 11): the person (open, direction, Reload, search) or
+    /// the background (a link's read-back, a refresh for the stream). The person's read freezes the
+    /// row order; a background read keeps every row where it is.
+    enum PickerRead { case person, background }
     /// Reloads the picker for the person (opening it, a direction change, the Reload button): on
     /// success it clears an earlier reload or link notice, asked after the read (S1-17), only while
     /// this reload is still the newest of its picker.
     func reloadDependencyPicker() async {
-        guard let ticket = await readDependencyPicker() else { return }
+        guard let ticket = await readDependencyPicker(.person) else { return }
         if dependencies.picker?.messages.isNewest(ticket) == true { dependencies.picker?.messages.clear([.reload, .link, .followUp], since: ticket.mark) }
     }
     /// Refreshes the picker's data for a link's read-back or a background refresh; clears nothing.
-    func refreshDependencyPicker() async { _ = await readDependencyPicker() }
-    /// Returns the reload's ticket when it applied fresh data.
-    private func readDependencyPicker() async -> SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket? {
+    func refreshDependencyPicker() async { _ = await readDependencyPicker(.background) }
+    /// The root and its linked Tasks, read and decoded off the main actor (candidate 11).
+    nonisolated private static func readRootAndLinked(_ client: Client, profile: String, root: String, direction: DependencyDirection) async throws -> (TaskSnapshot, [TaskSnapshot]) {
+        let current = try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: profile, task: root)).ok.body.json)
+        let ids = direction == .dependsOn ? current.depends_on ?? [] : current.blocks ?? []
+        let linked = try await withThrowingTaskGroup(of: (Int, TaskSnapshot).self) { group in
+            for (offset, id) in ids.enumerated() {
+                group.addTask { (offset, try TaskSnapshot.decode(try await client.tasks_period_show(path: .init(profile: profile, task: id)).ok.body.json)) }
+            }
+            var found: [(Int, TaskSnapshot)] = []
+            for try await row in group { found.append(row) }
+            return found.sorted { $0.0 < $1.0 }.map(\.1)
+        }
+        return (current, linked)
+    }
+    /// The candidates for `text`, read and decoded off the main actor (candidate 11).
+    nonisolated private static func readCandidates(_ client: Client, profile: String, text: String) async -> Result<[TaskSnapshot], Error> {
+        do {
+            let wire = try await client.tasks_period_list(path: .init(profile: profile), query: .init(text: text.isEmpty ? nil : text)).ok.body.json
+            return .success(try wire.map(TaskSnapshot.decode))
+        } catch { return .failure(error) }
+    }
+    /// Returns the reload's ticket when it applied fresh data. The root, linked and candidates reads
+    /// start together when the read starts and are published once (candidate 11: the sheet no longer
+    /// waits for the main thread between them).
+    private func readDependencyPicker(_ kind: PickerRead) async -> SurfaceMessages<DependencyPicker.MessageKind, DependencyNotice>.Ticket? {
         guard let picker = dependencies.picker else { return nil }
         guard connection == .live else { dependencies.picker?.loading = false; return nil }
-        if picker.purpose != .edit { await searchDependencyCandidates(); return nil }
+        if picker.purpose != .edit { await searchDependencyCandidates(kind); return nil }
         dependencies.picker?.reloadRequest += 1
+        if kind == .person { dependencies.picker?.resortPending = true }
         guard let request = dependencies.picker?.reloadRequest else { return nil }
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
@@ -193,17 +265,20 @@ extension TodoModel {
         let id = picker.id
         dependencies.picker?.loading = true
         guard let ticket = dependencies.picker?.messages.begin(.reload) else { return nil }
+        dependencies.searchRequest += 1
+        let searchRequest = dependencies.searchRequest
+        if picker.text.isEmpty { dependencies.picker?.searchFailure = nil }
+        let profileID = picker.profile, searchText = picker.text
+        async let candidates = Self.readCandidates(client, profile: profileID, text: searchText)
         do {
-            let root = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: picker.root.id)).ok.body.json)
+            let (root, linked) = try await Self.readRootAndLinked(client, profile: picker.profile, root: picker.root.id, direction: picker.direction)
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
-            let linkedIDs = picker.direction == .dependsOn ? root.depends_on ?? [] : root.blocks ?? []
-            var linked: [TaskSnapshot] = []
-            for taskID in linkedIDs { linked.append(try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: picker.profile, task: taskID)).ok.body.json)) }
+            let read = await candidates
             guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == id, dependencies.picker?.reloadRequest == request else { return nil }
             dependencies.picker?.root = root
             dependencies.picker?.linked = linked
             dependencies.picker?.requiresReload = false
-            await searchDependencyCandidates()
+            applyCandidates(read, of: picker, text: picker.text, request: searchRequest, epoch: epoch, run: run, kind: kind)
             return ticket
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
@@ -214,8 +289,11 @@ extension TodoModel {
             return nil
         }
     }
-    func searchDependencyCandidates() async {
+    /// The person's search (and a picker that only selects): the candidates for the current text.
+    func searchDependencyCandidates() async { await searchDependencyCandidates(.person) }
+    private func searchDependencyCandidates(_ kind: PickerRead) async {
         guard let picker = dependencies.picker else { return }
+        if kind == .person { dependencies.picker?.resortPending = true }
         dependencies.searchRequest += 1
         if picker.text.isEmpty { dependencies.picker?.searchFailure = nil }
         guard connection == .live else { dependencies.picker?.loading = false; return }
@@ -223,19 +301,25 @@ extension TodoModel {
         let epoch = discovery.credentialEpoch
         let run = dependencies.generation
         dependencies.picker?.loading = true
-        do {
-            let wire = try await client.tasks_period_list(path: .init(profile: picker.profile), query: .init(text: picker.text.isEmpty ? nil : picker.text)).ok.body.json
-            let rows = try wire.map(TaskSnapshot.decode)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id, dependencies.picker?.text == picker.text else { return }
+        let read = await Self.readCandidates(client, profile: picker.profile, text: picker.text)
+        applyCandidates(read, of: picker, text: picker.text, request: request, epoch: epoch, run: run, kind: kind)
+    }
+    /// Publishes a candidates read if it is still the newest for this picker and its text.
+    private func applyCandidates(_ read: Result<[TaskSnapshot], Error>, of picker: DependencyPicker, text: String, request: Int, epoch: Int, run: Int, kind: PickerRead) {
+        if case .failure(let error) = read { authorize(error, epoch: epoch, profile: picker.profile) }
+        guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id, dependencies.picker?.text == text else { return }
+        switch read {
+        case .success(let rows):
             dependencies.picker?.candidates = rows.filter { $0.id != picker.root.id }
             dependencies.picker?.searchFailure = nil
-            dependencies.picker?.loading = false
-        } catch {
-            authorize(error, epoch: epoch, profile: picker.profile)
-            guard currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.searchRequest == request, dependencies.picker?.id == picker.id, dependencies.picker?.text == picker.text else { return }
-            dependencies.picker?.loading = false
+            if kind == .person || dependencies.picker?.resortPending == true {
+                dependencies.picker?.freezeOrder()
+                dependencies.picker?.resortPending = false
+            }
+        case .failure(let error):
             dependencies.picker?.searchFailure = dependencyNotice(error, context: .search)
         }
+        dependencies.picker?.loading = false
     }
     func toggleDependency(_ candidate: TaskSnapshot) async {
         notePersonActed() // a write the person started (MAC-C1-S1-32)

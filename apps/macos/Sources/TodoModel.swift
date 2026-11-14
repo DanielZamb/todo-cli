@@ -47,8 +47,15 @@ final class TodoModel {
         get { profileDeletionMessages.value }
         set { if let newValue { profileDeletionMessages.publish(newValue, kind: .delete) } else { profileDeletionMessages.end() } }
     }
-    var projects: [DiscoveryEntry] = []
-    var tags: [DiscoveryEntry] = []
+    var projects: [DiscoveryEntry] = [] { didSet { projectNameByID = Dictionary(projects.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first }) } }
+    var tags: [DiscoveryEntry] = [] { didSet { tagNameByID = Dictionary(tags.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first }) } }
+    /// Candidate 11: names by id, built once per change, so a picker row looks up its Project and
+    /// Tags without scanning the lists.
+    private(set) var projectNameByID: [String: String] = [:]
+    private(set) var tagNameByID: [String: String] = [:]
+    func tagNames(of task: TaskSnapshot) -> [String] {
+        task.tags.map { tagNameByID[$0] ?? $0 }.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
     private static let tagNameEdges = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\u{FEFF}"))
     var planning: PlanningResult?
     var viewCounts: [String: Int] = [:]

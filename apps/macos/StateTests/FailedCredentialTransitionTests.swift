@@ -14,14 +14,15 @@ private actor FailedCredentialTransitionTransport: ClientTransport {
     let cancelled: Bool
     let holdSignOut: Bool
     let holdHealth: Bool
-    private var continuation: CheckedContinuation<Void, Never>?
+    /// Every held read (candidate 11: the picker sends its root and candidates reads together).
+    private var continuations: [CheckedContinuation<Void, Never>] = []
     private var signOutContinuation: CheckedContinuation<Void, Never>?
     private var healthContinuation: CheckedContinuation<Void, Never>?
     private(set) var holding = false
     private(set) var signOutCalls = 0
     private(set) var healthCalls = 0
     init(signIn: Bool = false, cancelled: Bool = false, holdSignOut: Bool = false, holdHealth: Bool = false) { self.signIn = signIn; self.cancelled = cancelled; self.holdSignOut = holdSignOut; self.holdHealth = holdHealth }
-    func finish() { continuation?.resume(); continuation = nil }
+    func finish() { continuations.forEach { $0.resume() }; continuations = [] }
     func finishSignOut() { signOutContinuation?.resume(); signOutContinuation = nil }
     func finishHealth() { healthContinuation?.resume(); healthContinuation = nil }
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
@@ -37,7 +38,7 @@ private actor FailedCredentialTransitionTransport: ClientTransport {
             if holdSignOut { await withCheckedContinuation { signOutContinuation = $0 } }
         }
         if !["system.health", "credentials.signOut", "signIn.signIn"].contains(operationID) {
-            await withCheckedContinuation { continuation = $0; holding = true }
+            await withCheckedContinuation { continuations.append($0); holding = true }
         }
         if cancelled { throw CancellationError() }
         throw URLError(.notConnectedToInternet)
