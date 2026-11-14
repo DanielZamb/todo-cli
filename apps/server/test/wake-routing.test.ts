@@ -45,7 +45,7 @@ const scratch = Effect.gen(function* () {
 
 const serve = (path: string, wake: StreamWake) =>
   Effect.gen(function* () {
-    yield* Layer.build(serverLayer({ path, port: 0, wake }));
+    yield* Layer.build(serverLayer({ timeZone: "UTC", path, port: 0, wake }));
     const binding = databaseBinding(path);
     if (!binding) throw new Error("No binding");
     const file = endpointPath(binding.path);

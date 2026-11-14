@@ -1,5 +1,6 @@
 import { expect, it } from "@effect/vitest";
 import { Schema } from "effect";
+import { planningClock, planningDay } from "../src/planning-day.ts";
 import {
   ErrorResponse,
   renderError,
@@ -8,6 +9,7 @@ import {
   renderReview,
 } from "../src/presentation.ts";
 import { shellFlag } from "../src/task-lookup-error.ts";
+import { Instant } from "../src/time.ts";
 
 it("maps actual exit codes independently of error names and rejects mismatched meanings", () => {
   for (const [exit, meaning] of [
@@ -54,7 +56,18 @@ it("requires list tasks without changing empty export or review JSON", () => {
     filters: { scope: "all", template: "default" },
   });
   expect(
-    JSON.parse(renderReview([], "daily", "json", "2030-01-01T00:00:00Z")),
+    JSON.parse(
+      renderReview(
+        [],
+        "daily",
+        "json",
+        "2030-01-01T00:00:00Z",
+        planningClock(
+          [],
+          planningDay(Instant.make("2030-01-01T00:00:00Z"), undefined, "UTC"),
+        ),
+      ),
+    ),
   ).toEqual({
     generated_at: "2030-01-01T00:00:00Z",
     filters: { review: "daily" },

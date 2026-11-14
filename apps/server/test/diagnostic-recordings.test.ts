@@ -35,7 +35,11 @@ it.effect(
         const expired = yield* store.auth.signIn("recording test passphrase");
         yield* TestClock.setTime(Date.now());
         const context = yield* Layer.build(
-          serverLayer({ path: join(path, "scratch.db"), port: 0 }),
+          serverLayer({
+            timeZone: "UTC",
+            path: join(path, "scratch.db"),
+            port: 0,
+          }),
         );
         const base = HttpServer.formatAddress(
           Context.get(context, HttpServer.HttpServer).address,
@@ -95,7 +99,11 @@ it.effect(
           writeFileSync(join(directory, "diagnostic-recordings"), "blocked"),
         );
         const context = yield* Layer.build(
-          serverLayer({ path: join(directory, "scratch.db"), port: 0 }),
+          serverLayer({
+            timeZone: "UTC",
+            path: join(directory, "scratch.db"),
+            port: 0,
+          }),
         );
         const base = HttpServer.formatAddress(
           Context.get(context, HttpServer.HttpServer).address,

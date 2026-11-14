@@ -318,6 +318,29 @@ const guides = {
       "TTY panes support q to quit, Tab for panes, arrow keys to scroll and p for Profile. Resize redraws. Non-TTY output falls back to diagnostics.",
     auth: "Requires an active owner Session. No database is opened by monitoring commands.",
   }),
+  catalog: reference({
+    purpose:
+      "Show the Catalog of the selected Profile: open Tasks per view, Projects and Tags with counts, and one view's Tasks in order, as of a History position.",
+    synopsis:
+      "todo catalog [--view all|today|overdue|scheduled|inbox] [filters]",
+    flags: [
+      "--view all|today|overdue|scheduled|inbox (default all)",
+      "--tasks all|matching (default all: every visible Task; matching: only the view's)",
+      "--project-id <id> (default all)",
+      "--tag-id <id> (default all)",
+      "--project <name>, --tag <name> and every list filter (combine by AND)",
+      "--time-zone <IANA zone> (default: this machine's zone)",
+      "--now <instant> (default the current time)",
+      "--known-generation <g> --known-seq <n> --known-day YYYY-MM-DD --known-stamp <s> (all four, from an earlier reply)",
+    ],
+    examples: [
+      "todo catalog --format json",
+      "todo catalog --view today --time-zone America/Bogota --format json",
+      "todo catalog --view inbox --tag-id TAG --tasks matching --format json",
+    ],
+    output:
+      "md lists the counts, Projects, Tags and the view's groups. json is the HTTP Catalog plus generated_at: position {generation, seq}, day, counts of distinct open Tasks per view (filters and search never change them), profiles, projects and tags in name order, view.groups as ordered Task ids with each Task once, and tasks. stamp digests what History does not record (the Profiles this credential sees, the schema version). With the four known flags, nothing committed since and the same stamp, json is unchanged: true with position, day and stamp only.",
+  }),
   import: reference({
     purpose:
       "Import Tasks by stable external id from a JSON array or NDJSON file.",

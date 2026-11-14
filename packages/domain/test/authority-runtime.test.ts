@@ -81,7 +81,7 @@ it.effect(
                     { snapshot: snapshot.id },
                   );
                   const commands = new TaskCommands(store),
-                    reads = new ClientReads(store),
+                    reads = new ClientReads(store, "UTC"),
                     discovery = new Discovery(store),
                     attachments = new AttachmentCommands(store);
                   const profiles = yield* store.auth.profilesRead(

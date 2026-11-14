@@ -17,7 +17,7 @@ Effect.gen(function* () {
       : Number(readFileSync(process.env.READ_CONTROL_CLOCK_FILE, "utf8"));
   const gate = process.env.READ_CONTROL_POLL_GATE;
   yield* Layer.launch(
-    serverLayer({ path: process.env.TODO_DB ?? "", port: 0 }),
+    serverLayer({ timeZone: "UTC", path: process.env.TODO_DB ?? "", port: 0 }),
   ).pipe(
     Effect.provideService(
       Clock.Clock,

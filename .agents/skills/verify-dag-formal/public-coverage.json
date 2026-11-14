@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "29927cb04cc49bb706be602127557f43602ed5b2",
+  "confirmedCommit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -40,7 +40,7 @@
         "EdgeReport",
         "BatchEdgeReport"
       ],
-      "sha256": "65cb160c6745d54bd05c5ed8db31247ea30785bd038092c07f28783ce4fa96eb"
+      "sha256": "d2f9ac315bc3320f766d55bfdc91ecf7530b5c4ba7740a13e736bf64389ce4ea"
     },
     {
       "path": "packages/domain/src/task-filters.ts",
@@ -48,7 +48,7 @@
         "TaskFilters",
         "filterTaskRecords"
       ],
-      "sha256": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27"
+      "sha256": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
     },
     {
       "path": "packages/domain/src/dependency-delete.ts",
@@ -65,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
+      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "d01346091850736bf1cb205dde3d30f4a7408ad9e4a82b8f6382e10def5834ca"
+      "sha256": "c6a6e1771cac47fb35017d3fe89ad8c0d2c620214e8457b2a0d4d23a82e6c829"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -87,7 +87,7 @@
       "functions": [
         "executeImport"
       ],
-      "sha256": "a5da60d74d8d7b3ce9a11f936a60769c05f23525a45ff90b300d35547ecb65b2"
+      "sha256": "63423e91fd5807392cbcc3c4043f04c90f611d05ed30acc22d205c6766ceafb0"
     },
     {
       "path": "packages/domain/src/import.ts",
@@ -96,7 +96,7 @@
         "ImportReport",
         "parseImportText"
       ],
-      "sha256": "6bfae374334bad4a8f065f3a67924a95b2c54f3c1cedd57cabd2557e74cd8780"
+      "sha256": "b42e6f16bf6d2b7c2f9ff71d86567ff5e7cf6573df727e2aa69399fa26738868"
     },
     {
       "path": "packages/domain/src/presentation.ts",
@@ -104,7 +104,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
+      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -116,7 +116,7 @@
         "takeSnapshot",
         "graph"
       ],
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
     },
     {
       "path": "packages/domain/src/store/purge.ts",
@@ -180,7 +180,7 @@
         "BatchEdgeRequest",
         "TaskFilters"
       ],
-      "sha256": "a11bd7620cd2e10036e8f1bfbee0fa8bf745dc443bbff9bc1ac345a0538196b6"
+      "sha256": "58bf524862b43c3f6b8cd4f2b0c2ee95f251673e3b6b6abbb3102695cda21fe3"
     },
     {
       "path": "apps/server/src/server.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
+      "sha256": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -199,14 +199,14 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
+      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
     },
     {
       "path": "apps/cli/src/schema.ts",
       "functions": [
         "registerCommandSchema"
       ],
-      "sha256": "0e26ae0f6f10a02074f27789e6a7d399f659a32e1fbe4273392b97c3a807fe2c"
+      "sha256": "c2c5e7843dabd85df81ab43adb5a1c4f64eb8a81a94d8af6ae3c694915ccea77"
     },
     {
       "path": "apps/cli/src/input.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "7832877039181df82aa7f3e19e001afffef2c1a45d9ab45ef011ade229ef9171"
+      "sha256": "ae00393c81d817b5e8175ca351232b72089eda4d1d75491c199b60320a197179"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,14 +304,14 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "9b99ebcb7ad1e04934469d64098c5f75b5663c5e332111c5ce8a9cdd1f4b5f2d",
+      "sha256": "b19cab34e1daf6ad9b4c3a3b632f6194bcc85d9ecbe265498be759bb373fed49",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "e53a824306de8dff01669835c8654c55bb04e1ed99fc8ed4ad0866b234530230",
+      "sha256": "7a41ced4c2f61507ccf7003c92930725b652c6da93b74740b8fdab5958f37ccd",
       "functions": [
         "contract identity"
       ]
@@ -426,14 +426,14 @@
       "functions": [
         "TaskWrite optional confirm_from_version"
       ],
-      "sha256": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5"
+      "sha256": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
     },
     {
       "path": "apps/cli/src/help.ts",
       "functions": [
         "rm confirmation Version wording"
       ],
-      "sha256": "56a8659c172018d7756ee1c0bbf15beb5e05d9c5379946d3a08593a120d8534b"
+      "sha256": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
@@ -683,6 +683,335 @@
         "path": "apps/cli/src/help.ts",
         "before": "12f5dfacde85738fb94cb019ac700dd3402cf3432e2b53f2326574fac0cc0a5e",
         "after": "56a8659c172018d7756ee1c0bbf15beb5e05d9c5379946d3a08593a120d8534b"
+      }
+    ]
+  },
+  "catalogIntegration": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "previous": [
+      "29927cb04cc49bb706be602127557f43602ed5b2"
+    ],
+    "contract": "76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "status": "candidate for the seats",
+    "scope": "feat/catalog-contract (C10-S5) on integ/contract 9a372e86: compareTasks and tag-name.ts extractions, the Catalog read, operation_seq on writes, todo catalog and the one name order. Mapped items that change: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite gain optional operation_seq; the depend, undepend, batchDepend and importTasks handlers are wrapped by withOperationSeq; executeImport's tag parts and filterTaskRecordSteps' Tag predicate go through tag-name.ts (same arrays on the corpus; the filter now trims stored names); the contract moves to 76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af. Unchanged: DependRequest, BatchEdgeRequest, TaskFilters, filterTaskRecords, rejectUnknownQuery, TaskCommands.result, TaskCommands.change, cliResult, mutateTask, dependencyCommand, batchDependCommand, registerCommandSchema, the rm wording, the graph response schema, and every production row's listed function (OperationStore.transaction, validate, appendSync, recordRejection, graph, dependencies, rebuild, takeSnapshot, resolveRevertSync, move, startSeriesSync; Authentication.startSeries, append, requireCredential, mutate). All 80 mutant anchors match exactly once on the product. No model, invariant or bound change. Candidate for the seats.",
+    "changes": [
+      {
+        "path": "packages/domain/src/dependency-contract.ts",
+        "from": "65cb160c6745d54bd05c5ed8db31247ea30785bd038092c07f28783ce4fa96eb",
+        "to": "2c39c1c8d0f0fcb4649928cbb7d5268f672fd4639e1f43f2a20e4a231ac127f3"
+      },
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27",
+        "to": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3",
+        "to": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      },
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "d01346091850736bf1cb205dde3d30f4a7408ad9e4a82b8f6382e10def5834ca",
+        "to": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada"
+      },
+      {
+        "path": "packages/domain/src/import-tasks.ts",
+        "from": "a5da60d74d8d7b3ce9a11f936a60769c05f23525a45ff90b300d35547ecb65b2",
+        "to": "63423e91fd5807392cbcc3c4043f04c90f611d05ed30acc22d205c6766ceafb0"
+      },
+      {
+        "path": "packages/domain/src/import.ts",
+        "from": "6bfae374334bad4a8f065f3a67924a95b2c54f3c1cedd57cabd2557e74cd8780",
+        "to": "9d26f4d1a598a8a8a36c3e855550a2236caa6fea5f6814982484822b0cd46efd"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "packages/api/src/index.ts",
+        "from": "a11bd7620cd2e10036e8f1bfbee0fa8bf745dc443bbff9bc1ac345a0538196b6",
+        "to": "f48a94d96404e1215e2926afa6d5c4fcbd944af20a45cb73edec51f0c161d089"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725",
+        "to": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572",
+        "to": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce"
+      },
+      {
+        "path": "apps/cli/src/schema.ts",
+        "from": "0e26ae0f6f10a02074f27789e6a7d399f659a32e1fbe4273392b97c3a807fe2c",
+        "to": "7a20fd465564053d29d76123c25171e015ccd8beba8388a1dee938f7525a752b"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "7832877039181df82aa7f3e19e001afffef2c1a45d9ab45ef011ade229ef9171",
+        "to": "90b372abdc3c1e357c136d9ad3261d65d8f3b15cc1f3a1141898f6cc20958fa9"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "9b99ebcb7ad1e04934469d64098c5f75b5663c5e332111c5ce8a9cdd1f4b5f2d",
+        "to": "2bf3556da994f2c9b52ab29d9488d48497b17078671a03698d225f225cbbc4a7"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "from": "e53a824306de8dff01669835c8654c55bb04e1ed99fc8ed4ad0866b234530230",
+        "to": "62bf877f4d9274bcd0de2a8e7433ce1ded6ebc15d7d56435097dfd5c3d1828c9"
+      },
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5",
+        "to": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "from": "56a8659c172018d7756ee1c0bbf15beb5e05d9c5379946d3a08593a120d8534b",
+        "to": "aaccc058e8e3f0526e4c99db852e8526435316630e689ced8db1edcd54bef471"
+      }
+    ],
+    "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+    "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "pinCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+    "previous": [
+      "45b86ff9c8ea32ada0a65d83350c5239e99ba027"
+    ],
+    "contract": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "The coordinator's corrections: OperationStore.record, Authentication.record and the restore bind the event text they note for operation_seq (total, settled on the row's bytes); the Catalog reads the Dependency graph from columns for matching and decodes after the lease; the operation_seq description changes the contract to 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d. Every listed production function other than the reviewed record path is byte-identical; mapped public items are unchanged from the f3039274 candidate apart from the contract identity and openapi.json's operation_seq description. All 80 mutant anchors match once at the pin. Pinned at 6c8a5c4f, byte-identical product to b110f4a8 plus the occ-atomicity and task-search-cache renewals the capture runs. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada",
+        "to": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "90b372abdc3c1e357c136d9ad3261d65d8f3b15cc1f3a1141898f6cc20958fa9",
+        "to": "f4e757f3dc93843aad161bfe4a75bde69a72d340c1f459c46b8edd064a19ee83"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "2bf3556da994f2c9b52ab29d9488d48497b17078671a03698d225f225cbbc4a7",
+        "to": "49bbc3014c143e6507de825b28c0c155484411493c0180f36ebb902add43c445"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "from": "62bf877f4d9274bcd0de2a8e7433ce1ded6ebc15d7d56435097dfd5c3d1828c9",
+        "to": "0385bd70421191da2e3e0dc5998f6361c6d54b02f20c0d40e5a07f1de7798ef2"
+      }
+    ]
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "pinCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+    "previous": [
+      "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3"
+    ],
+    "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's two findings on 9634a6e0: the Catalog's known check also needs a stamp of the visible Profiles and the schema version (contract a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e, todo catalog --known-stamp); the operation_seq note carries the columns Purge never rewrites and a request reports nothing when a note is unaccounted. OperationStore.record's note arguments and a read-only store member change; every other listed production function and mapped public item is unchanged apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the occ-atomicity and task-search-cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32",
+        "to": "9405afa2140ef593b0c9374e18fabbd5ba002c0784fe641a6821d3bfcbb97f5b"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "f4e757f3dc93843aad161bfe4a75bde69a72d340c1f459c46b8edd064a19ee83",
+        "to": "4b9c68018d4732ef8b0cbbe9f67121a7979637698295e6913277737158b55daa"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "49bbc3014c143e6507de825b28c0c155484411493c0180f36ebb902add43c445",
+        "to": "4689ece63521c6b2d27718ece589eb8af8e87212945b47cf75c8726a776a2c2d"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "from": "0385bd70421191da2e3e0dc5998f6361c6d54b02f20c0d40e5a07f1de7798ef2",
+        "to": "ea4a47ad49cfc10d734f04f9e1e96c5d94afdcb9ae9567b43241706be92346e6"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "from": "aaccc058e8e3f0526e4c99db852e8526435316630e689ced8db1edcd54bef471",
+        "to": "7420d29a1ee9bc0d1c3c1154b3bb15c867fd83dcbbe7a81debf07965cb010049"
+      }
+    ]
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "pinCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+    "previous": [
+      "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd"
+    ],
+    "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's findings and the owner's Q8 and Q9 on beae37bc: `todo catalog` refuses invalid flags before the store; the Swift identity describes the Swift sources beside it (55c6d138, with apps/macos/API/swift-client-pending.json naming the pair, now in the capture scopes); the routed command's reply carries operation_seq; a blank Project or Tag name filter is refused as invalid_args (TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); undated Tasks sort last inside a priority (compareTasks); planning reads take today from the sent zone or the server's own zone. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (commands.ts, presentation.ts, main.ts, help.ts, openapi.json) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467",
+        "to": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca",
+        "to": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      },
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "from": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded",
+        "to": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a",
+        "to": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce",
+        "to": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "4b9c68018d4732ef8b0cbbe9f67121a7979637698295e6913277737158b55daa",
+        "to": "901b27a087023d7193b29979243484c75f1e9548789d2071aa8a13dd18575f60"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "4689ece63521c6b2d27718ece589eb8af8e87212945b47cf75c8726a776a2c2d",
+        "to": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "from": "ea4a47ad49cfc10d734f04f9e1e96c5d94afdcb9ae9567b43241706be92346e6",
+        "to": "7a41ced4c2f61507ccf7003c92930725b652c6da93b74740b8fdab5958f37ccd"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "from": "7420d29a1ee9bc0d1c3c1154b3bb15c867fd83dcbbe7a81debf07965cb010049",
+        "to": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83"
+      }
+    ]
+  },
+  "seatDelta": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "pinCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+    "previous": [
+      "187d610e45779802bc3038d249f19879a69eb95b"
+    ],
+    "contract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's delta at 7f08409e: the Project name filter matches the stored name exactly again and only a blank Tag name is refused (seat F7: TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); a request reports no operation_seq when a restore moved the generation during it (seat F2b, committed-operations.ts only, its description moves the contract); a golden freezes undated-last. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (openapi.json, contract.ts) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b",
+        "to": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b",
+        "to": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "901b27a087023d7193b29979243484c75f1e9548789d2071aa8a13dd18575f60",
+        "to": "5b90359666ebf1a9922ba9a421dea572267768b3e98b47a8e677f4935d5656fc"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323",
+        "to": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374"
+      }
+    ]
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "pinCommit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
+    "previous": [
+      "cee500f063e321a9bbbfca65dbfc8919b052d632"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's second delta at 106f22fa (F8): every write reply and committing CLI command carries operation_position {generation, seq} instead of operation_seq; the generation is the one the request's Profile classification already read (auth.ts credentialCheck calls noteGeneration), the restore's new one, or one read at the first note on owner-only writes; the settle checks for a restore with an index range scan. Mapped public bodies that change are field renames only: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite carry operation_position where they carried operation_seq; the depend, undepend, batchDepend and importTasks handlers pipe withOperationPosition; registerCommandSchema's post-processing adds operation_position. Authentication.startSeries, Authentication.append, requireCredential, mutate, DependRequest, ImportRow, parseImportText, rejectUnknownQuery and every listed production function are byte-identical (auth.ts moves only in credentialCheck). The order goldens are pinned in golden-baseline.json. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the atomic-commit, task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/dependency-contract.ts",
+        "from": "2c39c1c8d0f0fcb4649928cbb7d5268f672fd4639e1f43f2a20e4a231ac127f3",
+        "to": "d2f9ac315bc3320f766d55bfdc91ecf7530b5c4ba7740a13e736bf64389ce4ea"
+      },
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "9405afa2140ef593b0c9374e18fabbd5ba002c0784fe641a6821d3bfcbb97f5b",
+        "to": "c6a6e1771cac47fb35017d3fe89ad8c0d2c620214e8457b2a0d4d23a82e6c829"
+      },
+      {
+        "path": "packages/domain/src/import.ts",
+        "from": "9d26f4d1a598a8a8a36c3e855550a2236caa6fea5f6814982484822b0cd46efd",
+        "to": "b42e6f16bf6d2b7c2f9ff71d86567ff5e7cf6573df727e2aa69399fa26738868"
+      },
+      {
+        "path": "packages/api/src/index.ts",
+        "from": "f48a94d96404e1215e2926afa6d5c4fcbd944af20a45cb73edec51f0c161d089",
+        "to": "58bf524862b43c3f6b8cd4f2b0c2ee95f251673e3b6b6abbb3102695cda21fe3"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682",
+        "to": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93",
+        "to": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      },
+      {
+        "path": "apps/cli/src/schema.ts",
+        "from": "7a20fd465564053d29d76123c25171e015ccd8beba8388a1dee938f7525a752b",
+        "to": "c2c5e7843dabd85df81ab43adb5a1c4f64eb8a81a94d8af6ae3c694915ccea77"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "5b90359666ebf1a9922ba9a421dea572267768b3e98b47a8e677f4935d5656fc",
+        "to": "ae00393c81d817b5e8175ca351232b72089eda4d1d75491c199b60320a197179"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374",
+        "to": "b19cab34e1daf6ad9b4c3a3b632f6194bcc85d9ecbe265498be759bb373fed49"
+      },
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6",
+        "to": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
       }
     ]
   }

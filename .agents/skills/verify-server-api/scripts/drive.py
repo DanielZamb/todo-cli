@@ -19,7 +19,7 @@ def redacted(value):
     return value
 
 with (evidence / 'server.log').open('w') as log:
-    server = subprocess.Popen([os.environ.get('TODO_SERVER_BINARY', str(scratch / 'server'))], env={**os.environ, 'TODO_DB': str(scratch / 'scratch.db'), 'TODO_PORT': '0', 'NO_COLOR': '1'}, stdout=log, stderr=log)
+    server = subprocess.Popen([os.environ.get('TODO_SERVER_BINARY', str(scratch / 'server'))], env={**os.environ, 'TODO_DB': str(scratch / 'scratch.db'), 'TODO_PORT': '0', 'NO_COLOR': '1', 'TZ': 'UTC'}, stdout=log, stderr=log)
     try:
         base = None
         for _ in range(1200):
@@ -64,8 +64,13 @@ with (evidence / 'server.log').open('w') as log:
         task = created['id']
         path = '/profiles/work/tasks/' + task
         assert [created['title'], created['status'], created['row_version'], created['priority'], created['source']] == ['Prove the HTTP API', 'open', 1, 'P3', 'manual']
-        assert request('GET', path, 200, credential=session) == created
+        # A write reply carries operation_position (its generation and the highest seq it committed); the Task is what Show returns.
+        assert created['operation_position']['generation'] == 'initial' and created['operation_position']['seq'] > 0
+        assert request('GET', path, 200, credential=session) == {k: v for k, v in created.items() if k != 'operation_position'}
         edited = request('PATCH', path, 200, {'from_version': 1, 'changes': {'title': 'Ship the HTTP API'}}, session)
+        assert edited['operation_position']['generation'] == created['operation_position']['generation']
+        assert edited['operation_position']['seq'] > created['operation_position']['seq']
+        edited = {k: v for k, v in edited.items() if k != 'operation_position'}
         conflict = request('PATCH', path, 409, {'from_version': 1, 'changes': {'title': 'Stale edit'}}, session)
         assert conflict == {'_tag': 'Conflict', 'latest': edited, 'exit_code': 4, 'exit_meaning': 'Conflict'}
         reader = request('POST', '/auth/tokens', 200, {'name': 'reader', 'profile': 'work', 'scope': 'read-only'}, session)['credential']
@@ -86,6 +91,17 @@ with (evidence / 'server.log').open('w') as log:
         assert deleted['deleted_at'] and deleted['row_version'] == 6
         assert request('GET', '/profiles/work/tasks', 200, credential=session) == []
         request('GET', path, 404, credential=session)
+        catalog = request('GET', '/profiles/work/catalog?view=today&now=2026-11-13T15:00:00Z', 200, credential=reader)
+        assert [catalog['unchanged'], catalog['counts'], catalog['tasks'], catalog['day']] == [
+            False, {'all': 0, 'today': 0, 'overdue': 0, 'scheduled': 0, 'inbox': 0}, [], '2026-11-13']
+        # The client rule: covered only in the same generation, at or below the Catalog's seq.
+        assert catalog['position']['generation'] == deleted['operation_position']['generation']
+        assert catalog['position']['seq'] >= deleted['operation_position']['seq']
+        known = f"known_generation={catalog['position']['generation']}&known_seq={catalog['position']['seq']}&known_day=2026-11-13&known_stamp={catalog['stamp']}"
+        assert request('GET', '/profiles/work/catalog?view=today&now=2026-11-13T15:00:00Z&' + known, 200, credential=reader) == {
+            'unchanged': True, 'position': catalog['position'], 'day': '2026-11-13', 'stamp': catalog['stamp']}
+        assert request('GET', '/profiles/work/catalog?time_zone=Mars%2FOlympus', 400, credential=reader)['code'] == 'invalid_args'
+        request('GET', '/profiles/personal/catalog', 403, credential=reader)
         request('DELETE', '/auth/tokens/writer', 204, credential=session)
         request('GET', '/profiles/work/tasks', 401, credential=writer)
         request('DELETE', '/auth/session', 204, credential=session)

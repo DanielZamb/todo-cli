@@ -223,6 +223,34 @@ immediate authorization transaction. Directory counts share its existing deferre
 read snapshot. Projection guards, generated Task columns, Version validation and
 atomic event/projection writes remain authoritative. Reads do not replay the log.
 
+The Catalog (`GET /profiles/:profile/catalog`, `todo catalog`, domain
+`catalog.ts`) answers a client refresh in one checked read lease: the History
+position the read reflects (`position {generation, seq}`, from the Profile
+classification the lease already runs), distinct open Tasks per view, Profiles,
+Projects and Tags in `compareNames` order, the view's groups as ordered Task ids
+with each Task once, and the Tasks (`tasks=all` every visible Task, `matching`
+only the groups'). Counts, order, membership and the Dependency graph come
+from stored columns (`store/catalog-projection.ts`); payload text is read in the
+lease and only the returned Tasks are decoded after it (search decodes the
+view's candidates; `order` decodes the whole graph, as `GET /tasks` does). With
+`known_generation`, `known_seq`, `known_day` and `known_stamp` the reply is
+`unchanged: true` when the generation, day and stamp match and nothing
+committed since; the stamp digests what History does not record (the Profiles
+the credential sees, the schema version). Today is the date of `now` in the
+`time_zone` the read sends (also on the planning views), or in the server's own
+zone when none is sent; the CLI, which reads the database directly, uses the
+machine's zone for `todo catalog` (unless `--time-zone`), `list --today` and
+`--overdue`, `review` and `export --scope today`. An instant falls on its date
+in the zone stored with it (ADR-0006). One Task order
+(`compareTasks`), one name order (`compareNames`) and one Tag-name rule
+(`tag-name.ts`) serve every read and writer. Write replies and writing CLI
+commands carry `operation_position` (`{generation, seq}`, the Catalog position's
+shape): when present, everything the request committed is at or below `seq` in
+`generation`. A client compares it with a Catalog position or a stream id only
+when the generations are equal; when they differ, or the field is absent, it
+reads (`committed-operations.ts`). The desktop clients still use the older reads
+until they move to the Catalog.
+
 Credential checks create read authorities inside the authentication module.
 Profile, scope, parsed fields and database identity live in ECMAScript private
 fields. Query ports validate the genuine instance, exact prototype, authority

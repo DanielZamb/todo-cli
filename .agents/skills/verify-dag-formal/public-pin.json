@@ -1,5 +1,5 @@
 {
-  "commit": "29927cb04cc49bb706be602127557f43602ed5b2",
+  "commit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -33,7 +33,8 @@
     "apps/macos/Sources/DependencyGraphView.swift",
     "apps/macos/Sources/DependencyErrors.swift",
     "apps/macos/Sources/DependencyViews.swift",
-    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift"
+    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
+    "apps/macos/API/swift-client-pending.json"
   ],
   "manifests": [
     "package.json",
@@ -45,7 +46,7 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "dae320b089cf4847ab92cc172bd8d808e0e21701dbe19bf77bb5babea0d99a23",
+  "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
   "awaitMergedIntegration": false,
   "integrationQualification": {
     "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
@@ -118,6 +119,126 @@
         "contract": {
           "from": "55c6d138cc924128593b25ef0313d898a6725bd0c0d91e026d09ad24536f28c8",
           "to": "dae320b089cf4847ab92cc172bd8d808e0e21701dbe19bf77bb5babea0d99a23"
+        }
+      }
+    ]
+  },
+  "catalogIntegration": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "previous": [
+      "29927cb04cc49bb706be602127557f43602ed5b2"
+    ],
+    "contract": "76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "status": "candidate for the seats",
+    "scope": "feat/catalog-contract (C10-S5) on integ/contract 9a372e86: compareTasks and tag-name.ts extractions, the Catalog read, operation_seq on writes, todo catalog and the one name order. Mapped items that change: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite gain optional operation_seq; the depend, undepend, batchDepend and importTasks handlers are wrapped by withOperationSeq; executeImport's tag parts and filterTaskRecordSteps' Tag predicate go through tag-name.ts (same arrays on the corpus; the filter now trims stored names); the contract moves to 76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af. Unchanged: DependRequest, BatchEdgeRequest, TaskFilters, filterTaskRecords, rejectUnknownQuery, TaskCommands.result, TaskCommands.change, cliResult, mutateTask, dependencyCommand, batchDependCommand, registerCommandSchema, the rm wording, the graph response schema, and every production row's listed function (OperationStore.transaction, validate, appendSync, recordRejection, graph, dependencies, rebuild, takeSnapshot, resolveRevertSync, move, startSeriesSync; Authentication.startSeries, append, requireCredential, mutate). All 80 mutant anchors match exactly once on the product. No model, invariant or bound change. Candidate for the seats.",
+    "changes": [
+      {
+        "contract": {
+          "from": "dae320b089cf4847ab92cc172bd8d808e0e21701dbe19bf77bb5babea0d99a23",
+          "to": "76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af"
+        }
+      }
+    ],
+    "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+    "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "pinCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+    "previous": [
+      "45b86ff9c8ea32ada0a65d83350c5239e99ba027"
+    ],
+    "contract": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "The coordinator's corrections: OperationStore.record, Authentication.record and the restore bind the event text they note for operation_seq (total, settled on the row's bytes); the Catalog reads the Dependency graph from columns for matching and decodes after the lease; the operation_seq description changes the contract to 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d. Every listed production function other than the reviewed record path is byte-identical; mapped public items are unchanged from the f3039274 candidate apart from the contract identity and openapi.json's operation_seq description. All 80 mutant anchors match once at the pin. Pinned at 6c8a5c4f, byte-identical product to b110f4a8 plus the occ-atomicity and task-search-cache renewals the capture runs. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af",
+          "to": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d"
+        }
+      }
+    ]
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "pinCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+    "previous": [
+      "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3"
+    ],
+    "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's two findings on 9634a6e0: the Catalog's known check also needs a stamp of the visible Profiles and the schema version (contract a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e, todo catalog --known-stamp); the operation_seq note carries the columns Purge never rewrites and a request reports nothing when a note is unaccounted. OperationStore.record's note arguments and a read-only store member change; every other listed production function and mapped public item is unchanged apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the occ-atomicity and task-search-cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+          "to": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e"
+        }
+      }
+    ]
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "pinCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+    "previous": [
+      "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd"
+    ],
+    "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's findings and the owner's Q8 and Q9 on beae37bc: `todo catalog` refuses invalid flags before the store; the Swift identity describes the Swift sources beside it (55c6d138, with apps/macos/API/swift-client-pending.json naming the pair, now in the capture scopes); the routed command's reply carries operation_seq; a blank Project or Tag name filter is refused as invalid_args (TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); undated Tasks sort last inside a priority (compareTasks); planning reads take today from the sent zone or the server's own zone. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (commands.ts, presentation.ts, main.ts, help.ts, openapi.json) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+          "to": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d"
+        }
+      },
+      {
+        "scopes": {
+          "added": "apps/macos/API/swift-client-pending.json"
+        }
+      }
+    ]
+  },
+  "seatDelta": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "pinCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+    "previous": [
+      "187d610e45779802bc3038d249f19879a69eb95b"
+    ],
+    "contract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's delta at 7f08409e: the Project name filter matches the stored name exactly again and only a blank Tag name is refused (seat F7: TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); a request reports no operation_seq when a restore moved the generation during it (seat F2b, committed-operations.ts only, its description moves the contract); a golden freezes undated-last. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (openapi.json, contract.ts) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+          "to": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797"
+        }
+      }
+    ]
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "pinCommit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
+    "previous": [
+      "cee500f063e321a9bbbfca65dbfc8919b052d632"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's second delta at 106f22fa (F8): every write reply and committing CLI command carries operation_position {generation, seq} instead of operation_seq; the generation is the one the request's Profile classification already read (auth.ts credentialCheck calls noteGeneration), the restore's new one, or one read at the first note on owner-only writes; the settle checks for a restore with an index range scan. Mapped public bodies that change are field renames only: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite carry operation_position where they carried operation_seq; the depend, undepend, batchDepend and importTasks handlers pipe withOperationPosition; registerCommandSchema's post-processing adds operation_position. Authentication.startSeries, Authentication.append, requireCredential, mutate, DependRequest, ImportRow, parseImportText, rejectUnknownQuery and every listed production function are byte-identical (auth.ts moves only in credentialCheck). The order goldens are pinned in golden-baseline.json. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the atomic-commit, task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+          "to": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc"
         }
       }
     ]

@@ -40,7 +40,9 @@ const fixture = Effect.gen(function* () {
       }),
     );
   const session = yield* store.auth.signIn("sse test passphrase");
-  const context = yield* Layer.build(serverLayer({ path, port: 0 }));
+  const context = yield* Layer.build(
+    serverLayer({ timeZone: "UTC", path, port: 0 }),
+  );
   const base = HttpServer.formatAddress(
     Context.get(context, HttpServer.HttpServer).address,
   );

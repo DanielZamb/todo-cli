@@ -30,3 +30,7 @@ The mapping is 0 success, 1 runtime failure, 2 validation or usage,
 3 not found or auth missing, and 4 Conflict. Success responses remain unchanged.
 See [ADR-0019](0019-authorized-read-only-discovery.md) for authorized lookup
 context and the approved recovery paths.
+
+## Amendment, 2026-11-13: undated Tasks last
+
+On 2026-11-13 the owner changed the one Task order so that undated Tasks come last within a priority; the `todo list` and export goldens were checked against it and needed no renewal, because none holds two Tasks of one priority.

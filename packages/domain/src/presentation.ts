@@ -18,6 +18,7 @@ import { OpLogEntry } from "./events.ts";
 import { type ExitCode, ExitStatus, exitStatus } from "./exit-status.ts";
 import { graphMermaid } from "./graph-mermaid.ts";
 import { ProfileId, TaskId } from "./ids.ts";
+import type { PlanningClock } from "./planning-day.ts";
 import { TaskLookupDetails } from "./task-lookup-error.ts";
 import { DependencyReadFields, type TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
@@ -300,28 +301,32 @@ export function renderError(
       : "")
   );
 }
+/** Today and Overdue take their day from clock (planning-day.ts). */
 export function renderReview(
   tasks: readonly TaskView[],
   period: "daily" | "weekly",
   format: Format,
   now: string,
+  clock: PlanningClock,
 ) {
   if (format !== "md")
     return renderTasks(tasks, format, now, { review: period });
   const open = tasks.filter((task) => task.status === "open");
-  const today = now.slice(0, 10);
+  const today = clock.day.today;
   const millis = Date.parse(now);
-  const overdue = open.filter(
-    (t) =>
-      t.due_at &&
-      (period === "daily"
-        ? t.due_at.slice(0, 10) < today
-        : Date.parse(t.due_at) < millis),
-  );
+  const dueDay = (t: TaskView) => clock.days.get(t.id)?.due ?? null;
+  const scheduledDay = (t: TaskView) => clock.days.get(t.id)?.scheduled ?? null;
+  const overdue = open.filter((t) => {
+    const due = dueDay(t);
+    if (!t.due_at || due === null) return false;
+    // Weekly compares an instant with now; a date is overdue after its day.
+    return period === "daily" || t.due_at.length === 10
+      ? due < today
+      : Date.parse(t.due_at) < millis;
+  });
   const scheduled = open.filter((t) =>
     period === "daily"
-      ? t.scheduled_at?.slice(0, 10) === today ||
-        t.due_at?.slice(0, 10) === today
+      ? scheduledDay(t) === today || dueDay(t) === today
       : t.due_at &&
         Date.parse(t.due_at) >= millis &&
         Date.parse(t.due_at) < millis + 7 * 86400000,

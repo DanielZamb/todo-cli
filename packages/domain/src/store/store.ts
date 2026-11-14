@@ -16,6 +16,10 @@ import {
   type AuthorizedTerminalRead,
   checkedRead,
 } from "../auth/authorized-read.ts";
+import {
+  markPreviewConnection,
+  noteCommitted,
+} from "../committed-operations.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
 import {
   beginDiagnosticSpan,
@@ -53,6 +57,7 @@ import {
 } from "../recurrence.ts";
 import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
+import { CatalogProjection } from "./catalog-projection.ts";
 import { ClientProjection } from "./client-projection.ts";
 import { incidentRemoval, putEdge, readEdges } from "./dependencies.ts";
 import {
@@ -192,6 +197,7 @@ export class OperationStore {
           readwrite: true,
           strict: true,
         });
+    if (this.isPreview) markPreviewConnection(this.db);
     try {
       this.db.function("domain_write_allowed", () => (this.writing ? 1 : 0));
       this.db.exec(
@@ -599,6 +605,37 @@ export class OperationStore {
       Effect.flatMap((value) => this.graph(value.profile)),
     );
 
+  readonly catalogRows = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).rows(read)),
+      ),
+    );
+
+  readonly catalogPayloads = (
+    read: AuthorizedRead,
+    ids: readonly TaskId[] | null,
+  ) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).payloads(read, ids)),
+      ),
+    );
+
+  readonly catalogSchemaVersion = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).schemaVersion(read)),
+      ),
+    );
+
+  readonly committedSince = (read: AuthorizedRead, seq: number) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).committedSince(read, seq)),
+      ),
+    );
+
   readonly terminalChangesRead = (read: AuthorizedTerminalRead) =>
     attempt(() => terminalHistory(this.db, read));
 
@@ -670,6 +707,7 @@ export class OperationStore {
     input: Pick<Append, "actor" | "profile">,
     entry: Omit<OpLogEntry, "seq" | "actor" | "profile">,
   ): OpLogEntry {
+    const event = json(entry.event);
     const result = diagnosticSync(
       "database",
       () =>
@@ -681,7 +719,7 @@ export class OperationStore {
             input.actor,
             input.profile,
             entry.event.entity_version,
-            json(entry.event),
+            event,
             entry.from_version,
             entry.to_version,
             entry.outcome,
@@ -689,6 +727,16 @@ export class OperationStore {
           ),
       { statement: "store.write" },
     );
+    if (entry.outcome === "committed")
+      noteCommitted(this.db, {
+        seq: Number(result.lastInsertRowid),
+        event,
+        actor: input.actor,
+        profile: input.profile,
+        from_version: entry.from_version,
+        to_version: entry.to_version,
+        occurred_at: entry.event.occurred_at,
+      });
     return Schema.decodeUnknownSync(OpLogEntry)({
       ...entry,
       seq: Number(result.lastInsertRowid),

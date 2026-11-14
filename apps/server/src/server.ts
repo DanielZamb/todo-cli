@@ -7,6 +7,7 @@ import {
   BUILD_ID,
   CONTRACT_ID,
   Conflict,
+  FilterUsageError,
   InternalError,
   InvalidTask,
   NotFound,
@@ -24,6 +25,9 @@ import {
   batchDepend,
   batchEditTasks,
   boundDiagnostics,
+  type CatalogError,
+  CatalogReads,
+  CatalogReply,
   ClientReads,
   DependencyCommands,
   type DependencyError,
@@ -51,6 +55,7 @@ import {
   TaskRead,
   type TaskWrite,
   taskLookupError,
+  withOperationPosition,
 } from "@todo/domain";
 import { AttachmentCommands } from "@todo/domain/attachments";
 import {
@@ -106,6 +111,55 @@ const encodedRead =
         ),
       ),
     );
+const usageError = (message: string) =>
+  Effect.fail(
+    Schema.decodeUnknownSync(FilterUsageError)({
+      ...exitStatus(2),
+      generated_at: new Date().toISOString(),
+      code: "invalid_args",
+      message,
+    }),
+  );
+const profileNotFound = () =>
+  Effect.fail(
+    Schema.decodeUnknownSync(ProfileNotFound)({
+      ...exitStatus(3),
+      generated_at: new Date().toISOString(),
+      code: "not_found",
+      message: "Profile not found; choose a Profile from GET /profiles",
+    }),
+  );
+type ReadFailure =
+  | Effect.Error<ReturnType<typeof translate>>
+  | typeof SearchTooBroadResponse.Type
+  | typeof FilterUsageError.Type
+  | typeof ProfileNotFound.Type;
+const catalogFailure = (
+  error: CatalogError,
+): Effect.Effect<never, ReadFailure> =>
+  error._tag === "SearchTooBroad"
+    ? Effect.fail(
+        Schema.decodeUnknownSync(SearchTooBroadResponse)({
+          ...exitStatus(2),
+          generated_at: new Date().toISOString(),
+          code: error.code,
+          message: error.message,
+        }),
+      )
+    : error._tag === "UnknownTimeZone" || error._tag === "CatalogUsageError"
+      ? usageError(error.message)
+      : error._tag === "CatalogProfileMissing"
+        ? profileNotFound()
+        : translate(Effect.fail(error));
+const planningFailure = (
+  error: Effect.Error<ReturnType<ClientReads["view"]>>,
+): Effect.Effect<
+  never,
+  Effect.Error<ReturnType<typeof translate>> | typeof FilterUsageError.Type
+> =>
+  error._tag === "UnknownTimeZone"
+    ? usageError(error.message)
+    : translate(Effect.fail(error));
 const taskResult = (
   result: TaskCommandResult,
 ): Effect.Effect<
@@ -216,6 +270,26 @@ export const rejectUnknownQuery = <E, R>(
             generated_at: new Date().toISOString(),
             code: "invalid_args",
             message: `${invalidDependencyFilter} accepts true only. Use --blocked or --status for another set of Tasks.`,
+          },
+          { status: 400 },
+        ),
+      );
+    // A blank Tag name is not a filter value: the Tag rule trims, so it could
+    // never be meant exactly. Refused before any read. A Project name is
+    // compared exactly, so a blank one is a real name (seat F7).
+    const blankName = ["tag"].find(
+      (name) =>
+        route?.parameters.has(name) &&
+        url.searchParams.getAll(name).some((value) => value.trim() === ""),
+    );
+    if (blankName && !unknown.length)
+      return Effect.succeed(
+        HttpServerResponse.jsonUnsafe(
+          {
+            ...exitStatus(2),
+            generated_at: new Date().toISOString(),
+            code: "invalid_args",
+            message: `${blankName} needs a name; leave the parameter out to match every Tag.`,
           },
           { status: 400 },
         ),
@@ -440,6 +514,12 @@ export const serverLayer = (options: {
   readonly profiler?: DiagnosticRecorder;
   readonly allowedHosts?: ReadonlySet<string>;
   readonly wake?: StreamWake;
+  /**
+   * The server's own IANA zone: "today" for a planning read or Catalog that
+   * sends no time_zone (ADR-0006). main.ts passes processTimeZone(); a test
+   * names its zone.
+   */
+  readonly timeZone: string;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
@@ -558,7 +638,8 @@ export const serverLayer = (options: {
         }),
       );
       const attachments = new AttachmentCommands(store);
-      const reads = new ClientReads(store);
+      const reads = new ClientReads(store, options.timeZone);
+      const catalogs = new CatalogReads(store, options.timeZone);
       const discovery = new Discovery(store);
       const ValidationHistoryLive = HttpApiMiddleware.layerSchemaErrorTransform(
         ValidationHistory,
@@ -731,7 +812,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           detach: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -744,7 +825,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           labelAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -757,7 +838,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           uploadAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -770,7 +851,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
               const {
@@ -803,7 +884,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           batchEdit: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -814,7 +895,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           importTasks: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -825,7 +906,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           depend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -836,7 +917,7 @@ export const serverLayer = (options: {
                   "depend",
                 ),
               ).pipe(Effect.flatMap(dependencyResult));
-            }),
+            }).pipe(withOperationPosition),
           undepend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -847,7 +928,7 @@ export const serverLayer = (options: {
                   "undepend",
                 ),
               ).pipe(Effect.flatMap(dependencyResult));
-            }),
+            }).pipe(withOperationPosition),
           batchDepend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -858,7 +939,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           graph: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -919,7 +1000,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           edit: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -929,7 +1010,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           transition: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -939,7 +1020,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           move: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -950,7 +1031,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
-            }),
+            }).pipe(withOperationPosition),
           copy: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -961,7 +1042,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
-            }),
+            }).pipe(withOperationPosition),
           revert: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -972,7 +1053,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "read")));
-            }),
+            }).pipe(withOperationPosition),
           createSeries: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -983,7 +1064,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           editSeries: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -994,7 +1075,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           skipOccurrence: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1005,7 +1086,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           delete: ({ params, query }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -1015,7 +1096,7 @@ export const serverLayer = (options: {
                   query,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
         }),
       ).pipe(
         Layer.provide(ValidationHistoryLive),
@@ -1042,7 +1123,7 @@ export const serverLayer = (options: {
                     : { ...result.error, ...exitStatus(2) },
                 );
               return result.report;
-            }),
+            }).pipe(withOperationPosition),
           lookup: ({ query }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -1076,18 +1157,26 @@ export const serverLayer = (options: {
                 }),
               );
             }).pipe(encodedRead(Schema.Array(TagSummary))),
+          catalog: ({ params, query }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* catalogs
+                .read({ credential, profile: params.profile }, query)
+                .pipe(Effect.catch(catalogFailure));
+            }).pipe(encodedRead(CatalogReply)),
           view: ({ params, query }) =>
             Effect.gen(function* () {
-              return yield* translate(
-                reads.view(
+              return yield* reads
+                .view(
                   {
                     credential: yield* BearerCredential,
                     profile: params.profile,
                   },
                   params.view,
                   query.now,
-                ),
-              );
+                  query.time_zone,
+                )
+                .pipe(Effect.catch(planningFailure));
             }).pipe(encodedRead(PlanningView)),
           history: ({ params }) =>
             Effect.gen(function* () {
@@ -1169,7 +1258,9 @@ export const serverLayer = (options: {
               Effect.gen(function* () {
                 const credential = yield* BearerCredential;
                 return yield* translate(
-                  store.auth.issueToken({ credential, token: payload }),
+                  withOperationPosition(
+                    store.auth.issueToken({ credential, token: payload }),
+                  ),
                 );
               }),
             listTokens: () =>
@@ -1262,9 +1353,11 @@ export const serverLayer = (options: {
               }),
             restore: ({ params, payload }) =>
               snapshotOwner(
-                store.snapshots.restore(params.snapshot, {
-                  dryRun: payload.dry_run,
-                }),
+                withOperationPosition(
+                  store.snapshots.restore(params.snapshot, {
+                    dryRun: payload.dry_run,
+                  }),
+                ),
               ),
             prune: ({ payload }) =>
               snapshotOwner(store.snapshots.prune({ dryRun: payload.dry_run })),

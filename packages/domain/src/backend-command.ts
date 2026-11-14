@@ -9,6 +9,7 @@ import {
   readTasks,
   taskFlags,
 } from "./commands.ts";
+import { operationPositionField } from "./committed-operations.ts";
 import { DependencyWarning } from "./dependency-contract.ts";
 import { Task } from "./entities.ts";
 import {
@@ -53,8 +54,13 @@ export const BackendReply = Schema.Union([
     outcome: Schema.Literal("success"),
     kind: Schema.Literal("add"),
     result: AddBackendResult,
+    ...operationPositionField,
   }),
-  Schema.Struct({ outcome: Schema.Literal("failure"), error: ErrorResponse }),
+  Schema.Struct({
+    outcome: Schema.Literal("failure"),
+    error: ErrorResponse,
+    ...operationPositionField,
+  }),
 ]);
 
 export const executeAdd = Effect.fn(function* (

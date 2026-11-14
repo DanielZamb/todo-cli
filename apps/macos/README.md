@@ -61,7 +61,8 @@ builds the release generator executable. It does not launch or sign the app.
 | Generated output | Source |
 | --- | --- |
 | `packages/api/openapi.json` | Effect `TodoApi` in `packages/api/src/index.ts`, emitted by `packages/api/scripts/openapi.ts` |
-| `packages/api/src/contract.ts` and `API/Sources/TodoAPI/ContractIdentity.swift` | SHA-256 of the canonical OpenAPI document, emitted by `packages/api/scripts/openapi.ts` |
+| `packages/api/src/contract.ts` | SHA-256 of the canonical OpenAPI document, emitted by `packages/api/scripts/openapi.ts` |
+| `API/Sources/TodoAPI/ContractIdentity.swift` | The contract the Swift sources implement, written only by `packages/api/scripts/swift-contract.ts --write` after `scripts/generate-api.sh`; the root check refuses an identity that claims a contract its sources do not implement, and `API/swift-client-pending.json` names what stays red while they lag |
 | `API/Sources/TodoAPI/openapi.json` | Canonical OpenAPI document transformed by `scripts/normalize-openapi.py` |
 | `API/Sources/TodoAPI/GeneratedSources/*.swift` | Normalized document and `API/Sources/TodoAPI/openapi-generator-config.yaml`, processed by the Swift generator and `scripts/preserve-null.py` |
 

@@ -33,7 +33,7 @@ it.effect(
                 "projection scratch only",
               );
               yield* store.append({ actor, profile: work.id, event: created });
-              const reads = new ClientReads(store);
+              const reads = new ClientReads(store, "UTC");
               const request = { credential, profile: work.id };
               const parse = JSON.parse;
               const spy = vi.spyOn(JSON, "parse");

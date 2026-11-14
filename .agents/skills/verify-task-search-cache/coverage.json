@@ -13,19 +13,19 @@
     },
     {
       "path": "task-filters.ts",
-      "sha256": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27"
+      "sha256": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
     },
     {
       "path": "commands.ts",
-      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
+      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
     },
     {
       "path": "store/store.ts",
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4"
+      "sha256": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
     },
     {
       "path": "store/search-cache-events.ts",
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
+      "sha256": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -49,15 +49,15 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4"
+      "sha256": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
+      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
     }
   ],
   "integrationReview": {
@@ -227,5 +227,189 @@
         "after": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
       }
     ]
+  },
+  "catalogIntegration": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "previous": "29927cb04cc49bb706be602127557f43602ed5b2",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27",
+        "to": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3",
+        "to": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4",
+        "to": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725",
+        "to": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4",
+        "to": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572",
+        "to": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce"
+      }
+    ],
+    "review": "No cache, matcher, runner, admission, accounting or erasure body changes. task-filters.ts: the Tag predicate calls tagNameMatches. commands.ts: readTasks sorts with compareTasks; the tag rule goes through tag-name.ts; both list helpers keep the token taken before the lease. store/store.ts: the catalog members, the operation_seq note in record and the preview mark in the constructor. store/snapshots.ts: the restore notes its DatabaseRestored seq. server.ts: the Catalog route and operation_seq on write handlers; hygiene still gets the raw store and is forked before the scheduler. main.ts: todo catalog and operation_seq stamping. One new cache consumer: CatalogReads.read takes searchWords.read(profile) before its lease and prepares through searchWords.words(search, text), the same shape as the two list helpers.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "previous": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e",
+        "to": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e",
+        "to": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      }
+    ],
+    "review": "store/store.ts: OperationStore.record binds the event text it notes; catalogTasks becomes catalogPayloads (payload text, decoded after the lease). store/snapshots.ts: the restore binds the event text it notes. No cache, matcher, runner, admission, accounting or erasure body changes; CatalogReads.read still takes searchWords.read(profile) before its lease and prepares through searchWords.words(search, text).",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "previous": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba",
+        "to": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba",
+        "to": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      }
+    ],
+    "review": "store/store.ts: the operation_seq note carries the kept columns; new read member catalogSchemaVersion. store/snapshots.ts: the restore's note carries them too. No cache, matcher, runner, admission, accounting or erasure body changes.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "previous": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467",
+        "to": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca",
+        "to": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a",
+        "to": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce",
+        "to": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
+      }
+    ],
+    "review": "task-filters.ts: the Project and Tag name filters refuse a blank value in the schema (no filter body change). commands.ts: filterTasks and exportScope take today from a PlanningClock (the machine's zone) instead of the UTC text of now. server.ts: rejectUnknownQuery refuses a blank project or tag as invalid_args; ClientReads and CatalogReads take the server's own zone. apps/cli/src/main.ts: todo catalog parses its flags before the store; the CLI's Today and Overdue use the machine's zone. No cache, matcher, runner, admission, accounting or erasure body changes.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDelta": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "previous": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b",
+        "to": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b",
+        "to": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682"
+      }
+    ],
+    "review": "task-filters.ts: the Project name filter is a plain string again (seat F7). apps/server/src/server.ts: rejectUnknownQuery refuses only a blank tag. No cache, matcher, runner, admission, accounting or erasure body changes.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "previous": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68",
+        "to": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682",
+        "to": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68",
+        "to": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93",
+        "to": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      }
+    ],
+    "review": "Seat F8: store/snapshots.ts passes the generation the restore starts to its note; apps/server/src/server.ts and apps/cli/src/main.ts rename operation_seq to operation_position. No cache, matcher, runner, admission, accounting or erasure body changes.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

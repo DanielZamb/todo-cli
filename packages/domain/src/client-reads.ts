@@ -1,9 +1,13 @@
 import { Clock, Effect, Schema } from "effect";
 import type { AccessRequest } from "./auth/model.ts";
-import { filterTasks } from "./commands.ts";
 import { Profile, Project, Tag, Task } from "./entities.ts";
 import type { TaskId } from "./ids.ts";
-import { taskView } from "./presentation.ts";
+import {
+  checkTimeZone,
+  type PlanningMembership,
+  planningDay,
+  planningMembership,
+} from "./planning-day.ts";
 import type { OperationStore } from "./store/store.ts";
 import { Instant, type TaskTime } from "./time.ts";
 
@@ -35,6 +39,12 @@ export const PlanningViewName = Schema.Literals([
 export type PlanningViewName = typeof PlanningViewName.Type;
 export const PlanningViewQuery = Schema.Struct({
   now: Schema.optionalKey(Instant),
+  time_zone: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "The client's IANA time zone. Today is the date of now there. Without it, today is the date of now in the server's own zone. An instant falls on its date in the zone stored with it either way. An unknown zone is invalid_args.",
+    }),
+  ),
 });
 export const PlanningView = Schema.Struct({
   name: PlanningViewName,
@@ -73,7 +83,11 @@ export const profileTaskCounts = (tasks: readonly Task[]) => ({
 });
 
 export class ClientReads {
-  constructor(private readonly store: OperationStore) {}
+  /** timeZone: the reader's own zone, used when a read sends none. */
+  constructor(
+    private readonly store: OperationStore,
+    private readonly timeZone: string,
+  ) {}
 
   readonly profiles = (credential: string) =>
     this.store.auth.profileSummaries({ credential });
@@ -87,15 +101,23 @@ export class ClientReads {
     request: AccessRequest,
     name: PlanningViewName,
     at?: Instant,
+    timeZone?: string,
   ) =>
     Effect.gen({ self: this }, function* () {
+      const unknown = checkTimeZone(timeZone);
+      if (unknown) return yield* Effect.fail(unknown);
       const { selection: authority, data } = yield* this.store.auth.readCatalog(
         request,
         Schema.Struct({
           name: PlanningViewName,
           at: Schema.optionalKey(Instant),
+          time_zone: Schema.optionalKey(Schema.String),
         }),
-        { name, ...(at === undefined ? {} : { at }) },
+        {
+          name,
+          ...(at === undefined ? {} : { at }),
+          ...(timeZone === undefined ? {} : { time_zone: timeZone }),
+        },
       );
       const selected = authority.fields;
       const now =
@@ -103,48 +125,25 @@ export class ClientReads {
         Schema.decodeUnknownSync(Instant)(
           new Date(yield* Clock.currentTimeMillis).toISOString(),
         );
-      const tasks = openTasks(data.tasks);
-      const views = tasks.map((task) =>
-        taskView(task, data.projects, data.tags),
-      );
-      const overdueIds = new Set(
-        filterTasks(views, { overdue: true }, now).map((task) => task.id),
-      );
-      const today = now.slice(0, 10);
-      const rows = (ids: ReadonlySet<string>) =>
-        tasks.filter((task) => ids.has(task.id));
-      const dueToday = new Set(
-        views
-          .filter((task) => task.due_at?.slice(0, 10) === today)
-          .map((task) => task.id),
-      );
-      const scheduledToday = new Set(
-        views
-          .filter((task) => task.scheduled_at?.slice(0, 10) === today)
-          .map((task) => task.id),
-      );
+      const day = planningDay(now, selected.time_zone, this.timeZone);
+      const tasks = openTasks(data.tasks).map((task) => ({
+        task,
+        member: planningMembership(task, day),
+      }));
+      const rows = (key: Exclude<keyof PlanningMembership, "open">) =>
+        tasks.filter(({ member }) => member[key]).map(({ task }) => task);
       const groups: PlanningView["groups"] =
         selected.name === "today"
           ? [
-              { name: "Overdue", tasks: rows(overdueIds) },
-              { name: "Due today", tasks: rows(dueToday) },
-              { name: "Scheduled today", tasks: rows(scheduledToday) },
+              { name: "Overdue", tasks: rows("overdue") },
+              { name: "Due today", tasks: rows("dueToday") },
+              { name: "Scheduled today", tasks: rows("scheduledToday") },
             ]
           : selected.name === "overdue"
-            ? [{ name: "Overdue", tasks: rows(overdueIds) }]
+            ? [{ name: "Overdue", tasks: rows("overdue") }]
             : selected.name === "scheduled"
-              ? [
-                  {
-                    name: "Scheduled",
-                    tasks: tasks.filter((task) => task.scheduled_at !== null),
-                  },
-                ]
-              : [
-                  {
-                    name: "Inbox",
-                    tasks: tasks.filter(isInboxTask),
-                  },
-                ];
+              ? [{ name: "Scheduled", tasks: rows("scheduled") }]
+              : [{ name: "Inbox", tasks: rows("inbox") }];
       return { name: selected.name, now, groups };
     });
 

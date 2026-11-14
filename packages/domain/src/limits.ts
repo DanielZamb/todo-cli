@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { AttachmentId, TaskId } from "./ids.ts";
+import { tagKey } from "./tag-name.ts";
 import { Instant, TaskTime } from "./time.ts";
 
 // Size limits on what a client may submit. Every accepted value is kept
@@ -53,9 +54,8 @@ const TagNameInput = NameInput.check(
     (value) =>
       value
         .split(",")
-        .every(
-          (part) => part.trim().toLowerCase().length <= inputLimits.name,
-        ) || `Tag names have at most ${inputLimits.name} characters.`,
+        .every((part) => tagKey(part).length <= inputLimits.name) ||
+      `Tag names have at most ${inputLimits.name} characters.`,
   ),
 );
 export const TagNamesInput = Schema.Array(TagNameInput).check(

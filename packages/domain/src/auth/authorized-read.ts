@@ -3,12 +3,14 @@ export type {
   AuthorizedProfiles,
   AuthorizedRead,
   AuthorizedTerminalRead,
+  ReadPosition,
 } from "./auth.ts";
 export {
   checkedRead,
   consumeTerminalRead,
   freezeRead,
   readAuthority,
+  readPosition,
 } from "./auth.ts";
 
 import { Schema } from "effect";

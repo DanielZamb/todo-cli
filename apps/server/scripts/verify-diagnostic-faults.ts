@@ -136,6 +136,7 @@ for (const point of [
         if (point === "configure") fault.arm();
         const context = yield* Layer.build(
           serverLayer({
+            timeZone: "UTC",
             path: join(directory, "scratch.db"),
             port: 0,
             profiler,
@@ -356,6 +357,7 @@ for (const point of [
         const profiler = new DiagnosticRecorder();
         const context = yield* Layer.build(
           serverLayer({
+            timeZone: "UTC",
             path: join(directory, "scratch.db"),
             port: 0,
             profiler,

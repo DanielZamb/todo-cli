@@ -3,6 +3,60 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Catalog seat findings renewal
+
+Candidate: product beae37bceef38fb46325e14ccb45e4d03ddc5e9f (seat CATALOG-S1's
+two findings fixed on top of 9634a6e0), pinned at
+f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd: byte-identical product plus the
+occ-atomicity and task-search-cache renewals the capture runs. The Catalog's
+unchanged answer also needs a stamp of the visible Profiles and the schema
+version (contract a49a9627); the operation_seq note carries the columns Purge
+keeps and a request reports nothing when a note is unaccounted. All 80 mutant
+anchors match once. The full default exits 0, "CONFORMANCE CHECKPOINT PASS"
+(check-5ADQMW): 36 production controls broken 1 and restored 0
+(conformance-ObD3UB), 53 public mutants exit 1 and restore 0 (public-GmU0Lq),
+clean recheck 19,784 states. No model, invariant or bound changed. Candidate
+for the seats.
+
+## Catalog contract correction renewal
+
+Candidate: product b110f4a8b286a737b1dc46e9093a66110b3589d5 (the coordinator's
+corrections to C10-S5), pinned at 6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3:
+byte-identical product plus the occ-atomicity and task-search-cache renewals the
+capture runs. OperationStore.record, Authentication.record and the restore bind
+the event text they note; the Catalog reads the Dependency graph from columns
+for matching; the contract moves to 7de9226a (operation_seq's description).
+Every other listed production function and every mapped public item is
+unchanged from the f3039274 candidate; all 80 mutant anchors match once. A first
+full default stopped in public conformance because I had deleted the preserved
+baseline CLI from .scratch/bin; with it restored from
+.storage-preserved/2026-11-13/dag-formal-inputs (digest dd1918fc…) the full
+default exits 0, "CONFORMANCE CHECKPOINT PASS" (check-lzAjVT): 36 production
+controls broken 1 and restored 0 (conformance-L0LBad), 53 public mutants exit 1
+and restore 0 (public-7kBasA), clean recheck 19,784 states. No model, invariant
+or bound changed. Candidate for the seats.
+
+## Catalog contract renewal
+
+Candidate: product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5,
+feat/catalog-contract), pinned at 45b86ff9c8ea32ada0a65d83350c5239e99ba027:
+byte-identical product files plus the occ-atomicity, task-search-formal and
+task-search-cache renewals that the candidate capture runs. Changed mapped
+items: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite gain optional
+operation_seq; the depend, undepend, batchDepend and importTasks handlers are
+wrapped by withOperationSeq; executeImport and filterTaskRecordSteps route the
+Tag-name rule through tag-name.ts; the public contract moves to 76f09fa6.
+Every listed production function is byte-identical, and all 80 mutant anchors
+match exactly once on the product. The first full default stopped in the
+compile guard because ps cannot run in the sandbox; with the isolation note's
+read-only ps proxy, a pin at f3039274 stopped inside production conformance at
+the occ mapping (its renewal is a later commit). At 45b86ff9 the full default,
+under the reference profile, exits 0 with "CONFORMANCE CHECKPOINT PASS"
+(check-A4oZvO): 36 production controls each broken 1 and restored 0
+(conformance-QfjXiq), 53 public mutants exit 1 and restore 0 (public-mZ3Vme),
+clean recheck 19,784 distinct states. No model, invariant or bound changed.
+Candidate for the seats.
+
 ## Recordings and CLI routing integration renewal
 
 Candidate: product 29927cb04cc49bb706be602127557f43602ed5b2 on integ/contract,
@@ -304,3 +358,54 @@ hash changes. All four covered Authentication methods and all other mapped
 files are byte-identical. Auth recording remains outside the finite DAG model.
 No invariant, bound or control changes. Independent seat acceptance is pending;
 the next full default command supplies fresh candidate-specific evidence.
+
+## Seat findings and owner answers candidate, 2026-11-14
+
+Product de766e3c20e3efbd6967763714fb99e9c1727354 (C10-S5 after seat CATALOG-S1's
+six findings and the owner's Q8 and Q9), pinned at
+187d610e45779802bc3038d249f19879a69eb95b (byte-identical product plus the
+task-search formal and cache renewals the capture runs); contract
+cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d. Every listed
+production function is byte-identical. Two mapped public bodies change:
+`TaskFilters` (a blank Project or Tag name is refused) and `rejectUnknownQuery`
+(it answers that refusal as invalid_args); the Swift identity row returns to
+55c6d138, which its sources implement, and apps/macos/API/swift-client-pending.json
+joins the public capture scopes so contract-properties.mjs sees the named pair.
+All 80 mutant anchors match once at the pin. The full default exits 0,
+"CONFORMANCE CHECKPOINT PASS" (check-DUcvUj): 36 production controls behave
+broken 1 and restore 0 (conformance-kBGpMi), 53 public mutants and 53 restores
+(public-7vSYRf), clean recheck 19,784 distinct states. No model, invariant or
+bound change. Candidate for the seats.
+
+## Seat delta candidate, 2026-11-14
+
+Product 5da90607e8c5a19d7007174925c6b6253c0714d3 (seat F7 and F2b on top of
+de766e3c), pinned at cee500f063e321a9bbbfca65dbfc8919b052d632 (byte-identical
+product plus the task-search formal and cache renewals); contract
+dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797. Every listed
+production function is byte-identical. Two mapped public bodies change:
+`TaskFilters` (the Project name filter is a plain string again) and
+`rejectUnknownQuery` (it refuses only a blank tag). All 80 mutant anchors match
+once at the pin. The full default exits 0, "CONFORMANCE CHECKPOINT PASS"
+(check-KzDYEU): 36 production controls behave broken 1 and restore 0
+(conformance-kzKfpm), 53 public mutants and 53 restores (public-4ifApl), clean
+recheck 19,784 distinct states. No model, invariant or bound change. Candidate
+for the seats.
+
+## Seat delta 2 candidate (F8), 2026-11-14
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa (seat F8 on top of
+5da90607), pinned at 7131f133b1ef79469dc6736d3a6f5bd86b758060 (byte-identical
+product plus the atomic-commit, task-search formal and cache renewals);
+contract 4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc.
+Every listed production function is byte-identical (auth.ts moves only in
+credentialCheck, which notes the classified generation). The mapped public
+bodies that change are field renames: EdgeReport, BatchEdgeReport,
+ImportReport and TaskWrite carry operation_position where they carried
+operation_seq, the depend, undepend, batchDepend and importTasks handlers pipe
+withOperationPosition, and registerCommandSchema adds operation_position. All
+80 mutant anchors match once at the pin. The full default exits 0,
+"CONFORMANCE CHECKPOINT PASS" (check-gVKQsx): 36 production controls behave
+broken 1 and restore 0 (conformance-myvggM), 53 public mutants and 53 restores
+(public-0DGg5w), clean recheck 19,784 distinct states. No model, invariant or
+bound change. Candidate for the seats.

@@ -5,6 +5,7 @@ import {
   type AuthorizedRead,
   readAuthority,
 } from "../auth/authorized-read.ts";
+import { compareNames } from "../catalog-order.ts";
 import { ProfileSummary, ProjectSummary, TagSummary } from "../client-reads.ts";
 import { diagnosticSync } from "../diagnostic-context.ts";
 import { Project, Tag, Task } from "../entities.ts";
@@ -73,34 +74,41 @@ export class ClientProjection {
       inbox_task_count: ProfileSummary.fields.inbox_task_count,
     });
     const rows = Schema.decodeUnknownSync(Schema.Array(Count))(counts);
-    return Schema.decodeUnknownSync(Schema.Array(ProfileSummary))(
-      profiles.map((profile) => ({
-        ...profile,
-        ...rows.find((row) => row.id === profile.id),
-      })),
-    );
+    return [
+      ...Schema.decodeUnknownSync(Schema.Array(ProfileSummary))(
+        profiles.map((profile) => ({
+          ...profile,
+          ...rows.find((row) => row.id === profile.id),
+        })),
+      ),
+    ].sort(compareNames);
   };
 
   readonly projects = (read: AuthorizedRead) => {
     const profile = readAuthority(read, "read", this.db).profile;
-    return Schema.decodeUnknownSync(Schema.Array(ProjectSummary))(
-      this.db
-        .query(`SELECT p.*,count(t.id) AS open_task_count FROM projects p
-        LEFT JOIN tasks t ON t.profile_id=p.profile_id AND t.project_id=p.id AND t.status='open' AND t.deleted_at IS NULL
-        WHERE p.profile_id=? GROUP BY p.id ORDER BY p.id`)
-        .all(profile),
-    );
+    return [
+      ...Schema.decodeUnknownSync(Schema.Array(ProjectSummary))(
+        this.db
+          .query(`SELECT p.*,coalesce(c.n,0) AS open_task_count FROM projects p
+        LEFT JOIN (SELECT project_id,count(*) AS n FROM tasks
+          WHERE profile_id=:profile AND status='open' AND deleted_at IS NULL GROUP BY project_id) c
+        ON c.project_id=p.id WHERE p.profile_id=:profile`)
+          .all({ profile }),
+      ),
+    ].sort(compareNames);
   };
 
   readonly tags = (read: AuthorizedRead) => {
     const profile = readAuthority(read, "read", this.db).profile;
-    return Schema.decodeUnknownSync(Schema.Array(TagSummary))(
-      this.db
-        .query(`SELECT g.*,count(t.id) AS open_task_count FROM tags g
-        LEFT JOIN task_tags l ON l.tag_id=g.id
-        LEFT JOIN tasks t ON t.id=l.task_id AND t.profile_id=g.profile_id AND t.status='open' AND t.deleted_at IS NULL
-        WHERE g.profile_id=? GROUP BY g.id ORDER BY g.id`)
-        .all(profile),
-    );
+    return [
+      ...Schema.decodeUnknownSync(Schema.Array(TagSummary))(
+        this.db
+          .query(`SELECT g.*,coalesce(c.n,0) AS open_task_count FROM tags g
+        LEFT JOIN (SELECT l.tag_id,count(*) AS n FROM tasks t JOIN task_tags l ON l.task_id=t.id
+          WHERE t.profile_id=:profile AND t.status='open' AND t.deleted_at IS NULL GROUP BY l.tag_id) c
+        ON c.tag_id=g.id WHERE g.profile_id=:profile`)
+          .all({ profile }),
+      ),
+    ].sort(compareNames);
   };
 }

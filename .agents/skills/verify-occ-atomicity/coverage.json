@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
+  "confirmedCommit": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -63,7 +63,7 @@
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
+      "sha256": "901bec77e54dcb7f6e8d50af94a72dfe7be90b1466f1836248c96b2cddcac265",
       "functions": [
         "Attachment",
         "validAttachmentLocation"
@@ -108,7 +108,7 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "Candidate for the seat: merge ae9c5be3 of feat/diag-core and integ/server. Every listed store and projection function is byte-identical to one parent's certified body while the other parent left it at base: the constructor (Init) is integ/server's 4d709efa body; transaction, record, appendSync, historySync and readTasks are diagnosticsReview's 3ef9e674 bodies; the rest equal base. Only the whole-file store.ts hash moves. The pre-renewal check passed every behavioral and model stage and stopped only on that hash (fv01-check-q7Eq1X); both real-code breaks then failed and the restored source passed (sensitivity-iQpwza); the renewed check passed (fv01-check-y8YbXS). No model, invariant, fixture or bound changed.",
+  "review": "Candidate for the seat: C10-S5 catalog contract product b110f4a8b286a737b1dc46e9093a66110b3589d5 after the coordinator's source review. OperationStore.constructor (accepted as reviewed): one WeakSet.add for a preview store. OperationStore.record: the INSERT's statement, bound values, returned entry and transaction are unchanged; the event text is computed once and bound unchanged; after the INSERT a total, guarded noteCommitted records seq and that exact text in the request's fiber-local cell (no SQL, no throw, no reordering). Settlement after the request confirms a note only by seq, outcome='committed' and byte-identical event text. Models, invariants, bounds and crash insertion points are unchanged.",
   "integrationReview": {
     "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "parents": [
@@ -136,5 +136,88 @@
     ],
     "previousStoreSha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
     "evidence": "docs/decisions/ui-speed/diag-recordings-report.md"
+  },
+  "catalogReview": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "previous": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "packages/domain/src/attachments.ts",
+        "from": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
+        "to": "181a97202acc0de468b736889f2de1966f9f0fa0c1d317d180d915d5fcfece32"
+      }
+    ],
+    "changedFunctions": [
+      "OperationStore.record",
+      "OperationStore.constructor"
+    ],
+    "coordinatorSourceReview": "pending",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "previous": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      }
+    ],
+    "changedFunctions": [
+      "OperationStore.record"
+    ],
+    "coordinatorSourceReview": "constructor accepted; record accepted on three conditions, now met: total note (guarded, test with a failing collector), identity by event bytes (fixed-clock reused-seq test, red on the earlier rule), absence means read to find out",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "previous": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      }
+    ],
+    "changedFunctions": [
+      "OperationStore.record"
+    ],
+    "review": "Seat CATALOG-S1 findings: OperationStore.record's guarded noteCommitted call now also passes the columns Purge never rewrites (actor, profile, from_version, to_version, occurred_at) so the settle can tell a rollback from a redaction; the INSERT, its bound values, the returned entry and the transaction are unchanged. The new store member catalogSchemaVersion reads PRAGMA user_version only. Models, invariants, bounds and crash insertion points are unchanged.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "coordinatorSourceReview": "2026-11-14, the coordinator's source review of OperationStore.record as it stands at 7f08409ecc76d818a32584cc9227f45b0449b842 (byte-identical to this candidate's body): the event text is computed once and bound unchanged; the INSERT, its other bound values, the returned entry and the transaction are unchanged; the note after it now also carries the actor, the Profile, the two Versions and occurred_at, and is guarded so it cannot cost a commit. Accepted."
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "previous": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/attachments.ts",
+        "from": "181a97202acc0de468b736889f2de1966f9f0fa0c1d317d180d915d5fcfece32",
+        "to": "901bec77e54dcb7f6e8d50af94a72dfe7be90b1466f1836248c96b2cddcac265"
+      }
+    ],
+    "changedFunctions": [],
+    "review": "attachments.ts moves only in AttachManyReport, whose operation_seq field becomes operation_position (seat F8); Attachment and validAttachmentLocation are byte-identical. store.ts, projection.ts, events.ts, entities.ts, ids.ts and the dependency files are byte-identical. Models, invariants, bounds and crash insertion points are unchanged.",
+    "noSqlCorrection": "The catalogReview record's sentence 'no SQL, no throw, no reordering' described the note at b110f4a8, where it was true. From 180f929d (seat F2b) the note at a request's first commit ran one guarded SELECT inside the write transaction; from 8a646594 (seat F8) it runs that SELECT only on writing paths that classify no Profile first. The note still cannot throw out of the transaction and does not reorder anything.",
+    "coordinatorStatementReview": "2026-11-14, the coordinator's source review of committed-operations.ts at 106f22fa93838da816904ec2b7b72f7d90e38f0d: generationOf runs, inside the transaction of a request's first committed insert, the newest committed DatabaseRestored among rows with profile IS NULL, by json_extract on each. It cannot fail a write (guarded twice: its own try/catch and noteCommitted's) and it writes nothing, so it does not touch atomicity: accepted on that ground. Cost was raised (the statement scans every profile IS NULL row when no restore exists).",
+    "statementNow": "At ec16d45d, for the coordinator to read: committed-operations.ts:129 (generationOf's SELECT) runs inside the write transaction only from committed-operations.ts:102, the first note of a request that classified no Profile before writing (owner-only AuthChanged writes: setupOwner, resetPassphrase, issueToken, revokeToken, signOut), once per request and database. Every other writing request notes the generation its Profile classification already read inside the same transaction (auth.ts:791, noteGeneration, no SQL); the restore notes the generation it starts (store/snapshots.ts:588, no SQL). The settle reads no generation: committed-operations.ts:187 is an index range scan (op_log_profile_seq, profile IS NULL AND seq >= the request's first noted seq) run after the request, outside any transaction; it cannot throw out (try/catch: a failure means nothing is reported) and writes nothing. Measured on 50,000 profile IS NULL rows: generationOf 9.7 ms median (0.55 ms at 5,000), with or without a restore far back; the settle's scan 0.001 ms.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDelta3": {
+    "product": "5150042cdc4df3b7e9d6bad0caf15c2b2146a198",
+    "previous": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "status": "candidate for the seats",
+    "changed": [],
+    "changedFunctions": [],
+    "coordinatorSourceReview": "2026-11-14, the coordinator's source review of 66dee60e52302c074c44f775a5b33e1313a1c165 (committed-operations.ts with noteGeneration at auth.ts:791): accepted.",
+    "statementNow": "At 5150042c (seat F9), for the coordinator to read: the generation SELECT (committed-operations.ts:125, generationOf) runs in two places. (1) committed-operations.ts:102, inside the write transaction, only at the first note of a request that classified no Profile before writing (owner-only AuthChanged writes: setupOwner, resetPassphrase, issueToken, revokeToken, signOut), once per request and database. (2) committed-operations.ts:189, the settle: after the request, outside any transaction, once per database the request noted, compared with the noted generation (from auth.ts:791 noteGeneration, the restore's own, or (1)); a difference or a failed read reports nothing. Both are guarded (try/catch, null on failure), write nothing, and cannot fail or change a write. The range scan of ec16d45d (restoredSince) is removed: it missed a restore below the request's lowest noted seq (seat F9). Cost of the SELECT as measured at ec16d45d: 0.55 ms at 5,000 and 9.7 ms at 50,000 profile IS NULL rows; at the settle it holds no write lock.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

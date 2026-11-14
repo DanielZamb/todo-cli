@@ -501,7 +501,7 @@ export const dagCases = {
       const session = yield* store.auth.signIn("dag scratch passphrase");
       yield* append(store, delta("B", "A", 1));
       yield* append(store, delta("A", "B", 1));
-      const reads = new ClientReads(store);
+      const reads = new ClientReads(store, "UTC");
       for (const target of ["A", "B"])
         assert.deepEqual(
           (yield* reads.history({

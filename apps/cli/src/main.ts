@@ -33,8 +33,10 @@ import {
   BatchEditRequest,
   batchDepend,
   batchEditTasks,
+  CatalogReads,
   ClientReads,
   CreateTask,
+  collectCommitted,
   DeleteTask,
   DependencyCommands,
   DependRequest,
@@ -50,6 +52,9 @@ import {
   ProfileDeletionReport,
   ProfileListResponse,
   parseQuickAdd,
+  planningClock,
+  planningDay,
+  processTimeZone,
   QuickAddDraft,
   QuickAddInput,
   RevertTask,
@@ -113,6 +118,7 @@ import {
   labelAttachment,
   withAttachmentStatus,
 } from "./attachments.ts";
+import { makeCatalogCommand, renderCatalog } from "./catalog.ts";
 import {
   credentialProfileName,
   loadCredential,
@@ -132,6 +138,7 @@ import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { decodeInput } from "./input.ts";
 import { verifyMacPassword } from "./macos-password.ts";
+import { stampOperationPosition } from "./operation-position.ts";
 import { resolveProfile } from "./profile-selection.ts";
 import {
   ConfigResponse,
@@ -173,7 +180,7 @@ const terminalSafe = (text: string) => {
 };
 const write = (text: string) =>
   Effect.sync(() => {
-    process.stdout.write(terminalSafe(text));
+    process.stdout.write(terminalSafe(stampOperationPosition(text)));
   });
 const response = <S extends Schema.ConstraintEncoder<unknown>>(
   format: Format,
@@ -234,6 +241,14 @@ const stringFlag = (name: string) => {
   stringFlags.add(`--${name}`);
   return Flag.String(name);
 };
+/**
+ * The CLI reads the database directly, so Today and Overdue take today in
+ * this machine's zone (ADR-0006); todo catalog --time-zone overrides it.
+ */
+const machineClock = (
+  tasks: Parameters<typeof planningClock>[0],
+  now = nowInstant(),
+) => planningClock(tasks, planningDay(now, undefined, processTimeZone()));
 const string = (name: string, fallback = "") =>
   stringFlag(name).pipe(Flag.withDefault(fallback));
 const bool = (name: string) => Flag.Boolean(name).pipe(Flag.withDefault(false));
@@ -308,7 +323,7 @@ const withStore = <A, E, R>(
               role: "cli",
               stage: "command",
             },
-            use(store),
+            collectCommitted(use(store)).pipe(Effect.map(({ value }) => value)),
           );
         })().pipe(
           Effect.catch((error) =>
@@ -856,7 +871,7 @@ const list = Command.make(
                   overdue: input.overdue,
                   inbox: input.inbox,
                 },
-                nowInstant(),
+                machineClock(data.tasks),
               ),
               cfg.format,
               nowInstant(),
@@ -965,7 +980,11 @@ const transfer = (kind: "move" | "copy") =>
               access: "write",
             });
             const data = yield* readTasks(store, request);
-            const matching = filterTasks(data.views, input, nowInstant());
+            const matching = filterTasks(
+              data.views,
+              input,
+              machineClock(data.tasks),
+            );
             const ids = input.ids.length
               ? [...new Set(input.ids)]
               : matching.map((t) => t.id);
@@ -1418,7 +1437,10 @@ const history = Command.make(
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg, "read");
           const task_id = yield* io(() => Schema.decodeUnknownSync(TaskId)(id));
-          const entries = yield* new ClientReads(store).history({
+          const entries = yield* new ClientReads(
+            store,
+            processTimeZone(),
+          ).history({
             ...request,
             task_id,
           });
@@ -1841,7 +1863,13 @@ const reviewCommand = (period: "daily" | "weekly") =>
             yield* selectProfile(store, cfg, "read"),
           );
           yield* write(
-            renderReview(data.views, period, cfg.format, nowInstant()),
+            renderReview(
+              data.views,
+              period,
+              cfg.format,
+              nowInstant(),
+              machineClock(data.tasks),
+            ),
           );
         }),
       );
@@ -1870,7 +1898,13 @@ const exportCommand = Command.make(
             yield* selectProfile(store, cfg, "read"),
           );
           const tasks = yield* Effect.try({
-            try: () => exportScope(data.views, input.scope, nowInstant()),
+            try: () =>
+              exportScope(
+                data.views,
+                input.scope,
+                nowInstant(),
+                machineClock(data.tasks),
+              ),
             catch: (error) => error,
           });
           const text = renderExport(
@@ -2026,6 +2060,42 @@ const config = Command.make("config").pipe(
     ).pipe(withGuide("config set")),
   ]),
   withGuide("config"),
+);
+const catalogCommand = makeCatalogCommand(
+  {
+    optional: (name) => stringFlag(name).pipe(Flag.optional),
+    bool,
+  },
+  (query) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      yield* withStore(cfg, "read", (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg, "read");
+          const reply = yield* new CatalogReads(store, processTimeZone())
+            .read(request, query)
+            .pipe(
+              Effect.mapError((error) =>
+                error._tag === "SearchTooBroad" ||
+                error._tag === "UnknownTimeZone" ||
+                error._tag === "CatalogUsageError"
+                  ? new CommandError(2, error.code, error.message)
+                  : error._tag === "CatalogProfileMissing"
+                    ? new CommandError(3, "not_found", error.message)
+                    : error,
+              ),
+              Effect.catchDefect((error) =>
+                Effect.fail(
+                  new CommandError(1, "runtime_error", String(error)),
+                ),
+              ),
+            );
+          yield* write(
+            yield* io(() => renderCatalog(reply, cfg.format, nowInstant())),
+          );
+        }),
+      );
+    }),
 );
 const importCommand = makeImportCommand((input) =>
   Effect.gen(function* () {
@@ -2285,7 +2355,7 @@ const profiles = Command.make("profile").pipe(
             const credential = yield* io(() => loadCredential(cfg));
             const profiles = yield* input.projects
               ? new Discovery(store).directory(credential)
-              : new ClientReads(store).profiles(credential);
+              : new ClientReads(store, processTimeZone()).profiles(credential);
             yield* write(
               cfg.format === "json"
                 ? encodeResponse(ProfileListResponse, {
@@ -2490,6 +2560,7 @@ const app = root.pipe(
     resetPassphrase,
     whoami,
     importCommand,
+    catalogCommand,
     profiles,
     lookup,
     add,

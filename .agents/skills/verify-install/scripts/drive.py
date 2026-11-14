@@ -74,16 +74,25 @@ with (evidence / 'commands.log').open('w') as log:
         shutil.copytree(root / 'packages/api' / directory, api_scratch / directory)
     shutil.copy2(root / 'packages/api/openapi.json', api_scratch / 'openapi.json')
     (api_scratch / 'node_modules').symlink_to(root / 'packages/api/node_modules', target_is_directory=True)
-    swift_identity = contract_scratch / 'apps/macos/API/Sources/TodoAPI/ContractIdentity.swift'
-    swift_identity.parent.mkdir(parents=True)
-    shutil.copy2(root / 'apps/macos/API/Sources/TodoAPI/ContractIdentity.swift', swift_identity)
     identity_ts = api_scratch / 'src/contract.ts'
     run(['bun', api_scratch / 'scripts/openapi.ts', '--check'])
     identity_ts.write_text(re.sub(r'[a-f0-9]{64}', '0' * 64, identity_ts.read_text()))
     run(['bun', api_scratch / 'scripts/openapi.ts', '--check'], expected=1)
     shutil.copy2(root / 'packages/api/src/contract.ts', identity_ts)
-    swift_identity.write_text(re.sub(r'[a-f0-9]{64}', '0' * 64, swift_identity.read_text()))
-    run(['bun', api_scratch / 'scripts/openapi.ts', '--check'], expected=1)
+    # The Swift identity is checked by swift-contract.ts: it must describe the
+    # Swift sources beside it, and an identity claiming the server's contract
+    # over sources generated from another document is refused.
+    for relative in ['apps/macos/API/Sources/TodoAPI/ContractIdentity.swift', 'apps/macos/API/Sources/TodoAPI/openapi.json', 'apps/macos/API/swift-client-pending.json', 'apps/macos/scripts/normalize-openapi.py']:
+        (contract_scratch / relative).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(root / relative, contract_scratch / relative)
+    swift_identity = contract_scratch / 'apps/macos/API/Sources/TodoAPI/ContractIdentity.swift'
+    run(['bun', api_scratch / 'scripts/swift-contract.ts'])
+    server_contract = re.search(r'[a-f0-9]{64}', identity_ts.read_text())[0]
+    honest = swift_identity.read_text()
+    if server_contract not in honest:
+        swift_identity.write_text(re.sub(r'[a-f0-9]{64}', server_contract, honest))
+        run(['bun', api_scratch / 'scripts/swift-contract.ts'], expected=1)
+        swift_identity.write_text(honest)
     for required in ['Copyright (c) 2026 DanielZamb', 'effect 4.0.5', 'react 19.3.1', 'Copyright (c) 2023 shadcn', 'swift-openapi-runtime', 'JavaScriptCore']:
         assert required in notices, required
     assert '/Users/' not in notices
@@ -206,6 +215,13 @@ for row in baseline['files']:
     assert digest(path) == row['sha256']
     assert path.stat().st_size == row['bytes']
     goldens.append({**row, 'byte_identical_to_base': True})
+# Goldens this repository introduced (no Go base): pinned by hash and size.
+order = root / 'apps/cli/test/golden-order'
+assert sorted('apps/cli/test/golden-order/' + path.name for path in order.iterdir()) == sorted(row['path'] for row in baseline['repository'])
+for row in baseline['repository']:
+    path = root / row['path']
+    assert digest(path) == row['sha256'] and path.stat().st_size == row['bytes'], row['path']
+    goldens.append({**row, 'pinned_by_manifest': True})
 assert not (root / 'legacy/go').exists()
 (evidence / 'golden-move.json').write_text(json.dumps(goldens, indent=2) + '\n')
 (evidence / 'result.json').write_text(json.dumps({

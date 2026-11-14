@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { isAbsolute } from "node:path";
 import { BunRuntime } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
+import { processTimeZone } from "@todo/domain";
 import { Config, Effect, Layer } from "effect";
 import { lifecycle, serviceLabel } from "./lifecycle.ts";
 import { allowedHostsFrom, serverLayer } from "./server.ts";
@@ -77,6 +78,9 @@ Effect.gen(function* () {
       path,
       port,
       allowedHosts: allowedHostsFrom(process.env.TODO_ALLOWED_HOSTS),
+      // Read once at start: a change of the machine's zone takes effect at
+      // the next server start. Clients that send time_zone are unaffected.
+      timeZone: processTimeZone(),
     }),
   );
 }).pipe(BunRuntime.runMain);
