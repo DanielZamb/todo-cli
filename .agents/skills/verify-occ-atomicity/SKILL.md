@@ -417,3 +417,15 @@ The pre-renewal check stopped only at the mapping (attachments.ts); after
 renewal the check passes (fv01-check-q79Wfp) and both real-code breaks fail
 while the restored source passes (sensitivity-KLHclt). Candidate until the
 seat accepts it.
+
+## Seat delta 3 (F9), 2026-11-14
+
+Product 5150042c (seat F9 on top of ec16d45d). No covered file changes; the
+check passes without renewal. The settle reads the current generation again
+(committed-operations.ts:189, after the request, outside any transaction) and
+compares it with the noted one; the range scan of ec16d45d is removed because
+it missed a restore below the request's lowest noted seq. Inside a write
+transaction the generation SELECT still runs only at committed-operations.ts:102
+(owner-only writes with no Profile classification). Both are guarded, write
+nothing, and cannot fail or change a write. Recorded as seatDelta3, with the
+coordinator's acceptance of 66dee60e. The check passes (fv01-check-iKGXt3).
