@@ -454,7 +454,7 @@ struct TaskListView: View {
                 }
         }
         .background(WindowReader(reference: window))
-        .focusedSceneValue(\.sidebarControl, SidebarControl(shown: sidebarShown) { setSidebar(!sidebarShown) })
+        .focusedSceneValue(\.sidebarControl, SidebarControl(shown: sidebarShown, notePersonActed: { model.notePersonActed() }) { setSidebar(!sidebarShown) })
     }
 
     var compactContent: some View {
@@ -1544,6 +1544,8 @@ struct WindowReader: NSViewRepresentable {
 /// View ▸ Hide/Show Sidebar (⌃⌘S) acts through this (candidate 12).
 struct SidebarControl {
     let shown: Bool
+    /// The model's mark for an action the person started (MAC-C1-S1-32): every menu command marks.
+    let notePersonActed: @MainActor () -> Void
     let toggle: @MainActor () -> Void
 }
 private struct SidebarControlKey: FocusedValueKey { typealias Value = SidebarControl }
@@ -1557,7 +1559,7 @@ struct TodoSidebarCommands: Commands {
     @FocusedValue(\.sidebarControl) private var control
     var body: some Commands {
         CommandGroup(replacing: .sidebar) {
-            Button(control?.shown == false ? "Show Sidebar" : "Hide Sidebar") { control?.toggle() }
+            Button(control?.shown == false ? "Show Sidebar" : "Hide Sidebar") { control?.notePersonActed(); control?.toggle() }
                 .keyboardShortcut("s", modifiers: [.control, .command]).disabled(control == nil)
         }
     }
