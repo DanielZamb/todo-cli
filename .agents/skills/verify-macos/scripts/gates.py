@@ -64,7 +64,7 @@ env.update(TODO_SERVER_BINARY=build['server'], TODO_CLI_BINARY=build['cli'], TOD
 # The gate head must be clean: nothing uncommitted is excluded.
 allowed_dirty = set()
 carried = {
-    'sse': 'integ/c9-server 675aab82 verify-sse qualification (docs/decisions/ui-speed/c9-server-integration.md, evidence docs/evidence/ui-speed/integ-wake c9-*): verify-sse 0 (71 focused tests, three wire witnesses, 3,696 compiled compositions, CLI fallback 253-256 ms) and the 37 gated stream scenarios 37/37. This head carries the same apps/server, apps/cli and packages bytes (merge 64fb5f16); update this whenever the server changes'
+    'sse': 'INTEG-STEP2 verify-sse at 333ac41d under the reference profile (docs/decisions/ui-speed/step2-one-installable-line.md, evidence docs/evidence/step2/sse): verify-sse 0 (3,888 compiled compositions, CLI fallback 250-258 ms, resume after 7, 0 rejected or foreign operations streamed). The server is the joined line (recordings, CLI routing slice 1, the Catalog) merged with main in 2c840e46; this head carries the same apps/server, apps/cli and packages bytes; update this whenever the server changes'
 }
 commands = []
 def wait_for_disk(name):
