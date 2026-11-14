@@ -336,6 +336,26 @@
       "file": ".agents/skills/verify-task-search-formal/REPORT.md",
       "value": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
       "reason": "TLA+ tools 1.7.4 jar hash quoted in prose; the live pin is tool.json"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/coverage.json",
+      "value": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+      "reason": "superseded contract id (the first seat round's), quoted in the seatFindings record's scope text; the live contract is the top-level contract"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/production-pin.json",
+      "value": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+      "reason": "superseded contract id (the first seat round's), quoted in the seatFindings record's scope text; the live contract is the top-level contract"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/public-coverage.json",
+      "value": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+      "reason": "superseded contract id (the first seat round's), quoted in the seatFindings record's scope text; the live contract is the top-level contract"
+    },
+    {
+      "file": ".agents/skills/verify-dag-formal/public-pin.json",
+      "value": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+      "reason": "superseded contract id (the first seat round's), quoted in the seatFindings record's scope text; the live contract is the top-level contract"
     }
   ]
 }
