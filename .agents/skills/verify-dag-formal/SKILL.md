@@ -3,6 +3,21 @@ name: verify-dag-formal
 description: Check finite Task dependency safety and immutable production conformance. Use after graph, transaction, replay or public Dependency changes. Read the active immutable product from production-pin.json and public-pin.json; final client/runtime mapping remains pending.
 ---
 
+## Catalog seat findings renewal
+
+Candidate: product beae37bceef38fb46325e14ccb45e4d03ddc5e9f (seat CATALOG-S1's
+two findings fixed on top of 9634a6e0), pinned at
+f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd: byte-identical product plus the
+occ-atomicity and task-search-cache renewals the capture runs. The Catalog's
+unchanged answer also needs a stamp of the visible Profiles and the schema
+version (contract a49a9627); the operation_seq note carries the columns Purge
+keeps and a request reports nothing when a note is unaccounted. All 80 mutant
+anchors match once. The full default exits 0, "CONFORMANCE CHECKPOINT PASS"
+(check-5ADQMW): 36 production controls broken 1 and restored 0
+(conformance-ObD3UB), 53 public mutants exit 1 and restore 0 (public-GmU0Lq),
+clean recheck 19,784 states. No model, invariant or bound changed. Candidate
+for the seats.
+
 ## Catalog contract correction renewal
 
 Candidate: product b110f4a8b286a737b1dc46e9093a66110b3589d5 (the coordinator's
