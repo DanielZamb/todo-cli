@@ -407,6 +407,39 @@ export function flagConsumer(command: string, flag: string) {
       consumer:
         "main.ts DependRequest/RevertTask validation -> DependencyCommands.change or revertTask; on/from supplies blocker_id, expected-version supplies from_version",
     };
+  if (
+    command === "catalog" &&
+    [
+      "--view",
+      "--tasks",
+      "--project-id",
+      "--tag-id",
+      "--ready",
+      "--blocked",
+      "--order",
+      "--status",
+      "--project",
+      "--tag",
+      "--priority",
+      "--due",
+      "--scheduled",
+      "--attachment",
+      "--text",
+      "--prefix",
+      "--energy",
+      "--estimate",
+      "--now",
+      "--time-zone",
+      "--known-generation",
+      "--known-seq",
+      "--known-day",
+    ].includes(flag)
+  )
+    return {
+      kind: "consumed",
+      consumer:
+        "catalog.ts catalogQuery -> CatalogQuery -> CatalogReads.read (view, scope, ids, filters, day, known position)",
+    };
   throw new Error(`No reviewed consumer for ${command} ${flag}`);
 }
 export function auditFlagInventory(

@@ -18,7 +18,7 @@
         "-h",
         "-v"
       ],
-      "help_sha256": "1ce9d5adc0b5e51867ac1e98d0272d338e91890ab4cb46570e8abde9ac0923f3",
+      "help_sha256": "1b830ca2572b730b5961a8f766195c616bb2818839e2ecb8e589a914c10ecb3c",
       "schema_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
     },
     "diagnostics": {
@@ -243,6 +243,50 @@
       ],
       "help_sha256": "f4827d665be209529423ee10cc26a0121d798bc8b42e71629d2ac94d721c9001",
       "schema_sha256": "1ef597877dfd6d7558979166f395555229ac6d3e6836b47b7ea3a98c1e3343e4"
+    },
+    "catalog": {
+      "flags": [
+        "--attachment",
+        "--blocked",
+        "--completions",
+        "--credential-profile",
+        "--db",
+        "--direct",
+        "--due",
+        "--energy",
+        "--estimate",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--known-day",
+        "--known-generation",
+        "--known-seq",
+        "--log-level",
+        "--no-color",
+        "--now",
+        "--order",
+        "--prefix",
+        "--priority",
+        "--profile",
+        "--project",
+        "--project-id",
+        "--ready",
+        "--require-server",
+        "--scheduled",
+        "--status",
+        "--tag",
+        "--tag-id",
+        "--tasks",
+        "--text",
+        "--time-zone",
+        "--version",
+        "--view",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "f890d30d22282b608c681f45b717cc9988de7633d48085bbd47dfa43a11776e5",
+      "schema_sha256": "27ac850d211e0d116300e536c5b186a13693b10e812f60f2c37333d2b7ed05b6"
     },
     "profile": {
       "flags": [

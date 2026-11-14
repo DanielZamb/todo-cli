@@ -33,6 +33,7 @@ import {
   BatchEditRequest,
   batchDepend,
   batchEditTasks,
+  CatalogReads,
   ClientReads,
   CreateTask,
   collectCommitted,
@@ -114,6 +115,7 @@ import {
   labelAttachment,
   withAttachmentStatus,
 } from "./attachments.ts";
+import { makeCatalogCommand, renderCatalog } from "./catalog.ts";
 import {
   credentialProfileName,
   loadCredential,
@@ -2029,6 +2031,36 @@ const config = Command.make("config").pipe(
   ]),
   withGuide("config"),
 );
+const catalogCommand = makeCatalogCommand(
+  {
+    string,
+    optional: (name) => stringFlag(name).pipe(Flag.optional),
+    bool,
+  },
+  (query) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      yield* withStore(cfg, "read", (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg, "read");
+          const reply = yield* new CatalogReads(store)
+            .read(request, query)
+            .pipe(
+              Effect.mapError((error) =>
+                error._tag === "SearchTooBroad" ||
+                error._tag === "UnknownTimeZone" ||
+                error._tag === "CatalogUsageError"
+                  ? new CommandError(2, error.code, error.message)
+                  : error._tag === "CatalogProfileMissing"
+                    ? new CommandError(3, "not_found", error.message)
+                    : error,
+              ),
+            );
+          yield* write(renderCatalog(reply, cfg.format, nowInstant()));
+        }),
+      );
+    }),
+);
 const importCommand = makeImportCommand((input) =>
   Effect.gen(function* () {
     const cfg = yield* root;
@@ -2492,6 +2524,7 @@ const app = root.pipe(
     resetPassphrase,
     whoami,
     importCommand,
+    catalogCommand,
     profiles,
     lookup,
     add,
