@@ -133,7 +133,7 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      "sha256": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -155,7 +155,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
+      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -163,7 +163,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -304,6 +304,30 @@
       }
     ],
     "review": "filterTaskRecordSteps: the Tag predicate calls tagNameMatches (tagKey on the stored name and the query) instead of comparing the lowercased stored name with the trimmed, lowercased query; search, prefix, ordering, yields and finalization are unchanged. readTasks: the inline comparator moves to compareTasks (code units instead of localeCompare; the same sign on all 802,816 pairs of real value shapes). task-read.ts changes only TaskWrite (optional operation_seq); limits.ts only the tag length check through tagKey; TaskRead and inputLimits are byte-identical. Matcher, models, bounds and client sources are unchanged.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindingsReview": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "previous": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467",
+        "to": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      },
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "from": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded",
+        "to": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca",
+        "to": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      }
+    ],
+    "review": "TaskFilters: the project and tag fields refuse a blank value (a schema check, the seat's F4); filterTaskRecords, filterTaskRecordSteps, runTaskRecordSteps and filterTaskRecordsEffect are byte-identical. presentation.ts: TaskViewSchema and taskView are byte-identical; only renderReview takes a PlanningClock (Q9). commands.ts: readTasks and TaskCommands.list are byte-identical; readTasks' order follows compareTasks, now set to undated last inside a priority (Q8); filterTasks and exportScope take a PlanningClock (Q9). The matcher and both clients are byte-identical.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

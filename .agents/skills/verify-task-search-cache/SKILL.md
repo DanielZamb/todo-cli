@@ -285,3 +285,17 @@ only at store/store.ts after its controls, and check-hygiene.mjs only at a
 mapped hash after clean, three controls and restored. After renewal both exit
 0, build-baseline.mjs --uncached exits 0 and the full verify.mjs exits 0
 (verify-FKfeQq). Candidate until the seats accept it.
+
+## Seat findings and owner answers, 2026-11-14
+
+Product de766e3c20e3efbd6967763714fb99e9c1727354. task-filters.ts (TaskFilters
+refuses a blank Project or Tag name), commands.ts (filterTasks and exportScope
+take a PlanningClock), apps/server/src/server.ts (blank name refusal; the
+server's own zone for planning reads) and apps/cli/src/main.ts (todo catalog
+parses flags before the store; the machine's zone for Today and Overdue) move;
+no cache, matcher, runner, admission, accounting or erasure body changes.
+Before renewal check.mjs stopped only at task-filters.ts and check-hygiene.mjs
+only at apps/server/src/server.ts. After renewal check.mjs and
+check-hygiene.mjs exit 0, build-baseline.mjs --uncached exits 0 and the full
+verify.mjs exits 0 (verify-7CjB25). Candidate until the seats accept it;
+`coverage.json` carries the record as seatFindings2.

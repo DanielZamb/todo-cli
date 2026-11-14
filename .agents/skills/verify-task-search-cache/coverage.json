@@ -13,11 +13,11 @@
     },
     {
       "path": "task-filters.ts",
-      "sha256": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      "sha256": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
     },
     {
       "path": "commands.ts",
-      "sha256": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
     },
     {
       "path": "store/store.ts",
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a"
+      "sha256": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce"
+      "sha256": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
     }
   ],
   "integrationReview": {
@@ -333,6 +333,35 @@
       }
     ],
     "review": "store/store.ts: the operation_seq note carries the kept columns; new read member catalogSchemaVersion. store/snapshots.ts: the restore's note carries them too. No cache, matcher, runner, admission, accounting or erasure body changes.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "previous": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467",
+        "to": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca",
+        "to": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a",
+        "to": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce",
+        "to": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
+      }
+    ],
+    "review": "task-filters.ts: the Project and Tag name filters refuse a blank value in the schema (no filter body change). commands.ts: filterTasks and exportScope take today from a PlanningClock (the machine's zone) instead of the UTC text of now. server.ts: rejectUnknownQuery refuses a blank project or tag as invalid_args; ClientReads and CatalogReads take the server's own zone. apps/cli/src/main.ts: todo catalog parses its flags before the store; the CLI's Today and Overdue use the machine's zone. No cache, matcher, runner, admission, accounting or erasure body changes.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

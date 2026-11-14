@@ -267,3 +267,18 @@ check stopped only at the mapping; after renewing those hashes the one command
 passed, with every broken variant reaching its counterexample and the restored
 model exiting 0 (378,091 states). Models and bounds are unchanged. Candidate for
 the seats; `coverage.json` carries the record as catalogReview.
+
+## Seat findings and owner answers, 2026-11-14
+
+Product de766e3c20e3efbd6967763714fb99e9c1727354 (C10-S5, after seat CATALOG-S1
+and the owner's Q8 and Q9). Three covered files move: task-filters.ts
+(TaskFilters' project and tag refuse a blank value; every filter body is
+byte-identical), commands.ts (readTasks and TaskCommands.list are
+byte-identical; readTasks' order follows compareTasks, now undated last inside
+a priority) and presentation.ts (TaskViewSchema and taskView byte-identical;
+only renderReview takes a PlanningClock). The matcher and both clients are
+byte-identical. The pre-renewal check passed every model run and stopped only
+at the mapping; after renewing those hashes the one command passed, with every
+broken variant reaching its counterexample and the restored model exiting 0
+(378,091 states). Models and bounds are unchanged. Candidate for the seats;
+`coverage.json` carries the record as seatFindingsReview.
