@@ -358,3 +358,21 @@ hash changes. All four covered Authentication methods and all other mapped
 files are byte-identical. Auth recording remains outside the finite DAG model.
 No invariant, bound or control changes. Independent seat acceptance is pending;
 the next full default command supplies fresh candidate-specific evidence.
+
+## Seat findings and owner answers candidate, 2026-11-14
+
+Product de766e3c20e3efbd6967763714fb99e9c1727354 (C10-S5 after seat CATALOG-S1's
+six findings and the owner's Q8 and Q9), pinned at
+187d610e45779802bc3038d249f19879a69eb95b (byte-identical product plus the
+task-search formal and cache renewals the capture runs); contract
+cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d. Every listed
+production function is byte-identical. Two mapped public bodies change:
+`TaskFilters` (a blank Project or Tag name is refused) and `rejectUnknownQuery`
+(it answers that refusal as invalid_args); the Swift identity row returns to
+55c6d138, which its sources implement, and apps/macos/API/swift-client-pending.json
+joins the public capture scopes so contract-properties.mjs sees the named pair.
+All 80 mutant anchors match once at the pin. The full default exits 0,
+"CONFORMANCE CHECKPOINT PASS" (check-DUcvUj): 36 production controls behave
+broken 1 and restore 0 (conformance-kBGpMi), 53 public mutants and 53 restores
+(public-7vSYRf), clean recheck 19,784 distinct states. No model, invariant or
+bound change. Candidate for the seats.
