@@ -4,6 +4,7 @@ import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
 import { readRequest } from "./auth/authorized-read.ts";
 import { type AccessRequest, AuthError } from "./auth/model.ts";
+import { compareTasks } from "./catalog-order.ts";
 import { isInboxTask } from "./client-reads.ts";
 import type { DependencyError, Edge, VersionChange } from "./dependencies.ts";
 import { dependencyWarnings } from "./dependency-commands.ts";
@@ -184,24 +185,7 @@ export const readTasks = Effect.fn(function* (
   const checkedFilters = authority.fields.filters;
   const ordered = graph.tasks
     .filter((t) => t.deleted_at === null)
-    .sort(
-      (a, b) =>
-        a.priority.localeCompare(b.priority) ||
-        (a.due_at === null
-          ? ""
-          : a.due_at.kind === "date"
-            ? a.due_at.date
-            : a.due_at.utc
-        ).localeCompare(
-          b.due_at === null
-            ? ""
-            : b.due_at.kind === "date"
-              ? b.due_at.date
-              : b.due_at.utc,
-        ) ||
-        a.created_at.localeCompare(b.created_at) ||
-        a.id.localeCompare(b.id),
-    );
+    .sort(compareTasks);
   const context =
     graph.edges.length ||
     checkedFilters.ready ||
