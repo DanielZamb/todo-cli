@@ -1,13 +1,12 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # CLI writes through the running server
 
 Proposed 2026-11-12, following the owner's decision to route CLI writes through
-the local server when it runs. This record awaits coordinator review and owner
-acceptance. It does not authorize implementation or change accepted records yet.
-ADR-0022 is reserved for another decision.
+the local server when it runs. Corrected on 2026-11-13 after two review rounds,
+and accepted by the owner on 2026-11-13. ADR-0022 is reserved for another decision.
 
 ## Decided, 2026-11-13 corrections
 
