@@ -270,6 +270,10 @@ struct TaskListView: View {
     }
     @State private var selection: String?
     @State private var showingTaskFilters = false
+    /// Whether the sidebar is shown (candidate 12, the owner's report): the app owns this state, so
+    /// the toolbar button and View ▸ Hide/Show Sidebar always act on a known value.
+    @SceneStorage("sidebar-shown") private var sidebarShown = true
+    @State private var window = WindowReference()
     /// The notice holds while the pointer is over it or its button has keyboard focus (UI check, c10).
     @State private var noticeHovered = false
     @FocusState private var noticeButtonFocused: Bool
@@ -384,8 +388,19 @@ struct TaskListView: View {
         .onExitCommand { model.setSearchText("") }
     }
 
+    private var columnVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(get: { sidebarShown ? .all : .detailOnly }, set: { setSidebar($0 != .detailOnly) })
+    }
+    /// Shows or hides the sidebar. Showing it never does nothing: when the sidebar, the list's
+    /// minimum and the inspector do not fit, the window grows if the screen has room, and otherwise
+    /// the inspector closes first (candidate 12).
+    func setSidebar(_ shown: Bool) {
+        if shown && !sidebarShown { SidebarRoom.make(in: window.window, inspectorOpen: model.editor != nil && !model.busy) { closeInspector() } }
+        sidebarShown = shown
+    }
+
     private var expandedContent: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: columnVisibility) {
             sidebar
         } detail: {
             taskContent
@@ -415,25 +430,31 @@ struct TaskListView: View {
                     }
                 }
                 .onExitCommand { if !model.busy { closeInspector() } }
-        }
-        .inspector(isPresented: inspectorPresented) {
-            Group {
-                if model.editor != nil {
-                    EditorView(model: model).inspectorColumnWidth(min: 340, ideal: 380, max: 480)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button {
-                        if model.editor != nil { closeInspector() } else { _ = openSelection() }
-                    } label: {
-                        Label("Inspector", systemImage: "sidebar.right")
+                // Candidate 12: the inspector is attached inside detail:, so it is the split view's
+                // trailing column. Attached to the NavigationSplitView itself, its width was counted
+                // twice (as the detail's trailing inset and as its own column): with a Task open the
+                // window needed 1,088 pt and AppKit pushed the sidebar past the window's left edge.
+                .inspector(isPresented: inspectorPresented) {
+                    Group {
+                        if model.editor != nil {
+                            EditorView(model: model).inspectorColumnWidth(min: 340, ideal: 380, max: 480)
+                        }
                     }
-                    .disabled(model.busy || (model.editor == nil && selectedTask == nil))
-                    .help("Show or hide the task inspector")
+                    .toolbar {
+                        ToolbarItem(placement: .automatic) {
+                            Button {
+                                if model.editor != nil { closeInspector() } else { _ = openSelection() }
+                            } label: {
+                                Label("Inspector", systemImage: "sidebar.right")
+                            }
+                            .disabled(model.busy || (model.editor == nil && selectedTask == nil))
+                            .help("Show or hide the task inspector")
+                        }
+                    }
                 }
-            }
         }
+        .background(WindowReader(reference: window))
+        .focusedSceneValue(\.sidebarControl, SidebarControl(shown: sidebarShown) { setSidebar(!sidebarShown) })
     }
 
     var compactContent: some View {
@@ -601,7 +622,8 @@ struct TaskListView: View {
                         .accessibilityIdentifier("filter-tag").compactBounds("filter-tag")
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }.pickerStyle(.menu).controlSize(.large)
-            HStack {
+            // The buttons wrap to a second row when the list is narrow (candidate 12).
+            FlowLayout {
                 if !compactMode {
                     Button("Add dependency", systemImage: "link") { if let task = selectedTask { Task { await model.openDependencyPicker(task) } } }
                         .disabled(!model.canWrite || selectedTask == nil).accessibilityIdentifier("dependency-add")
@@ -1462,5 +1484,108 @@ struct OutdatedServerView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Todo server is out of date")
         .accessibilityIdentifier("outdated-server")
+    }
+}
+
+/// Candidate 12, the owner's report ("when you resize the window with the sidebar, it gets cut
+/// through half, or after hiding it doesn't come back"). Measured: with a Task open, AppKit
+/// enforced 1,088 pt for the sidebar, the list and the inspector, because the inspector, attached to
+/// the NavigationSplitView itself, was counted twice; below that it laid the columns out past the
+/// window's left edge (up to the whole sidebar). With the inspector inside detail: and the filter
+/// bar's buttons wrapping, the columns fit at the window's 900 pt minimum. Showing the sidebar
+/// still makes room first, measured from what AppKit enforces, in case content is wider.
+@MainActor enum SidebarRoom {
+    /// The sidebar's ideal width plus its inset: what showing it adds to the window's needs.
+    static let sidebarShare: CGFloat = 228
+    enum Outcome: Equatable { case fits, grew(to: CGFloat), closedInspector, noRoom }
+    /// What AppKit enforces now: the widest fitting width among the split view's columns (each
+    /// column's hosting view carries a minimum-width constraint SwiftUI derives from its content).
+    static func enforcedMinimum(in window: NSWindow) -> CGFloat {
+        func splits(_ view: NSView) -> [NSSplitView] { ((view as? NSSplitView).map { [$0] } ?? []) + view.subviews.flatMap(splits) }
+        guard let content = window.contentView else { return 0 }
+        return splits(content).compactMap { $0.delegate as? NSSplitViewController }
+            .flatMap(\.splitViewItems).filter { !$0.isCollapsed }
+            .map { $0.viewController.view.fittingSize.width }.max() ?? 0
+    }
+    /// Makes room for the sidebar before it is shown: when the columns would need more than the
+    /// window has, grows the window by what is missing if the screen has room, and otherwise closes
+    /// the inspector (`closeInspector`).
+    @discardableResult
+    static func make(in window: NSWindow?, inspectorOpen: Bool, closeInspector: () -> Void) -> Outcome {
+        guard let window else { return .fits }
+        let need = enforcedMinimum(in: window) + sidebarShare
+        let width = window.frame.width
+        guard need > width + 0.5 else { return .fits }
+        if let screen = window.screen?.visibleFrame, screen.width >= need {
+            var frame = window.frame
+            frame.size.width = need
+            if frame.maxX > screen.maxX { frame.origin.x = max(screen.minX, screen.maxX - frame.width) }
+            window.setFrame(frame, display: true)
+            return .grew(to: need)
+        }
+        guard inspectorOpen else { return .noRoom }
+        closeInspector()
+        return .closedInspector
+    }
+}
+
+/// The window a view is in, for code that must size it (SidebarRoom).
+@MainActor final class WindowReference { weak var window: NSWindow? }
+struct WindowReader: NSViewRepresentable {
+    let reference: WindowReference
+    func makeNSView(context: Context) -> ReaderView { let view = ReaderView(); view.reference = reference; return view }
+    func updateNSView(_ view: ReaderView, context: Context) { view.reference = reference; reference.window = view.window }
+    final class ReaderView: NSView {
+        var reference: WindowReference?
+        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); reference?.window = window }
+    }
+}
+
+/// View ▸ Hide/Show Sidebar (⌃⌘S) acts through this (candidate 12).
+struct SidebarControl {
+    let shown: Bool
+    let toggle: @MainActor () -> Void
+}
+private struct SidebarControlKey: FocusedValueKey { typealias Value = SidebarControl }
+extension FocusedValues {
+    var sidebarControl: SidebarControl? {
+        get { self[SidebarControlKey.self] }
+        set { self[SidebarControlKey.self] = newValue }
+    }
+}
+struct TodoSidebarCommands: Commands {
+    @FocusedValue(\.sidebarControl) private var control
+    var body: some Commands {
+        CommandGroup(replacing: .sidebar) {
+            Button(control?.shown == false ? "Show Sidebar" : "Hide Sidebar") { control?.toggle() }
+                .keyboardShortcut("s", modifiers: [.control, .command]).disabled(control == nil)
+        }
+    }
+}
+
+/// Lays its children out in rows, wrapping to the next row when one does not fit (the filter bar,
+/// candidate 12), so the list's minimum width is its widest child, not the sum of all of them.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+    var lineSpacing: CGFloat = 6
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(proposal.width ?? .infinity, subviews).size
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for (index, point) in arrange(bounds.width, subviews).points.enumerated() {
+            subviews[index].place(at: CGPoint(x: bounds.minX + point.x, y: bounds.minY + point.y), proposal: .unspecified)
+        }
+    }
+    private func arrange(_ width: CGFloat, _ subviews: Subviews) -> (points: [CGPoint], size: CGSize) {
+        var points: [CGPoint] = [], x: CGFloat = 0, y: CGFloat = 0, line: CGFloat = 0, widest: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0 && x + size.width > width { x = 0; y += line + lineSpacing; line = 0 }
+            points.append(CGPoint(x: x, y: y))
+            x += size.width + spacing
+            line = max(line, size.height)
+            widest = max(widest, x - spacing)
+        }
+        return (points, CGSize(width: width.isFinite ? min(widest, width) : widest, height: y + line))
     }
 }
