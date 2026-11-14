@@ -152,10 +152,23 @@ from about 12:05; at 13:05 the load was 240, from another project's work).
   app's restore retries every 10 ms for up to a second until the full
   layout lifts Compact's width limit, so the check is timed. The Mac sources
   are byte-identical to candidate 10, which passed this gate on 2026-11-13.
-  **Open (Mac side, item 1):** a control at normal load, candidate 10's own
-  client against this head on this machine, decides whether it is the
-  environment or a finding. A pair started at load 240 was stopped and is
-  discarded. The gates after design (state, diagnostics, unsigned, idle,
+  **Item 1, the control (13:20 to 14:05):** at normal load the check does
+  not fail on either side.
+  - Candidate 10's own generated client overlaid on the state package
+    (`STATE_PACKAGE_OVERRIDE_DIR`; the six regenerated files back to
+    1a33e969): `WindowLayoutTests` 2 of 2 pass, load 5 → 50.
+  - This head, in a clean build folder: 2 of 2 pass, load 53 → 7. (A head
+    run in between failed to link: my overlay left test objects compiled
+    against candidate 10's client, which an incremental build reused. I
+    deleted that build folder, which was mine.)
+  - The whole design runner on this head: exit 0, 19 tests, 898 offscreen
+    PNGs, load 6 → 4 (`docs/evidence/step2/design-rerun-2`).
+  - The machine: one display, frame 1710 × 1107 pt, visible frame
+    1710 × 1073, scale 2; the front app T3 Code, no Todo window.
+  So it is neither the regenerated client nor a display change: the test
+  waits a fixed 200 ms, and on 13:01's run and in the cycle (load 19 → 25,
+  with a loaded machine around it) the restore took longer. A pair started
+  at load 240 was stopped and discarded. The gates after design (state, diagnostics, unsigned, idle,
   subscribers, discovery, task-search-formal, dag-public, root, doc-links)
   have not run in this cycle; the cycle runs once more, whole, after the
   merge of main.
