@@ -45,7 +45,11 @@ found by parent id, because `swift test` starts `swiftpm-testing-helper` in a pr
 its own, and stays in the caller's session so a session-wide stop still reaches it. The design
 runner uses the same function. `scripts/verify-runner-cleanup.py` proves it with
 `RunnerCleanupProbeTests.hangsOnPurpose`: after the time limit, and after a stop from outside,
-no process of that run remains.
+no process of that run remains. Every signal names a process by its pid and its start time, and a
+child that is already reaped gets none, so a pid reused by another process is never signalled; the
+script's `pidIdentity` case proves both without a build (`RUNNER_CLEANUP_CASES=pidIdentity`). Not
+covered: a descendant whose parent ended before the freeze (re-parented to launchd), and a SIGKILL
+of the runner itself.
 
 ## Native verification is on HOLD
 

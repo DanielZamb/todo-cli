@@ -162,44 +162,72 @@ def _descendants(root: int) -> list:
     return found
 
 
-def _signal(pids, sig) -> None:
-    for pid in pids:
+def _starts(pids) -> dict:
+    """Each live pid's start time (ps lstart), so a process is told from a later one that reuses
+    its pid (MAC-C11-S1-6). A zombie still has its start time; a pid that is gone is left out."""
+    pids = sorted(set(pids))
+    if not pids:
+        return {}
+    rows = subprocess.run(['/bin/ps', '-o', 'pid=,lstart=', '-p', ','.join(map(str, pids))], capture_output=True, text=True).stdout.splitlines()
+    starts = {}
+    for row in rows:
+        pid, _, start = row.strip().partition(' ')
+        if pid.isdigit():
+            starts[int(pid)] = start.strip()
+    return starts
+
+
+def _signal(known: dict, sig) -> None:
+    """Signals each process in `known` (pid -> start time) that is still that process."""
+    current = _starts(known)
+    for pid, start in known.items():
+        if current.get(pid) != start:
+            continue  # gone, or a later process that reuses the pid
         try:
             os.kill(pid, sig)
         except (ProcessLookupError, PermissionError):
             pass
 
 
-def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
+def _alive(known: dict) -> list:
+    """The processes in `known` that are still running as themselves (not zombies)."""
+    if not known:
+        return []
+    current = _starts(known)
+    rows = subprocess.run(['/bin/ps', '-o', 'pid=,stat=', '-p', ','.join(map(str, sorted(known)))], capture_output=True, text=True).stdout.splitlines()
+    zombies = {int(r.split()[0]) for r in rows if len(r.split()) == 2 and r.split()[1].startswith('Z')}
+    return [pid for pid, start in known.items() if current.get(pid) == start and pid not in zombies]
 
 
 def _stop_tree(process) -> None:
     """Stops the child and everything it started: freezes the whole tree (SIGSTOP until no new
-    process appears), then SIGTERM and SIGCONT, up to 3 s, then SIGKILL for what is left."""
-    frozen = set()
+    process appears), then SIGTERM and SIGCONT, up to 3 s, then SIGKILL for what is left.
+    Every signal names a process by pid and start time (MAC-C11-S1-6). A child already reaped is
+    not touched: its pid, and the processes under it, may belong to someone else by now. Not
+    covered: a descendant whose parent ended before the freeze is re-parented to launchd and is
+    not found, and a SIGKILL of this runner cannot be handled."""
+    if process.poll() is not None:
+        return
+    frozen = {}
     deadline = time.monotonic() + 2
     while time.monotonic() < deadline:
-        current = set([process.pid] + _descendants(process.pid)) - frozen
+        listed = _starts([process.pid] + _descendants(process.pid))
+        current = {pid: start for pid, start in listed.items() if pid not in frozen}
         if not current:
             break
         _signal(current, signal.SIGSTOP)
-        frozen |= current
+        frozen.update(current)
     _signal(frozen, signal.SIGTERM)
     _signal(frozen, signal.SIGCONT)
     deadline = time.monotonic() + 3
+    others = {pid: start for pid, start in frozen.items() if pid != process.pid}
     while time.monotonic() < deadline:
         process.poll()
-        if not any(_alive(pid) for pid in frozen if pid != process.pid) and process.returncode is not None:
+        if not _alive(others) and process.returncode is not None:
             return
         time.sleep(0.05)
-    _signal(frozen, signal.SIGKILL)
+    # Once the child is reaped its pid is left out; every pid is checked against its start time.
+    _signal(frozen if process.returncode is None else others, signal.SIGKILL)
     process.poll()
 
 
