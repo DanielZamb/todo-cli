@@ -5,12 +5,16 @@ Design and rulings: [catalog-contract-design.md](catalog-contract-design.md)
 and the coordinator's answer of 2026-11-13. Phase 2a is domain, server, CLI and
 contract only; neither app changes (2b is Electron, C10-S3 the Mac app).
 
-**Contract id: dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797**
-(after the seat's delta: F7 and F2b; 2a delivered 76f09fa6…, the corrections
-7de9226a…, the first seat round a49a9627…, the second cae74594…).
-Product for every renewal: 5da90607e8c5a19d7007174925c6b6253c0714d3 (2a
+**Contract id: 4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc**
+(after the seat's second delta: F8; 2a delivered 76f09fa6…, the corrections
+7de9226a…, the first seat round a49a9627…, the second cae74594…, the first
+delta dfade560…).
+Product for every renewal: ec16d45d44146e061aa802bf3f9876cb3a5b03fa (2a
 delivered f3039274, the corrections b110f4a8, the first seat round beae37bc,
-the second de766e3c).
+the second de766e3c, the first delta 5da90607).
+
+`operation_seq` became `operation_position` (`{generation, seq}`) in F8; the
+earlier sections keep the name they had then.
 
 ## The line
 
@@ -45,6 +49,10 @@ the second de766e3c).
 | 5da90607 | A golden freezing undated-last (the product) |
 | b79a9dc9 | The coordinator's source review of `OperationStore.record`, recorded |
 | cee500f0, f4080def, ead12256 | Mapping candidates for 5da90607: task-search formal and cache; dag-formal inputs and result |
+| d25b1d67, 106f22fa | Report and pin audit for 5da90607 |
+| 8a646594 | Seat F8: `operation_position {generation, seq}` replaces `operation_seq`; the generation comes from the request's own classification |
+| ec16d45d | The order goldens pinned in golden-baseline.json (the product) |
+| the next commits | The atomic-commit record (statement review, correction), mapping candidates for ec16d45d, this report |
 
 ## What changed for a person to see
 
@@ -52,7 +60,7 @@ Nothing changes in either app yet: both still use the older reads.
 
 - `todo catalog` is new: counts per view, Projects and Tags with counts, one view's Tasks.
 - `todo profile list`, `GET /profiles`, `/projects` and `/tags` list names in one order: `9` before `10`, `a` before `á`, capitals beside lower case. Today `/projects` and `/tags` come in id order and `/profiles` in id order.
-- A writing command's JSON and a write reply carry `operation_seq`.
+- A writing command's JSON and a write reply carry `operation_position` (`{generation, seq}`).
 - `--tag work` now also finds a migrated Tag stored as `" Work"` (D3's one change).
 - A blank Tag name filter (`?tag=`, `?tag=%20`, `todo list --tag " "`, `todo catalog --tag ""`) is refused as `invalid_args`. A Project name, blank or not, is compared exactly (F7).
 - Undated Tasks come last inside a priority (Q8), in `todo list`, export and every read that orders Tasks.
@@ -580,6 +588,139 @@ mapping's seatFindings record as coordinatorSourceReview, and in its SKILL.md
   `filesScanned 488, occurrences 616, unknown 0`. One problem, the base's known
   drift (owed to step 2): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
 
+## Seat delta at 106f22fa (CATALOG-S1): F8, the golden manifest, the generation statement
+
+**F8. A write reply names its generation** (8a646594). The seat's schedule: a
+client holds a Catalog at `{initial, 9}`; a restore happens; before the client
+sees the reload it writes and gets `operation_seq` 5, because the request ran
+wholly in the new generation; by the stated rule (the generation from its last
+Catalog) the client took 5 ≤ 9 as covered and kept the old title.
+
+- Every write reply that carried `operation_seq` now carries
+  `operation_position: {generation, seq}`, the Catalog position's shape, and
+  `operation_seq` is gone (nothing installed used it). The CLI's JSON likewise:
+  the 23 committing commands, their published schemas (flag golden: 23 schema
+  hashes) and the CLI module, now `operation-position.ts`.
+- Present: everything this request committed is at or below `seq` in
+  `generation`. Absent: read to find out. F2b's rule stays: nothing when the
+  generation moved during the request or cannot be told.
+- **The client rule**, once in the contract (the field's description) and once
+  here: compare a write's position with a Catalog position or a stream id only
+  when the generations are equal; when they differ, or the field is absent,
+  read.
+- Tests:
+  - the seat's schedule over HTTP: the write's position names the restore's
+    generation; its seq alone is at or below the old Catalog's (5 ≤ 9, the
+    trap) but the rule says not covered; the later Catalog is in the write's
+    generation, covers it and shows "client write". On 106f22fa the reply has
+    no generation, so the test cannot pass there;
+  - a write and a Catalog in one generation: covered;
+  - the restore's own reply: its position names the generation its body
+    reports (HTTP, domain and the compiled CLI);
+  - after a restore, a request inside one generation reports the new
+    generation;
+  - the compiled CLI: `init`, `add`, `done`, `snapshot restore` and a later
+    `add` carry the right position; `login`, `list` and a dry run carry none;
+    exactly the 23 committing commands publish the field.
+
+**Where the generation comes from, and what each read costs** (the
+coordinator's question).
+
+| Statement | Where it runs | Plan | 5,000 `profile IS NULL` rows | 50,000, no restore | 50,000, a restore far back |
+| --- | --- | --- | --- | --- | --- |
+| The generation read (`generationOf`, committed-operations.ts:129; the same text as auth.ts:97) | inside the write transaction, only on owner-only writes | `SEARCH op_log USING INDEX op_log_profile_seq (profile=?)`, newest first, to the first match | 0.55 ms | 9.7 ms | 9.6 ms |
+| The settle's restore check (committed-operations.ts:187) | after the request, outside any transaction | `SEARCH op_log USING INDEX op_log_profile_seq (profile=? AND seq>?)` | 0.001 ms | 0.001 ms | 0.001 ms |
+| The Profile classification (auth.ts:699, existing) | inside every Profile lease, under the write lock | the same restore lookup as a CTE | 0.57 ms | 9.6 ms | 9.7 ms |
+
+Median of 41 runs after 5 warmups, synthetic History (authentication events and
+refused attempts, a third refused), load 2.4 to 4.6;
+`.scratch/gen-cost/measure.ts` builds it. With no restore the lookup visits
+every `profile IS NULL` row; a restore far back does not help, since the walk
+goes newest first.
+
+- **What 8a646594 does instead of reading.** Every writing request with a
+  Profile already classifies it inside its own write transaction
+  (`credentialCheck` → `classifyProfile`, auth.ts:699), and that row carries
+  the generation. `noteGeneration` (auth.ts:791) stores it in the request's
+  cell, no SQL, and the latest classification before the first note counts.
+  So the note at the first commit reads nothing. The restore notes the
+  generation it starts (store/snapshots.ts:588).
+- **Paths with no such value:** owner-only writes with no Profile
+  classification. These are `setupOwner` (`todo init`), `resetPassphrase`,
+  `issueToken`, `revokeToken` and `signOut` (`todo logout`), each committing
+  AuthChanged. Their first note reads the generation once, inside their
+  transaction (committed-operations.ts:102 → :129), at the cost in the table.
+  Sign-in and expired-credential cleanup run outside any request's cell and
+  note nothing.
+- **The settle** no longer reads the generation. It asks whether a
+  DatabaseRestored other than the request's own committed at or after the
+  request's first noted seq. That is an index range scan over the rows written
+  since the request began, after the request, outside any transaction. A
+  restore whose DatabaseRestored lands below the first note took the seqs of
+  every note (its Snapshot predates them all), so no note stands as committed
+  and nothing is reported. A failed lookup counts as moved. Red without it:
+  the F2b schedule reports 5.
+- **A cost that predates this unit, for the coordinator.** The same restore
+  lookup runs in every Profile classification and every read authority
+  (auth.ts:97, :179, :220). That is about 9.6 ms each at 50,000
+  `profile IS NULL` rows, under the write lock. Bounding it needs an indexed
+  path to the newest restore (a partial index was not chosen by the planner
+  without statistics) or a stored generation. That is a migration, not built
+  here.
+
+**The order goldens in the manifest** (ec16d45d). `golden-baseline.json` gains
+a `repository` list. It pins each golden this repository introduced
+(`apps/cli/test/golden-order/list_json.golden`, `export_default_md.golden`)
+by sha256 and size, beside the five Go goldens pinned to their base blobs. The
+order test checks it before comparing output, and verify-install's drive
+checks it too. Shown red: with the placement flipped to "first" and the JSON
+golden rewritten to match, the bytes agree and the test fails at the manifest.
+
+**The coordinator's source review and the correction** are appended to the
+atomic-commit mapping (seatDelta2: coordinatorStatementReview, noSqlCorrection,
+statementNow with the exact lines).
+
+**The lines to read before the seat does:**
+- committed-operations.ts:102: the only call of the generation read inside a
+  write transaction;
+- committed-operations.ts:129: the read;
+- committed-operations.ts:187: the settle's scan;
+- auth.ts:791: `noteGeneration` after `classifyProfile`;
+- store/snapshots.ts:588: the restore's note with its generation.
+
+**Proof for this round** (product ec16d45d), all under the reference sandbox:
+- Root check exit 0 at 002edb8a: domain 631, server 203, CLI 98, Electron 168
+  (1 skipped).
+- Controls made red, then restored:
+  - the settle without the restore check (F2b's schedule reports 5);
+  - the order golden with the placement flipped and the golden rewritten to
+    match (red at the manifest).
+- Verify skills, each exit 0: verify-server-api (its drive now checks the
+  position's generation and the covered rule) and its reads, verify-filters,
+  verify-sse, verify-cli, verify-profiles, verify-task-search,
+  verify-cli-routing (after its isolation controls), and verify-install.
+  - verify-install passed as install-12, which also checks the manifest's
+    repository goldens.
+  - install-10 and -11 timed out at the swift-slot step while another unit's
+    Swift work held the shared lock. Nothing of theirs was touched.
+- Mappings, each appended as a candidate:
+  - verify-occ-atomicity: the pre-renewal check stopped only at
+    attachments.ts (AttachManyReport); renewed, the check passes
+    (fv01-check-q79Wfp) and sensitivity passes (sensitivity-KLHclt). The
+    statement review and the correction are recorded.
+  - verify-task-search-formal: stopped only at task-read.ts (TaskWrite);
+    renewed, the one command passes.
+  - verify-task-search-cache: stopped only at store/snapshots.ts and
+    server.ts; renewed, check and hygiene pass, baseline `--uncached` passes
+    and the full verify.mjs passes (verify-IZ25yY).
+  - verify-dag-formal: pinned at 7131f133; 80 of 80 anchors; full default exit
+    0, "CONFORMANCE CHECKPOINT PASS" (check-gVKQsx); 36 production controls
+    (conformance-myvggM) and 53 public mutants with 53 restores
+    (public-0DGg5w); clean recheck 19,784 states.
+  - verify-discovery-formal: TypeScript steps exit 0 (electron-fTEZpE); the
+    Swift step and renewal belong to the next unit.
+- PIN_AUDIT_F8
+
 ## What the clients inherit
 
 - **The zone.** Electron sends its zone with each planning and Catalog read
@@ -589,9 +730,14 @@ mapping's seatFindings record as coordinatorSourceReview, and in its SKILL.md
 - **Undated last** inside a priority, through the Catalog's group order.
 - **Blank name filters.** A blank Tag name filter is refused; neither app sends
   one. A Project name, blank or not, is compared exactly (F7).
-- **`operation_seq`** on every write reply, including the routed command's.
-  Absent after a concurrent Purge or restore; when present it belongs to the
-  generation the client already holds (no reply names one).
+- **`operation_position {generation, seq}`** on every write reply, including
+  the routed command's, and on the 23 committing CLI commands' JSON. **A client
+  compares generations first**: a write is covered by a Catalog position (or a
+  stream id) only when the generations are equal and its seq is at or below the
+  position's; when they differ, or the field is absent, the client reads. The
+  Swift regeneration (next unit) gets the field as an optional struct on every
+  write reply and must apply that rule where it decides whether to refetch;
+  Electron (2b) the same, through its HttpApi client and IPC `ClientTask`.
 - **The `due:` label** in CLI Markdown stays the UTC date for instants until
   the owner decides.
 - **The Swift client** must be regenerated with `generate-api.sh` (then
