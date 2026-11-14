@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
+  "confirmedCommit": "f30392745e53c524dffa9915814ec1ec208baea7",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -63,7 +63,7 @@
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
+      "sha256": "181a97202acc0de468b736889f2de1966f9f0fa0c1d317d180d915d5fcfece32",
       "functions": [
         "Attachment",
         "validAttachmentLocation"
@@ -108,7 +108,7 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "Candidate for the seat: merge ae9c5be3 of feat/diag-core and integ/server. Every listed store and projection function is byte-identical to one parent's certified body while the other parent left it at base: the constructor (Init) is integ/server's 4d709efa body; transaction, record, appendSync, historySync and readTasks are diagnosticsReview's 3ef9e674 bodies; the rest equal base. Only the whole-file store.ts hash moves. The pre-renewal check passed every behavioral and model stage and stopped only on that hash (fv01-check-q7Eq1X); both real-code breaks then failed and the restored source passed (sensitivity-iQpwza); the renewed check passed (fv01-check-y8YbXS). No model, invariant, fixture or bound changed.",
+  "review": "Candidate for the seat: C10-S5 catalog contract product f30392745e53c524dffa9915814ec1ec208baea7. Two covered functions change, both pending the coordinator's source review. OperationStore.record notes a committed row's seq, actor and occurred_at in the request's fiber-local cell after the unchanged INSERT; it issues no SQL, opens no transaction and changes no ordering. OperationStore.constructor marks a preview (forked) store's connection so its notes are ignored; the constructor's statement trace and seed are identical to 9a372e86 for a normal store. attachments.ts changes only AttachManyReport (an optional operation_seq field); Attachment and validAttachmentLocation are byte-identical. Every other covered declaration is byte-identical. Models, invariants, bounds and crash insertion points are unchanged.",
   "integrationReview": {
     "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "parents": [
@@ -136,5 +136,27 @@
     ],
     "previousStoreSha256": "f7f7aac127d3e308335fc43aec4d8490b1e795e6b175d54f0e3b5a33752c6e4e",
     "evidence": "docs/decisions/ui-speed/diag-recordings-report.md"
+  },
+  "catalogReview": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "previous": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "packages/domain/src/attachments.ts",
+        "from": "7094e663ad7a34dc38de76529a471c6f1b1d9c52c2f29883666b408603e1962e",
+        "to": "181a97202acc0de468b736889f2de1966f9f0fa0c1d317d180d915d5fcfece32"
+      }
+    ],
+    "changedFunctions": [
+      "OperationStore.record",
+      "OperationStore.constructor"
+    ],
+    "coordinatorSourceReview": "pending",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

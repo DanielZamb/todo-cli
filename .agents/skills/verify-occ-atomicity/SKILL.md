@@ -339,3 +339,18 @@ are the reviewed Diagnostics bodies. Only the whole-file store.ts hash moves.
 The pre-renewal check stopped only on that hash, both real-code breaks failed,
 the restored source passed and the renewed check passed. The renewal is a
 candidate (`reviewedCandidate: false`) until the seat re-checks it.
+
+## Catalog contract candidate, 2026-11-13
+
+Product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5, feat/catalog-contract).
+Two covered functions change, and both wait for the coordinator's source review:
+`OperationStore.record` notes a committed row's seq, actor and occurred_at in the
+request's fiber-local cell after the unchanged INSERT (no SQL, no transaction,
+no reordering), and `OperationStore.constructor` marks a preview store's
+connection so its notes are ignored. The constructor statement trace and seed
+equal 9a372e86's for a normal store (10 statements, 2 boundaries). attachments.ts
+changes only AttachManyReport. The pre-renewal check stopped only at the source
+mapping (store.ts and attachments.ts); the renewed check passed
+(fv01-check-ZpFAlV); both real-code breaks failed and the restored source passed
+(sensitivity-DJfLoV). Candidate (`reviewedCandidate: false`) until the seat and
+the source review accept it.
