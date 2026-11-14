@@ -130,7 +130,7 @@ struct DependencyPickerView: View {
     /// A row the arrow keys are moving to: scrolled into view (and so built) before it takes focus.
     @State private var scrollTarget: String?
     /// Every row has this height (UI check: an honest scroll bar, no jumps while scrolling).
-    static let rowHeight: CGFloat = 46
+    static let rowHeight: CGFloat = 56
     var body: some View {
         if let picker = model.dependencies.picker {
             VStack(alignment: .leading, spacing: 10) {
@@ -170,10 +170,15 @@ struct DependencyPickerView: View {
                     // row reads only its own entries of the picker's row index.
                     List {
                         ForEach(picker.rowIDs, id: \.self) { id in
-                            if let task = picker.tasksByID[id] { row(task, picker: picker).id(id) }
+                            if let task = picker.tasksByID[id] {
+                                // The Task row draws its own divider, as before the list; the list
+                                // adds no inset or separator of its own.
+                                row(task, picker: picker).id(id)
+                                    .listRowInsets(EdgeInsets()).listRowSeparator(.hidden).listRowBackground(Color.clear)
+                            }
                         }
                     }
-                    .listStyle(.plain)
+                    .listStyle(.plain).scrollContentBackground(.hidden).contentMargins(.horizontal, 0, for: .scrollContent)
                     .environment(\.defaultMinListRowHeight, Self.rowHeight)
                     .overlay { if !picker.loading && picker.rowIDs.isEmpty { Text("No matching Tasks").foregroundStyle(.secondary) } }
                     .onChange(of: scrollTarget) { _, target in
