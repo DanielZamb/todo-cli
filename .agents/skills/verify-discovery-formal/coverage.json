@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "718b016859f866ab37394ce191736f2a10b242db",
+  "productionSyncCommit": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f",
+      "sha256": "0507aa473d5f57d10863cf274d8c8a4b64895c2e4ee2d61c0cb1780d86943316",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1",
+      "sha256": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
+  "previousProductionSyncCommit": "718b016859f866ab37394ce191736f2a10b242db",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -636,6 +636,23 @@
         }
       ],
       "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
+      "controls": "check-swift passed on 664c12a7: docs/evidence/discovery-formal/swift-wCss6Q",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f",
+          "to": "0507aa473d5f57d10863cf274d8c8a4b64895c2e4ee2d61c0cb1780d86943316"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1",
+          "to": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4"
+        }
+      ],
+      "review": "Candidate 11 (6cc45ab9 to 664c12a7) changes two files mapped here. TodoModel.swift: the Profile-return code (ProfileViewState, ForcedProfileLeave and the extension that records, resolves and offers a forced return) moves to ProfileReturn.swift, 27 declarations byte-identical at the parent and the head (declaration-identity.py); announce, scheduleSearch and failure lose `private` (access only); projects and tags gain didSets that build name dictionaries (projectNameByID, tagNameByID) and a tagNames(of:) helper for the Dependency picker's rows. AppViews.swift: the Dependency picker's sheet is presented through DependencyPickerSheet instead of an inline .sheet. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
