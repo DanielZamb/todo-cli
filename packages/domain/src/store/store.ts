@@ -700,6 +700,7 @@ export class OperationStore {
     input: Pick<Append, "actor" | "profile">,
     entry: Omit<OpLogEntry, "seq" | "actor" | "profile">,
   ): OpLogEntry {
+    const event = json(entry.event);
     const result = diagnosticSync(
       "database",
       () =>
@@ -711,7 +712,7 @@ export class OperationStore {
             input.actor,
             input.profile,
             entry.event.entity_version,
-            json(entry.event),
+            event,
             entry.from_version,
             entry.to_version,
             entry.outcome,
@@ -720,11 +721,7 @@ export class OperationStore {
       { statement: "store.write" },
     );
     if (entry.outcome === "committed")
-      noteCommitted(this.db, {
-        seq: Number(result.lastInsertRowid),
-        actor: input.actor,
-        occurred_at: entry.event.occurred_at,
-      });
+      noteCommitted(this.db, { seq: Number(result.lastInsertRowid), event });
     return Schema.decodeUnknownSync(OpLogEntry)({
       ...entry,
       seq: Number(result.lastInsertRowid),

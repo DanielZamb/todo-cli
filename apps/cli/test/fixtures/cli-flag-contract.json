@@ -132,7 +132,7 @@
         "-v"
       ],
       "help_sha256": "aa5e5c6781f6dbd94857a8772a0580154e3296211d2abd508f84057c6e144cbf",
-      "schema_sha256": "0cbd6e4d97b602b8418bd6a8b188d59ed0a2d969a7ba8614dbce1831794590c4"
+      "schema_sha256": "e9d5a26b032324d7ff3d5a15c1d25b67d193076e6413d7c5238569056d95b6b4"
     },
     "login": {
       "flags": [
@@ -176,7 +176,7 @@
         "-v"
       ],
       "help_sha256": "e500d9da5e776cafc9377837fdf201343123251c91729d88d86f117efdc99a96",
-      "schema_sha256": "0cbd6e4d97b602b8418bd6a8b188d59ed0a2d969a7ba8614dbce1831794590c4"
+      "schema_sha256": "e9d5a26b032324d7ff3d5a15c1d25b67d193076e6413d7c5238569056d95b6b4"
     },
     "reset-passphrase": {
       "flags": [
@@ -198,7 +198,7 @@
         "-v"
       ],
       "help_sha256": "0c8212b2bb62024c403882a0928d5902fcf8e88e29de68ddbecbdc548461bec9",
-      "schema_sha256": "d3f9b9df2d9c485f5b53e0e59406758e1b5ccb190ee661e5c63c514ec4b11565"
+      "schema_sha256": "c77b331bd2a93623ad4d116ab60292a19bf88b7fa695628262749528fade9aa6"
     },
     "whoami": {
       "flags": [
@@ -242,7 +242,7 @@
         "-v"
       ],
       "help_sha256": "f4827d665be209529423ee10cc26a0121d798bc8b42e71629d2ac94d721c9001",
-      "schema_sha256": "1ef597877dfd6d7558979166f395555229ac6d3e6836b47b7ea3a98c1e3343e4"
+      "schema_sha256": "95faaaa6c799b1487c41a965bba72c84c93f49a9ce8d3a7c75346fce4ed0560f"
     },
     "catalog": {
       "flags": [
@@ -366,7 +366,7 @@
         "-v"
       ],
       "help_sha256": "317e5193cc1a318dcbfe98e264f0e779fd1172d78cc49137c32e5791866d9b35",
-      "schema_sha256": "818d87f8a4181c7eb3093a41a90429e9eea5858c0d4a9492d27646eaf7d69fa2"
+      "schema_sha256": "c339d36874ab432dd0d6ed95b09421444fcd3146acec8044bd2660f525127768"
     },
     "parse": {
       "flags": [
@@ -468,7 +468,7 @@
         "-v"
       ],
       "help_sha256": "27b6d2d7a4bacdccda13fa1bdadb6f67388d8af49fde6d21d1ac110df702177b",
-      "schema_sha256": "5c3a05198d7424eaf2d406383a50a67419a9181d65814fd7abe785aade96e87e"
+      "schema_sha256": "78a7a21dbd23b3482c3b843f1d7294426837e4664103cc78c085a8daf2780911"
     },
     "attach-many": {
       "flags": [
@@ -490,7 +490,7 @@
         "-v"
       ],
       "help_sha256": "2213dceb4c33748640e43cfcbb5158d0fdeb54816667e758f1bf02714a1e0217",
-      "schema_sha256": "1dc3aa3208aa957f4e4676f9c9a2d3c1560cb49e0d3777520f88d47213b3e0d5"
+      "schema_sha256": "507becd86624b8af22d54bb1d877a71b2988cf2f1d315972aeda7f0998f3318c"
     },
     "attach": {
       "flags": [
@@ -513,7 +513,7 @@
         "-v"
       ],
       "help_sha256": "000118764ea529e7f8ee88fbaa2e3764f044515c76fe339b96951db86fe63cbd",
-      "schema_sha256": "9aac1e3dfa407013c6475729dd282ac4ace6468c4fc963434a0f2f2774652665"
+      "schema_sha256": "ef13d7cf147c6ff40d2ac377da72a86e28b6d37bfc4528baf43d5ae37921eeb7"
     },
     "detach": {
       "flags": [
@@ -536,7 +536,7 @@
         "-v"
       ],
       "help_sha256": "6be76b3435f6d80f33d47790020c2d455c1c4812db2e8907331b5b629c8df01b",
-      "schema_sha256": "9aac1e3dfa407013c6475729dd282ac4ace6468c4fc963434a0f2f2774652665"
+      "schema_sha256": "ef13d7cf147c6ff40d2ac377da72a86e28b6d37bfc4528baf43d5ae37921eeb7"
     },
     "label-attachment": {
       "flags": [
@@ -559,7 +559,7 @@
         "-v"
       ],
       "help_sha256": "d4e65e457296c250161962ce59499e3e6b7399b6b0fce09b16a066c677722902",
-      "schema_sha256": "9aac1e3dfa407013c6475729dd282ac4ace6468c4fc963434a0f2f2774652665"
+      "schema_sha256": "ef13d7cf147c6ff40d2ac377da72a86e28b6d37bfc4528baf43d5ae37921eeb7"
     },
     "move": {
       "flags": [
@@ -590,7 +590,7 @@
         "-v"
       ],
       "help_sha256": "51fe991b282ad2b2cc1f7a305d746a437852f2acb5880f9939daca879af40f62",
-      "schema_sha256": "4907b628d5cae3ab91bffdf64177099975c36abe0f69b586e8da17b64ab208a1"
+      "schema_sha256": "94fa5384b1ec7a6d196ae63d170dac28bb2aa53f6f621370467c9139fc431afd"
     },
     "copy": {
       "flags": [
@@ -621,7 +621,7 @@
         "-v"
       ],
       "help_sha256": "200924e123f6d2306a54225692c01e84403bb900242dbfd9d3ff432248dabc53",
-      "schema_sha256": "4907b628d5cae3ab91bffdf64177099975c36abe0f69b586e8da17b64ab208a1"
+      "schema_sha256": "94fa5384b1ec7a6d196ae63d170dac28bb2aa53f6f621370467c9139fc431afd"
     },
     "history": {
       "flags": [
@@ -665,7 +665,7 @@
         "-v"
       ],
       "help_sha256": "7c1cfffaffb58368ef4cfd71299c2bbe80c116b6f2403c8567c5c1a381f4d2ea",
-      "schema_sha256": "71adeb47029c3cd1a1bac4ca9ed9287930f0ad712b49828c12f93cd9b8e9c1b8"
+      "schema_sha256": "88dff1f0d8e0759d8d32044d5f829f8f3e3a18e0c701691e88c8ac69d4ecf3ac"
     },
     "undepend": {
       "flags": [
@@ -688,7 +688,7 @@
         "-v"
       ],
       "help_sha256": "d477c074375491611a86ecf451f42a683953c1e13d1d29917fbfdc5c619318d2",
-      "schema_sha256": "71adeb47029c3cd1a1bac4ca9ed9287930f0ad712b49828c12f93cd9b8e9c1b8"
+      "schema_sha256": "88dff1f0d8e0759d8d32044d5f829f8f3e3a18e0c701691e88c8ac69d4ecf3ac"
     },
     "graph": {
       "flags": [
@@ -732,7 +732,7 @@
         "-v"
       ],
       "help_sha256": "f5c35e9ef225a6795fcae63e4dbb2b636fab5782c9deb604371e0222f964950c",
-      "schema_sha256": "37e7c9a69be94cc8b69873681b2c7175c9b16c0ae6ce1e4e6c863cebdf87f4bc"
+      "schema_sha256": "4da13b26d81fe68a7644d6db34002b80c3f7dfa4e4fe786770838a4ff72765fe"
     },
     "revert": {
       "flags": [
@@ -754,7 +754,7 @@
         "-v"
       ],
       "help_sha256": "a19855130214a7cccbe9c4d96400751e62832980b4db5c21b121908a17ff093d",
-      "schema_sha256": "818d87f8a4181c7eb3093a41a90429e9eea5858c0d4a9492d27646eaf7d69fa2"
+      "schema_sha256": "c339d36874ab432dd0d6ed95b09421444fcd3146acec8044bd2660f525127768"
     },
     "edit": {
       "flags": [
@@ -788,7 +788,7 @@
         "-v"
       ],
       "help_sha256": "e19c1369ef0d4a778d74b4a76d783199e7ec427271c1a95db32740ede7e50615",
-      "schema_sha256": "818d87f8a4181c7eb3093a41a90429e9eea5858c0d4a9492d27646eaf7d69fa2"
+      "schema_sha256": "c339d36874ab432dd0d6ed95b09421444fcd3146acec8044bd2660f525127768"
     },
     "done": {
       "flags": [
@@ -810,7 +810,7 @@
         "-v"
       ],
       "help_sha256": "677b50b0c2b3af60a2b9243ba4c0792cf40367e4cdb366039a7b3276bf2a54d9",
-      "schema_sha256": "818d87f8a4181c7eb3093a41a90429e9eea5858c0d4a9492d27646eaf7d69fa2"
+      "schema_sha256": "c339d36874ab432dd0d6ed95b09421444fcd3146acec8044bd2660f525127768"
     },
     "cancel": {
       "flags": [
@@ -832,7 +832,7 @@
         "-v"
       ],
       "help_sha256": "35349714bcab75f97a0481067b0723d75b0f703e9a2e31bbcddf84c889695d27",
-      "schema_sha256": "818d87f8a4181c7eb3093a41a90429e9eea5858c0d4a9492d27646eaf7d69fa2"
+      "schema_sha256": "c339d36874ab432dd0d6ed95b09421444fcd3146acec8044bd2660f525127768"
     },
     "reopen": {
       "flags": [
@@ -854,7 +854,7 @@
         "-v"
       ],
       "help_sha256": "135aab9ebf42537c0844644b6bad3af5d35ee8b6737d18562c3bac05fa80bde9",
-      "schema_sha256": "818d87f8a4181c7eb3093a41a90429e9eea5858c0d4a9492d27646eaf7d69fa2"
+      "schema_sha256": "c339d36874ab432dd0d6ed95b09421444fcd3146acec8044bd2660f525127768"
     },
     "rm": {
       "flags": [
@@ -880,7 +880,7 @@
         "-v"
       ],
       "help_sha256": "d504a7fc727d1e7ef74350d8c9efbaec8092ccc11fae7bcef8742100a5dc5820",
-      "schema_sha256": "c8f28073b42fe40375359e6af0ed99e4831ea439435152d771c9e835be09c284"
+      "schema_sha256": "b608a5a20adddcbc9e11df04ba97707428f60090624d29ba9b17c33b926d0ecb"
     },
     "review": {
       "flags": [
@@ -1197,7 +1197,7 @@
         "-v"
       ],
       "help_sha256": "00e0aa4f03546fcb9d964b2cc26e97b1132dc2048c4a4dd94f858e55e1968276",
-      "schema_sha256": "80abb081d3d689e3856887b14f3b192099c90f4b42f57bf9a928af9356dd2c5f"
+      "schema_sha256": "7f894bd42a2c1e8895e6a0dbabc184ce7fd5b74791c13da427923074451e4b01"
     },
     "snapshot prune": {
       "flags": [
@@ -1264,7 +1264,7 @@
         "-v"
       ],
       "help_sha256": "5bc319923ebdb90b88806d94d19404d051bf020ee52044ec95914e2052991423",
-      "schema_sha256": "a286d0e21a48a34e94f71f06e4f124b50986f459af2a307e990c8aebe1aaf033"
+      "schema_sha256": "ba153df7fe9bbb338994b80c281260e15fc958ad920c84581e0d43242f4e64a1"
     },
     "review daily": {
       "flags": [

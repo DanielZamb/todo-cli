@@ -579,15 +579,15 @@ export class Snapshots {
             generation,
             snapshot_id: id,
           });
+          const text = JSON.stringify(event);
           const restored = this.db
             .query(
               "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES ('snapshot-restore',NULL,1,?,NULL,NULL,'committed',NULL)",
             )
-            .run(JSON.stringify(event));
+            .run(text);
           noteCommitted(this.db, {
             seq: Number(restored.lastInsertRowid),
-            actor: "snapshot-restore",
-            occurred_at: event.occurred_at,
+            event: text,
           });
           for (const trigger of triggers) this.db.exec(trigger.sql);
           if (this.db.query("PRAGMA foreign_key_check").all().length)

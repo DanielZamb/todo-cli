@@ -2,9 +2,17 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
-import { collectCommitted, Profile, type TaskId } from "@todo/domain";
-import { openStore, TaskCommands } from "@todo/domain/store";
-import { Effect, Schema } from "effect";
+import {
+  CommittedOperationsCell,
+  collectCommitted,
+  noteCommitted,
+  Profile,
+  type TaskId,
+} from "@todo/domain";
+import { openStore, StoreError, TaskCommands } from "@todo/domain/store";
+import { Effect, Fiber, Schema } from "effect";
+import { TestClock } from "effect/testing";
+import { created, task, time } from "./store-fixtures.ts";
 
 const work = Schema.decodeUnknownSync(Profile)({
   id: "work",
@@ -116,5 +124,132 @@ it.effect("reports the highest seq a request committed, per request", () =>
         (store) => Effect.orDie(store.close()),
       ),
     (directory) => Effect.sync(() => rmSync(directory, { recursive: true })),
+  ),
+);
+
+type Row = { seq: number; actor: string; event: string; outcome: string };
+const scratchStore = <A, E>(
+  body: (
+    store: Effect.Success<ReturnType<typeof openStore>>,
+    rows: () => Row[],
+  ) => Effect.Effect<A, E>,
+) =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => mkdtempSync(join(tmpdir(), "todo-committed-"))),
+    (directory) =>
+      Effect.acquireUseRelease(
+        openStore({ path: join(directory, "scratch.db") }),
+        (store) =>
+          Effect.gen(function* () {
+            yield* store.putProfile(work);
+            yield* store.auth.setupOwner("committed scratch");
+            const db: { query: (sql: string) => { all: () => unknown[] } } =
+              Reflect.get(store, "db");
+            return yield* body(
+              store,
+              () =>
+                db
+                  .query(
+                    "SELECT seq,actor,event,outcome FROM op_log ORDER BY seq",
+                  )
+                  .all() as Row[],
+            );
+          }),
+        (store) => Effect.orDie(store.close()),
+      ),
+    (directory) => Effect.sync(() => rmSync(directory, { recursive: true })),
+  );
+
+it.effect("a failing collector never costs a commit", () =>
+  scratchStore((store, rows) =>
+    Effect.gen(function* () {
+      const { credential } = yield* store.auth.signIn("committed scratch");
+      const request = { credential, profile: work.id };
+      // A cell whose push throws: the note fails inside the write's transaction.
+      const broken = { noted: Object.freeze([]) as never[] };
+      const result = yield* new TaskCommands(store)
+        .create(request, { title: "Still committed", source: "agent" } as never)
+        .pipe(Effect.provideService(CommittedOperationsCell, broken));
+      expect(result.outcome).toBe("committed");
+      const last = rows().at(-1);
+      expect([last?.outcome, JSON.parse(last?.event ?? "{}").kind]).toEqual([
+        "committed",
+        "TaskCreated",
+      ]);
+    }),
+  ),
+);
+
+it.effect(
+  "a rolled-back insert never claims the operation that takes its seq",
+  () =>
+    scratchStore((store, rows) =>
+      Effect.gen(function* () {
+        yield* TestClock.setTime(Date.parse(time));
+        const { credential } = yield* store.auth.signIn("committed scratch");
+        const request = { credential, profile: work.id };
+        let rolledBackSeq = 0;
+        const rollBack = store.auth.mutate(request, (identity) =>
+          Effect.gen(function* () {
+            const entry = yield* store.append({
+              ...identity,
+              event: created as never,
+            });
+            rolledBackSeq = entry.seq;
+            return yield* Effect.fail(new StoreError(new Error("rolled back")));
+          }),
+        );
+        // Request B: its own fiber, no collector of A's, the same actor at the
+        // same fixed time, another Task.
+        const commitOther = store.auth
+          .mutate(request, (identity) =>
+            store.append({
+              ...identity,
+              event: {
+                ...created,
+                task: { ...task, id: "task-2", title: "Another Task" },
+              } as never,
+            }),
+          )
+          .pipe(Effect.provideService(CommittedOperationsCell, undefined));
+        // Request A: its append is rolled back, then B takes that seq while A
+        // is still running, and A itself succeeds.
+        const first = yield* collectCommitted(
+          Effect.gen(function* () {
+            yield* Effect.exit(rollBack);
+            yield* Fiber.join(yield* Effect.forkChild(commitOther));
+          }),
+        );
+        const taken = rows().find((row) => row.seq === rolledBackSeq);
+        expect(rolledBackSeq).toBeGreaterThan(0);
+        expect(taken?.outcome).toBe("committed");
+        expect(JSON.parse(taken?.event ?? "{}").task.id).toBe("task-2");
+        expect(JSON.parse(taken?.event ?? "{}").occurred_at).toBe(time);
+        // A committed nothing and reports nothing.
+        expect(first.seq).toBe(null);
+      }),
+    ),
+);
+
+it.effect("a note made outside the request's fiber is dropped", () =>
+  scratchStore((store, rows) =>
+    Effect.gen(function* () {
+      const db = Reflect.get(store, "db");
+      const row = rows()[0] as Row;
+      const inside = yield* collectCommitted(
+        Effect.sync(() =>
+          noteCommitted(db, { seq: row.seq, event: row.event }),
+        ),
+      );
+      expect(inside.seq).toBe(row.seq);
+      const outside = yield* collectCommitted(
+        Effect.promise(() =>
+          Promise.resolve().then(() =>
+            noteCommitted(db, { seq: row.seq, event: row.event }),
+          ),
+        ),
+      );
+      expect(outside.seq).toBe(null);
+    }),
   ),
 );

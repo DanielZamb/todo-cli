@@ -568,6 +568,7 @@ export class Authentication<Read> {
           entity_version: 1,
           occurred_at: instant(input.time),
         };
+    const text = JSON.stringify(event);
     const inserted = this.db
       .query(
         "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,1,?,NULL,NULL,?,?)",
@@ -575,15 +576,14 @@ export class Authentication<Read> {
       .run(
         input.actor,
         input.profile ?? null,
-        JSON.stringify(event),
+        text,
         input.error ? "rejected" : "committed",
         input.error ? "auth" : null,
       );
     if (!input.error)
       noteCommitted(this.db, {
         seq: Number(inserted.lastInsertRowid),
-        actor: input.actor,
-        occurred_at: event.occurred_at,
+        event: text,
       });
   }
 
