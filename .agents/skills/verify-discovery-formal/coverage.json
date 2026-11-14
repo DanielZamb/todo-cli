@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
+  "productionSyncCommit": "718b016859f866ab37394ce191736f2a10b242db",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d",
+      "sha256": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -225,7 +225,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "1f281291641fcef42301443f09d5f0f2651153ed",
+  "previousProductionSyncCommit": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -624,6 +624,18 @@
         "verdict": "Renewal ACCEPTED",
         "report": "reports/mac-c1-seat1/candidate-10-review.md"
       }
+    },
+    {
+      "product": "718b016859f866ab37394ce191736f2a10b242db",
+      "controls": "check-swift passed on 718b0168: docs/evidence/discovery-formal/swift-ocyq2C",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d",
+          "to": "c8780112a286db486bfdc78f82c18a6e821b44228f06ff2c84d57959ea52e27f"
+        }
+      ],
+      "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
