@@ -314,6 +314,71 @@ it.effect("a redacted operation never lets a request report a lower seq", () =>
   ),
 );
 
+it.effect(
+  "the seat's schedule: a batch's second edit is purged before it settles, so nothing is reported",
+  () =>
+    scratchStore((store, rows) =>
+      Effect.gen(function* () {
+        const { credential } = yield* store.auth.signIn("committed scratch");
+        const request = { credential, profile: work.id };
+        const commands = new TaskCommands(store);
+        const made = [];
+        for (const title of ["X", "Y"]) {
+          const created = yield* commands.create(request, {
+            title,
+            source: "agent",
+          } as never);
+          if (created.outcome !== "committed") throw new Error("create");
+          made.push(created.task);
+        }
+        const [x, y] = made;
+        if (!x || !y) throw new Error("fixture");
+        const seqs: number[] = [];
+        const reply = yield* collectCommitted(
+          Effect.gen(function* () {
+            // R: edits X then Y (seq 6 and 7 in the seat's schedule).
+            let edited = y;
+            for (const task of [x, y]) {
+              const result = yield* commands.edit(
+                { ...request, task_id: task.id as TaskId },
+                {
+                  from_version: task.row_version,
+                  changes: { title: `${task.title} edited` },
+                } as never,
+              );
+              if (result.outcome !== "committed") throw new Error("edit");
+              seqs.push(rows().at(-1)?.seq ?? 0);
+              edited = result.task;
+            }
+            // Q and Q': another request deletes and purges Y before R settles.
+            const target = { ...request, task_id: y.id as TaskId };
+            const purge = Effect.gen(function* () {
+              const deleted = yield* commands.delete(target, {
+                from_version: edited.row_version,
+                with_dependencies: true,
+              } as never);
+              if (deleted.outcome !== "committed") throw new Error("delete");
+              const purged = yield* commands.purge(target, {
+                from_version: deleted.task.row_version,
+              } as never);
+              if (purged.outcome !== "committed") throw new Error("purge");
+            }).pipe(Effect.provideService(CommittedOperationsCell, undefined));
+            yield* Fiber.join(yield* Effect.forkChild(purge));
+          }),
+        );
+        const [first, second] = seqs;
+        expect(second).toBe((first ?? 0) + 1);
+        const redacted = rows().find((value) => value.seq === second);
+        expect([
+          JSON.parse(redacted?.event ?? "{}").kind,
+          redacted?.outcome,
+        ]).toEqual(["TaskHistoryRedacted", "committed"]);
+        // Never the first edit's seq: absent, read to find out.
+        expect(reply.seq).toBe(null);
+      }),
+    ),
+);
+
 it.effect("a rolled-back insert leaves the request's committed seq", () =>
   scratchStore((store, rows) =>
     Effect.gen(function* () {

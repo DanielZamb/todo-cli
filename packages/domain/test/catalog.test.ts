@@ -388,10 +388,11 @@ it.effect("never answers unchanged after a change, over random histories", () =>
       let seed = 1113;
       const next = () => {
         seed = (seed * 1103515245 + 12345) % 2147483648;
-        return seed % 5;
+        return Math.floor(seed / 65536) % 6;
       };
       let unchangedSeen = 0;
       let changedSeen = 0;
+      let profilesCreated = 0;
       for (let step = 0; step < 60; step++) {
         const before = changed(yield* fixture.catalog({ view: "today" }));
         const choice = next();
@@ -418,6 +419,9 @@ it.effect("never answers unchanged after a change, over random histories", () =>
               access: "read",
             }),
           );
+        // A Profile created without History (todo init/login --profile).
+        if (choice === 5)
+          yield* Effect.orDie(ensureProfile(fixture.store, `Created ${step}`));
         const reply = yield* fixture.catalog({
           view: "today",
           known_generation: before.position.generation,
@@ -430,8 +434,11 @@ it.effect("never answers unchanged after a change, over random histories", () =>
           unchangedSeen++;
           expect(lists(full)).toBe(lists(before));
         } else changedSeen++;
-        if (choice === 0 || choice === 1) expect(reply.unchanged).toBe(false);
+        if (choice === 0 || choice === 1 || choice === 5)
+          expect([choice, reply.unchanged]).toEqual([choice, false]);
+        if (choice === 5) profilesCreated++;
       }
+      expect(profilesCreated).toBeGreaterThan(0);
       expect(unchangedSeen).toBeGreaterThan(0);
       expect(changedSeen).toBeGreaterThan(0);
     }),
