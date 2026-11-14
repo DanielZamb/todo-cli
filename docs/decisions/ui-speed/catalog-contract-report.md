@@ -253,7 +253,7 @@ on the next read, but nothing prompts that read: a Profile created from the CLI
 writes no History, so no stream operation reaches an open app. Closing it needs
 a History row or a stream notice for Profile creation.
 
-**2. `operation_seq` could be too low** (fdd8bec0, the commit before). Each note
+**2. `operation_seq` could be too low** (f74d1b3f, the commit before). Each note
 also carries the columns Purge never rewrites (actor, profile, `from_version`,
 `to_version`, `occurred_at`; Purge rewrites only `event` and `entity_version`).
 When the request ends, each note stands as one of:
