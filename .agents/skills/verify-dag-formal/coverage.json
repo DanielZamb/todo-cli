@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+  "confirmedCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -86,7 +86,7 @@
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b",
       "functions": [
         "OperationStore.transaction",
         "OperationStore.validate",
@@ -155,7 +155,7 @@
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
-      "sha256": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32",
+      "sha256": "9405afa2140ef593b0c9374e18fabbd5ba002c0784fe641a6821d3bfcbb97f5b",
       "functions": [
         "Authentication.startSeries",
         "Authentication.append"
@@ -328,6 +328,29 @@
         "path": "packages/domain/src/auth/auth.ts",
         "from": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada",
         "to": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32"
+      }
+    ]
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "pinCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+    "previous": [
+      "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3"
+    ],
+    "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's two findings on 9634a6e0: the Catalog's known check also needs a stamp of the visible Profiles and the schema version (contract a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e, todo catalog --known-stamp); the operation_seq note carries the columns Purge never rewrites and a request reports nothing when a note is unaccounted. OperationStore.record's note arguments and a read-only store member change; every other listed production function and mapped public item is unchanged apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the occ-atomicity and task-search-cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      },
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "1486c9002d44f9d5d81fa1038c6ff98ba9d5f4d52707403b1cf20736c565ec32",
+        "to": "9405afa2140ef593b0c9374e18fabbd5ba002c0784fe641a6821d3bfcbb97f5b"
       }
     ]
   }

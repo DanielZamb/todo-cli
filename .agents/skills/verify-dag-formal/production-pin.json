@@ -1,5 +1,5 @@
 {
-  "commit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+  "commit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -95,6 +95,18 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/catalog-contract-report.md",
     "scope": "The coordinator's corrections: OperationStore.record, Authentication.record and the restore bind the event text they note for operation_seq (total, settled on the row's bytes); the Catalog reads the Dependency graph from columns for matching and decodes after the lease; the operation_seq description changes the contract to 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d. Every listed production function other than the reviewed record path is byte-identical; mapped public items are unchanged from the f3039274 candidate apart from the contract identity and openapi.json's operation_seq description. All 80 mutant anchors match once at the pin. Pinned at 6c8a5c4f, byte-identical product to b110f4a8 plus the occ-atomicity and task-search-cache renewals the capture runs. No model, invariant or bound change.",
+    "changes": []
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "pinCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+    "previous": [
+      "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3"
+    ],
+    "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's two findings on 9634a6e0: the Catalog's known check also needs a stamp of the visible Profiles and the schema version (contract a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e, todo catalog --known-stamp); the operation_seq note carries the columns Purge never rewrites and a request reports nothing when a note is unaccounted. OperationStore.record's note arguments and a read-only store member change; every other listed production function and mapped public item is unchanged apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the occ-atomicity and task-search-cache renewals. No model, invariant or bound change.",
     "changes": []
   }
 }

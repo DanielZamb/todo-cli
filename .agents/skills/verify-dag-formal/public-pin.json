@@ -1,5 +1,5 @@
 {
-  "commit": "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3",
+  "commit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -45,7 +45,7 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+  "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
   "awaitMergedIntegration": false,
   "integrationQualification": {
     "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
@@ -157,6 +157,25 @@
         "contract": {
           "from": "76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af",
           "to": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d"
+        }
+      }
+    ]
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "pinCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+    "previous": [
+      "6c8a5c4ff6f9475c2ef3aeb18f5a5f21a8037fa3"
+    ],
+    "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's two findings on 9634a6e0: the Catalog's known check also needs a stamp of the visible Profiles and the schema version (contract a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e, todo catalog --known-stamp); the operation_seq note carries the columns Purge never rewrites and a request reports nothing when a note is unaccounted. OperationStore.record's note arguments and a read-only store member change; every other listed production function and mapped public item is unchanged apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the occ-atomicity and task-search-cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
+          "to": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e"
         }
       }
     ]
