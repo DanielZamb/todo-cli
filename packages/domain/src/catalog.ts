@@ -1,6 +1,7 @@
 // The Catalog query (CONTEXT.md: Catalog): one checked read lease gathers the
 // Profile's rows, counts and lists; filtering, search and grouping run after
 // it, as TaskCommands.list does, because search yields between steps.
+import { createHash } from "node:crypto";
 import { Clock, Effect, Schema } from "effect";
 import type { AccessRequest, AuthError } from "./auth/model.ts";
 import {
@@ -35,7 +36,32 @@ import type { TaskRead } from "./task-read.ts";
 import { type SearchTooBroad, taskSearchExecution } from "./task-search.ts";
 import { CalendarDate, Instant } from "./time.ts";
 
-/** known_generation, known_seq and known_day go together. Exit 2, invalid_args. */
+/**
+ * What a Catalog reply contains that History does not record: the Profiles
+ * this credential sees (todo init and todo login --profile create one with no
+ * History row) and the schema version (a migration at start-up). A restore
+ * already changes the generation; everything else in the reply is written
+ * only by committed operations.
+ */
+export const catalogStamp = (
+  schemaVersion: number,
+  profiles: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly created_at: string;
+    readonly updated_at: string;
+  }[],
+) =>
+  createHash("sha256")
+    .update(
+      JSON.stringify([
+        schemaVersion,
+        profiles.map((p) => [p.id, p.name, p.created_at, p.updated_at]),
+      ]),
+    )
+    .digest("hex");
+
+/** known_generation, known_seq, known_day and known_stamp go together. Exit 2, invalid_args. */
 export class CatalogUsageError extends Error {
   readonly _tag = "CatalogUsageError";
   readonly code = "invalid_args";
@@ -138,6 +164,7 @@ const taskFilters = (query: CatalogQuery): TaskFilters => {
     known_generation: _generation,
     known_seq: _seq,
     known_day: _day,
+    known_stamp: _stamp,
     ...filters
   } = query;
   return filters;
@@ -162,14 +189,19 @@ export class CatalogReads {
     return Effect.suspend((): Effect.Effect<CatalogReply, CatalogError> => {
       const unknownZone = checkTimeZone(query.time_zone);
       if (unknownZone) return Effect.fail(unknownZone);
-      const known = [query.known_generation, query.known_seq, query.known_day];
+      const known = [
+        query.known_generation,
+        query.known_seq,
+        query.known_day,
+        query.known_stamp,
+      ];
       if (
         known.some((value) => value === undefined) &&
         known.some((value) => value !== undefined)
       )
         return Effect.fail(
           new CatalogUsageError(
-            "known_generation, known_seq and known_day go together; send all three from an earlier reply, or none.",
+            "known_generation, known_seq, known_day and known_stamp go together; send all four from an earlier reply, or none.",
           ),
         );
       const selected = Object.freeze({
@@ -196,17 +228,22 @@ export class CatalogReads {
                 );
               const now = fields.now ?? clock;
               const day = planningDay(now, fields.time_zone);
+              const profiles = yield* this.store.auth.profileSummaries({
+                credential: authority.credential,
+              });
+              const stamp = catalogStamp(
+                yield* this.store.catalogSchemaVersion(read),
+                profiles,
+              );
               if (
                 fields.known_generation === position.generation &&
                 fields.known_day === day.today &&
+                fields.known_stamp === stamp &&
                 fields.known_seq !== undefined &&
                 fields.known_seq <= position.seq &&
                 !(yield* this.store.committedSince(read, fields.known_seq))
               )
-                return { kind: "unchanged" as const, position, day };
-              const profiles = yield* this.store.auth.profileSummaries({
-                credential: authority.credential,
-              });
+                return { kind: "unchanged" as const, position, day, stamp };
               const projects = yield* this.store.auth.projects(selected);
               const tags = yield* this.store.auth.tags(selected);
               const light = yield* this.store.catalogRows(read);
@@ -253,6 +290,7 @@ export class CatalogReads {
                 kind: "changed" as const,
                 position,
                 day,
+                stamp,
                 now,
                 fields,
                 view,
@@ -280,6 +318,7 @@ export class CatalogReads {
             unchanged: true,
             position: lease.position,
             day: calendarDate(lease.day.today),
+            stamp: lease.stamp,
           } satisfies CatalogReply;
         const { fields, view, metadata, members } = lease;
         const graph =
@@ -407,6 +446,7 @@ export class CatalogReads {
           unchanged: false,
           position: lease.position,
           day: calendarDate(lease.day.today),
+          stamp: lease.stamp,
           now: lease.now,
           profiles: lease.profiles,
           projects: lease.projects,

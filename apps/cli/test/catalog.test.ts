@@ -122,7 +122,7 @@ it("orders names, counts and serves the same Catalog from the compiled CLI and s
     cliPosition.seq,
   );
 
-  const unchanged = run([
+  const knownArgs = [
     "catalog",
     "--view",
     "today",
@@ -134,14 +134,31 @@ it("orders names, counts and serves the same Catalog from the compiled CLI and s
     String((httpPosition as { seq: number }).seq),
     "--known-day",
     "2026-11-13",
-  ]);
+    "--known-stamp",
+    String(http.stamp),
+  ];
+  const unchanged = run(knownArgs);
   expect(unchanged).toMatchObject({ unchanged: true, day: "2026-11-13" });
   expect(Object.keys(unchanged).sort()).toEqual([
     "day",
     "generated_at",
     "position",
+    "stamp",
     "unchanged",
   ]);
+  // The seat's schedule: todo login --profile creates a Profile with no
+  // History row; the same known position must not answer unchanged.
+  const login = spawnSync(
+    binary,
+    ["--profile", "Errands", "--format", "json", "login", "--password-stdin"],
+    { env, encoding: "utf8", input: `${passphrase}\n`, timeout: 60000 },
+  );
+  expect(login.status, login.stdout + login.stderr).toBe(0);
+  const afterLogin = run(knownArgs);
+  expect(afterLogin.unchanged).toBe(false);
+  expect(afterLogin.profiles.map((p: { name: string }) => p.name)).toContain(
+    "Errands",
+  );
   const zone = run(["catalog", "--time-zone", "Mars/Olympus"], 2);
   expect(zone).toMatchObject({ code: "invalid_args" });
   const markdown = run(["catalog", "--view", "inbox", "--now", now], 0, "md");

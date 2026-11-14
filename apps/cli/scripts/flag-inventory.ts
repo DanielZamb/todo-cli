@@ -433,6 +433,7 @@ export function flagConsumer(command: string, flag: string) {
       "--known-generation",
       "--known-seq",
       "--known-day",
+      "--known-stamp",
     ].includes(flag)
   )
     return {

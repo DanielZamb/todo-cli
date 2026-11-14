@@ -87,6 +87,8 @@ const members = {
     catalogRows: (s, f) => within(s, f, (read) => s.catalogRows(read)),
     catalogPayloads: (s, f) =>
       within(s, f, (read) => s.catalogPayloads(read, null)),
+    catalogSchemaVersion: (s, f) =>
+      within(s, f, (read) => s.catalogSchemaVersion(read)),
     committedSince: (s, f) => within(s, f, (read) => s.committedSince(read, 0)),
     terminalChangesRead: (s) =>
       Effect.suspend(() => s.terminalChangesRead(null as never)),

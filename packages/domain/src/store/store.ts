@@ -622,6 +622,13 @@ export class OperationStore {
       ),
     );
 
+  readonly catalogSchemaVersion = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).schemaVersion(read)),
+      ),
+    );
+
   readonly committedSince = (read: AuthorizedRead, seq: number) =>
     checkedRead(read, "read", this.db).pipe(
       Effect.flatMap(() =>

@@ -81,6 +81,15 @@ export class CatalogProjection {
     );
   };
 
+  /** The database's schema version (PRAGMA user_version), changed only by a migration. */
+  readonly schemaVersion = (read: AuthorizedRead) => {
+    readAuthority(read, "read", this.db);
+    return (
+      this.db.query<{ user_version: number }, []>("PRAGMA user_version").get()
+        ?.user_version ?? 0
+    );
+  };
+
   /**
    * Whether any operation was committed after `seq`. Global on purpose: the
    * Catalog lists every Profile's counts, so another Profile's change is a

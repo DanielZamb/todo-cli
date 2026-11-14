@@ -94,9 +94,9 @@ with (evidence / 'server.log').open('w') as log:
         assert [catalog['unchanged'], catalog['counts'], catalog['tasks'], catalog['day']] == [
             False, {'all': 0, 'today': 0, 'overdue': 0, 'scheduled': 0, 'inbox': 0}, [], '2026-11-13']
         assert catalog['position']['seq'] >= deleted['operation_seq']
-        known = f"known_generation={catalog['position']['generation']}&known_seq={catalog['position']['seq']}&known_day=2026-11-13"
+        known = f"known_generation={catalog['position']['generation']}&known_seq={catalog['position']['seq']}&known_day=2026-11-13&known_stamp={catalog['stamp']}"
         assert request('GET', '/profiles/work/catalog?view=today&now=2026-11-13T15:00:00Z&' + known, 200, credential=reader) == {
-            'unchanged': True, 'position': catalog['position'], 'day': '2026-11-13'}
+            'unchanged': True, 'position': catalog['position'], 'day': '2026-11-13', 'stamp': catalog['stamp']}
         assert request('GET', '/profiles/work/catalog?time_zone=Mars%2FOlympus', 400, credential=reader)['code'] == 'invalid_args'
         request('GET', '/profiles/personal/catalog', 403, credential=reader)
         request('DELETE', '/auth/tokens/writer', 204, credential=session)

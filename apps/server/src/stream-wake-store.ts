@@ -200,6 +200,7 @@ export const streamWakeStore = (store: OperationStore, wake: StreamWake) => {
       graphRead: "read",
       catalogRows: "read",
       catalogPayloads: "read",
+      catalogSchemaVersion: "read",
       committedSince: "read",
       terminalChangesRead: "read",
       committedHistory: "read",

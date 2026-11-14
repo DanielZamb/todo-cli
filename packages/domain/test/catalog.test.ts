@@ -13,6 +13,7 @@ import {
   type ProfileId,
   type TaskId,
 } from "@todo/domain";
+import { ensureProfile } from "@todo/domain/commands";
 import {
   type OperationStore,
   openStore,
@@ -313,11 +314,13 @@ it.effect("answers unchanged only when nothing can have changed", () =>
         known_generation: first.position.generation,
         known_seq: first.position.seq,
         known_day: first.day,
+        known_stamp: first.stamp,
       };
       expect(yield* fixture.catalog(known)).toEqual({
         unchanged: true,
         position: first.position,
         day: "2026-11-13",
+        stamp: first.stamp,
       });
       // A rejected attempt (a stale Version) changes nothing.
       const commands = new TaskCommands(fixture.store);
@@ -420,6 +423,7 @@ it.effect("never answers unchanged after a change, over random histories", () =>
           known_generation: before.position.generation,
           known_seq: before.position.seq,
           known_day: before.day,
+          known_stamp: before.stamp,
         });
         const full = changed(yield* fixture.catalog({ view: "today" }));
         if (reply.unchanged) {
@@ -734,6 +738,49 @@ it.effect(
           }
         }
         expect(compared).toBeGreaterThan(100);
+      }),
+    ),
+);
+
+it.effect(
+  "never answers unchanged after a Profile appears without History",
+  () =>
+    withFixture((fixture) =>
+      Effect.gen(function* () {
+        const first = changed(yield* fixture.catalog({ view: "today" }));
+        const known = {
+          view: "today" as const,
+          known_generation: first.position.generation,
+          known_seq: first.position.seq,
+          known_day: first.day,
+          known_stamp: first.stamp,
+        };
+        expect((yield* fixture.catalog(known)).unchanged).toBe(true);
+        // The path todo init --profile and todo login --profile take: a Profile
+        // row and no History row.
+        const historyBefore = (yield* fixture.store.history()).length;
+        yield* Effect.orDie(ensureProfile(fixture.store, "Errands"));
+        expect((yield* fixture.store.history()).length).toBe(historyBefore);
+        const after = yield* fixture.catalog(known);
+        expect(after.unchanged).toBe(false);
+        expect(changed(after).profiles.map((p) => p.name)).toEqual([
+          "Errands",
+          "Personal",
+          "Work",
+        ]);
+        expect(after.position.seq).toBe(first.position.seq);
+        // A different credential's view of the Profiles is another stamp.
+        const scoped = yield* fixture.store.auth.issueToken({
+          credential: fixture.credential,
+          token: { name: "work only", profile: work.id, scope: "read-only" },
+        });
+        const fromScoped = changed(
+          yield* new CatalogReads(fixture.store).read(
+            { credential: scoped.credential, profile: work.id },
+            { view: "today", now: instant(start) },
+          ),
+        );
+        expect(fromScoped.stamp).not.toBe(changed(after).stamp);
       }),
     ),
 );

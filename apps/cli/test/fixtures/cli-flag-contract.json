@@ -261,6 +261,7 @@
         "--known-day",
         "--known-generation",
         "--known-seq",
+        "--known-stamp",
         "--log-level",
         "--no-color",
         "--now",
@@ -285,8 +286,8 @@
         "-h",
         "-v"
       ],
-      "help_sha256": "f890d30d22282b608c681f45b717cc9988de7633d48085bbd47dfa43a11776e5",
-      "schema_sha256": "27ac850d211e0d116300e536c5b186a13693b10e812f60f2c37333d2b7ed05b6"
+      "help_sha256": "5437fafe54fb6d0c4d5fb1054b2f848fa001ede0ad75ebb81dc6e710704ae4ec",
+      "schema_sha256": "7931dd54d30fb5d2667b5698d7024cc47e9155a31df85a7625e07b05c4b306c9"
     },
     "profile": {
       "flags": [

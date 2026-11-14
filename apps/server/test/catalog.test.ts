@@ -125,7 +125,7 @@ it.effect("serves the Catalog, its position and its refusals over HTTP", () =>
         seq: opLog()?.seq,
       });
 
-      const known = `known_generation=initial&known_seq=${catalog.position.seq}&known_day=${catalog.day}`;
+      const known = `known_generation=initial&known_seq=${catalog.position.seq}&known_day=${catalog.day}&known_stamp=${catalog.stamp}`;
       const again = yield* request(
         "GET",
         `/profiles/work/catalog?view=today&now=${now}&${known}`,
@@ -138,6 +138,7 @@ it.effect("serves the Catalog, its position and its refusals over HTTP", () =>
           unchanged: true,
           position: catalog.position,
           day: "2026-11-13",
+          stamp: catalog.stamp,
         },
       });
 

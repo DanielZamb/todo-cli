@@ -68,9 +68,10 @@ export const CatalogQuery = Schema.Struct({
   known_day: Schema.optionalKey(
     CalendarDate.annotate({
       description:
-        "With known_generation and known_seq, the position and day of an earlier reply to the same request. If nothing can have changed since, the reply is unchanged: true and no lists.",
+        "With known_generation, known_seq and known_stamp, the position, day and stamp of an earlier reply to the same request. If nothing can have changed since, the reply is unchanged: true and no lists.",
     }),
   ),
+  known_stamp: Schema.optionalKey(Schema.String),
 });
 export type CatalogQuery = typeof CatalogQuery.Type;
 
@@ -97,10 +98,15 @@ export const CatalogCounts = Schema.Struct({
     "Distinct open Tasks per view. Filters, search, Project and Tag never change a count.",
 });
 
+const CatalogStamp = Schema.String.annotate({
+  description:
+    "A digest of what the reply holds that History does not record: the Profiles this credential sees and the schema version. Send it back as known_stamp.",
+});
 export const CatalogChanged = Schema.Struct({
   unchanged: Schema.Literal(false),
   position: CatalogPosition,
   day: CalendarDate,
+  stamp: CatalogStamp,
   now: Instant,
   profiles: Schema.Array(ProfileSummary),
   projects: Schema.Array(ProjectSummary),
@@ -123,6 +129,7 @@ export const CatalogUnchanged = Schema.Struct({
   unchanged: Schema.Literal(true),
   position: CatalogPosition,
   day: CalendarDate,
+  stamp: CatalogStamp,
 }).annotate({ identifier: "CatalogUnchanged" });
 export type CatalogUnchanged = typeof CatalogUnchanged.Type;
 

@@ -50,6 +50,7 @@ const textFlags = [
   "known-generation",
   "known-seq",
   "known-day",
+  "known-stamp",
 ] as const;
 
 export const makeCatalogCommand = <A, E, R>(

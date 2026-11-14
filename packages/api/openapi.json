@@ -30471,6 +30471,14 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "name": "known_stamp",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
           }
         ],
         "security": [
@@ -82606,9 +82614,13 @@
           },
           "day": {
             "type": "string"
+          },
+          "stamp": {
+            "type": "string",
+            "description": "A digest of what the reply holds that History does not record: the Profiles this credential sees and the schema version. Send it back as known_stamp."
           }
         },
-        "required": ["unchanged", "position", "day"],
+        "required": ["unchanged", "position", "day", "stamp"],
         "additionalProperties": false
       },
       "Catalog": {
@@ -82637,6 +82649,10 @@
           },
           "day": {
             "type": "string"
+          },
+          "stamp": {
+            "type": "string",
+            "description": "A digest of what the reply holds that History does not record: the Profiles this credential sees and the schema version. Send it back as known_stamp."
           },
           "now": {
             "type": "string"
@@ -83230,6 +83246,7 @@
           "unchanged",
           "position",
           "day",
+          "stamp",
           "now",
           "profiles",
           "projects",
