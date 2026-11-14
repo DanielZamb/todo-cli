@@ -515,7 +515,12 @@ this report), all under the reference sandbox after its five controls:
   - verify-discovery-formal: TypeScript steps only, `prepare-inputs.ts` and
     `check-electron.ts` exit 0 at b57ba61b (electron-WG2G96). The Swift step
     and its renewal stay owed to step 2.
-- PIN_AUDIT_RESULT
+- **Pin audit** (`pin-audit.mjs HEAD` with the ledger, at 44ff839e):
+  `filesScanned 488, occurrences 595, unknown 0`. One problem, the same as on
+  the base (owed to step 2): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
+  The first run had 4 unknowns: the previous contract id (a49a9627…) quoted in
+  the first seat round's DAG record text, compared while it was live. They are
+  ledgered as historical (44ff839e); the audit's self-test passes.
 
 The earlier rounds' proof follows.
 
