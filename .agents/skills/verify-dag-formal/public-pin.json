@@ -1,5 +1,5 @@
 {
-  "commit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+  "commit": "187d610e45779802bc3038d249f19879a69eb95b",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -33,7 +33,8 @@
     "apps/macos/Sources/DependencyGraphView.swift",
     "apps/macos/Sources/DependencyErrors.swift",
     "apps/macos/Sources/DependencyViews.swift",
-    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift"
+    "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
+    "apps/macos/API/swift-client-pending.json"
   ],
   "manifests": [
     "package.json",
@@ -45,7 +46,7 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+  "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
   "awaitMergedIntegration": false,
   "integrationQualification": {
     "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
@@ -176,6 +177,30 @@
         "contract": {
           "from": "7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d",
           "to": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e"
+        }
+      }
+    ]
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "pinCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+    "previous": [
+      "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd"
+    ],
+    "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's findings and the owner's Q8 and Q9 on beae37bc: `todo catalog` refuses invalid flags before the store; the Swift identity describes the Swift sources beside it (55c6d138, with apps/macos/API/swift-client-pending.json naming the pair, now in the capture scopes); the routed command's reply carries operation_seq; a blank Project or Tag name filter is refused as invalid_args (TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); undated Tasks sort last inside a priority (compareTasks); planning reads take today from the sent zone or the server's own zone. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (commands.ts, presentation.ts, main.ts, help.ts, openapi.json) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e",
+          "to": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d"
+        }
+      },
+      {
+        "scopes": {
+          "added": "apps/macos/API/swift-client-pending.json"
         }
       }
     ]

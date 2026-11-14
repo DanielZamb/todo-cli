@@ -1,5 +1,5 @@
 {
-  "commit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+  "commit": "187d610e45779802bc3038d249f19879a69eb95b",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -107,6 +107,18 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/catalog-contract-report.md",
     "scope": "Seat CATALOG-S1's two findings on 9634a6e0: the Catalog's known check also needs a stamp of the visible Profiles and the schema version (contract a49a9627309afe74e48c0f61541e4e8136e6747d36afd2ae535b3a890581701e, todo catalog --known-stamp); the operation_seq note carries the columns Purge never rewrites and a request reports nothing when a note is unaccounted. OperationStore.record's note arguments and a read-only store member change; every other listed production function and mapped public item is unchanged apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the occ-atomicity and task-search-cache renewals. No model, invariant or bound change.",
+    "changes": []
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "pinCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+    "previous": [
+      "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd"
+    ],
+    "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's findings and the owner's Q8 and Q9 on beae37bc: `todo catalog` refuses invalid flags before the store; the Swift identity describes the Swift sources beside it (55c6d138, with apps/macos/API/swift-client-pending.json naming the pair, now in the capture scopes); the routed command's reply carries operation_seq; a blank Project or Tag name filter is refused as invalid_args (TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); undated Tasks sort last inside a priority (compareTasks); planning reads take today from the sent zone or the server's own zone. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (commands.ts, presentation.ts, main.ts, help.ts, openapi.json) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
     "changes": []
   }
 }

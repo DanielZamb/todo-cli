@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd",
+  "confirmedCommit": "187d610e45779802bc3038d249f19879a69eb95b",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -48,7 +48,7 @@
         "TaskFilters",
         "filterTaskRecords"
       ],
-      "sha256": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      "sha256": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
     },
     {
       "path": "packages/domain/src/dependency-delete.ts",
@@ -65,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -104,7 +104,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
+      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a"
+      "sha256": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce"
+      "sha256": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "4b9c68018d4732ef8b0cbbe9f67121a7979637698295e6913277737158b55daa"
+      "sha256": "901b27a087023d7193b29979243484c75f1e9548789d2071aa8a13dd18575f60"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,14 +304,14 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "4689ece63521c6b2d27718ece589eb8af8e87212945b47cf75c8726a776a2c2d",
+      "sha256": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323",
       "functions": [
         "contract identity"
       ]
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
-      "sha256": "ea4a47ad49cfc10d734f04f9e1e96c5d94afdcb9ae9567b43241706be92346e6",
+      "sha256": "7a41ced4c2f61507ccf7003c92930725b652c6da93b74740b8fdab5958f37ccd",
       "functions": [
         "contract identity"
       ]
@@ -433,7 +433,7 @@
       "functions": [
         "rm confirmation Version wording"
       ],
-      "sha256": "7420d29a1ee9bc0d1c3c1154b3bb15c867fd83dcbbe7a81debf07965cb010049"
+      "sha256": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
@@ -858,6 +858,64 @@
         "path": "apps/cli/src/help.ts",
         "from": "aaccc058e8e3f0526e4c99db852e8526435316630e689ced8db1edcd54bef471",
         "to": "7420d29a1ee9bc0d1c3c1154b3bb15c867fd83dcbbe7a81debf07965cb010049"
+      }
+    ]
+  },
+  "seatFindings2": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "pinCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+    "previous": [
+      "f9f07a1d6323057fc35f2ba9c96d42cacb04e1bd"
+    ],
+    "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's findings and the owner's Q8 and Q9 on beae37bc: `todo catalog` refuses invalid flags before the store; the Swift identity describes the Swift sources beside it (55c6d138, with apps/macos/API/swift-client-pending.json naming the pair, now in the capture scopes); the routed command's reply carries operation_seq; a blank Project or Tag name filter is refused as invalid_args (TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); undated Tasks sort last inside a priority (compareTasks); planning reads take today from the sent zone or the server's own zone. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (commands.ts, presentation.ts, main.ts, help.ts, openapi.json) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467",
+        "to": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca",
+        "to": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      },
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "from": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded",
+        "to": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a",
+        "to": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce",
+        "to": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "4b9c68018d4732ef8b0cbbe9f67121a7979637698295e6913277737158b55daa",
+        "to": "901b27a087023d7193b29979243484c75f1e9548789d2071aa8a13dd18575f60"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "4689ece63521c6b2d27718ece589eb8af8e87212945b47cf75c8726a776a2c2d",
+        "to": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323"
+      },
+      {
+        "path": "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift",
+        "from": "ea4a47ad49cfc10d734f04f9e1e96c5d94afdcb9ae9567b43241706be92346e6",
+        "to": "7a41ced4c2f61507ccf7003c92930725b652c6da93b74740b8fdab5958f37ccd"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "from": "7420d29a1ee9bc0d1c3c1154b3bb15c867fd83dcbbe7a81debf07965cb010049",
+        "to": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83"
       }
     ]
   }
