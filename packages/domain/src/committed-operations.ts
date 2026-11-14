@@ -10,7 +10,7 @@ export const OperationSeq = Schema.Int.check(
   Schema.isGreaterThanOrEqualTo(1),
 ).annotate({
   description:
-    "Present: everything this request committed to History is at or below this seq, so a Catalog whose position.seq is at least this value (same generation) reflects all of it. Absent: read to find out. Absence never means nothing changed; a dry run, a refusal, and History written outside the request (such as a sign-in) all leave it out.",
+    "Present: everything this request committed to History is at or below this seq, in the generation that was current from the request's first commit until its reply (a restore in between leaves the field out). A Catalog whose position has that generation and a seq at least this value reflects all of it. No write reply names the generation (there is no generation header; only a Snapshot restore's report carries one, the new generation): a client holds it from its last Catalog position or stream, and a restore reaches the stream as reload. Absent: read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.",
 });
 export const operationSeqField = {
   operation_seq: Schema.optionalKey(OperationSeq),
@@ -35,7 +35,11 @@ type Reader = {
     readonly get: (...values: (string | number)[]) => unknown;
   };
 };
-type Cell = { noted: { readonly db: Reader; readonly row: NotedOperation }[] };
+type Cell = {
+  noted: { readonly db: Reader; readonly row: NotedOperation }[];
+  /** Each database's generation at the request's first note there; null if unreadable. */
+  generations: Map<Reader, string | null>;
+};
 /** The request's cell. Exported for tests that need a failing collector. */
 export const CommittedOperationsCell = Context.Reference<Cell | undefined>(
   "todo/CommittedOperations",
@@ -63,8 +67,28 @@ export const markPreviewConnection = (db: object) => {
  */
 export const noteCommitted = (db: Reader, row: NotedOperation) => {
   try {
-    if (!previews.has(db)) currentCell()?.noted.push({ db, row });
+    if (previews.has(db)) return;
+    const cell = currentCell();
+    if (!cell) return;
+    cell.noted.push({ db, row });
+    if (!cell.generations.has(db)) cell.generations.set(db, generationOf(db));
   } catch {}
+};
+
+// The generation a seq belongs to: the newest committed DatabaseRestored's, or
+// "initial". The same rule as the Profile classification (auth.ts) and
+// snapshots.generationSync. null when it cannot be read.
+const generationOf = (db: Reader): string | null => {
+  try {
+    const row = db
+      .query(
+        "SELECT json_extract(event,'$.generation') AS generation FROM op_log WHERE profile IS NULL AND actor='snapshot-restore' AND outcome='committed' AND json_extract(event,'$.kind')='DatabaseRestored' ORDER BY seq DESC LIMIT 1",
+      )
+      .get() as { generation: string | null } | null;
+    return row?.generation ?? "initial";
+  } catch {
+    return null;
+  }
 };
 
 // How a noted row stands when the request ends:
@@ -108,7 +132,12 @@ const standing = (db: Reader, row: NotedOperation): Standing => {
 // A seq is reported only when every note is accounted for: the highest
 // committed one, ignoring rolled-back inserts. One unaccounted note (a
 // redacted row, a failed lookup) means nothing is reported, never a lower seq.
+// A seq means something only inside one generation: when a restore moved the
+// generation after the request's first note, nothing is reported (a restore
+// reuses seqs, so a note would otherwise read as rolled back).
 const settled = (cell: Cell) => {
+  for (const [db, generation] of cell.generations)
+    if (generation === null || generationOf(db) !== generation) return null;
   let seq: number | null = null;
   for (const { db, row } of cell.noted) {
     const state = standing(db, row);
@@ -127,7 +156,7 @@ export const committedSoFar = () => {
 /** Runs an effect and returns what it produced with the highest seq it committed. */
 export const collectCommitted = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
   Effect.suspend(() => {
-    const cell: Cell = { noted: [] };
+    const cell: Cell = { noted: [], generations: new Map() };
     return effect.pipe(
       Effect.provideService(CommittedOperationsCell, cell),
       Effect.map((value) => ({ value, seq: settled(cell) })),

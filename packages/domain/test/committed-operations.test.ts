@@ -184,7 +184,10 @@ it.effect("a failing collector never costs a commit", () =>
       const { credential } = yield* store.auth.signIn("committed scratch");
       const request = { credential, profile: work.id };
       // A cell whose push throws: the note fails inside the write's transaction.
-      const broken = { noted: Object.freeze([]) as never[] };
+      const broken = {
+        noted: Object.freeze([]) as never[],
+        generations: new Map(),
+      };
       const result = yield* new TaskCommands(store)
         .create(request, { title: "Still committed", source: "agent" } as never)
         .pipe(Effect.provideService(CommittedOperationsCell, broken));
@@ -377,6 +380,83 @@ it.effect(
         expect(reply.seq).toBe(null);
       }),
     ),
+);
+
+it.effect(
+  "the seat's F2b schedule: a restore during the request moves the generation, so nothing is reported",
+  () =>
+    scratchStore((store, rows) =>
+      Effect.gen(function* () {
+        const { credential } = yield* store.auth.signIn("committed scratch");
+        const request = { credential, profile: work.id };
+        const commands = new TaskCommands(store);
+        const made = [];
+        for (const title of ["X", "Z"]) {
+          const created = yield* commands.create(request, {
+            title,
+            source: "agent",
+          } as never);
+          if (created.outcome !== "committed") throw new Error("create");
+          made.push(created.task);
+        }
+        const [x, z] = made;
+        if (!x || !z) throw new Error("fixture");
+        const other = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+          effect.pipe(
+            Effect.provideService(CommittedOperationsCell, undefined),
+          );
+        const seqs: number[] = [];
+        let snapshot = "";
+        const reply = yield* collectCommitted(
+          Effect.gen(function* () {
+            const edit = (target: typeof x) =>
+              Effect.gen(function* () {
+                const result = yield* commands.edit(
+                  { ...request, task_id: target.id as TaskId },
+                  {
+                    from_version: target.row_version,
+                    changes: { title: `${target.title} edited` },
+                  } as never,
+                );
+                if (result.outcome !== "committed") throw new Error("edit");
+                seqs.push(rows().at(-1)?.seq ?? 0);
+              });
+            yield* edit(x); // 1. R edits X
+            snapshot = (yield* other(store.snapshots.create("between"))).id; // 2.
+            yield* edit(z); // 3. R edits Z
+            yield* other(store.snapshots.restore(snapshot)); // 4. another request restores
+          }),
+        );
+        const [first, second] = seqs;
+        // The restore brings sqlite_sequence back: DatabaseRestored takes Z's seq
+        // with other kept columns, so Z's note alone would read as rolled back.
+        const restored = rows().find((row) => row.seq === second);
+        expect([
+          second,
+          (first ?? 0) + 1,
+          JSON.parse(restored?.event ?? "{}").kind,
+        ]).toEqual([second, second, "DatabaseRestored"]);
+        // Never X's seq in a generation the reply does not name: absent.
+        expect(reply.seq).toBe(null);
+      }),
+    ),
+);
+
+it.effect("a request inside one generation still reports its seq", () =>
+  scratchStore((store, rows) =>
+    Effect.gen(function* () {
+      const { credential } = yield* store.auth.signIn("committed scratch");
+      const request = { credential, profile: work.id };
+      const commands = new TaskCommands(store);
+      // A restore before the request: the request's notes all share the new generation.
+      const saved = yield* store.snapshots.create("before");
+      yield* store.snapshots.restore(saved.id);
+      const reply = yield* collectCommitted(
+        commands.create(request, { title: "After", source: "agent" } as never),
+      );
+      expect(reply.seq).toBe(rows().at(-1)?.seq ?? -1);
+    }),
+  ),
 );
 
 it.effect("a rolled-back insert leaves the request's committed seq", () =>
