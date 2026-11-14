@@ -219,5 +219,15 @@
     "coordinatorSourceReview": "2026-11-14, the coordinator's source review of 66dee60e52302c074c44f775a5b33e1313a1c165 (committed-operations.ts with noteGeneration at auth.ts:791): accepted.",
     "statementNow": "At 5150042c (seat F9), for the coordinator to read: the generation SELECT (committed-operations.ts:125, generationOf) runs in two places. (1) committed-operations.ts:102, inside the write transaction, only at the first note of a request that classified no Profile before writing (owner-only AuthChanged writes: setupOwner, resetPassphrase, issueToken, revokeToken, signOut), once per request and database. (2) committed-operations.ts:189, the settle: after the request, outside any transaction, once per database the request noted, compared with the noted generation (from auth.ts:791 noteGeneration, the restore's own, or (1)); a difference or a failed read reports nothing. Both are guarded (try/catch, null on failure), write nothing, and cannot fail or change a write. The range scan of ec16d45d (restoredSince) is removed: it missed a restore below the request's lowest noted seq (seat F9). Cost of the SELECT as measured at ec16d45d: 0.55 ms at 5,000 and 9.7 ms at 50,000 profile IS NULL rows; at the settle it holds no write lock.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "step2Merge": {
+    "product": "b4b708f5bc4a84f7034ddd0c137e2187ecbc77fd",
+    "status": "candidate for the seats",
+    "previous": [
+      "beae37bceef38fb46325e14ccb45e4d03ddc5e9f"
+    ],
+    "changed": [],
+    "review": "INTEG-STEP2: feat/catalog-contract 5885998f merged into integ/contract (27733185), then origin/main 1a33e969 (Mac candidate 10, 2c840e46), then the Swift client regenerated (b4b708f5). Main changed no file under packages, apps/server, apps/cli or apps/electron since 675aab82, so every covered file equals the Catalog line's bytes. confirmedCommit and hashes are unchanged; the one command passes on the merged product without renewal (fv01-check-aBimBS). No model, fixture, bound or invariant change.",
+    "evidence": "docs/decisions/ui-speed/step2-one-installable-line.md"
   }
 }

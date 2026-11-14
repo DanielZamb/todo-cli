@@ -66,7 +66,7 @@
         "lookup",
         "showTask"
       ],
-      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6",
+      "sha256": "dff5d1846b7b2b540b6c0a3ce12032f7deca237119640cec8b5bbacdd81d6951",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -636,6 +636,19 @@
         }
       ],
       "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "b4b708f5bc4a84f7034ddd0c137e2187ecbc77fd",
+      "status": "candidate for the seats",
+      "controls": "Before renewal check.ts stopped only at the task-client.ts hash (check-PRjRB1). After renewal check.ts passes on b4b708f5 with every model stage, the Electron real-code controls and the Swift step (check-izAVi8; Swift step swift-0A0kEO, reusing the completed build of swift-4H6xUA through TODO_DISCOVERY_SWIFT_REUSE because a fresh build with slot waits exceeded the step's 600 s ceiling twice; keychainLinked false, liveSourceUnchanged true).",
+      "changed": [
+        {
+          "path": "apps/electron/src/task-client.ts",
+          "from": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6",
+          "to": "dff5d1846b7b2b540b6c0a3ce12032f7deca237119640cec8b5bbacdd81d6951"
+        }
+      ],
+      "review": "INTEG-STEP2: integ/contract (with feat/catalog-contract) merged with main (Mac candidate 10), and the Swift client regenerated for contract 4c932cfc. The one mapped file that differs is apps/electron/src/task-client.ts, and it differs from its pin only in taskRequest's diagnostics branch (feat/diag-core 2c147ad9: http.diagnostics.snapshot({ query: {} }) instead of snapshot()), a drift carried since the recordings line. directory, lookup and showTask are byte-identical. Every Swift row (Discovery.swift, TodoModel.swift, AppViews.swift, DiscoveryView.swift and the others) equals main's candidate 10 bytes; the regenerated client changes only generated types and the identity. No model, invariant or bound change."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."

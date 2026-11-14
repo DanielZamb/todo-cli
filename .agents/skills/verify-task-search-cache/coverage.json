@@ -411,5 +411,15 @@
     ],
     "review": "Seat F8: store/snapshots.ts passes the generation the restore starts to its note; apps/server/src/server.ts and apps/cli/src/main.ts rename operation_seq to operation_position. No cache, matcher, runner, admission, accounting or erasure body changes.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "step2Merge": {
+    "product": "b4b708f5bc4a84f7034ddd0c137e2187ecbc77fd",
+    "previous": [
+      "29927cb04cc49bb706be602127557f43602ed5b2"
+    ],
+    "status": "candidate for the seats",
+    "changed": [],
+    "review": "INTEG-STEP2: the Catalog line and main (Mac candidate 10) merged, Swift client regenerated. No protected or hygiene file differs from the Catalog line's accepted rows (main changed no server, CLI or domain file). build-baseline.mjs <product> --uncached and the full verify.mjs on b4b708f5 exit 0 (verify-S3cJlU) without renewing a hash. No cache, matcher, runner, admission, accounting or erasure body change.",
+    "evidence": "docs/decisions/ui-speed/step2-one-installable-line.md"
   }
 }
