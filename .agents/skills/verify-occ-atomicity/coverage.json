@@ -189,6 +189,7 @@
       "OperationStore.record"
     ],
     "review": "Seat CATALOG-S1 findings: OperationStore.record's guarded noteCommitted call now also passes the columns Purge never rewrites (actor, profile, from_version, to_version, occurred_at) so the settle can tell a rollback from a redaction; the INSERT, its bound values, the returned entry and the transaction are unchanged. The new store member catalogSchemaVersion reads PRAGMA user_version only. Models, invariants, bounds and crash insertion points are unchanged.",
-    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "coordinatorSourceReview": "2026-11-14, the coordinator's source review of OperationStore.record as it stands at 7f08409ecc76d818a32584cc9227f45b0449b842 (byte-identical to this candidate's body): the event text is computed once and bound unchanged; the INSERT, its other bound values, the returned entry and the transaction are unchanged; the note after it now also carries the actor, the Profile, the two Versions and occurred_at, and is guarded so it cannot cost a commit. Accepted."
   }
 }

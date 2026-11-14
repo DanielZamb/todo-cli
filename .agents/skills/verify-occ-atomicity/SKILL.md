@@ -378,3 +378,14 @@ returned entry and the transaction are unchanged. The pre-renewal check stopped
 only at the mapping; the renewed check passed (fv01-check-Qv0eoV); both
 real-code breaks failed and the restored source passed (sensitivity-M3o6h1).
 Candidate until the seat accepts it.
+
+## Coordinator's source review of OperationStore.record, 2026-11-14
+
+For the seat-findings candidate (beae37bc; the body is byte-identical at
+7f08409e): the event text is computed once and bound unchanged; the INSERT,
+its other bound values, the returned entry and the transaction are unchanged;
+the note after it now also carries the actor, the Profile, the two Versions and
+occurred_at, and is guarded so it cannot cost a commit. Accepted. Recorded in
+`coverage.json` as seatFindings.coordinatorSourceReview. The seat accepted the
+candidate on its check and sensitivity rerun (fv01-check-tsfnEu,
+sensitivity-fTmIHV).
