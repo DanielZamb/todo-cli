@@ -57,7 +57,10 @@ struct WindowLayoutTests {
         #expect(window.isVisible == false)
         #expect(model.editor?.title == "Keep this unsaved draft")
         layout.compact = false
-        try await settle(window)
+        // The app restores the expanded frame by retrying every 10 ms for up to 1 s (restoreExpanded,
+        // 100 attempts); wait for it up to that bound rather than a fixed 200 ms (follow-up 63: it
+        // failed twice at load 19 to 25).
+        try await settle(window, until: { window.frame == expanded && window.contentMaxSize.width > 393 })
         #expect(window.frame == expanded)
         #expect(window.contentMaxSize.width > 393, "the full window's width is free again: \(window.contentMaxSize)")
         #expect(model.editor?.title == "Keep this unsaved draft")
@@ -94,5 +97,15 @@ struct WindowLayoutTests {
         window.contentView?.layoutSubtreeIfNeeded()
         try await Task.sleep(for: .milliseconds(200))
         window.contentView?.layoutSubtreeIfNeeded()
+    }
+    /// Settles, then waits for `condition` up to the restore's own bound (100 attempts 10 ms apart)
+    /// plus a margin, laying the window out between checks.
+    private func settle(_ window: NSWindow, until condition: () -> Bool) async throws {
+        try await settle(window)
+        let deadline = ProcessInfo.processInfo.systemUptime + 1.2
+        while !condition() && ProcessInfo.processInfo.systemUptime < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+            window.contentView?.layoutSubtreeIfNeeded()
+        }
     }
 }
