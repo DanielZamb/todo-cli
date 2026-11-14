@@ -367,3 +367,14 @@ byte-identical event text. The pre-renewal check stopped only at the mapping
 (fv01-check-dvHBJT); the renewed check passed (fv01-check-qGPaQj); both
 real-code breaks failed and the restored source passed (sensitivity-VCmWB1).
 Candidate (`reviewedCandidate: false`) until the seat accepts it.
+
+## Seat findings correction, 2026-11-13
+
+Product beae37bceef38fb46325e14ccb45e4d03ddc5e9f, after seat CATALOG-S1's two
+findings. `OperationStore.record`'s guarded note now also carries the columns
+Purge never rewrites (actor, profile, from_version, to_version, occurred_at),
+so a rollback can be told from a redaction; the INSERT, its bound values, the
+returned entry and the transaction are unchanged. The pre-renewal check stopped
+only at the mapping; the renewed check passed (fv01-check-Qv0eoV); both
+real-code breaks failed and the restored source passed (sensitivity-M3o6h1).
+Candidate until the seat accepts it.

@@ -275,3 +275,13 @@ and stopped only at store/store.ts; check-hygiene.mjs ran clean, three controls
 (exit 1 each) and restored, then stopped only at a mapped hash. After renewal
 check.mjs, check-hygiene.mjs, build-baseline.mjs --uncached and the full
 verify.mjs all exit 0 on the product. Candidate until the seats accept it.
+
+## Seat findings correction, 2026-11-13
+
+Product beae37bceef38fb46325e14ccb45e4d03ddc5e9f. store/store.ts (the note's
+kept columns, the catalogSchemaVersion read member) and store/snapshots.ts (the
+restore's note) move; no cache body changes. Before renewal check.mjs stopped
+only at store/store.ts after its controls, and check-hygiene.mjs only at a
+mapped hash after clean, three controls and restored. After renewal both exit
+0, build-baseline.mjs --uncached exits 0 and the full verify.mjs exits 0
+(verify-FKfeQq). Candidate until the seats accept it.

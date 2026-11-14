@@ -21,11 +21,11 @@
     },
     {
       "path": "store/store.ts",
-      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
+      "sha256": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
     },
     {
       "path": "store/search-cache-events.ts",
@@ -49,11 +49,11 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba"
+      "sha256": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -304,6 +304,35 @@
       }
     ],
     "review": "store/store.ts: OperationStore.record binds the event text it notes; catalogTasks becomes catalogPayloads (payload text, decoded after the lease). store/snapshots.ts: the restore binds the event text it notes. No cache, matcher, runner, admission, accounting or erasure body changes; CatalogReads.read still takes searchWords.read(profile) before its lease and prepares through searchWords.words(search, text).",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "previous": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba",
+        "to": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "50836d1dd245d8b75d824b8c458c218319d16a97938e952c9e8eb5a3d0c412ba",
+        "to": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      }
+    ],
+    "review": "store/store.ts: the operation_seq note carries the kept columns; new read member catalogSchemaVersion. store/snapshots.ts: the restore's note carries them too. No cache, matcher, runner, admission, accounting or erasure body changes.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

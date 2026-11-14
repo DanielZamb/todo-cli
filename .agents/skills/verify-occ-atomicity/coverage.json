@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+  "confirmedCommit": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+      "sha256": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -173,6 +173,22 @@
       "OperationStore.record"
     ],
     "coordinatorSourceReview": "constructor accepted; record accepted on three conditions, now met: total note (guarded, test with a failing collector), identity by event bytes (fixed-clock reused-seq test, red on the earlier rule), absence means read to find out",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindings": {
+    "product": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "previous": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
+        "to": "dc49c3ea85ee74e83127b1c52eb37139833240495d1f867a6bd5afa53100800b"
+      }
+    ],
+    "changedFunctions": [
+      "OperationStore.record"
+    ],
+    "review": "Seat CATALOG-S1 findings: OperationStore.record's guarded noteCommitted call now also passes the columns Purge never rewrites (actor, profile, from_version, to_version, occurred_at) so the settle can tell a rollback from a redaction; the INSERT, its bound values, the returned entry and the transaction are unchanged. The new store member catalogSchemaVersion reads PRAGMA user_version only. Models, invariants, bounds and crash insertion points are unchanged.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }
