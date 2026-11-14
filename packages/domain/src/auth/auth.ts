@@ -584,6 +584,11 @@ export class Authentication<Read> {
       noteCommitted(this.db, {
         seq: Number(inserted.lastInsertRowid),
         event: text,
+        actor: input.actor,
+        profile: input.profile ?? null,
+        from_version: null,
+        to_version: null,
+        occurred_at: event.occurred_at,
       });
   }
 

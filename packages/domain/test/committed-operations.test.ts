@@ -127,7 +127,25 @@ it.effect("reports the highest seq a request committed, per request", () =>
   ),
 );
 
-type Row = { seq: number; actor: string; event: string; outcome: string };
+type Row = {
+  seq: number;
+  actor: string;
+  profile: string | null;
+  from_version: number | null;
+  to_version: number | null;
+  event: string;
+  outcome: string;
+  occurred_at: string;
+};
+const noted = (row: Row) => ({
+  seq: row.seq,
+  event: row.event,
+  actor: row.actor,
+  profile: row.profile,
+  from_version: row.from_version,
+  to_version: row.to_version,
+  occurred_at: row.occurred_at,
+});
 const scratchStore = <A, E>(
   body: (
     store: Effect.Success<ReturnType<typeof openStore>>,
@@ -150,7 +168,7 @@ const scratchStore = <A, E>(
               () =>
                 db
                   .query(
-                    "SELECT seq,actor,event,outcome FROM op_log ORDER BY seq",
+                    "SELECT seq,actor,profile,from_version,to_version,event,outcome,json_extract(event,'$.occurred_at') AS occurred_at FROM op_log ORDER BY seq",
                   )
                   .all() as Row[],
             );
@@ -237,19 +255,93 @@ it.effect("a note made outside the request's fiber is dropped", () =>
       const db = Reflect.get(store, "db");
       const row = rows()[0] as Row;
       const inside = yield* collectCommitted(
-        Effect.sync(() =>
-          noteCommitted(db, { seq: row.seq, event: row.event }),
-        ),
+        Effect.sync(() => noteCommitted(db, noted(row))),
       );
       expect(inside.seq).toBe(row.seq);
       const outside = yield* collectCommitted(
         Effect.promise(() =>
-          Promise.resolve().then(() =>
-            noteCommitted(db, { seq: row.seq, event: row.event }),
-          ),
+          Promise.resolve().then(() => noteCommitted(db, noted(row))),
         ),
       );
       expect(outside.seq).toBe(null);
+    }),
+  ),
+);
+
+it.effect("a redacted operation never lets a request report a lower seq", () =>
+  scratchStore((store, rows) =>
+    Effect.gen(function* () {
+      const { credential } = yield* store.auth.signIn("committed scratch");
+      const request = { credential, profile: work.id };
+      const commands = new TaskCommands(store);
+      let highest = 0;
+      const reply = yield* collectCommitted(
+        Effect.gen(function* () {
+          yield* commands.create(request, {
+            title: "Kept",
+            source: "agent",
+          } as never);
+          const created = yield* commands.create(request, {
+            title: "Purged later",
+            source: "agent",
+          } as never);
+          if (created.outcome !== "committed") throw new Error("create");
+          highest = rows().at(-1)?.seq ?? 0;
+          // Another request (its own fiber, no collector of this one) deletes
+          // and purges that Task before this request ends.
+          const target = { ...request, task_id: created.task.id as TaskId };
+          const purge = Effect.gen(function* () {
+            const deleted = yield* commands.delete(target, {
+              from_version: created.task.row_version,
+              with_dependencies: true,
+            } as never);
+            if (deleted.outcome !== "committed") throw new Error("delete");
+            const purged = yield* commands.purge(target, {
+              from_version: deleted.task.row_version,
+            } as never);
+            if (purged.outcome !== "committed") throw new Error("purge");
+          }).pipe(Effect.provideService(CommittedOperationsCell, undefined));
+          yield* Fiber.join(yield* Effect.forkChild(purge));
+        }),
+      );
+      const row = rows().find((value) => value.seq === highest);
+      expect(JSON.parse(row?.event ?? "{}").kind).toBe("TaskHistoryRedacted");
+      expect(row?.outcome).toBe("committed");
+      // The highest operation can no longer be confirmed: nothing is reported,
+      // never the lower seq of the first create.
+      expect(reply.seq).toBe(null);
+    }),
+  ),
+);
+
+it.effect("a rolled-back insert leaves the request's committed seq", () =>
+  scratchStore((store, rows) =>
+    Effect.gen(function* () {
+      const { credential } = yield* store.auth.signIn("committed scratch");
+      const request = { credential, profile: work.id };
+      const reply = yield* collectCommitted(
+        Effect.gen(function* () {
+          yield* new TaskCommands(store).create(request, {
+            title: "Committed",
+            source: "agent",
+          } as never);
+          yield* Effect.exit(
+            store.auth.mutate(request, (identity) =>
+              Effect.gen(function* () {
+                yield* store.append({ ...identity, event: created as never });
+                return yield* Effect.fail(
+                  new StoreError(new Error("rolled back")),
+                );
+              }),
+            ),
+          );
+        }),
+      );
+      const committed = rows().filter((row) => row.outcome === "committed");
+      expect(reply.seq).toBe(committed.at(-1)?.seq);
+      expect(JSON.parse(committed.at(-1)?.event ?? "{}").task.title).toBe(
+        "Committed",
+      );
     }),
   ),
 );

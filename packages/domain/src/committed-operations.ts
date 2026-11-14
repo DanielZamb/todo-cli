@@ -16,10 +16,19 @@ export const operationSeqField = {
   operation_seq: Schema.optionalKey(OperationSeq),
 };
 
-/** A committed op_log row as inserted: its seq and its exact event text. */
+/**
+ * A committed op_log row as inserted: its seq, its exact event text, and the
+ * columns Purge never rewrites (actor, profile, versions; occurred_at lives in
+ * the event and is kept by a redaction too).
+ */
 export type NotedOperation = {
   readonly seq: number;
   readonly event: string;
+  readonly actor: string;
+  readonly profile: string | null;
+  readonly from_version: number | null;
+  readonly to_version: number | null;
+  readonly occurred_at: string;
 };
 type Reader = {
   readonly query: (sql: string) => {
@@ -58,27 +67,54 @@ export const noteCommitted = (db: Reader, row: NotedOperation) => {
   } catch {}
 };
 
-// A row noted inside a transaction that rolled back (a dry run, a failure) is
-// gone, or its seq was taken by another operation. Only a committed row at
-// that seq with the byte-identical event text counts: a false match would be
-// the same operation. A failed lookup counts as unconfirmed.
-const confirmed = (db: Reader, row: NotedOperation) => {
+// How a noted row stands when the request ends:
+// - "committed": a committed row at that seq with byte-identical event text;
+// - "rolled-back": no row at that seq, or a row whose kept columns differ, so
+//   the seq was taken by another operation after this insert rolled back;
+// - "unaccounted": a committed row with the same kept columns but other event
+//   bytes. Purge redacts that way (it rewrites event and entity_version only),
+//   and a same-shaped reuse would look the same, so it cannot be told apart.
+// A failed lookup is unaccounted too.
+type Standing = "committed" | "rolled-back" | "unaccounted";
+const standing = (db: Reader, row: NotedOperation): Standing => {
   try {
-    return (
-      db
-        .query(
-          "SELECT 1 AS found FROM op_log WHERE seq=? AND outcome='committed' AND event=?",
-        )
-        .get(row.seq, row.event) !== null
-    );
+    const stored = db
+      .query(
+        "SELECT actor,profile,from_version,to_version,outcome,event,json_extract(event,'$.occurred_at') AS occurred_at FROM op_log WHERE seq=?",
+      )
+      .get(row.seq) as {
+      actor: string;
+      profile: string | null;
+      from_version: number | null;
+      to_version: number | null;
+      outcome: string;
+      event: string;
+      occurred_at: string | null;
+    } | null;
+    if (!stored) return "rolled-back";
+    const kept =
+      stored.outcome === "committed" &&
+      stored.actor === row.actor &&
+      stored.profile === row.profile &&
+      stored.from_version === row.from_version &&
+      stored.to_version === row.to_version &&
+      stored.occurred_at === row.occurred_at;
+    if (!kept) return "rolled-back";
+    return stored.event === row.event ? "committed" : "unaccounted";
   } catch {
-    return false;
+    return "unaccounted";
   }
 };
+// A seq is reported only when every note is accounted for: the highest
+// committed one, ignoring rolled-back inserts. One unaccounted note (a
+// redacted row, a failed lookup) means nothing is reported, never a lower seq.
 const settled = (cell: Cell) => {
   let seq: number | null = null;
-  for (const { db, row } of cell.noted)
-    if ((seq === null || row.seq > seq) && confirmed(db, row)) seq = row.seq;
+  for (const { db, row } of cell.noted) {
+    const state = standing(db, row);
+    if (state === "unaccounted") return null;
+    if (state === "committed" && (seq === null || row.seq > seq)) seq = row.seq;
+  }
   return seq;
 };
 

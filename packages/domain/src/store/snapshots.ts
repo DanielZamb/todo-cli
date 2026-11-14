@@ -588,6 +588,11 @@ export class Snapshots {
           noteCommitted(this.db, {
             seq: Number(restored.lastInsertRowid),
             event: text,
+            actor: "snapshot-restore",
+            profile: null,
+            from_version: null,
+            to_version: null,
+            occurred_at: event.occurred_at,
           });
           for (const trigger of triggers) this.db.exec(trigger.sql);
           if (this.db.query("PRAGMA foreign_key_check").all().length)

@@ -721,7 +721,15 @@ export class OperationStore {
       { statement: "store.write" },
     );
     if (entry.outcome === "committed")
-      noteCommitted(this.db, { seq: Number(result.lastInsertRowid), event });
+      noteCommitted(this.db, {
+        seq: Number(result.lastInsertRowid),
+        event,
+        actor: input.actor,
+        profile: input.profile,
+        from_version: entry.from_version,
+        to_version: entry.to_version,
+        occurred_at: entry.event.occurred_at,
+      });
     return Schema.decodeUnknownSync(OpLogEntry)({
       ...entry,
       seq: Number(result.lastInsertRowid),
