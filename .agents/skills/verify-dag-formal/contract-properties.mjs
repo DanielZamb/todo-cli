@@ -70,8 +70,17 @@ export function verifyContractArtifacts(candidate, evidence) {
   const apiIdentity = readFileSync(join(candidate, "packages/api/src/contract.ts"), "utf8")
     .match(/"([a-f0-9]{64})"/)?.[1];
   assert.ok(apiIdentity);
-  assert.ok(readFileSync(join(candidate, "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"), "utf8")
-    .includes('"' + apiIdentity + '"'));
+  // The Swift identity names the contract its sources implement. It may differ
+  // from the API identity only while apps/macos/API/swift-client-pending.json
+  // names that exact pair (the Swift client is not regenerated yet).
+  const swiftIdentity = readFileSync(join(candidate, "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"), "utf8")
+    .match(/"([a-f0-9]{64})"/)?.[1];
+  assert.ok(swiftIdentity);
+  if (swiftIdentity !== apiIdentity) {
+    const pending = JSON.parse(readFileSync(join(candidate, "apps/macos/API/swift-client-pending.json"), "utf8"));
+    assert.equal(pending.swiftContract, swiftIdentity, "Swift identity differs and is not named as pending");
+    assert.equal(pending.serverContract, apiIdentity, "Swift identity differs and is not named as pending");
+  }
   const factory = readFileSync(
     join(candidate, "apps/electron/src/http-client.ts"),
     "utf8",
