@@ -143,6 +143,7 @@ public final class ClientStallSampler: @unchecked Sendable {
     /// recorded so Diagnostics shows the cost.
     public static let stallBudgetNS: UInt64 = 2_000_000
     private let windowLimitNS: UInt64
+    private let budgetNS: UInt64
     private let ownImages: [String]
     private let thread: thread_act_t
     private let buffer: UnsafeMutablePointer<todo_stall_sample>
@@ -166,11 +167,14 @@ public final class ClientStallSampler: @unchecked Sendable {
     @MainActor public convenience init(ownImages: [String]? = nil) {
         self.init(thread: mach_thread_self(), ownImages: ownImages ?? [Bundle.main.bundleURL.resolvingSymlinksInPath().path], windowLimitNS: Self.windowLimitNS)
     }
-    /// For the failing-first controls: a given thread port (owned by the sampler) and window limit.
-    public init(thread: thread_act_t, ownImages: [String], windowLimitNS: UInt64) {
+    /// For the failing-first controls: a given thread port (owned by the sampler), window limit and
+    /// stall budget. A test that must not depend on the machine's load raises both (follow-up 59):
+    /// under load one suspend can take over 1 ms, which turns the production sampler off.
+    public init(thread: thread_act_t, ownImages: [String], windowLimitNS: UInt64, stallBudgetNS: UInt64 = ClientStallSampler.stallBudgetNS) {
         self.thread = thread
         self.ownImages = ownImages
         self.windowLimitNS = windowLimitNS
+        budgetNS = stallBudgetNS
         buffer = .allocate(capacity: Self.capacity)
         buffer.initialize(repeating: todo_stall_sample(), count: Self.capacity)
         windows.reserveCapacity(Self.capacity)
@@ -198,7 +202,7 @@ public final class ClientStallSampler: @unchecked Sendable {
         let index = taken
         guard index >= 0, index < Self.capacity, index == 0 || nowMS - lastSampleMS >= Self.intervalMS else { return false }
         // The stall's time budget, before the suspend: start only if a full-limit window still fits.
-        guard spentNS + windowLimitNS <= Self.stallBudgetNS else { return false }
+        guard spentNS + windowLimitNS <= budgetNS else { return false }
         let slot = buffer.advanced(by: index)
         let status = Int(todo_sample_thread(thread, slot))
         // Conservative: from before the suspend call to after the resume (S1-25). Every suspension
