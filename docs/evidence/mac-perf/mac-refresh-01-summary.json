@@ -1,0 +1,254 @@
+{
+  "attempt": "C4-01",
+  "verdict": "kept",
+  "mechanism": "One owned ordinary Client and URLSession per model credential scope; cancellation on replacement and teardown",
+  "native_latency_improvement_qualified": false,
+  "request_reduction_percent": 0,
+  "socket_reduction_percent": 99.70845481049562,
+  "before": {
+    "reuse": {
+      "credential_scope_new_connections": 8,
+      "credential_scope_requests": 8,
+      "new_connections": 16,
+      "refreshes": 2,
+      "requests": 16,
+      "reused_connections": 0
+    },
+    "credential_cancel": {
+      "cancelled": false,
+      "reason": "request completed"
+    },
+    "resources": {
+      "before_transport_descriptors": 3,
+      "before_transport_soft_limit": 256,
+      "descriptors": 2408,
+      "peak_sockets": 2401,
+      "refreshes": 300,
+      "requested_initial_soft_limit": 256,
+      "requests": 2400,
+      "scope": "production model and transport directly against scratch server; no proxy",
+      "sockets": 2401,
+      "soft_limit": 2560
+    }
+  },
+  "after": {
+    "reuse": {
+      "credential_scope_new_connections": 6,
+      "credential_scope_requests": 8,
+      "new_connections": 6,
+      "refreshes": 2,
+      "requests": 16,
+      "reused_connections": 10
+    },
+    "credential_cancel": {
+      "cancelled": true,
+      "reason": "cancelled"
+    },
+    "resources": {
+      "before_transport_descriptors": 3,
+      "before_transport_soft_limit": 256,
+      "descriptors": 14,
+      "peak_sockets": 7,
+      "refreshes": 300,
+      "requested_initial_soft_limit": 256,
+      "requests": 2400,
+      "scope": "production model and transport directly against scratch server; no proxy",
+      "sockets": 7,
+      "soft_limit": 2560
+    }
+  },
+  "timing_conclusion": "Ranges overlap; no latency improvement claimed. Burst model-action range includes CLI producer time and is wider after the change.",
+  "controls": {
+    "44d37479": {
+      "runs": 5,
+      "operations_per_cell": 372,
+      "requests": {
+        "median": 3035,
+        "minimum": 3035,
+        "maximum": 3035
+      },
+      "catalog_reads": {
+        "median": 378,
+        "minimum": 378,
+        "maximum": 378
+      },
+      "actor_gap_ms": {
+        "median": 145.408667,
+        "minimum": 140.452,
+        "maximum": 239.988834
+      },
+      "first_full_layout_ms": {
+        "median": 177.316459,
+        "minimum": 170.199833,
+        "maximum": 217.017209
+      },
+      "complete_busy_ms": {
+        "median": 274.31291600000003,
+        "minimum": 259.66541599999994,
+        "maximum": 356.28824999999995
+      },
+      "burst_model_action_ms": {
+        "median": 6735.594583,
+        "minimum": 6456.094542,
+        "maximum": 7718.552792
+      },
+      "switch_to_current_ms": {
+        "profile-switch-backlog-0": {
+          "median": 394.763459,
+          "minimum": 389.170583,
+          "maximum": 521.041291
+        },
+        "profile-switch-backlog-50": {
+          "median": 398.461,
+          "minimum": 370.714375,
+          "maximum": 560.118708
+        },
+        "profile-switch-backlog-300": {
+          "median": 430.27475,
+          "minimum": 417.2085,
+          "maximum": 503.748291
+        }
+      },
+      "active_load": [
+        {
+          "median": 6.591796875,
+          "minimum": 5.06396484375,
+          "maximum": 8.880859375
+        },
+        {
+          "median": 4.6982421875,
+          "minimum": 4.03173828125,
+          "maximum": 5.45849609375
+        },
+        {
+          "median": 32.3642578125,
+          "minimum": 15.267578125,
+          "maximum": 76.22509765625
+        },
+        {
+          "median": 3.23828125,
+          "minimum": 2.81201171875,
+          "maximum": 3.62744140625
+        },
+        {
+          "median": 38.373779296875,
+          "minimum": 17.83154296875,
+          "maximum": 88.1552734375
+        }
+      ]
+    },
+    "working-tree": {
+      "runs": 5,
+      "operations_per_cell": 372,
+      "requests": {
+        "median": 3035,
+        "minimum": 3035,
+        "maximum": 3035
+      },
+      "catalog_reads": {
+        "median": 378,
+        "minimum": 378,
+        "maximum": 378
+      },
+      "actor_gap_ms": {
+        "median": 170.597167,
+        "minimum": 140.015875,
+        "maximum": 242.038875
+      },
+      "first_full_layout_ms": {
+        "median": 182.323541,
+        "minimum": 172.861625,
+        "maximum": 188.622667
+      },
+      "complete_busy_ms": {
+        "median": 273.05166700000007,
+        "minimum": 270.1630830000001,
+        "maximum": 313.804833
+      },
+      "burst_model_action_ms": {
+        "median": 7634.3745,
+        "minimum": 6802.054,
+        "maximum": 8543.66925
+      },
+      "switch_to_current_ms": {
+        "profile-switch-backlog-0": {
+          "median": 372.689709,
+          "minimum": 361.968083,
+          "maximum": 457.5465
+        },
+        "profile-switch-backlog-50": {
+          "median": 386.723834,
+          "minimum": 372.4115,
+          "maximum": 511.90025
+        },
+        "profile-switch-backlog-300": {
+          "median": 422.117875,
+          "minimum": 408.58125,
+          "maximum": 480.521709
+        }
+      },
+      "active_load": [
+        {
+          "median": 3.434814453125,
+          "minimum": 2.853515625,
+          "maximum": 4.46484375
+        },
+        {
+          "median": 4.88427734375,
+          "minimum": 3.21875,
+          "maximum": 5.47607421875
+        },
+        {
+          "median": 6.53857421875,
+          "minimum": 4.8515625,
+          "maximum": 11.9638671875
+        },
+        {
+          "median": 4.171875,
+          "minimum": 3.4580078125,
+          "maximum": 5.1025390625
+        },
+        {
+          "median": 7.11572265625,
+          "minimum": 5.0869140625,
+          "maximum": 13.3427734375
+        }
+      ]
+    }
+  },
+  "gates": {
+    "state_contract": {
+      "tests": 200,
+      "suites": 30,
+      "result": "PASS"
+    },
+    "diagnostics_release": {
+      "tests": 31,
+      "suites": 3,
+      "result": "PASS"
+    },
+    "idle": {
+      "app_launched": false,
+      "can_write": true,
+      "idle_ms": 300037.245708334,
+      "keychain_called": false,
+      "loading": false,
+      "reconnects": 0,
+      "refreshes": 0,
+      "requests": 0
+    },
+    "subscribers": [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0
+    ],
+    "real_http_sse": "PASS",
+    "exact_proof_source_hashes_match": true
+  },
+  "discarded_pilot": "red-sockets lowered256 afterURLSession startup; fixture error, not a product reproduction"
+}

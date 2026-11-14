@@ -1,0 +1,142 @@
+{
+  "proof": {
+    "result": "PASS",
+    "errors": 0,
+    "refreshes": 30,
+    "requests_recorded": 120,
+    "tasks": 178,
+    "keychain_called": false,
+    "app_launched": false,
+    "signed": false,
+    "pushed": false,
+    "native_input_proven": false,
+    "scratch_removed": true,
+    "owned_server_stopped": true
+  },
+  "runs_per_side": 5,
+  "refreshes_per_cell": 3,
+  "layout": "fresh production TaskList sidebar and content, unordered 1280x820 window",
+  "verdict": "inconclusive overhead; ranges overlap",
+  "native_ui_latency_proven": false,
+  "load_range": [
+    5.9990234375,
+    6.17333984375
+  ],
+  "measurements": {
+    "ms": {
+      "disabled": {
+        "median": 163.69274999306072,
+        "min": 143.67341667821165,
+        "max": 173.19504165789112,
+        "samples": [
+          143.67341667821165,
+          163.69274999306072,
+          168.22491666243877,
+          173.19504165789112,
+          152.63516665436327
+        ]
+      },
+      "enabled": {
+        "median": 178.99158333602827,
+        "min": 160.90758334030397,
+        "max": 185.914583329577,
+        "samples": [
+          185.914583329577,
+          182.6839583227411,
+          178.99158333602827,
+          164.58924999460578,
+          160.90758334030397
+        ]
+      }
+    },
+    "layout_ms": {
+      "disabled": {
+        "median": 191.77779166784603,
+        "min": 189.3276666669408,
+        "max": 302.10962500132155,
+        "samples": [
+          302.10962500132155,
+          189.3276666669408,
+          191.15745833551046,
+          191.77779166784603,
+          195.8687916630879
+        ]
+      },
+      "enabled": {
+        "median": 192.88795834290795,
+        "min": 187.6450833369745,
+        "max": 199.2958333430579,
+        "samples": [
+          187.6450833369745,
+          199.2958333430579,
+          190.7761666661827,
+          192.88795834290795,
+          193.7820416642353
+        ]
+      }
+    }
+  },
+  "artifact": {
+    "sha256": "0b453c28e016a952b3f7bc88b07f500ece62b9cb35d1bcb57559710e997081b8",
+    "configuration": "release"
+  },
+  "source_sha256": {
+    ".agents/skills/verify-client-diagnostics/scripts/verify.py": "13c3e7b68cdaaa20c98579f0d508378e64d4561646a07ac0436e61ad2883727e",
+    "apps/macos/API/Sources/TodoAPI/ClientDiagnosticEvent.swift": "b05e1239a7f7bcefeaea93aa4b3695728fc09f44a6b1b7b98bf21311db18e3d7",
+    "apps/macos/API/Sources/TodoAPI/ClientDiagnosticsRecorder.swift": "1de59215a36e75f02685e4d23e68a6cb1d42735f35ba2eb9b67c5511058bca9b",
+    "apps/macos/API/Sources/TodoAPI/ClientRequestCorrelation.swift": "c7d29cd07d9c0b50ad52015a9a12ebc9cfef8eff20ac014e6367fb7cdbb53e93",
+    "apps/macos/API/Sources/TodoAPI/ClientServerTiming.swift": "0654bf4bcee83940e70695a1dc95cf417575967b294bb80fd6419581e398a1d1",
+    "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift": "2961b2686c8df0331495d260d6496970c28ae4bef47591b3c224054be3c21431",
+    "apps/macos/API/Sources/TodoAPI/DiagnosticTransport.swift": "c33ddaec925e54a196c16371c363df543a04c2b045ce0eff8d7021480ab48fd7",
+    "apps/macos/API/Sources/TodoAPI/Transport.swift": "43f9c1d8b7129257854eaf677ded7df5c32dc71d2e7d8ebc7f6f5b3511b18487",
+    "apps/macos/Package.swift": "c61f9d5f596b062ce153db7a69bb49953e84293dfb5040d229099ee89d3f71b9",
+    "apps/macos/Sources/AppViews.swift": "6942fe51d6c26253067c9c2a8c8d3d95f7af2210a53a81d9b0be7d3b20dd92d1",
+    "apps/macos/Sources/AttachmentBatch.swift": "acaa4385ca0b8b4566bdfaf747bf05f98d47c7d1f75a814379596c7c19d28dc8",
+    "apps/macos/Sources/AttachmentModel.swift": "014232d99ade1c2178fb1ea8c2dbdf8935b8862ebad88af9865291cc2e0909fa",
+    "apps/macos/Sources/AttachmentSnapshot.swift": "c2a6e5ea2a5b63154184d65438ef6c36ee5ce2a3d2c265b59353d42270c51411",
+    "apps/macos/Sources/AttachmentsSection.swift": "a0761a4d17e6aa24f5d1b6f893a612e498b7512268ba4026d42cb831367438f1",
+    "apps/macos/Sources/BatchEdit.swift": "0529a345476bffb752cad574360766db9c6e088d96cb88ded31f47a0a3a7a2b4",
+    "apps/macos/Sources/ClientDiagnosticDisplay.swift": "f67adcfb2f655e2e66c8285ae338f93fbd48d5a4930aabd444f24b5e03725bb3",
+    "apps/macos/Sources/ClientDiagnosticsMonitor.swift": "cbcd8782025aea39fe1c3b74c767ce004b3a1d70c3e9db9c759f43d8026cfd47",
+    "apps/macos/Sources/ClientDiagnosticsView.swift": "5a16892b9797f9ba07d861790f30fc65dbd0ebbd9ee8e4b5c46b5b47e2c829dd",
+    "apps/macos/Sources/ClientErrors.swift": "ff0b5d47a7a733442bad3917de2fe36a9613aebf921146f19fc3ab58d9da4402",
+    "apps/macos/Sources/ClientProcessResources.swift": "4897bc20e5982e06f0b95f9d80127fa5dc94a4fd0abcfd5373898a928e5b219e",
+    "apps/macos/Sources/ClientReads.swift": "5cc3006309cd9cfbbd9632b5e33cda324aecd8cfed9cdbef7c3f1c77ad69b517",
+    "apps/macos/Sources/ConflictMerge.swift": "213007aec953e03dcb513bed7eeab8113b690e71c1cb7ebae7f2658f3018f6c1",
+    "apps/macos/Sources/Dependencies.swift": "a484f1aab49343f66d70076975d131490a9b935b2f278b1468bbe8192f140d8d",
+    "apps/macos/Sources/DependencyBatch.swift": "bb6eb027e312e96eca1d214011db8e204f0dad69105f87b3f052c2f57ae802c7",
+    "apps/macos/Sources/DependencyDelete.swift": "989ec095bafd94d255dffaa7f238a7474ead4c2c2b4c7c14d29617e102e42b03",
+    "apps/macos/Sources/DependencyDrag.swift": "205d1df3862c4e0d0ecb71f413f9d5c5702b684d465cf358ccd760ab2fe0221b",
+    "apps/macos/Sources/DependencyErrors.swift": "db9dbe5380df1d65da8073136e1e99f2fdf472cf88714db3495d5a195d2d8a97",
+    "apps/macos/Sources/DependencyGraphState.swift": "d92da0c040730e6035cd59627a19e1b626e705eed0e0548f00a33aae899980de",
+    "apps/macos/Sources/DependencyGraphView.swift": "bdf7a946d97234cd198292c846d61d8c70f66feeb100a72b9d21b09ad857ac9e",
+    "apps/macos/Sources/DependencyHistory.swift": "c84407e0fe039ff422d9315f51e94bcf780b344ebb6b6f95f5c9d1bc2f4730cd",
+    "apps/macos/Sources/DependencyHistoryTypes.swift": "8c1f97f21c7bcbafc76ae8f71be75e603670d6aec13c75412299f3bd33c9f3c9",
+    "apps/macos/Sources/DependencyProtocol.swift": "4b992b1649c9aaa2aee1a4e186a84233bab27ccda3cf9a752765186228becd11",
+    "apps/macos/Sources/DependencyViews.swift": "58bac2150570912132370bce7a02893a067506a633966412d27917c87aac3273",
+    "apps/macos/Sources/DependencyWebView.swift": "a59a603c51e34ca4a2f3b2f4a19ea8cd119f80f31c16c6c5db6d5533d21fde6d",
+    "apps/macos/Sources/DiagnosticsView.swift": "27104fc5b51374c4b40435b809798c72be54c64d6241155007075ce5648290ea",
+    "apps/macos/Sources/Discovery.swift": "d4cb2548215a43da7589646195d4907e74731c3b2db8ad8c7f667b350a162b60",
+    "apps/macos/Sources/DiscoveryView.swift": "99d4fe04019a550269723afa21a2b47766242603ea8b393c14c33ce863a10de9",
+    "apps/macos/Sources/EditorView.swift": "fd2a117de87bb5219151ff1a31dcda35774dcd5c28f2cbcb9705827da38439ae",
+    "apps/macos/Sources/EventStream.swift": "3f652eb3f825ea5d45b12a9e72b8594bbb95eac7399cc1ccf37e3c5de8e26d46",
+    "apps/macos/Sources/Import.swift": "954ce7b4047fc445d04de4ddbe1d1e3cae626f6a8f847fa76a96a30ea18ef179",
+    "apps/macos/Sources/NotificationPermission.swift": "fe26e52eb68b33a9c119a4130c6f682a8ca4a8726fd0c03679e81a72bf015904",
+    "apps/macos/Sources/Presentation.swift": "4e4883dec8f9f9d253c31004f41b78eb0f6e4083f22b20e430bf7970ba992136",
+    "apps/macos/Sources/Recurrence.swift": "673a9f5983cc2df95102a416457370d0a20cac766ca1bff421c1c2114a45f21b",
+    "apps/macos/Sources/Reminders.swift": "4fde902834828ca037b47559fcac25be2ab9033597641cd82a6120df9e936df8",
+    "apps/macos/Sources/SeriesView.swift": "92bce37638ab8eda9795f78202ce3a2c7393a2d8974b54ab4065a12a62791a73",
+    "apps/macos/Sources/ServerLifecycle.swift": "481b0ad4e61e0c3d7c817eafd32fcf34b4e1be0b9c8690e1db532874da77ccf8",
+    "apps/macos/Sources/ServerSettingsView.swift": "f32250308d2df0d91354c86cd193842b4d459c8eb0b2b4c322b53157f466a273",
+    "apps/macos/Sources/SessionVault.swift": "101ad59877b3446eb95db6766f91590b4e31985558a9fc9ba3f2b07d390f60c5",
+    "apps/macos/Sources/SettingsView.swift": "d5ca1b47bdf8dc938200b2bcff1bf013d47bb2d1f88bca947691a4580e463f61",
+    "apps/macos/Sources/TaskFilters.swift": "4d39d654fd3ff9c2b3aaabe108b7155cca6085f4ed27af5b74366ee0f3001785",
+    "apps/macos/Sources/TaskSearch.swift": "2b98d8fb63ae9be6afc2983e63a0c60bf2ac640b1dbceeef842dc1b6ef8a2445",
+    "apps/macos/Sources/TaskSnapshot.swift": "8502de3358af711ba47c20790d32214caaacd3ed6c6ad1655367a93149feb9e6",
+    "apps/macos/Sources/TodoApp.swift": "6e547b6e322b19423fff46d911656932e53a794ace06eef23f2bc36b304db313",
+    "apps/macos/Sources/TodoColors.swift": "92cd3d459de84efef6be7e5bb7ec6eb5a3332a14c8e0a101510697dc0f66b7a1",
+    "apps/macos/Sources/TodoModel.swift": "b3dc0bd770498eece2870511e609a0280ac6f797df8a67cf425f42b81f2246bc",
+    "apps/macos/StateTests/ClientDiagnosticsTests.swift": "33ac41a18ed412555d465210697efd656c4a3839c51a6271972f70c211128a7a"
+  },
+  "binary_source_sha256": "66db5deacd7cd8d558d87f1072e44c7ee696c8daa5609f0d61e29b5ba40fffd2"
+}

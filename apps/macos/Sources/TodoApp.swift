@@ -10,7 +10,11 @@ struct TodoApp: App {
     init() {
         let configuration = ClientConfiguration.load()
         configureVerificationKeychain()
-        _model = State(initialValue: TodoModel(configuration: configuration))
+        let model = TodoModel(configuration: configuration, clientDiagnostics: .init())
+        // The person-input observer (MAC-C1-S1-32) is installed with the model, before any window or
+        // owner diagnostics can start, so Diagnostics input never depends on which window opened first.
+        model.personInput.install()
+        _model = State(initialValue: model)
     }
 
     var body: some Scene {
@@ -19,15 +23,18 @@ struct TodoApp: App {
                 .task { await model.restore() }
         }
         .defaultSize(width: 1100, height: 760)
+        // The window's limits come from the content: Compact is 393 pt wide (its maximum width
+        // equals its minimum) and at least 426 pt tall with no maximum height (O34).
+        .windowResizability(.contentSize)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("New task") { model.quickAdd = true }
+                Button("New task") { model.notePersonActed(); model.quickAdd = true }
                     .keyboardShortcut("n").disabled(!model.canWrite)
-                Button("Quick add in menu bar", action: openMenuBarQuickAdd)
+                Button("Quick add in menu bar") { model.notePersonActed(); openMenuBarQuickAdd() }
                     .keyboardShortcut("n", modifiers: [.command, .option]).disabled(!model.signedIn)
             }
             CommandGroup(after: .sidebar) {
-                Toggle("Compact mode", isOn: $compactMode)
+                Toggle("Compact mode", isOn: Binding(get: { compactMode }, set: { model.notePersonActed(); compactMode = $0 }))
                     .keyboardShortcut("m", modifiers: [.command, .shift])
             }
         }

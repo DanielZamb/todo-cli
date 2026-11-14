@@ -202,3 +202,10 @@ The same suite substitutes a real preview or a foreign Task/Profile body for
 Delete confirmation, preserving the native in-memory unsaved draft and navigation
 guard. Only a validated deletion closes the editor. It does not claim persistent
 native draft or Session restoration, or that the server emits incompatible bodies.
+
+The DependencyRowProviderTests source assertion rejects a content-level
+`.onDrag` on Task rows and requires the List row `itemProvider`. Its literal
+codec test preserves the two-field Dependency payload. These checks do not
+prove mouse selection or drag delivery. A real-app pass must select title and
+empty-row targets, open the matching inspector and preserve Dependency drag
+behavior.

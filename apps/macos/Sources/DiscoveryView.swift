@@ -47,7 +47,7 @@ struct DiscoveryView: View {
                 Button("Close") { model.closeDiscovery() }.keyboardShortcut(.cancelAction)
                     .accessibilityIdentifier("discovery-close").compactBounds("discovery-close")
             }
-        }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 : 600)
+        }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 + model.compactExtraHeight : 600)
             .onAppear { prefixFocused = true }
             .alert(DraftNavigationPrompt.title(hasConflict: model.conflict != nil), isPresented: Binding(get: { model.pendingNavigation != nil }, set: { if !$0 { model.dismissNavigationPrompt() } }), presenting: model.pendingNavigation) { target in
                 DraftNavigationActions(model: model, target: target)

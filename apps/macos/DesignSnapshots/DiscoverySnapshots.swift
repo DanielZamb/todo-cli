@@ -158,8 +158,7 @@ import TodoAPI
                         #expect(frame.minX >= 0 && frame.maxX <= width && frame.minY >= 0 && frame.maxY <= height, "\(file) \(key) \(frame)")
                     }
                     geometry[file] = frames.frames.merging(frames.reportFrames, uniquingKeysWith: { _, next in next }).mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }
-                    let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-                    host.cacheDisplay(in: host.bounds, to: bitmap)
+                    let bitmap = try await settledSnapshotBitmap(host, name: file)
                     try #require(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent(file))
                     files.append(file)
                     window.close()

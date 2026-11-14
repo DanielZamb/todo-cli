@@ -1,0 +1,74 @@
+{
+  "parent": "baa794d8cc83c15ae26b704d5c261ad7602eac64",
+  "scope": "Focused C3b controls; final candidate gates follow Diagnostics review fixes",
+  "calendar_control_before": {
+    "exit": 1,
+    "test_functions": 9,
+    "issues": 17
+  },
+  "calendar_control_after": {
+    "exit": 0,
+    "test_functions": 11,
+    "seconds": 5.88
+  },
+  "subscriber_before": {
+    "app_launched": false,
+    "counts": [
+      0,
+      1,
+      2,
+      11,
+      6,
+      7,
+      8,
+      8
+    ],
+    "keychain_called": false,
+    "labels": [
+      "before",
+      "connected",
+      "first_switch_after_3s",
+      "ten_switches_after_3s",
+      "old_profile_operation_after_3s",
+      "credential_change_after_3s",
+      "profile_deletion_after_3s",
+      "signed_out_after_3s"
+    ],
+    "sign_out_boundary": "signedIn false plus connect; SessionVault signOut not called"
+  },
+  "subscriber_after": {
+    "app_launched": false,
+    "counts": [
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      0
+    ],
+    "diagnostics_enabled": true,
+    "keychain_called": false,
+    "labels": [
+      "before",
+      "connected",
+      "first_switch_after_3s",
+      "ten_switches_after_3s",
+      "old_profile_operation_after_3s",
+      "credential_change_after_3s",
+      "profile_deletion_after_3s",
+      "signed_out_after_3s"
+    ],
+    "sign_out_boundary": "signedIn false plus connect; SessionVault signOut not called"
+  },
+  "subscriber_debug_exit": 0,
+  "native_ui_proven": false,
+  "keychain_called": false,
+  "source_sha256": {
+    "apps/macos/Sources/TodoModel.swift": "86535e5a31c7cfd8dffd943ce2aa0a39b823d169cb18791727404749758c729b",
+    "apps/macos/API/Sources/TodoAPI/StreamTransport.swift": "e58a1656d2c16655e09af39282db24f75855f5c277568477c2062445c2bb0100",
+    "apps/macos/StateTests/StreamIdleTests.swift": "cffe6098337f6190aa762f5b30a16557005820919da519c65993fb55ce74a098",
+    "apps/macos/StateTests/StreamIdleTransportTests.swift": "e5fbd7cd566699529a1fb9329640f4fa339f1d417ea92e63ffe1bf50e5a57b90"
+  }
+}

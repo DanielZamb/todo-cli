@@ -5,11 +5,13 @@ CONSTANTS Slots, MaxRequests, NoIdentity, Broken
 
 VARIABLES credential, signedIn, dialog, prefix, requestedIdentity, generation,
           credentialGeneration, dialogGeneration, pending, appliedSnapshot,
-          phase, showCandidate, showRequest, openedTask, publicationOK, showOK
+          phase, showCandidate, showRequest, openedTask, publicationOK, showOK,
+          signingOut
 
 vars == <<credential, signedIn, dialog, prefix, requestedIdentity, generation,
           credentialGeneration, dialogGeneration, pending, appliedSnapshot,
-          phase, showCandidate, showRequest, openedTask, publicationOK, showOK>>
+          phase, showCandidate, showRequest, openedTask, publicationOK, showOK,
+          signingOut>>
 
 Credentials == {"Owner", "Scoped"}
 Dialogs == {"Directory", "Lookup"}
@@ -55,6 +57,7 @@ Init ==
   /\ appliedSnapshot = EmptySnapshot /\ phase = "Closed"
   /\ showCandidate = EmptySnapshot /\ showRequest = EmptySnapshot
   /\ openedTask = {} /\ publicationOK = TRUE /\ showOK = TRUE
+  /\ signingOut = FALSE
 
 Issue(n) ==
   /\ n \in Free /\ Outstanding < MaxRequests
@@ -64,7 +67,7 @@ Issue(n) ==
   /\ dialogGeneration' = dialogGeneration \cup {n}
   /\ appliedSnapshot' = EmptySnapshot /\ phase' = "Requesting"
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
-                 showCandidate, showRequest, openedTask, publicationOK, showOK>>
+                 showCandidate, showRequest, openedTask, publicationOK, showOK, signingOut>>
 
 Open(d) ==
   /\ signedIn /\ phase = "Closed"
@@ -73,7 +76,7 @@ Open(d) ==
   /\ dialogGeneration' = {} /\ appliedSnapshot' = EmptySnapshot
   /\ phase' = "Editing"
   /\ UNCHANGED <<credential, signedIn, prefix, generation, credentialGeneration,
-                 pending, showCandidate, showRequest, openedTask, publicationOK, showOK>>
+                 pending, showCandidate, showRequest, openedTask, publicationOK, showOK, signingOut>>
 
 Submit ==
   /\ signedIn /\ phase = "Editing"
@@ -92,10 +95,10 @@ ResponseOK(n, rows) ==
                                THEN appliedSnapshot' ELSE showCandidate
           /\ phase' = IF rows = {} THEN "Empty" ELSE "Showing"
           /\ publicationOK' = Current(n)
-     ELSE UNCHANGED <<appliedSnapshot, showCandidate, phase, publicationOK>>
+     ELSE UNCHANGED <<appliedSnapshot, showCandidate, phase, publicationOK, signingOut>>
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
                  generation, credentialGeneration, dialogGeneration,
-                 showRequest, openedTask, showOK>>
+                 showRequest, openedTask, showOK, signingOut>>
 
 ResponseError(n) ==
   /\ n \in Requests
@@ -103,10 +106,10 @@ ResponseError(n) ==
   /\ IF Publish(n) \/ Broken = "error"
      THEN /\ phase' = "Error" /\ appliedSnapshot' = EmptySnapshot
           /\ publicationOK' = Current(n)
-     ELSE UNCHANGED <<phase, appliedSnapshot, publicationOK>>
+     ELSE UNCHANGED <<phase, appliedSnapshot, publicationOK, signingOut>>
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
                  generation, credentialGeneration, dialogGeneration,
-                 showCandidate, showRequest, openedTask, showOK>>
+                 showCandidate, showRequest, openedTask, showOK, signingOut>>
 
 EditPrefix(p) ==
   /\ phase # "Closed" /\ dialog = "Lookup" /\ p # prefix
@@ -115,7 +118,7 @@ EditPrefix(p) ==
   /\ appliedSnapshot' = IF Broken = "edit-clear" THEN appliedSnapshot ELSE EmptySnapshot
   /\ UNCHANGED <<credential, signedIn, dialog, credentialGeneration,
                  dialogGeneration, pending, showCandidate, showRequest,
-                 openedTask, publicationOK, showOK>>
+                 openedTask, publicationOK, showOK, signingOut>>
 
 Close ==
   /\ phase # "Closed"
@@ -123,23 +126,46 @@ Close ==
   /\ appliedSnapshot' = IF Broken = "close-clear" THEN appliedSnapshot ELSE EmptySnapshot
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
                  generation, credentialGeneration, pending, showCandidate,
+                 showRequest, openedTask, publicationOK, showOK, signingOut>>
+
+\* Sign-out start closes discovery but retains the credential epoch until
+\* the server has revoked the credential. Pending replies keep their
+\* credential provenance; the cleared dialog generation rejects them.
+SignOutStart ==
+  /\ signedIn /\ ~signingOut
+  /\ signingOut' = TRUE /\ phase' = "Closed" /\ dialogGeneration' = {}
+  /\ appliedSnapshot' = IF Broken = "signout-start-clear" THEN appliedSnapshot ELSE EmptySnapshot
+  /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
+                 generation, credentialGeneration, pending, showCandidate,
                  showRequest, openedTask, publicationOK, showOK>>
 
+\* A failed or cancelled sign-out leaves the same credential installed and
+\* current. Nothing is invalidated or restored.
+SignOutFail ==
+  /\ signingOut /\ signingOut' = FALSE
+  /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
+                 generation, credentialGeneration, dialogGeneration, pending,
+                 appliedSnapshot, phase, showCandidate, showRequest, openedTask,
+                 publicationOK, showOK>>
+
+\* Committed sign-out after revocation, or Session expiry. Only this step
+\* (or CredentialChanged) ends credential provenance.
 SignOut ==
   /\ signedIn
   /\ signedIn' = FALSE /\ phase' = "Closed" /\ credentialGeneration' = {}
   /\ appliedSnapshot' = IF Broken = "signout-clear" THEN appliedSnapshot ELSE EmptySnapshot
-  /\ openedTask' = {}
+  /\ openedTask' = {} /\ signingOut' = FALSE
   /\ UNCHANGED <<credential, dialog, prefix, requestedIdentity, generation,
                  dialogGeneration, pending, showCandidate, showRequest, publicationOK, showOK>>
 
 CredentialChanged(c) ==
+  /\ ~signingOut
   /\ credential' = c /\ signedIn' = TRUE
   /\ credentialGeneration' = {} /\ appliedSnapshot' = EmptySnapshot /\ openedTask' = {}
   /\ requestedIdentity' = Identity(c, dialog, prefix)
   /\ phase' = IF phase = "Closed" THEN "Closed" ELSE "Editing"
   /\ UNCHANGED <<dialog, prefix, generation, dialogGeneration, pending,
-                 showCandidate, showRequest, publicationOK, showOK>>
+                 showCandidate, showRequest, publicationOK, showOK, signingOut>>
 
 Show ==
   /\ showCandidate # EmptySnapshot /\ showCandidate.rows # {}
@@ -150,7 +176,7 @@ Show ==
   /\ phase' = "Closed" /\ appliedSnapshot' = EmptySnapshot /\ dialogGeneration' = {}
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
                  generation, credentialGeneration, pending, showCandidate,
-                 openedTask, publicationOK>>
+                 openedTask, publicationOK, signingOut>>
 
 ShowResponseOK(p) ==
   /\ showRequest # EmptySnapshot /\ p \in showRequest.rows
@@ -158,17 +184,17 @@ ShowResponseOK(p) ==
      THEN /\ openedTask' = {p}
           /\ showOK' = (CurrentCredential(showRequest.generation)
                        /\ p \in Authorized(credential))
-     ELSE UNCHANGED <<openedTask, showOK>>
+     ELSE UNCHANGED <<openedTask, showOK, signingOut>>
   /\ showRequest' = EmptySnapshot
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
                  generation, credentialGeneration, dialogGeneration, pending,
-                 appliedSnapshot, phase, showCandidate, publicationOK>>
+                 appliedSnapshot, phase, showCandidate, publicationOK, signingOut>>
 
 ShowResponseError ==
   /\ showRequest # EmptySnapshot /\ showRequest' = EmptySnapshot
   /\ UNCHANGED <<credential, signedIn, dialog, prefix, requestedIdentity,
                  generation, credentialGeneration, dialogGeneration, pending,
-                 appliedSnapshot, phase, showCandidate, openedTask, publicationOK, showOK>>
+                 appliedSnapshot, phase, showCandidate, openedTask, publicationOK, showOK, signingOut>>
 
 Next ==
   \/ \E d \in Dialogs : Open(d)
@@ -176,7 +202,7 @@ Next ==
   \/ \E n \in Slots : (\E rows \in SUBSET {"work", "personal"} : ResponseOK(n, rows))
                          \/ ResponseError(n)
   \/ \E p \in Prefixes : EditPrefix(p)
-  \/ Close \/ SignOut \/ \E c \in Credentials : CredentialChanged(c)
+  \/ Close \/ SignOutStart \/ SignOutFail \/ SignOut \/ \E c \in Credentials : CredentialChanged(c)
   \/ Show \/ \E p \in {"work", "personal"} : ShowResponseOK(p)
   \/ ShowResponseError
 
@@ -193,6 +219,7 @@ TypeOK ==
   /\ appliedSnapshot \in Snapshots /\ showCandidate \in Snapshots /\ showRequest \in Snapshots
   /\ openedTask \subseteq {"work", "personal"}
   /\ phase \in Phases /\ publicationOK \in BOOLEAN /\ showOK \in BOOLEAN
+  /\ signingOut \in BOOLEAN
 CurrentCredentialProvenance ==
   appliedSnapshot.rows # {} =>
     /\ signedIn /\ appliedSnapshot.generation \in credentialGeneration

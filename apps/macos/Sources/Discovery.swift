@@ -45,7 +45,9 @@ struct DiscoveryShowIntent: Equatable {
 
 @MainActor @Observable
 final class DiscoveryState {
-    var dialog: DiscoveryDialog?
+    var dialog: DiscoveryDialog? { didSet { if dialog != nil && oldValue == nil { presented() } } }
+    /// A sheet presented counts as the person acting (MAC-C1-S1-32); set by the model.
+    @ObservationIgnored var presented: @MainActor () -> Void = {}
     var phase = DiscoveryPhase.closed
     var prefix = ""
     var error: String?
@@ -141,10 +143,10 @@ extension TodoModel {
             discovery.appliedSnapshot = snapshot
             discovery.phase = snapshot.profiles.isEmpty && snapshot.matches.isEmpty ? .empty : .showing
         } catch {
+            if discovery.credentialEpoch == identity.credentialEpoch { handleAuthorization(error, credentialEpoch: identity.credentialEpoch) }
             guard canPublishDiscovery(identity) else { return }
             discovery.error = describe(error, at: .discovery)
             discovery.phase = .error
-            handleAuthorization(error, credentialEpoch: identity.credentialEpoch)
         }
     }
 
@@ -172,12 +174,14 @@ extension TodoModel {
         let fullID = intent.match.task_id
         closeDiscovery()
         discovery.showIntent = intent
+        let mark = messageMark
         busy = true
-        defer { busy = false }
+        defer { if discovery.credentialEpoch == intent.identity.credentialEpoch { busy = false } }
         do {
             let task = try await TaskSnapshot.decode(client.tasks_period_show(path: .init(profile: sourceProfile, task: fullID)).ok.body.json)
             guard canShowDiscovery(intent) else { return false }
             discovery.showIntent = nil
+            clearMessage([.discoveryShow], since: mark)
             editor = nil
             conflict = nil
             activateProfile(sourceProfile)
@@ -187,10 +191,10 @@ extension TodoModel {
             beginEditing(task)
             return true
         } catch {
+            if discovery.credentialEpoch == intent.identity.credentialEpoch { handleAuthorization(error, credentialEpoch: intent.identity.credentialEpoch) }
             guard canShowDiscovery(intent) else { return false }
             discovery.showIntent = nil
-            message = describe(error)
-            handleAuthorization(error, credentialEpoch: intent.identity.credentialEpoch)
+            publishMessage(describe(error), kind: .discoveryShow)
             return false
         }
     }

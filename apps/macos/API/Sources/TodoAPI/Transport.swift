@@ -45,11 +45,46 @@ public struct OutdatedServer: Error, Sendable {
 }
 
 public func todoClient(server: URL, credential: String) -> Client {
+    todoClient(server: server, credential: credential, diagnostics: .disabled, requestTimeout: 60)
+}
+
+public func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder) -> Client {
+    todoClient(server: server, credential: credential, diagnostics: diagnostics, requestTimeout: 60)
+}
+
+func todoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> Client {
+    makeTodoClient(server: server, credential: credential, diagnostics: diagnostics, session: makeTodoSession(diagnostics: diagnostics, requestTimeout: requestTimeout)).client
+}
+
+public final class TodoClientSession: Sendable {
+    public let client: Client
+    private let scope: ScopedTransport
+
+    public init(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder = .disabled) {
+        let session = makeTodoSession(diagnostics: diagnostics, requestTimeout: 60)
+        let built = makeTodoClient(server: server, credential: credential, diagnostics: diagnostics, session: session)
+        scope = built.scope
+        client = built.client
+    }
+    public func invalidate() { scope.retire() }
+    deinit { invalidate() }
+}
+
+private func makeTodoSession(diagnostics: ClientDiagnosticsRecorder, requestTimeout: TimeInterval) -> URLSession {
     let configuration = URLSessionConfiguration.default
-    configuration.timeoutIntervalForRequest = 60
+    configuration.timeoutIntervalForRequest = requestTimeout
     configuration.timeoutIntervalForResource = 86_400
     configuration.urlCache = nil
-    return Client(serverURL: server, transport: URLSessionTransport(configuration: .init(session: URLSession(configuration: configuration))), middlewares: [BearerMiddleware(credential: credential)])
+    return diagnostics.isEnabled
+        ? URLSession(configuration: configuration, delegate: ClientRequestMetrics(diagnostics), delegateQueue: nil)
+        : URLSession(configuration: configuration)
+}
+
+private func makeTodoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, session: URLSession) -> (client: Client, scope: ScopedTransport) {
+    let base = StreamTransport(ordinary: URLSessionTransport(configuration: .init(session: session)), diagnostics: diagnostics)
+    let transport: any ClientTransport = diagnostics.isEnabled ? DiagnosticTransport(transport: base, recorder: diagnostics) : base
+    let scope = ScopedTransport(session: session, base: transport)
+    return (Client(serverURL: server, transport: scope, middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()]), scope)
 }
 
 public struct FailureDetails: Codable, Sendable {

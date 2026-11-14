@@ -12,7 +12,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-openapi-urlsession", exact: "1.3.2")
     ],
     targets: [
+        // The stall sampler's suspended window, in C so it provably makes no allocation or runtime call.
+        .target(name: "ClientStallSampling"),
         .target(name: "TodoAPI", dependencies: [
+            "ClientStallSampling",
             .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
             .product(name: "OpenAPIURLSession", package: "swift-openapi-urlsession")
         ]),

@@ -279,3 +279,11 @@ closes and awaits its forwarding Task, invalidates its session and requires zero
 remaining native requests. Cancelling the Swift body reader alone can leave an
 idle native SSE request in URLSession.shared and exhaust later fixtures' per-host
 connections. The original SearchTransport and its reconnect assertion stay unchanged.
+
+## Mac client idle and quiet recovery
+
+The [idle feature map](features/idle.md#driving-the-mac-transport-and-model-headlessly)
+includes the native URLSession short-timeout control, production-model five-minute
+idle observation and quiet-EOF state controls. Run it after changing the Mac
+stream policy or reconnect state. Keep the real HTTP resume/auth drive above;
+the headless Mac cases complement it and do not replace it.

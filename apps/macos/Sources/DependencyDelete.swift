@@ -7,12 +7,17 @@ extension TodoModel {
         dependencies.deletion = .init(profile: profile, task: task)
         await reloadDependencyDelete()
     }
-    func closeDependencyDelete() { dependencies.deletion = nil }
+    func closeDependencyDelete() {
+        let closing = dependencies.deletion?.id
+        dependencies.deletion = nil
+        if let closing { endMessage(raisedBy: .deleteDialog(closing)) }
+    }
     func reloadDependencyDelete(changed: Bool = false) async {
         guard let deletion = dependencies.deletion else { return }
         let epoch = discovery.credentialEpoch
+        let client = self.client
         dependencies.deletion?.request += 1
-        guard let request = dependencies.deletion?.request else { return }
+        guard let request = dependencies.deletion?.request, let ticket = dependencies.deletion?.messages.begin(.reload) else { return }
         dependencies.deletion?.loading = true
         dependencies.deletion?.fingerprint = nil
         dependencies.deletion?.acceptedFromVersion = nil
@@ -23,6 +28,7 @@ extension TodoModel {
             guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             guard current.id == deletion.task.id, current.profile_id == deletion.profile else { throw DependencyGraphReply.ProtocolError.incompatible }
             let response = try await client.tasks_period_delete(path: .init(profile: deletion.profile, task: current.id), query: .init(from_version: String(current.row_version), with_dependencies: ._true, dry_run: ._true))
+            guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             if case .conflict(let conflict) = response { throw try dependencyConflict(conflict.body.json) }
             let preview = try response.ok.body.json
             let after = try TaskSnapshot.decode(preview)
@@ -40,12 +46,13 @@ extension TodoModel {
             dependencies.deletion?.fingerprint = fingerprint
             dependencies.deletion?.acceptedFromVersion = current.row_version
             dependencies.deletion?.loading = false
-            dependencies.deletion?.failure = nil
+            if dependencies.deletion?.messages.isNewest(ticket) == true { dependencies.deletion?.messages.clear([.reload, .delete], since: ticket.mark) }
         } catch {
+            authorize(error, epoch: epoch, profile: deletion.profile)
             guard currentDependencyDelete(deletion, epoch: epoch, request: request) else { return }
             dependencies.deletion?.loading = false
-            dependencies.deletion?.failure = dependencyNotice(error, context: .delete)
-            handleAuthorization(error, credentialEpoch: epoch)
+            let failureNotice = dependencyNotice(error, context: .delete)
+            dependencies.deletion?.messages.fail(failureNotice, ticket)
         }
     }
     private func currentDependencyDelete(_ deletion: DependencyDelete, epoch: Int, request: Int) -> Bool {

@@ -36,5 +36,5 @@ for entry in entries {
     }
 }
 try require(committed == 3, "Expected three committed SSE operations")
-let result: [String: Any] = ["result": "PASS", "history_entries": history.count, "committed_sse_operations": committed, "app_launched": false, "xctest_launched": false, "keychain_accessed": false]
+let result: [String: Any] = ["result": "PASS", "history_entries": history.count, "committed_sse_operations": committed, "app_launched": false, "xctest_launched": false]
 print(String(decoding: try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys]), as: UTF8.self))

@@ -55,7 +55,8 @@ struct SeriesView: View {
                     InitialDependencySelection(tasks: Binding(get: { model.dependencies.firstOccurrenceInitial }, set: { model.dependencies.firstOccurrenceInitial = $0 }), enabled: model.canWrite) { Task { await model.openInitialDependencyPicker(firstOccurrence: true) } }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            Text(custom ? original?.recurrence.rrule ?? "" : draft.rule).font(.caption.monospaced())
+            // The raw rule only describes a custom rule; a preset is already named in the Repeat row.
+            if custom { Text(original?.recurrence.rrule ?? "").font(.caption.monospaced()).compactBounds("series-raw-rule") }
             if custom { Text("This custom rule is preserved. Preset editing is unavailable.").foregroundStyle(.secondary) }
             if let dates = original?.recurrence.exdate, !dates.isEmpty {
                 Text("Excluded: " + dates.map(\.display).joined(separator: ", ")).font(.caption)
@@ -70,9 +71,9 @@ struct SeriesView: View {
                 Button("Close") { model.recurrenceDraft = nil; model.showingSeries = false }.disabled(model.busy).keyboardShortcut(.cancelAction)
                 Button(original == nil ? "Create Series" : "Save Series") {
                     if let start { Task { await model.saveSeries(Recurrence(dtstart: start, rrule: draft.rule, exdate: model.recurrenceDraft?.exdate ?? original?.recurrence.exdate ?? [])) } }
-                }.buttonStyle(.glassProminent).disabled(!model.canWrite || custom || !draft.valid || start == nil)
+                }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).compactBounds("series-primary").disabled(!model.canWrite || custom || !draft.valid || start == nil)
             }.compactBounds("series-actions")
-        }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 : 600)
+        }.padding(compact ? 16 : 24).frame(width: compact ? 393 : 580, height: compact ? 426 + model.compactExtraHeight : 600)
             .interactiveDismissDisabled(model.busy)
             .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }
     }

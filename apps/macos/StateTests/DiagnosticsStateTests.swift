@@ -58,12 +58,11 @@ func diagnosticsReadsRealTrafficAndSurvivesReload() async throws {
     let invalid = TodoModel(configuration: model.configuration, clientFactory: { _, _ in todoClient(server: server, credential: "ses_invalid") })
     invalid.signedIn = true
     await invalid.loadDiagnostics()
+    // A 401 for the current credential is handled first and ends the Session (MAC-C1-S1-20, ruled):
+    // an invalid owner credential is not "server unavailable", so no retry is scheduled.
     #expect(invalid.diagnostics == nil)
-    #expect(invalid.diagnosticsError == "Server unavailable; retrying when live.")
-    #expect(invalid.diagnosticsRetrySeconds == 2)
-    for _ in 0..<5 { await invalid.loadDiagnostics() }
-    #expect(invalid.diagnosticsRetrySeconds == 30)
-    invalid.signedIn = false
+    #expect(!invalid.signedIn)
+    #expect(invalid.diagnosticsError == nil && invalid.diagnosticsRetrySeconds == 1)
     await invalid.loadDiagnostics()
     #expect(invalid.diagnosticsError == "Sign in to Todo with an owner Session.")
 }

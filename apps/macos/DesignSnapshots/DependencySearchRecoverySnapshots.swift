@@ -93,7 +93,7 @@ private actor SearchRecoverySnapshotTransport: ClientTransport {
                         #expect(body.contains(candidateFrame))
                     }
                     let file = "dag-sc1-\(compact ? "compact" : "full")-\(graph ? "graph" : "picker")-recovered-\(scheme == .light ? "light" : "dark").png"
-                    try await DependencyGraphSnapshots.image(host: host).write(to: directory.appendingPathComponent(file))
+                    try await DependencyGraphSnapshots.image(host: host, name: file).write(to: directory.appendingPathComponent(file))
                     files.append(file)
                     receipts.append(["client": "macos", "layout": compact ? "compact" : "full", "appearance": scheme == .light ? "light" : "dark", "state": graph ? "graph-search-recovered" : "picker-search-recovered", "png": file, "initial_error": before?.message ?? "", "initial_exit_pair": before?.detail ?? "", "current_query": "launch 49", "current_results": ["g49"], "search_notice_after_success": NSNull(), "transport": "controlled valid public 422 then 200 through compiled production TodoModel and generated client", "recovery_behavior_suite": "DependencySearchRecoveryTests", "geometry": frames.frames.mapValues { [Double($0.minX), Double($0.minY), Double($0.width), Double($0.height)] }, "identifiers": graph ? ["dependency-graph", "dependency-graph-search", "dependency-graph-list", "dependency-graph-close"] : ["dependency-picker", "dependency-search", "dependency-choice-g49", "dependency-picker-close"], "behavior_status": "pending", "behavior_receipt": NSNull()])
                     window.close()

@@ -22,7 +22,9 @@ let package = Package(name: "HistoryProof", platforms: [.macOS(.v26)], targets: 
 SWIFT
 printf '%s\n' 'swift test --package-path <scratch Foundation-only package>' > "$evidence/commands.log"
 sh "$root/scripts/disk-guard.sh" > "$evidence/disk-guard.log"
-swift test --disable-automatic-resolution --package-path "$scratch" > "$evidence/tests.log" 2>&1
+# The Keychain guard (apps/macos/scripts/state_package.py) builds, checks the test products, then runs them.
+STATE_PACKAGE_RECEIPT="$evidence/keychain-guard.json" python3 "$root/apps/macos/scripts/state_package.py" swift test --disable-automatic-resolution --package-path "$scratch" > "$evidence/tests.log" 2>&1
 printf '%s\n' 'exit 0' >> "$evidence/commands.log"
-printf '%s\n' '{"status":"PASS","nativeAppLaunched":false,"keychainAccessed":false,"dependencies":[],"productionSources":["ClientReads.swift","TaskSnapshot.swift","Recurrence.swift"]}' > "$evidence/result.json"
+keychain=$(python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1]))["keychainLinked"]))' "$evidence/keychain-guard.json")
+printf '%s\n' '{"status":"PASS","nativeAppLaunched":false,"keychainAccessed":'"$keychain"',"keychainGuard":"keychain-guard.json","dependencies":[],"productionSources":["ClientReads.swift","TaskSnapshot.swift","Recurrence.swift"]}' > "$evidence/result.json"
 echo 'PASS; production History formatting with Swift Testing, Foundation only'

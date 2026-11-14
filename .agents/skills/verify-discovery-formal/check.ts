@@ -112,6 +112,7 @@ const mutations = [
   { broken: "error", property: "LatestPublication" },
   { broken: "close-clear", property: "ClosedIsEmpty" },
   { broken: "signout-clear", property: "SignedOutIsEmpty" },
+  { broken: "signout-start-clear", property: "ClosedIsEmpty" },
   { broken: "edit-clear", property: "AppliedIsCurrent" },
   { broken: "show-guard", property: "ShowIsAuthorized" },
   { broken: "show-source", property: "ShowIsAuthorized" },

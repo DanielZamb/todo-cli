@@ -1,0 +1,111 @@
+{
+  "result": "PASS_WITH_RETRY",
+  "required_gates_passed": [
+    "design",
+    "state",
+    "diagnostics",
+    "unsigned",
+    "idle",
+    "subscribers",
+    "sse-retry",
+    "root"
+  ],
+  "failed_gate_attempts": 1,
+  "failed_attempt": {
+    "gate": "sse",
+    "stage": "scratch CLI login before any stream",
+    "timeout_seconds": 10,
+    "host_load_1m": 38.30126953125,
+    "disposition": "identical fresh-evidence retry passed; no timeout or product change; cause unproven"
+  },
+  "state_contract": {
+    "tests": 206,
+    "suites": 30
+  },
+  "diagnostics": {
+    "tests": 37,
+    "suites": 3,
+    "refreshes": 30,
+    "requests": 120,
+    "tasks": 178,
+    "errors": 0
+  },
+  "design": {
+    "renders": 872,
+    "physical_presentation_qualified": false
+  },
+  "idle": {
+    "app_launched": false,
+    "can_write": true,
+    "idle_ms": 300016.1501249986,
+    "keychain_called": false,
+    "loading": false,
+    "reconnects": 0,
+    "refreshes": 0,
+    "requests": 0
+  },
+  "subscriber_counts": [
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0
+  ],
+  "pointer_controls": {
+    "red_issues": 5,
+    "tests": 3,
+    "release_records_after_duplicate_and_foreign_release": 1,
+    "native_changing_records": 1,
+    "native_committed_records": 1,
+    "old_scope_records": 0,
+    "native_swiftui_delivery_qualified": false,
+    "unavailable_capability_explicit": true
+  },
+  "source_manifest_files": 86,
+  "source_mismatches": 0,
+  "source_manifest_sha256": "65d66ee4a0fbe3df424c9b41843905f66df9f516b9ec7293b66c3a1aadc620d7",
+  "cpu_calibration": {
+    "encoding_main_thread_cpu_ms": 3.487000000000009,
+    "encoding_process_cpu_ms": 3.486000000000004,
+    "host_load_1m": 4.13232421875,
+    "mean_sample_ms": 0.0005597500003204914,
+    "samples": 1000,
+    "sleep_main_thread_cpu_ms": 0.01099999999999568
+  },
+  "generated_writer_hour": {
+    "active_hour_bytes": 2564891,
+    "diagnostics_polls": 3120,
+    "dropped": 0,
+    "evening_interaction_preserved": true,
+    "health_polls": 5580,
+    "hours_per_file": 26.164411665057113,
+    "idle_hour_bytes": 19504.333333333332,
+    "journal_failures": 0,
+    "refreshes": 120,
+    "requests": 9660,
+    "workload": "real generated HTTP and model refreshes with synthetic interaction metadata and clock; not an observed owner hour or UI latency"
+  },
+  "captures": [
+    "c4/candidate-4/diagnostics/client-full-light.png",
+    "c4/candidate-4/diagnostics/client-full-dark.png",
+    "c4/candidate-4/diagnostics/client-compact-light.png",
+    "c4/candidate-4/diagnostics/client-compact-dark.png"
+  ],
+  "limits": [
+    "No native pointer delivery or physical presentation qualification.",
+    "Writer-hour interactions and clock are synthetic, with real generated requests; added native release/highlight phases are not replayed in that hour.",
+    "Primary native latency targets and six-attempt floor remain unmet."
+  ],
+  "optimization_attempts": {
+    "kept": 1,
+    "reverted": 0,
+    "floor": 6
+  },
+  "app_launched": false,
+  "keychain_called": false,
+  "signed": false,
+  "pushed": false
+}

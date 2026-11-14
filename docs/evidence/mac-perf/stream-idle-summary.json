@@ -1,0 +1,184 @@
+{
+  "scope": "Unhosted scratch model and production transport; native input and physical frames unproven",
+  "parent": "f0156fb70ac5f161240d519353ab9d7ec592eb81",
+  "result": "PASS",
+  "fixture": {
+    "total": 178,
+    "open": 50,
+    "done": 126,
+    "cancelled": 2,
+    "tagLinks": 278,
+    "attachments": 108,
+    "descriptionChars": 222312,
+    "descriptionMedian": 1260.0,
+    "descriptionMax": 5244,
+    "externalIds": 178
+  },
+  "long_idle": {
+    "app_launched": false,
+    "can_write": true,
+    "idle_ms": 300001.87174999155,
+    "keychain_called": false,
+    "loading": false,
+    "reconnects": 0,
+    "refreshes": 0,
+    "requests": 0
+  },
+  "short_idle": {
+    "app_launched": false,
+    "idle_ms": 1865.6553333275951,
+    "keychain_called": false,
+    "minimum_idle_ms": 1500,
+    "operations_received": 1,
+    "ordinary_timeout_ms": 100,
+    "ordinary_timeout_observed": true,
+    "ready_observed": true,
+    "stream_end_reason": "none",
+    "stream_survived_idle": true
+  },
+  "controls": {
+    "state_before_fix": {
+      "test_count": 4,
+      "issues": 7,
+      "exit": 1
+    },
+    "native_before_fix": {
+      "timeout_ms": 100,
+      "silence_ms": 1500,
+      "operations_received": 0,
+      "ready_observed": "unknown after reader failure",
+      "exit": 1
+    }
+  },
+  "gates": {
+    "design": {
+      "status": "PASS",
+      "exit": 0,
+      "pngs": 872,
+      "appLaunched": false,
+      "signed": false,
+      "keychainAccess": false,
+      "nativeGlassVerified": false
+    },
+    "state": {
+      "tests": 174,
+      "suites": 29,
+      "exit": 0
+    },
+    "native_release": {
+      "tests": 8,
+      "suites": 2,
+      "exit": 0
+    },
+    "root_check": {
+      "exit": 0
+    },
+    "http_sse": {
+      "exit": 0
+    },
+    "search_formal": {
+      "passed": true,
+      "source_mapping": "manual working-tree review, not mechanical refinement",
+      "safety_distinct": 3053160,
+      "restored_distinct": 44922
+    },
+    "unsigned_build": {
+      "exit": 0,
+      "configuration": "Release",
+      "code_signing_allowed": false,
+      "code_sign_command_found": false
+    },
+    "history_dag_union": {
+      "exit": 0,
+      "swift": {
+        "database_restored_source": "scratch operation store",
+        "fixture_kinds": 20,
+        "global_operation_kinds": [
+          "AuthChanged",
+          "DatabaseRestored",
+          "DependencyAdded",
+          "DependencyRemoved"
+        ],
+        "keychain_accessed": false,
+        "logical_task_kinds": [
+          "DependencyAdded",
+          "DependencyRemoved",
+          "ReminderFired",
+          "TaskAttemptRejected",
+          "TaskCancelled",
+          "TaskCompleted",
+          "TaskCreated",
+          "TaskDeleted",
+          "TaskEdited",
+          "TaskMovedIn",
+          "TaskMovedOut",
+          "TaskPurged",
+          "TaskReopened",
+          "TaskReverted"
+        ],
+        "native_app_launched": false,
+        "real_history_entries": 17,
+        "status": "PASS"
+      },
+      "scratch": {
+        "status": "PASS",
+        "fixtureKinds": [
+          "AuthAttemptRejected",
+          "AuthChanged",
+          "DatabaseRestored",
+          "DependencyAdded",
+          "DependencyRemoved",
+          "ProfileDeleted",
+          "ProfileDeletionRejected",
+          "ReminderFired",
+          "TaskAttemptRejected",
+          "TaskCancelled",
+          "TaskCompleted",
+          "TaskCreated",
+          "TaskDeleted",
+          "TaskEdited",
+          "TaskHistoryRedacted",
+          "TaskMovedIn",
+          "TaskMovedOut",
+          "TaskPurged",
+          "TaskReopened",
+          "TaskReverted"
+        ],
+        "realHistoryKinds": [
+          "DependencyAdded",
+          "DependencyRemoved",
+          "ReminderFired",
+          "TaskAttemptRejected",
+          "TaskCancelled",
+          "TaskCompleted",
+          "TaskCreated",
+          "TaskDeleted",
+          "TaskEdited",
+          "TaskMovedIn",
+          "TaskMovedOut",
+          "TaskPurged",
+          "TaskReopened",
+          "TaskReverted"
+        ],
+        "globalOperationSources": {
+          "AuthChanged": "public SSE",
+          "DatabaseRestored": "scratch operation store"
+        }
+      }
+    }
+  },
+  "package_pins_changed": false,
+  "native_ui_slo_proven": false,
+  "keychain_called": false,
+  "app_launched": false,
+  "signed": false,
+  "pushed": false,
+  "raw_evidence": "run store mac-perf/raw-evidence/c3; design in checkout-local .scratch/proofs/mac-candidate-1-design",
+  "source_sha256": {
+    "apps/macos/API/Sources/TodoAPI/Transport.swift": "15687c64c61965cfdaf990eda93e269d612679b398f7be584142589d5c04acd7",
+    "apps/macos/API/Sources/TodoAPI/StreamTransport.swift": "fd23f8467f34ddc9d7ad9a014f274f2de8d56ace8adab8d009573dfa1f59819c",
+    "apps/macos/Sources/TodoModel.swift": "3e37afc1f288dd7b86bd171058d04a8186030472b8a5527432c4f9ca003a5a0c",
+    "apps/macos/StateTests/StreamIdleTests.swift": "a98114fb70fb247c63dfafacf13450358cc9d897b6d8afa0c22a4e54d979c58c",
+    "apps/macos/StateTests/StreamIdleTransportTests.swift": "e61f474478e89c3452a60e2bd694d17c9674d998408fb521c061fb634b358b9b"
+  }
+}

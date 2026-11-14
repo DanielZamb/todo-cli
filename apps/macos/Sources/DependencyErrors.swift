@@ -14,6 +14,9 @@ struct DependencyNotice {
     var recovery: String? = nil
     var followUp: String? = nil
     var failure: ServerFailure? = nil
+    /// A failed "Create follow-up" offered by this notice, shown with it (the notice and its
+    /// button stay, so the person can try again).
+    var followUpFailure: String? = nil
     static func countAdvice(_ count: Int) -> String {
         "This Task depends on \(count) Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks."
     }
@@ -26,7 +29,7 @@ struct DependencyNotice {
                     return .init(message: value.details.dependent_id == value.details.blocker_id ? "A Task can't depend on itself." : "This Dependency would create a loop.", detail: failure.exitDetail, path: value.details.path, recovery: "Choose another Task", failure: failure)
                 }
                 if let value = error.value2 {
-                    return .init(message: "A Task can have at most 13 direct Dependencies.\n" + countAdvice(value.details.count), detail: failure.exitDetail, recovery: "Choose fewer Dependencies", failure: failure)
+                    return .init(message: "A Task can have at most \(DependencyContract.directDependencies) direct Dependencies.\n" + countAdvice(value.details.count), detail: failure.exitDetail, recovery: "Choose fewer Dependencies", failure: failure)
                 }
                 if let value = error.value3 {
                     return try .init(message: context == .linkDone ? "A done Task can only depend on done or cancelled Tasks." : "Finish or cancel these Dependencies before marking this Task done.", detail: failure.exitDetail, tasks: value.details.blockers.map(TaskSnapshot.decode), recovery: context == .linkDone ? "Choose another Task" : nil, failure: failure)

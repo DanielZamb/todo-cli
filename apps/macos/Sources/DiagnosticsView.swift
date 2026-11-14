@@ -18,33 +18,45 @@ struct DiagnosticsView: View {
     var initiallyExpanded: Set<String> = []
     var body: some View {
         GeometryReader { geometry in DiagnosticsContent(model: model, compact: geometry.size.width < 700, initiallyExpanded: initiallyExpanded) }
+            .background(ClientDiagnosticSurfaceView(monitor: model.clientDiagnosticsUI, surface: .diagnostics))
             .coordinateSpace(name: "diagnostics")
             .frame(minWidth: 360, minHeight: 380)
             .accessibilityIdentifier("diagnostics-window")
             .task(id: "\(model.signedIn)-\(model.diagnosticsLive)") {
                 guard live, model.signedIn, model.diagnosticsLive else { return }
                 while !Task.isCancelled {
-                    await model.loadDiagnostics()
+                    await ClientDiagnosticContext.$actionID.withValue(nil) {
+                        await ClientDiagnosticContext.$inputKind.withValue(.background) {
+                            await ClientDiagnosticContext.$periodicPoll.withValue(true) { await model.loadDiagnostics() }
+                        }
+                    }
                     do { try await Task.sleep(for: .seconds(model.diagnosticsRetrySeconds)) } catch { return }
                 }
             }
     }
 }
-private struct DiagnosticsContent: View {
+struct DiagnosticsContent: View {
     @Bindable var model: TodoModel
     let compact: Bool
     @State private var profile = ""
     @State private var expanded: Set<String> = []
     @State private var allRows: Set<String> = []
+    private let clientInitiallyExpanded: Set<String>
     init(model: TodoModel, compact: Bool, initiallyExpanded: Set<String>) {
         self.model = model
         self.compact = compact
         self._expanded = State(initialValue: initiallyExpanded)
+        self.clientInitiallyExpanded = initiallyExpanded
     }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: compact ? 8 : 16) {
                 heading
+                if model.clientDiagnostics.isOwnerSession {
+                    section("This client", summary: ClientDiagnosticDisplay.sectionSummary(model.clientDiagnosticsUI.summary), alwaysLive: true) {
+                        ClientDiagnosticsView(model: model, compact: compact, initiallyExpanded: clientInitiallyExpanded)
+                    }
+                }
                 if let error = model.diagnosticsError { Label(error, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).accessibilityIdentifier("diagnostics-error") }
                 if let snapshot = model.diagnostics {
                     summary(snapshot)
@@ -90,16 +102,10 @@ private struct DiagnosticsContent: View {
             }
         }.frame(minHeight: 28)
     }
-    @ViewBuilder private func section<Content: View>(_ title: String, summary: String, defaultOpen: Bool = false, @ViewBuilder content: @escaping () -> Content) -> some View {
-        if compact {
-            DisclosureGroup(isExpanded: Binding(get: { expanded.contains(title) }, set: { if $0 { expanded.insert(title) } else { expanded.remove(title) } })) {
-                VStack(alignment: .leading, spacing: 8, content: content).frame(maxWidth: .infinity, alignment: .leading).diagnosticsBounds("content:\(title)").padding(.leading, 12).padding(.vertical, 8)
-            } label: {
-                HStack(spacing: 8) { Text(title).fontWeight(.medium).diagnosticsBounds("title:\(title)"); Spacer(minLength: 0); Text(summary).foregroundStyle(.secondary).lineLimit(1) }.font(.system(size: 11)).frame(minHeight: 28).diagnosticsBounds("summary:\(title)")
-            }.padding(.horizontal, 8).background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 8)).onAppear { if defaultOpen { expanded.insert(title) } }.diagnosticsBounds("section:\(title)")
-        } else {
-            GroupBox { VStack(alignment: .leading, spacing: 8, content: content).frame(maxWidth: .infinity, alignment: .leading).padding(4) } label: { Text(title).font(.headline) }.diagnosticsBounds("section:\(title)")
-        }
+    private func section<Content: View>(_ title: String, summary: @autoclosure @escaping () -> String, defaultOpen: Bool = false, alwaysLive: Bool = false, @ViewBuilder content: @escaping () -> Content) -> some View {
+        DiagnosticsSection(title: title, summary: summary, compact: compact,
+            expanded: Binding(get: { expanded.contains(title) }, set: { if $0 { expanded.insert(title) } else { expanded.remove(title) } }),
+            defaultOpen: defaultOpen, alwaysLive: alwaysLive, content: content)
     }
     private func limit(_ key: String, _ count: Int, short: Int = 5) -> Int { allRows.contains(key) ? count : min(short, count) }
     @ViewBuilder private func showAll(_ key: String, _ count: Int, short: Int = 5) -> some View {
@@ -215,4 +221,41 @@ enum DiagnosticsFormatting {
         let date = formatter.date(from: value) ?? ISO8601DateFormatter().date(from: value)
         return date?.formatted(date: .omitted, time: .standard) ?? value
     }
+}
+
+private struct DiagnosticsSection<Content: View>: View {
+    let title: String
+    let summary: () -> String
+    let compact: Bool
+    @Binding var expanded: Bool
+    let defaultOpen: Bool
+    let alwaysLive: Bool
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if compact {
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: 8, content: content).frame(maxWidth: .infinity, alignment: .leading).diagnosticsBounds("content:\(title)").padding(.leading, 12).padding(.vertical, 8)
+            } label: {
+                if alwaysLive {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack { titleLabel; Text("Always live").foregroundStyle(.secondary); Spacer(minLength: 0) }
+                        Text(summary()).foregroundStyle(.secondary).lineLimit(1)
+                    }.font(.system(size: 11)).frame(minHeight: 36).diagnosticsBounds("summary:\(title)")
+                } else {
+                    HStack(spacing: 8) { titleLabel; Spacer(minLength: 0); Text(summary()).foregroundStyle(.secondary).lineLimit(1) }.font(.system(size: 11)).frame(minHeight: 28).diagnosticsBounds("summary:\(title)")
+                }
+            }.padding(.horizontal, 8).background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 8)).onAppear { if defaultOpen { expanded = true } }.diagnosticsBounds("section:\(title)")
+        } else {
+            GroupBox {
+                VStack(alignment: .leading, spacing: 8, content: content).frame(maxWidth: .infinity, alignment: .leading).padding(4)
+            } label: {
+                HStack {
+                    Text(title).font(.headline)
+                    if alwaysLive { Text("\(summary()) · Always live").font(.caption).foregroundStyle(.secondary) }
+                }
+            }.diagnosticsBounds("section:\(title)")
+        }
+    }
+    private var titleLabel: some View { Text(title).fontWeight(.medium).diagnosticsBounds("title:\(title)") }
 }

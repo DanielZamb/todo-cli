@@ -6,6 +6,7 @@
 - [Client reads and quick-add](client-reads.md): counts, planning views, scoped History, Purge redaction and parser.
 - [Client writes](client-writes.md): move, Revert, Series writes and Occurrence skip.
 - [Contract and listener](contract.md): health, loopback binding and OpenAPI.
+- [Scratch latency](performance.md): old/new binaries, concurrent reads and controlled CPU contention.
 
 Run the helper in [the skill](../SKILL.md) for the complete curl drive. The
 HTTP contract suite adds malformed requests, recurrence and durable History.

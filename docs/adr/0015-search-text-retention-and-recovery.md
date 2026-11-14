@@ -27,3 +27,16 @@ failing no-recovery trace separately from its safety checks.
 We rejected clearing search on navigation, clearing retained results on a
 disconnect, reverting typed text after failure, and timer-based search retries.
 They interrupt the search or hide the information needed to recover it.
+
+## Amendment, 2026-11-11: quiet stream recovery
+
+An idle event stream is healthy. A clean end first attempts to resume with the
+saved cursor while retaining availability and open UI state. Offline begins
+only after that reconnect fails. An open discovery dialog retries its retained
+submission when connectivity returns.
+
+A successfully applied result at the current identity, cursor and restore
+generation needs no catalog reads on a quiet reconnect. Failed, too-broad,
+missing or superseded results still retry the requested identity. Snapshot
+reload and generation change retain their reset and refresh behavior. This
+clarifies the recovery rule above; it does not add a timer-based search retry.
