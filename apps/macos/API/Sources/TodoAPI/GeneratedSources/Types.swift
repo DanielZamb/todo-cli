@@ -115,6 +115,9 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `GET /profiles/{profile}/tags`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/tags/get(reads.tags)`.
     func reads_period_tags(_ input: Operations.reads_period_tags.Input) async throws -> Operations.reads_period_tags.Output
+    /// - Remark: HTTP `GET /profiles/{profile}/catalog`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)`.
+    func reads_period_catalog(_ input: Operations.reads_period_catalog.Input) async throws -> Operations.reads_period_catalog.Output
     /// - Remark: HTTP `GET /profiles/{profile}/views/{view}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/views/{view}/get(reads.view)`.
     func reads_period_view(_ input: Operations.reads_period_view.Input) async throws -> Operations.reads_period_view.Output
@@ -159,6 +162,15 @@ public protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /snapshots/prune`.
     /// - Remark: Generated from `#/paths//snapshots/prune/post(snapshots.prune)`.
     func snapshots_period_prune(_ input: Operations.snapshots_period_prune.Input) async throws -> Operations.snapshots_period_prune.Output
+    /// - Remark: HTTP `POST /local/database-proof`.
+    /// - Remark: Generated from `#/paths//local/database-proof/post(local.databaseProof)`.
+    func local_period_databaseProof(_ input: Operations.local_period_databaseProof.Input) async throws -> Operations.local_period_databaseProof.Output
+    /// - Remark: HTTP `POST /local/nudge`.
+    /// - Remark: Generated from `#/paths//local/nudge/post(local.nudge)`.
+    func local_period_nudge(_ input: Operations.local_period_nudge.Input) async throws -> Operations.local_period_nudge.Output
+    /// - Remark: HTTP `POST /local/commands`.
+    /// - Remark: Generated from `#/paths//local/commands/post(local.runCommand)`.
+    func local_period_runCommand(_ input: Operations.local_period_runCommand.Input) async throws -> Operations.local_period_runCommand.Output
 }
 
 /// Convenience overloads for operation inputs.
@@ -587,6 +599,19 @@ extension APIProtocol {
             headers: headers
         ))
     }
+    /// - Remark: HTTP `GET /profiles/{profile}/catalog`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)`.
+    public func reads_period_catalog(
+        path: Operations.reads_period_catalog.Input.Path,
+        query: Operations.reads_period_catalog.Input.Query = .init(),
+        headers: Operations.reads_period_catalog.Input.Headers = .init()
+    ) async throws -> Operations.reads_period_catalog.Output {
+        try await reads_period_catalog(Operations.reads_period_catalog.Input(
+            path: path,
+            query: query,
+            headers: headers
+        ))
+    }
     /// - Remark: HTTP `GET /profiles/{profile}/views/{view}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/views/{view}/get(reads.view)`.
     public func reads_period_view(
@@ -743,6 +768,33 @@ extension APIProtocol {
         body: Operations.snapshots_period_prune.Input.Body
     ) async throws -> Operations.snapshots_period_prune.Output {
         try await snapshots_period_prune(Operations.snapshots_period_prune.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /local/database-proof`.
+    /// - Remark: Generated from `#/paths//local/database-proof/post(local.databaseProof)`.
+    public func local_period_databaseProof(
+        headers: Operations.local_period_databaseProof.Input.Headers = .init(),
+        body: Operations.local_period_databaseProof.Input.Body
+    ) async throws -> Operations.local_period_databaseProof.Output {
+        try await local_period_databaseProof(Operations.local_period_databaseProof.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// - Remark: HTTP `POST /local/nudge`.
+    /// - Remark: Generated from `#/paths//local/nudge/post(local.nudge)`.
+    public func local_period_nudge(headers: Operations.local_period_nudge.Input.Headers) async throws -> Operations.local_period_nudge.Output {
+        try await local_period_nudge(Operations.local_period_nudge.Input(headers: headers))
+    }
+    /// - Remark: HTTP `POST /local/commands`.
+    /// - Remark: Generated from `#/paths//local/commands/post(local.runCommand)`.
+    public func local_period_runCommand(
+        headers: Operations.local_period_runCommand.Input.Headers,
+        body: Operations.local_period_runCommand.Input.Body
+    ) async throws -> Operations.local_period_runCommand.Output {
+        try await local_period_runCommand(Operations.local_period_runCommand.Input(
             headers: headers,
             body: body
         ))

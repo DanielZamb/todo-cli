@@ -302,8 +302,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.signIn_period_signIn.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json/id`.
                         public var id: Swift.String
                         /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/json/kind`.
@@ -335,6 +388,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - id:
                         ///   - kind:
                         ///   - name:
@@ -345,6 +399,7 @@ public enum Operations {
                         ///   - revoked_at:
                         ///   - credential:
                         public init(
+                            operation_position: Operations.signIn_period_signIn.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             id: Swift.String,
                             kind: Operations.signIn_period_signIn.Output.Ok.Body.jsonPayload.kindPayload,
                             name: Swift.String? = nil,
@@ -355,6 +410,7 @@ public enum Operations {
                             revoked_at: Swift.String? = nil,
                             credential: Swift.String
                         ) {
+                            self.operation_position = operation_position
                             self.id = id
                             self.kind = kind
                             self.name = name
@@ -366,6 +422,7 @@ public enum Operations {
                             self.credential = credential
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case id
                             case kind
                             case name
@@ -378,7 +435,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.signIn_period_signIn.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.id = try container.decode(
                                 Swift.String.self,
                                 forKey: .id
@@ -416,6 +477,7 @@ public enum Operations {
                                 forKey: .credential
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "id",
                                 "kind",
                                 "name",
@@ -428,31 +490,36 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.id, forKey: .id)
-                            try container.encode(self.kind, forKey: .kind)
-                            if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
-                                try container.encodeNil(forKey: .name)
-                            } else {
-                                try container.encodeIfPresent(self.name, forKey: .name)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.kind, forKey: .kind)
+                                if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
+                                    try container.encodeNil(forKey: .name)
+                                } else {
+                                    try container.encodeIfPresent(self.name, forKey: .name)
+                                }
+                                if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
+                                    try container.encodeNil(forKey: .profile)
+                                } else {
+                                    try container.encodeIfPresent(self.profile, forKey: .profile)
+                                }
+                                try container.encode(self.scope, forKey: .scope)
+                                try container.encode(self.created_at, forKey: .created_at)
+                                try container.encode(self.expires_at, forKey: .expires_at)
+                                if self.revoked_at == nil && _explicitNullKeys.contains(CodingKeys.revoked_at.stringValue) {
+                                    try container.encodeNil(forKey: .revoked_at)
+                                } else {
+                                    try container.encodeIfPresent(self.revoked_at, forKey: .revoked_at)
+                                }
+                                try container.encode(self.credential, forKey: .credential)
                             }
-                            if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
-                                try container.encodeNil(forKey: .profile)
-                            } else {
-                                try container.encodeIfPresent(self.profile, forKey: .profile)
-                            }
-                            try container.encode(self.scope, forKey: .scope)
-                            try container.encode(self.created_at, forKey: .created_at)
-                            try container.encode(self.expires_at, forKey: .expires_at)
-                            if self.revoked_at == nil && _explicitNullKeys.contains(CodingKeys.revoked_at.stringValue) {
-                                try container.encodeNil(forKey: .revoked_at)
-                            } else {
-                                try container.encodeIfPresent(self.revoked_at, forKey: .revoked_at)
-                            }
-                            try container.encode(self.credential, forKey: .credential)
                         }
-                    }
                     /// - Remark: Generated from `#/paths/auth/sessions/POST/responses/200/content/application\/json`.
                     case json(Operations.signIn_period_signIn.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -2039,8 +2106,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.credentials_period_issueToken.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json/id`.
                         public var id: Swift.String
                         /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/json/kind`.
@@ -2072,6 +2192,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - id:
                         ///   - kind:
                         ///   - name:
@@ -2082,6 +2203,7 @@ public enum Operations {
                         ///   - revoked_at:
                         ///   - credential:
                         public init(
+                            operation_position: Operations.credentials_period_issueToken.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             id: Swift.String,
                             kind: Operations.credentials_period_issueToken.Output.Ok.Body.jsonPayload.kindPayload,
                             name: Swift.String? = nil,
@@ -2092,6 +2214,7 @@ public enum Operations {
                             revoked_at: Swift.String? = nil,
                             credential: Swift.String
                         ) {
+                            self.operation_position = operation_position
                             self.id = id
                             self.kind = kind
                             self.name = name
@@ -2103,6 +2226,7 @@ public enum Operations {
                             self.credential = credential
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case id
                             case kind
                             case name
@@ -2115,7 +2239,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.credentials_period_issueToken.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.id = try container.decode(
                                 Swift.String.self,
                                 forKey: .id
@@ -2153,6 +2281,7 @@ public enum Operations {
                                 forKey: .credential
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "id",
                                 "kind",
                                 "name",
@@ -2165,31 +2294,36 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.id, forKey: .id)
-                            try container.encode(self.kind, forKey: .kind)
-                            if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
-                                try container.encodeNil(forKey: .name)
-                            } else {
-                                try container.encodeIfPresent(self.name, forKey: .name)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.kind, forKey: .kind)
+                                if self.name == nil && _explicitNullKeys.contains(CodingKeys.name.stringValue) {
+                                    try container.encodeNil(forKey: .name)
+                                } else {
+                                    try container.encodeIfPresent(self.name, forKey: .name)
+                                }
+                                if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
+                                    try container.encodeNil(forKey: .profile)
+                                } else {
+                                    try container.encodeIfPresent(self.profile, forKey: .profile)
+                                }
+                                try container.encode(self.scope, forKey: .scope)
+                                try container.encode(self.created_at, forKey: .created_at)
+                                try container.encode(self.expires_at, forKey: .expires_at)
+                                if self.revoked_at == nil && _explicitNullKeys.contains(CodingKeys.revoked_at.stringValue) {
+                                    try container.encodeNil(forKey: .revoked_at)
+                                } else {
+                                    try container.encodeIfPresent(self.revoked_at, forKey: .revoked_at)
+                                }
+                                try container.encode(self.credential, forKey: .credential)
                             }
-                            if self.profile == nil && _explicitNullKeys.contains(CodingKeys.profile.stringValue) {
-                                try container.encodeNil(forKey: .profile)
-                            } else {
-                                try container.encodeIfPresent(self.profile, forKey: .profile)
-                            }
-                            try container.encode(self.scope, forKey: .scope)
-                            try container.encode(self.created_at, forKey: .created_at)
-                            try container.encode(self.expires_at, forKey: .expires_at)
-                            if self.revoked_at == nil && _explicitNullKeys.contains(CodingKeys.revoked_at.stringValue) {
-                                try container.encodeNil(forKey: .revoked_at)
-                            } else {
-                                try container.encodeIfPresent(self.revoked_at, forKey: .revoked_at)
-                            }
-                            try container.encode(self.credential, forKey: .credential)
                         }
-                    }
                     /// - Remark: Generated from `#/paths/auth/tokens/POST/responses/200/content/application\/json`.
                     case json(Operations.credentials_period_issueToken.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -3183,8 +3317,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.tasks_period_depend.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/json/outcome`.
@@ -3421,6 +3608,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - outcome:
                         ///   - dependent_id:
@@ -3431,6 +3619,7 @@ public enum Operations {
                         ///   - warnings:
                         ///   - dry_run:
                         public init(
+                            operation_position: Operations.tasks_period_depend.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             outcome: Operations.tasks_period_depend.Output.Ok.Body.jsonPayload.outcomePayload,
                             dependent_id: Swift.String,
@@ -3441,6 +3630,7 @@ public enum Operations {
                             warnings: Operations.tasks_period_depend.Output.Ok.Body.jsonPayload.warningsPayload,
                             dry_run: Swift.Bool? = nil
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.outcome = outcome
                             self.dependent_id = dependent_id
@@ -3452,6 +3642,7 @@ public enum Operations {
                             self.dry_run = dry_run
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case outcome
                             case dependent_id
@@ -3464,7 +3655,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.tasks_period_depend.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -3502,6 +3697,7 @@ public enum Operations {
                                 forKey: .dry_run
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "outcome",
                                 "dependent_id",
@@ -3514,27 +3710,32 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.outcome, forKey: .outcome)
-                            try container.encode(self.dependent_id, forKey: .dependent_id)
-                            try container.encode(self.blocker_id, forKey: .blocker_id)
-                            try container.encode(self.from_version, forKey: .from_version)
-                            try container.encode(self.to_version, forKey: .to_version)
-                            if self.seq == nil && _explicitNullKeys.contains(CodingKeys.seq.stringValue) {
-                                try container.encodeNil(forKey: .seq)
-                            } else {
-                                try container.encodeIfPresent(self.seq, forKey: .seq)
-                            }
-                            try container.encode(self.warnings, forKey: .warnings)
-                            if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
-                                try container.encodeNil(forKey: .dry_run)
-                            } else {
-                                try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.outcome, forKey: .outcome)
+                                try container.encode(self.dependent_id, forKey: .dependent_id)
+                                try container.encode(self.blocker_id, forKey: .blocker_id)
+                                try container.encode(self.from_version, forKey: .from_version)
+                                try container.encode(self.to_version, forKey: .to_version)
+                                if self.seq == nil && _explicitNullKeys.contains(CodingKeys.seq.stringValue) {
+                                    try container.encodeNil(forKey: .seq)
+                                } else {
+                                    try container.encodeIfPresent(self.seq, forKey: .seq)
+                                }
+                                try container.encode(self.warnings, forKey: .warnings)
+                                if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
+                                    try container.encodeNil(forKey: .dry_run)
+                                } else {
+                                    try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                                }
                             }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/POST/responses/200/content/application\/json`.
                     case json(Operations.tasks_period_depend.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -4309,8 +4510,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.tasks_period_undepend.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/json/outcome`.
@@ -4547,6 +4801,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - outcome:
                         ///   - dependent_id:
@@ -4557,6 +4812,7 @@ public enum Operations {
                         ///   - warnings:
                         ///   - dry_run:
                         public init(
+                            operation_position: Operations.tasks_period_undepend.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             outcome: Operations.tasks_period_undepend.Output.Ok.Body.jsonPayload.outcomePayload,
                             dependent_id: Swift.String,
@@ -4567,6 +4823,7 @@ public enum Operations {
                             warnings: Operations.tasks_period_undepend.Output.Ok.Body.jsonPayload.warningsPayload,
                             dry_run: Swift.Bool? = nil
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.outcome = outcome
                             self.dependent_id = dependent_id
@@ -4578,6 +4835,7 @@ public enum Operations {
                             self.dry_run = dry_run
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case outcome
                             case dependent_id
@@ -4590,7 +4848,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.tasks_period_undepend.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -4628,6 +4890,7 @@ public enum Operations {
                                 forKey: .dry_run
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "outcome",
                                 "dependent_id",
@@ -4640,27 +4903,32 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.outcome, forKey: .outcome)
-                            try container.encode(self.dependent_id, forKey: .dependent_id)
-                            try container.encode(self.blocker_id, forKey: .blocker_id)
-                            try container.encode(self.from_version, forKey: .from_version)
-                            try container.encode(self.to_version, forKey: .to_version)
-                            if self.seq == nil && _explicitNullKeys.contains(CodingKeys.seq.stringValue) {
-                                try container.encodeNil(forKey: .seq)
-                            } else {
-                                try container.encodeIfPresent(self.seq, forKey: .seq)
-                            }
-                            try container.encode(self.warnings, forKey: .warnings)
-                            if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
-                                try container.encodeNil(forKey: .dry_run)
-                            } else {
-                                try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.outcome, forKey: .outcome)
+                                try container.encode(self.dependent_id, forKey: .dependent_id)
+                                try container.encode(self.blocker_id, forKey: .blocker_id)
+                                try container.encode(self.from_version, forKey: .from_version)
+                                try container.encode(self.to_version, forKey: .to_version)
+                                if self.seq == nil && _explicitNullKeys.contains(CodingKeys.seq.stringValue) {
+                                    try container.encodeNil(forKey: .seq)
+                                } else {
+                                    try container.encodeIfPresent(self.seq, forKey: .seq)
+                                }
+                                try container.encode(self.warnings, forKey: .warnings)
+                                if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
+                                    try container.encodeNil(forKey: .dry_run)
+                                } else {
+                                    try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                                }
                             }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/tasks/{task}/dependencies/remove/POST/responses/200/content/application\/json`.
                     case json(Operations.tasks_period_undepend.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -5510,8 +5778,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/dry_run`.
@@ -5526,8 +5847,61 @@ public enum Operations {
                                 public var index: Swift.Int
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result`.
                                 public struct resultPayload: Codable, Hashable, Sendable {
-                                    private var _explicitNullKeys: Set<String> = []
+                                        private var _explicitNullKeys: Set<String> = []
 
+                                    /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                                    ///
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result/operation_position`.
+                                    public struct operation_positionPayload: Codable, Hashable, Sendable {
+                                        private var _explicitNullKeys: Set<String> = []
+
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result/operation_position/generation`.
+                                        public var generation: Swift.String
+                                        /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result/operation_position/seq`.
+                                        public var seq: Swift.Int
+                                        /// Creates a new `operation_positionPayload`.
+                                        ///
+                                        /// - Parameters:
+                                        ///   - generation:
+                                        ///   - seq:
+                                        public init(
+                                            generation: Swift.String,
+                                            seq: Swift.Int
+                                        ) {
+                                            self.generation = generation
+                                            self.seq = seq
+                                        }
+                                        public enum CodingKeys: String, CodingKey {
+                                            case generation
+                                            case seq
+                                        }
+                                        public init(from decoder: any Swift.Decoder) throws {
+                                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                            self.generation = try container.decode(
+                                                Swift.String.self,
+                                                forKey: .generation
+                                            )
+                                            self.seq = try container.decode(
+                                                Swift.Int.self,
+                                                forKey: .seq
+                                            )
+                                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                                "generation",
+                                                "seq"
+                                            ])
+                                        }
+
+                                        public func encode(to encoder: any Swift.Encoder) throws {
+                                            var container = encoder.container(keyedBy: CodingKeys.self)
+                                            try container.encode(self.generation, forKey: .generation)
+                                            try container.encode(self.seq, forKey: .seq)
+                                        }
+                                    }
+                                    /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                                    ///
+                                    /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result/operation_position`.
+                                    public var operation_position: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayloadPayload.Value1Payload.resultPayload.operation_positionPayload?
                                     /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result/generated_at`.
                                     public var generated_at: Swift.String
                                     /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result/outcome`.
@@ -5764,6 +6138,7 @@ public enum Operations {
                                     /// Creates a new `resultPayload`.
                                     ///
                                     /// - Parameters:
+                                    ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                                     ///   - generated_at:
                                     ///   - outcome:
                                     ///   - dependent_id:
@@ -5774,6 +6149,7 @@ public enum Operations {
                                     ///   - warnings:
                                     ///   - dry_run:
                                     public init(
+                                        operation_position: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayloadPayload.Value1Payload.resultPayload.operation_positionPayload? = nil,
                                         generated_at: Swift.String,
                                         outcome: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayloadPayload.Value1Payload.resultPayload.outcomePayload,
                                         dependent_id: Swift.String,
@@ -5784,6 +6160,7 @@ public enum Operations {
                                         warnings: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayloadPayload.Value1Payload.resultPayload.warningsPayload,
                                         dry_run: Swift.Bool? = nil
                                     ) {
+                                        self.operation_position = operation_position
                                         self.generated_at = generated_at
                                         self.outcome = outcome
                                         self.dependent_id = dependent_id
@@ -5795,6 +6172,7 @@ public enum Operations {
                                         self.dry_run = dry_run
                                     }
                                     public enum CodingKeys: String, CodingKey {
+                                        case operation_position
                                         case generated_at
                                         case outcome
                                         case dependent_id
@@ -5807,7 +6185,11 @@ public enum Operations {
                                     }
                                     public init(from decoder: any Swift.Decoder) throws {
                                         let container = try decoder.container(keyedBy: CodingKeys.self)
-                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.operation_position = try container.decodeIfPresent(
+                                            Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayloadPayload.Value1Payload.resultPayload.operation_positionPayload.self,
+                                            forKey: .operation_position
+                                        )
                                         self.generated_at = try container.decode(
                                             Swift.String.self,
                                             forKey: .generated_at
@@ -5845,6 +6227,7 @@ public enum Operations {
                                             forKey: .dry_run
                                         )
                                         try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "operation_position",
                                             "generated_at",
                                             "outcome",
                                             "dependent_id",
@@ -5857,27 +6240,32 @@ public enum Operations {
                                         ])
                                     }
 
-                                    public func encode(to encoder: any Swift.Encoder) throws {
-                                        var container = encoder.container(keyedBy: CodingKeys.self)
-                                        try container.encode(self.generated_at, forKey: .generated_at)
-                                        try container.encode(self.outcome, forKey: .outcome)
-                                        try container.encode(self.dependent_id, forKey: .dependent_id)
-                                        try container.encode(self.blocker_id, forKey: .blocker_id)
-                                        try container.encode(self.from_version, forKey: .from_version)
-                                        try container.encode(self.to_version, forKey: .to_version)
-                                        if self.seq == nil && _explicitNullKeys.contains(CodingKeys.seq.stringValue) {
-                                            try container.encodeNil(forKey: .seq)
-                                        } else {
-                                            try container.encodeIfPresent(self.seq, forKey: .seq)
-                                        }
-                                        try container.encode(self.warnings, forKey: .warnings)
-                                        if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
-                                            try container.encodeNil(forKey: .dry_run)
-                                        } else {
-                                            try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                                        public func encode(to encoder: any Swift.Encoder) throws {
+                                            var container = encoder.container(keyedBy: CodingKeys.self)
+                                            if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                                try container.encodeNil(forKey: .operation_position)
+                                            } else {
+                                                try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                            }
+                                            try container.encode(self.generated_at, forKey: .generated_at)
+                                            try container.encode(self.outcome, forKey: .outcome)
+                                            try container.encode(self.dependent_id, forKey: .dependent_id)
+                                            try container.encode(self.blocker_id, forKey: .blocker_id)
+                                            try container.encode(self.from_version, forKey: .from_version)
+                                            try container.encode(self.to_version, forKey: .to_version)
+                                            if self.seq == nil && _explicitNullKeys.contains(CodingKeys.seq.stringValue) {
+                                                try container.encodeNil(forKey: .seq)
+                                            } else {
+                                                try container.encodeIfPresent(self.seq, forKey: .seq)
+                                            }
+                                            try container.encode(self.warnings, forKey: .warnings)
+                                            if self.dry_run == nil && _explicitNullKeys.contains(CodingKeys.dry_run.stringValue) {
+                                                try container.encodeNil(forKey: .dry_run)
+                                            } else {
+                                                try container.encodeIfPresent(self.dry_run, forKey: .dry_run)
+                                            }
                                         }
                                     }
-                                }
                                 /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/json/resultsPayload/value1/result`.
                                 public var result: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayloadPayload.Value1Payload.resultPayload
                                 /// Creates a new `Value1Payload`.
@@ -6705,26 +7093,34 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - dry_run:
                         ///   - results:
                         public init(
+                            operation_position: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             dry_run: Swift.Bool,
                             results: Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.resultsPayload
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.dry_run = dry_run
                             self.results = results
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case dry_run
                             case results
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -6738,19 +7134,25 @@ public enum Operations {
                                 forKey: .results
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "dry_run",
                                 "results"
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.dry_run, forKey: .dry_run)
-                            try container.encode(self.results, forKey: .results)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.dry_run, forKey: .dry_run)
+                                try container.encode(self.results, forKey: .results)
+                            }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/dependencies/batch/POST/responses/200/content/application\/json`.
                     case json(Operations.tasks_period_batchDepend.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -10721,8 +11123,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/json/dry_run`.
@@ -11140,22 +11595,26 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - dry_run:
                         ///   - items:
                         ///   - totals:
                         public init(
+                            operation_position: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             dry_run: Swift.Bool,
                             items: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.itemsPayload,
                             totals: Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.totalsPayload
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.dry_run = dry_run
                             self.items = items
                             self.totals = totals
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case dry_run
                             case items
@@ -11163,7 +11622,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -11181,6 +11644,7 @@ public enum Operations {
                                 forKey: .totals
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "dry_run",
                                 "items",
@@ -11188,14 +11652,19 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.dry_run, forKey: .dry_run)
-                            try container.encode(self.items, forKey: .items)
-                            try container.encode(self.totals, forKey: .totals)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.dry_run, forKey: .dry_run)
+                                try container.encode(self.items, forKey: .items)
+                                try container.encode(self.totals, forKey: .totals)
+                            }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/attachments/batch/POST/responses/200/content/application\/json`.
                     case json(Operations.tasks_period_attachMany.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -16525,8 +16994,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/json/dry_run`.
@@ -16919,22 +17441,26 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - dry_run:
                         ///   - items:
                         ///   - totals:
                         public init(
+                            operation_position: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             dry_run: Swift.Bool,
                             items: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.itemsPayload,
                             totals: Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.totalsPayload
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.dry_run = dry_run
                             self.items = items
                             self.totals = totals
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case dry_run
                             case items
@@ -16942,7 +17468,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -16960,6 +17490,7 @@ public enum Operations {
                                 forKey: .totals
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "dry_run",
                                 "items",
@@ -16967,14 +17498,19 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.dry_run, forKey: .dry_run)
-                            try container.encode(self.items, forKey: .items)
-                            try container.encode(self.totals, forKey: .totals)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.dry_run, forKey: .dry_run)
+                                try container.encode(self.items, forKey: .items)
+                                try container.encode(self.totals, forKey: .totals)
+                            }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/batch-edit/POST/responses/200/content/application\/json`.
                     case json(Operations.tasks_period_batchEdit.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -17855,8 +18391,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/json/dry_run`.
@@ -18299,22 +18888,26 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - dry_run:
                         ///   - items:
                         ///   - totals:
                         public init(
+                            operation_position: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             dry_run: Swift.Bool,
                             items: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.itemsPayload,
                             totals: Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.totalsPayload
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.dry_run = dry_run
                             self.items = items
                             self.totals = totals
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case dry_run
                             case items
@@ -18322,7 +18915,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -18340,6 +18937,7 @@ public enum Operations {
                                 forKey: .totals
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "dry_run",
                                 "items",
@@ -18347,14 +18945,19 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.dry_run, forKey: .dry_run)
-                            try container.encode(self.items, forKey: .items)
-                            try container.encode(self.totals, forKey: .totals)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.dry_run, forKey: .dry_run)
+                                try container.encode(self.items, forKey: .items)
+                                try container.encode(self.totals, forKey: .totals)
+                            }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/import/POST/responses/200/content/application\/json`.
                     case json(Operations.tasks_period_importTasks.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -34451,8 +35054,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.reads_period_deleteProfile.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json/generated_at`.
                         public var generated_at: Swift.String
                         /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/json/profile`.
@@ -34539,6 +35195,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - generated_at:
                         ///   - profile:
                         ///   - dry_run:
@@ -34546,6 +35203,7 @@ public enum Operations {
                         ///   - sessions_revoked:
                         ///   - access_tokens_revoked:
                         public init(
+                            operation_position: Operations.reads_period_deleteProfile.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             generated_at: Swift.String,
                             profile: Operations.reads_period_deleteProfile.Output.Ok.Body.jsonPayload.profilePayload,
                             dry_run: Swift.Bool,
@@ -34553,6 +35211,7 @@ public enum Operations {
                             sessions_revoked: Swift.Double,
                             access_tokens_revoked: Swift.Int
                         ) {
+                            self.operation_position = operation_position
                             self.generated_at = generated_at
                             self.profile = profile
                             self.dry_run = dry_run
@@ -34561,6 +35220,7 @@ public enum Operations {
                             self.access_tokens_revoked = access_tokens_revoked
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case generated_at
                             case profile
                             case dry_run
@@ -34570,7 +35230,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.reads_period_deleteProfile.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.generated_at = try container.decode(
                                 Swift.String.self,
                                 forKey: .generated_at
@@ -34596,6 +35260,7 @@ public enum Operations {
                                 forKey: .access_tokens_revoked
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "generated_at",
                                 "profile",
                                 "dry_run",
@@ -34605,16 +35270,21 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.generated_at, forKey: .generated_at)
-                            try container.encode(self.profile, forKey: .profile)
-                            try container.encode(self.dry_run, forKey: .dry_run)
-                            try container.encode(self.tasks_affected, forKey: .tasks_affected)
-                            try container.encode(self.sessions_revoked, forKey: .sessions_revoked)
-                            try container.encode(self.access_tokens_revoked, forKey: .access_tokens_revoked)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.profile, forKey: .profile)
+                                try container.encode(self.dry_run, forKey: .dry_run)
+                                try container.encode(self.tasks_affected, forKey: .tasks_affected)
+                                try container.encode(self.sessions_revoked, forKey: .sessions_revoked)
+                                try container.encode(self.access_tokens_revoked, forKey: .access_tokens_revoked)
+                            }
                         }
-                    }
                     /// - Remark: Generated from `#/paths/profiles/{profile}/DELETE/responses/200/content/application\/json`.
                     case json(Operations.reads_period_deleteProfile.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -37905,6 +38575,1048 @@ public enum Operations {
             }
         }
     }
+    /// - Remark: HTTP `GET /profiles/{profile}/catalog`.
+    /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)`.
+    public enum reads_period_catalog {
+        public static let id: Swift.String = "reads.catalog"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/path`.
+            public struct Path: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/path/profile`.
+                public var profile: Swift.String
+                /// Creates a new `Path`.
+                ///
+                /// - Parameters:
+                ///   - profile:
+                public init(profile: Swift.String) {
+                    self.profile = profile
+                }
+            }
+            public var path: Operations.reads_period_catalog.Input.Path
+            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query`.
+            public struct Query: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/view`.
+                @frozen public enum viewPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case all = "all"
+                    case today = "today"
+                    case overdue = "overdue"
+                    case scheduled = "scheduled"
+                    case inbox = "inbox"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/view`.
+                public var view: Operations.reads_period_catalog.Input.Query.viewPayload?
+                /// all (default): every visible Task of the Profile, as a full refresh needs. matching: only the Tasks in the groups.
+                ///
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/tasks`.
+                @frozen public enum tasksPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case all = "all"
+                    case matching = "matching"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/tasks`.
+                public var tasks: Operations.reads_period_catalog.Input.Query.tasksPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/project_id`.
+                public var project_id: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/tag_id`.
+                public var tag_id: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/ready`.
+                @frozen public enum readyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _true = "true"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/ready`.
+                public var ready: Operations.reads_period_catalog.Input.Query.readyPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/blocked`.
+                @frozen public enum blockedPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _true = "true"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/blocked`.
+                public var blocked: Operations.reads_period_catalog.Input.Query.blockedPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/order`.
+                @frozen public enum orderPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case topo = "topo"
+                    case lightest = "lightest"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/order`.
+                public var order: Operations.reads_period_catalog.Input.Query.orderPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/text`.
+                public var text: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/prefix`.
+                public var prefix: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/project`.
+                public var project: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/tag`.
+                public var tag: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/status`.
+                @frozen public enum statusPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case open = "open"
+                    case done = "done"
+                    case cancelled = "cancelled"
+                    case snoozed = "snoozed"
+                    case closed = "closed"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/status`.
+                public var status: Operations.reads_period_catalog.Input.Query.statusPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/priority`.
+                @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case P1 = "P1"
+                    case P2 = "P2"
+                    case P3 = "P3"
+                    case P4 = "P4"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/priority`.
+                public var priority: Operations.reads_period_catalog.Input.Query.priorityPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/due`.
+                public var due: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/scheduled`.
+                public var scheduled: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/attachment`.
+                public var attachment: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/energy`.
+                @frozen public enum energyPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case _1 = "1"
+                    case _2 = "2"
+                    case _3 = "3"
+                    case _4 = "4"
+                    case _5 = "5"
+                    case none = "none"
+                }
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/energy`.
+                public var energy: Operations.reads_period_catalog.Input.Query.energyPayload?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/estimate`.
+                public var estimate: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/now`.
+                public var now: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/time_zone`.
+                public var time_zone: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/known_generation`.
+                public var known_generation: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/known_seq`.
+                public var known_seq: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/known_day`.
+                public var known_day: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/query/known_stamp`.
+                public var known_stamp: Swift.String?
+                /// Creates a new `Query`.
+                ///
+                /// - Parameters:
+                ///   - view:
+                ///   - tasks:
+                ///   - project_id:
+                ///   - tag_id:
+                ///   - ready:
+                ///   - blocked:
+                ///   - order:
+                ///   - text:
+                ///   - prefix:
+                ///   - project:
+                ///   - tag:
+                ///   - status:
+                ///   - priority:
+                ///   - due:
+                ///   - scheduled:
+                ///   - attachment:
+                ///   - energy:
+                ///   - estimate:
+                ///   - now:
+                ///   - time_zone:
+                ///   - known_generation:
+                ///   - known_seq:
+                ///   - known_day:
+                ///   - known_stamp:
+                public init(
+                    view: Operations.reads_period_catalog.Input.Query.viewPayload? = nil,
+                    tasks: Operations.reads_period_catalog.Input.Query.tasksPayload? = nil,
+                    project_id: Swift.String? = nil,
+                    tag_id: Swift.String? = nil,
+                    ready: Operations.reads_period_catalog.Input.Query.readyPayload? = nil,
+                    blocked: Operations.reads_period_catalog.Input.Query.blockedPayload? = nil,
+                    order: Operations.reads_period_catalog.Input.Query.orderPayload? = nil,
+                    text: Swift.String? = nil,
+                    prefix: Swift.String? = nil,
+                    project: Swift.String? = nil,
+                    tag: Swift.String? = nil,
+                    status: Operations.reads_period_catalog.Input.Query.statusPayload? = nil,
+                    priority: Operations.reads_period_catalog.Input.Query.priorityPayload? = nil,
+                    due: Swift.String? = nil,
+                    scheduled: Swift.String? = nil,
+                    attachment: Swift.String? = nil,
+                    energy: Operations.reads_period_catalog.Input.Query.energyPayload? = nil,
+                    estimate: Swift.String? = nil,
+                    now: Swift.String? = nil,
+                    time_zone: Swift.String? = nil,
+                    known_generation: Swift.String? = nil,
+                    known_seq: Swift.String? = nil,
+                    known_day: Swift.String? = nil,
+                    known_stamp: Swift.String? = nil
+                ) {
+                    self.view = view
+                    self.tasks = tasks
+                    self.project_id = project_id
+                    self.tag_id = tag_id
+                    self.ready = ready
+                    self.blocked = blocked
+                    self.order = order
+                    self.text = text
+                    self.prefix = prefix
+                    self.project = project
+                    self.tag = tag
+                    self.status = status
+                    self.priority = priority
+                    self.due = due
+                    self.scheduled = scheduled
+                    self.attachment = attachment
+                    self.energy = energy
+                    self.estimate = estimate
+                    self.now = now
+                    self.time_zone = time_zone
+                    self.known_generation = known_generation
+                    self.known_seq = known_seq
+                    self.known_day = known_day
+                    self.known_stamp = known_stamp
+                }
+            }
+            public var query: Operations.reads_period_catalog.Input.Query
+            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_catalog.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.reads_period_catalog.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.reads_period_catalog.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - path:
+            ///   - query:
+            ///   - headers:
+            public init(
+                path: Operations.reads_period_catalog.Input.Path,
+                query: Operations.reads_period_catalog.Input.Query = .init(),
+                headers: Operations.reads_period_catalog.Input.Headers = .init()
+            ) {
+                self.path = path
+                self.query = query
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/200/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/200/content/json/value1`.
+                        public var value1: Components.Schemas.Catalog?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/200/content/json/value2`.
+                        public var value2: Components.Schemas.CatalogUnchanged?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Components.Schemas.Catalog? = nil,
+                            value2: Components.Schemas.CatalogUnchanged? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/200/content/application\/json`.
+                    case json(Operations.reads_period_catalog.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_catalog.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.reads_period_catalog.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.reads_period_catalog.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/400/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/400/content/json/value1`.
+                        public var value1: Components.Schemas.FilterUsageError?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/400/content/json/value2`.
+                        public var value2: Components.Schemas.BadRequestEncoded?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Components.Schemas.FilterUsageError? = nil,
+                            value2: Components.Schemas.BadRequestEncoded? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/400/content/application\/json`.
+                    case json(Operations.reads_period_catalog.Output.BadRequest.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_catalog.Output.BadRequest.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// FilterUsageError | BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.reads_period_catalog.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.reads_period_catalog.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Unauthorized: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/401/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/401/content/application\/json`.
+                    case json(Components.Schemas.UnauthorizedEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.UnauthorizedEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.Unauthorized.Body
+                /// Creates a new `Unauthorized`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.Unauthorized.Body) {
+                    self.body = body
+                }
+            }
+            /// Unauthorized
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/401`.
+            ///
+            /// HTTP response code: `401 unauthorized`.
+            case unauthorized(Operations.reads_period_catalog.Output.Unauthorized)
+            /// The associated value of the enum case if `self` is `.unauthorized`.
+            ///
+            /// - Throws: An error if `self` is not `.unauthorized`.
+            /// - SeeAlso: `.unauthorized`.
+            public var unauthorized: Operations.reads_period_catalog.Output.Unauthorized {
+                get throws {
+                    switch self {
+                    case let .unauthorized(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unauthorized",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Forbidden: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/403/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/403/content/application\/json`.
+                    case json(Components.Schemas.ForbiddenEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ForbiddenEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.Forbidden.Body
+                /// Creates a new `Forbidden`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.Forbidden.Body) {
+                    self.body = body
+                }
+            }
+            /// Forbidden
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/403`.
+            ///
+            /// HTTP response code: `403 forbidden`.
+            case forbidden(Operations.reads_period_catalog.Output.Forbidden)
+            /// The associated value of the enum case if `self` is `.forbidden`.
+            ///
+            /// - Throws: An error if `self` is not `.forbidden`.
+            /// - SeeAlso: `.forbidden`.
+            public var forbidden: Operations.reads_period_catalog.Output.Forbidden {
+                get throws {
+                    switch self {
+                    case let .forbidden(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "forbidden",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct NotFound: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1`.
+                        public struct Value1Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_space_found_space_or_space_auth_space_missing = "not found or auth missing"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case not_found = "not_found"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/code`.
+                            public var code: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value1Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload,
+                                generated_at: Swift.String,
+                                code: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value1`.
+                        public var value1: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/json/value2`.
+                        public var value2: Components.Schemas.NotFoundEncoded?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        public init(
+                            value1: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload.Value1Payload? = nil,
+                            value2: Components.Schemas.NotFoundEncoded? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/404/content/application\/json`.
+                    case json(Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_catalog.Output.NotFound.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.NotFound.Body
+                /// Creates a new `NotFound`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.NotFound.Body) {
+                    self.body = body
+                }
+            }
+            /// NotFound
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/404`.
+            ///
+            /// HTTP response code: `404 notFound`.
+            case notFound(Operations.reads_period_catalog.Output.NotFound)
+            /// The associated value of the enum case if `self` is `.notFound`.
+            ///
+            /// - Throws: An error if `self` is not `.notFound`.
+            /// - SeeAlso: `.notFound`.
+            public var notFound: Operations.reads_period_catalog.Output.NotFound {
+                get throws {
+                    switch self {
+                    case let .notFound(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "notFound",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct Conflict: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/409/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/409/content/application\/json`.
+                    case json(Components.Schemas.ConflictEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.ConflictEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.Conflict.Body
+                /// Creates a new `Conflict`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.Conflict.Body) {
+                    self.body = body
+                }
+            }
+            /// Conflict
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/409`.
+            ///
+            /// HTTP response code: `409 conflict`.
+            case conflict(Operations.reads_period_catalog.Output.Conflict)
+            /// The associated value of the enum case if `self` is `.conflict`.
+            ///
+            /// - Throws: An error if `self` is not `.conflict`.
+            /// - SeeAlso: `.conflict`.
+            public var conflict: Operations.reads_period_catalog.Output.Conflict {
+                get throws {
+                    switch self {
+                    case let .conflict(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "conflict",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct UnprocessableContent: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value1`.
+                        public var value1: Components.Schemas.DependencyError?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value2`.
+                        public var value2: Components.Schemas.InvalidTaskEncoded?
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3`.
+                        public struct Value3Payload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/exit_code`.
+                            public var exit_code: Swift.Double
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/exit_meaning`.
+                            @frozen public enum exit_meaningPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case validation_space_or_space_usage = "validation or usage"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/exit_meaning`.
+                            public var exit_meaning: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload.exit_meaningPayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/generated_at`.
+                            public var generated_at: Swift.String
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/code`.
+                            @frozen public enum codePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case search_too_broad = "search_too_broad"
+                            }
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/code`.
+                            public var code: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload.codePayload
+                            /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3/message`.
+                            public var message: Swift.String
+                            /// Creates a new `Value3Payload`.
+                            ///
+                            /// - Parameters:
+                            ///   - exit_code:
+                            ///   - exit_meaning:
+                            ///   - generated_at:
+                            ///   - code:
+                            ///   - message:
+                            public init(
+                                exit_code: Swift.Double,
+                                exit_meaning: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload.exit_meaningPayload,
+                                generated_at: Swift.String,
+                                code: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload.codePayload,
+                                message: Swift.String
+                            ) {
+                                self.exit_code = exit_code
+                                self.exit_meaning = exit_meaning
+                                self.generated_at = generated_at
+                                self.code = code
+                                self.message = message
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case exit_code
+                                case exit_meaning
+                                case generated_at
+                                case code
+                                case message
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.exit_code = try container.decode(
+                                    Swift.Double.self,
+                                    forKey: .exit_code
+                                )
+                                self.exit_meaning = try container.decode(
+                                    Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload.exit_meaningPayload.self,
+                                    forKey: .exit_meaning
+                                )
+                                self.generated_at = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generated_at
+                                )
+                                self.code = try container.decode(
+                                    Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload.codePayload.self,
+                                    forKey: .code
+                                )
+                                self.message = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .message
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "exit_code",
+                                    "exit_meaning",
+                                    "generated_at",
+                                    "code",
+                                    "message"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.exit_code, forKey: .exit_code)
+                                try container.encode(self.exit_meaning, forKey: .exit_meaning)
+                                try container.encode(self.generated_at, forKey: .generated_at)
+                                try container.encode(self.code, forKey: .code)
+                                try container.encode(self.message, forKey: .message)
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/json/value3`.
+                        public var value3: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload?
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - value1:
+                        ///   - value2:
+                        ///   - value3:
+                        public init(
+                            value1: Components.Schemas.DependencyError? = nil,
+                            value2: Components.Schemas.InvalidTaskEncoded? = nil,
+                            value3: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload.Value3Payload? = nil
+                        ) {
+                            self.value1 = value1
+                            self.value2 = value2
+                            self.value3 = value3
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            var errors: [any Swift.Error] = []
+                            do {
+                                self.value1 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value2 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            do {
+                                self.value3 = try .init(from: decoder)
+                            } catch {
+                                errors.append(error)
+                            }
+                            try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                [
+                                    self.value1,
+                                    self.value2,
+                                    self.value3
+                                ],
+                                type: Self.self,
+                                codingPath: decoder.codingPath,
+                                errors: errors
+                            )
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            try self.value1?.encode(to: encoder)
+                            try self.value2?.encode(to: encoder)
+                            try self.value3?.encode(to: encoder)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/422/content/application\/json`.
+                    case json(Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.reads_period_catalog.Output.UnprocessableContent.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.UnprocessableContent.Body
+                /// Creates a new `UnprocessableContent`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.UnprocessableContent.Body) {
+                    self.body = body
+                }
+            }
+            /// DependencyError | InvalidTask
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/422`.
+            ///
+            /// HTTP response code: `422 unprocessableContent`.
+            case unprocessableContent(Operations.reads_period_catalog.Output.UnprocessableContent)
+            /// The associated value of the enum case if `self` is `.unprocessableContent`.
+            ///
+            /// - Throws: An error if `self` is not `.unprocessableContent`.
+            /// - SeeAlso: `.unprocessableContent`.
+            public var unprocessableContent: Operations.reads_period_catalog.Output.UnprocessableContent {
+                get throws {
+                    switch self {
+                    case let .unprocessableContent(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "unprocessableContent",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct InternalServerError: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/500/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/profiles/{profile}/catalog/GET/responses/500/content/application\/json`.
+                    case json(Components.Schemas.InternalErrorEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.InternalErrorEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.reads_period_catalog.Output.InternalServerError.Body
+                /// Creates a new `InternalServerError`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.reads_period_catalog.Output.InternalServerError.Body) {
+                    self.body = body
+                }
+            }
+            /// InternalError
+            ///
+            /// - Remark: Generated from `#/paths//profiles/{profile}/catalog/get(reads.catalog)/responses/500`.
+            ///
+            /// HTTP response code: `500 internalServerError`.
+            case internalServerError(Operations.reads_period_catalog.Output.InternalServerError)
+            /// The associated value of the enum case if `self` is `.internalServerError`.
+            ///
+            /// - Throws: An error if `self` is not `.internalServerError`.
+            /// - SeeAlso: `.internalServerError`.
+            public var internalServerError: Operations.reads_period_catalog.Output.InternalServerError {
+                get throws {
+                    switch self {
+                    case let .internalServerError(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "internalServerError",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
     /// - Remark: HTTP `GET /profiles/{profile}/views/{view}`.
     /// - Remark: Generated from `#/paths//profiles/{profile}/views/{view}/get(reads.view)`.
     public enum reads_period_view {
@@ -37941,12 +39653,19 @@ public enum Operations {
             public struct Query: Sendable, Hashable {
                 /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/query/now`.
                 public var now: Swift.String?
+                /// - Remark: Generated from `#/paths/profiles/{profile}/views/{view}/GET/query/time_zone`.
+                public var time_zone: Swift.String?
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
                 ///   - now:
-                public init(now: Swift.String? = nil) {
+                ///   - time_zone:
+                public init(
+                    now: Swift.String? = nil,
+                    time_zone: Swift.String? = nil
+                ) {
                     self.now = now
+                    self.time_zone = time_zone
                 }
             }
             public var query: Operations.reads_period_view.Input.Query
@@ -98804,8 +100523,61 @@ public enum Operations {
                 @frozen public enum Body: Sendable, Hashable {
                     /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json`.
                     public struct jsonPayload: Codable, Hashable, Sendable {
-                        private var _explicitNullKeys: Set<String> = []
+                            private var _explicitNullKeys: Set<String> = []
 
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json/operation_position`.
+                        public struct operation_positionPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json/operation_position/generation`.
+                            public var generation: Swift.String
+                            /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json/operation_position/seq`.
+                            public var seq: Swift.Int
+                            /// Creates a new `operation_positionPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - generation:
+                            ///   - seq:
+                            public init(
+                                generation: Swift.String,
+                                seq: Swift.Int
+                            ) {
+                                self.generation = generation
+                                self.seq = seq
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case generation
+                                case seq
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.generation = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .generation
+                                )
+                                self.seq = try container.decode(
+                                    Swift.Int.self,
+                                    forKey: .seq
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "generation",
+                                    "seq"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.generation, forKey: .generation)
+                                try container.encode(self.seq, forKey: .seq)
+                            }
+                        }
+                        /// Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
+                        ///
+                        /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json/operation_position`.
+                        public var operation_position: Operations.snapshots_period_restore.Output.Ok.Body.jsonPayload.operation_positionPayload?
                         /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json/id`.
                         public var id: Swift.String
                         /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/json/dry_run`.
@@ -99090,6 +100862,7 @@ public enum Operations {
                         /// Creates a new `jsonPayload`.
                         ///
                         /// - Parameters:
+                        ///   - operation_position: Present: everything this request committed to History is at or below seq in generation (the generation that was current from the request's first commit until its reply). Compare it with a Catalog position or a stream id only when the generations are equal: then a Catalog whose position.seq is at least this seq reflects all of it. When the generations differ, or the field is absent, read to find out. Absence never means nothing changed; a dry run, a refusal, a concurrent Purge or restore, and History written outside the request (such as a sign-in) all leave it out.
                         ///   - id:
                         ///   - dry_run:
                         ///   - seq_before:
@@ -99099,6 +100872,7 @@ public enum Operations {
                         ///   - safety_snapshot:
                         ///   - generation:
                         public init(
+                            operation_position: Operations.snapshots_period_restore.Output.Ok.Body.jsonPayload.operation_positionPayload? = nil,
                             id: Swift.String,
                             dry_run: Swift.Bool,
                             seq_before: Swift.Int,
@@ -99108,6 +100882,7 @@ public enum Operations {
                             safety_snapshot: Operations.snapshots_period_restore.Output.Ok.Body.jsonPayload.safety_snapshotPayload? = nil,
                             generation: Swift.String
                         ) {
+                            self.operation_position = operation_position
                             self.id = id
                             self.dry_run = dry_run
                             self.seq_before = seq_before
@@ -99118,6 +100893,7 @@ public enum Operations {
                             self.generation = generation
                         }
                         public enum CodingKeys: String, CodingKey {
+                            case operation_position
                             case id
                             case dry_run
                             case seq_before
@@ -99129,7 +100905,11 @@ public enum Operations {
                         }
                         public init(from decoder: any Swift.Decoder) throws {
                             let container = try decoder.container(keyedBy: CodingKeys.self)
-                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.operation_position = try container.decodeIfPresent(
+                                Operations.snapshots_period_restore.Output.Ok.Body.jsonPayload.operation_positionPayload.self,
+                                forKey: .operation_position
+                            )
                             self.id = try container.decode(
                                 Swift.String.self,
                                 forKey: .id
@@ -99163,6 +100943,7 @@ public enum Operations {
                                 forKey: .generation
                             )
                             try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "operation_position",
                                 "id",
                                 "dry_run",
                                 "seq_before",
@@ -99174,22 +100955,27 @@ public enum Operations {
                             ])
                         }
 
-                        public func encode(to encoder: any Swift.Encoder) throws {
-                            var container = encoder.container(keyedBy: CodingKeys.self)
-                            try container.encode(self.id, forKey: .id)
-                            try container.encode(self.dry_run, forKey: .dry_run)
-                            try container.encode(self.seq_before, forKey: .seq_before)
-                            try container.encode(self.seq_after, forKey: .seq_after)
-                            try container.encode(self.seq_delta, forKey: .seq_delta)
-                            try container.encode(self.task_counts, forKey: .task_counts)
-                            if self.safety_snapshot == nil && _explicitNullKeys.contains(CodingKeys.safety_snapshot.stringValue) {
-                                try container.encodeNil(forKey: .safety_snapshot)
-                            } else {
-                                try container.encodeIfPresent(self.safety_snapshot, forKey: .safety_snapshot)
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.operation_position == nil && _explicitNullKeys.contains(CodingKeys.operation_position.stringValue) {
+                                    try container.encodeNil(forKey: .operation_position)
+                                } else {
+                                    try container.encodeIfPresent(self.operation_position, forKey: .operation_position)
+                                }
+                                try container.encode(self.id, forKey: .id)
+                                try container.encode(self.dry_run, forKey: .dry_run)
+                                try container.encode(self.seq_before, forKey: .seq_before)
+                                try container.encode(self.seq_after, forKey: .seq_after)
+                                try container.encode(self.seq_delta, forKey: .seq_delta)
+                                try container.encode(self.task_counts, forKey: .task_counts)
+                                if self.safety_snapshot == nil && _explicitNullKeys.contains(CodingKeys.safety_snapshot.stringValue) {
+                                    try container.encodeNil(forKey: .safety_snapshot)
+                                } else {
+                                    try container.encodeIfPresent(self.safety_snapshot, forKey: .safety_snapshot)
+                                }
+                                try container.encode(self.generation, forKey: .generation)
                             }
-                            try container.encode(self.generation, forKey: .generation)
                         }
-                    }
                     /// - Remark: Generated from `#/paths/snapshots/{snapshot}/restore/POST/responses/200/content/application\/json`.
                     case json(Operations.snapshots_period_restore.Output.Ok.Body.jsonPayload)
                     /// The associated value of the enum case if `self` is `.json`.
@@ -100804,6 +102590,1656 @@ public enum Operations {
                     default:
                         try throwUnexpectedResponseStatus(
                             expectedStatus: "internalServerError",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `POST /local/database-proof`.
+    /// - Remark: Generated from `#/paths//local/database-proof/post(local.databaseProof)`.
+    public enum local_period_databaseProof {
+        public static let id: Swift.String = "local.databaseProof"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/local/database-proof/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.local_period_databaseProof.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - accept:
+                public init(accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.local_period_databaseProof.AcceptableContentType>] = .defaultValues()) {
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.local_period_databaseProof.Input.Headers
+            /// - Remark: Generated from `#/paths/local/database-proof/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/database-proof/POST/requestBody/json`.
+                public struct jsonPayload: Codable, Hashable, Sendable {
+                    private var _explicitNullKeys: Set<String> = []
+
+                    /// - Remark: Generated from `#/paths/local/database-proof/POST/requestBody/json/nonce`.
+                    public var nonce: Swift.String
+                    /// Creates a new `jsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - nonce:
+                    public init(nonce: Swift.String) {
+                        self.nonce = nonce
+                    }
+                    public enum CodingKeys: String, CodingKey {
+                        case nonce
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                        self.nonce = try container.decode(
+                            Swift.String.self,
+                            forKey: .nonce
+                        )
+                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                            "nonce"
+                        ])
+                    }
+
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        var container = encoder.container(keyedBy: CodingKeys.self)
+                        try container.encode(self.nonce, forKey: .nonce)
+                    }
+                }
+                /// - Remark: Generated from `#/paths/local/database-proof/POST/requestBody/content/application\/json`.
+                case json(Operations.local_period_databaseProof.Input.Body.jsonPayload)
+            }
+            public var body: Operations.local_period_databaseProof.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            public init(
+                headers: Operations.local_period_databaseProof.Input.Headers = .init(),
+                body: Operations.local_period_databaseProof.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json`.
+                    public struct jsonPayload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/protocol`.
+                        public var _protocol: Swift.Double
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/contract`.
+                        public var contract: Swift.String
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding`.
+                        public struct bindingPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/identity`.
+                            public struct identityPayload: Codable, Hashable, Sendable {
+                                private var _explicitNullKeys: Set<String> = []
+
+                                /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/identity/device`.
+                                public var device: Swift.String
+                                /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/identity/inode`.
+                                public var inode: Swift.String
+                                /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/identity/birth`.
+                                public var birth: Swift.String
+                                /// Creates a new `identityPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - device:
+                                ///   - inode:
+                                ///   - birth:
+                                public init(
+                                    device: Swift.String,
+                                    inode: Swift.String,
+                                    birth: Swift.String
+                                ) {
+                                    self.device = device
+                                    self.inode = inode
+                                    self.birth = birth
+                                }
+                                public enum CodingKeys: String, CodingKey {
+                                    case device
+                                    case inode
+                                    case birth
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                    self.device = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .device
+                                    )
+                                    self.inode = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .inode
+                                    )
+                                    self.birth = try container.decode(
+                                        Swift.String.self,
+                                        forKey: .birth
+                                    )
+                                    try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                        "device",
+                                        "inode",
+                                        "birth"
+                                    ])
+                                }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.device, forKey: .device)
+                                    try container.encode(self.inode, forKey: .inode)
+                                    try container.encode(self.birth, forKey: .birth)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/identity`.
+                            public var identity: Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload.bindingPayload.identityPayload
+                            /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/path`.
+                            public var path: Swift.String
+                            /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding/attachment_root`.
+                            public var attachment_root: Swift.String
+                            /// Creates a new `bindingPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - identity:
+                            ///   - path:
+                            ///   - attachment_root:
+                            public init(
+                                identity: Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload.bindingPayload.identityPayload,
+                                path: Swift.String,
+                                attachment_root: Swift.String
+                            ) {
+                                self.identity = identity
+                                self.path = path
+                                self.attachment_root = attachment_root
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case identity
+                                case path
+                                case attachment_root
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                    self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.identity = try container.decode(
+                                    Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload.bindingPayload.identityPayload.self,
+                                    forKey: .identity
+                                )
+                                self.path = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .path
+                                )
+                                self.attachment_root = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .attachment_root
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "identity",
+                                    "path",
+                                    "attachment_root"
+                                ])
+                            }
+
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    var container = encoder.container(keyedBy: CodingKeys.self)
+                                    try container.encode(self.identity, forKey: .identity)
+                                    try container.encode(self.path, forKey: .path)
+                                    try container.encode(self.attachment_root, forKey: .attachment_root)
+                                }
+                            }
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/binding`.
+                        public var binding: Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload.bindingPayload
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/incarnation`.
+                        public var incarnation: Swift.String
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/nonce`.
+                        public var nonce: Swift.String
+                        /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/json/mac`.
+                        public var mac: Swift.String
+                        /// Creates a new `jsonPayload`.
+                        ///
+                        /// - Parameters:
+                        ///   - _protocol:
+                        ///   - contract:
+                        ///   - binding:
+                        ///   - incarnation:
+                        ///   - nonce:
+                        ///   - mac:
+                        public init(
+                            _protocol: Swift.Double,
+                            contract: Swift.String,
+                            binding: Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload.bindingPayload,
+                            incarnation: Swift.String,
+                            nonce: Swift.String,
+                            mac: Swift.String
+                        ) {
+                            self._protocol = _protocol
+                            self.contract = contract
+                            self.binding = binding
+                            self.incarnation = incarnation
+                            self.nonce = nonce
+                            self.mac = mac
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case _protocol = "protocol"
+                            case contract
+                            case binding
+                            case incarnation
+                            case nonce
+                            case mac
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self._protocol = try container.decode(
+                                Swift.Double.self,
+                                forKey: ._protocol
+                            )
+                            self.contract = try container.decode(
+                                Swift.String.self,
+                                forKey: .contract
+                            )
+                            self.binding = try container.decode(
+                                Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload.bindingPayload.self,
+                                forKey: .binding
+                            )
+                            self.incarnation = try container.decode(
+                                Swift.String.self,
+                                forKey: .incarnation
+                            )
+                            self.nonce = try container.decode(
+                                Swift.String.self,
+                                forKey: .nonce
+                            )
+                            self.mac = try container.decode(
+                                Swift.String.self,
+                                forKey: .mac
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "protocol",
+                                "contract",
+                                "binding",
+                                "incarnation",
+                                "nonce",
+                                "mac"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self._protocol, forKey: ._protocol)
+                            try container.encode(self.contract, forKey: .contract)
+                            try container.encode(self.binding, forKey: .binding)
+                            try container.encode(self.incarnation, forKey: .incarnation)
+                            try container.encode(self.nonce, forKey: .nonce)
+                            try container.encode(self.mac, forKey: .mac)
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/200/content/application\/json`.
+                    case json(Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.local_period_databaseProof.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.local_period_databaseProof.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.local_period_databaseProof.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//local/database-proof/post(local.databaseProof)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.local_period_databaseProof.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.local_period_databaseProof.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/local/database-proof/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.local_period_databaseProof.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.local_period_databaseProof.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//local/database-proof/post(local.databaseProof)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.local_period_databaseProof.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.local_period_databaseProof.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `POST /local/nudge`.
+    /// - Remark: Generated from `#/paths//local/nudge/post(local.nudge)`.
+    public enum local_period_nudge {
+        public static let id: Swift.String = "local.nudge"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/local/nudge/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/nudge/POST/header/x-todo-incarnation`.
+                public var x_hyphen_todo_hyphen_incarnation: Swift.String
+                /// - Remark: Generated from `#/paths/local/nudge/POST/header/x-todo-proof`.
+                public var x_hyphen_todo_hyphen_proof: Swift.String
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.local_period_nudge.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - x_hyphen_todo_hyphen_incarnation:
+                ///   - x_hyphen_todo_hyphen_proof:
+                ///   - accept:
+                public init(
+                    x_hyphen_todo_hyphen_incarnation: Swift.String,
+                    x_hyphen_todo_hyphen_proof: Swift.String,
+                    accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.local_period_nudge.AcceptableContentType>] = .defaultValues()
+                ) {
+                    self.x_hyphen_todo_hyphen_incarnation = x_hyphen_todo_hyphen_incarnation
+                    self.x_hyphen_todo_hyphen_proof = x_hyphen_todo_hyphen_proof
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.local_period_nudge.Input.Headers
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            public init(headers: Operations.local_period_nudge.Input.Headers) {
+                self.headers = headers
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/nudge/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/local/nudge/POST/responses/200/content/json`.
+                    @frozen public enum jsonPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                        case _empty = ""
+                    }
+                    /// - Remark: Generated from `#/paths/local/nudge/POST/responses/200/content/application\/json`.
+                    case json(Operations.local_period_nudge.Output.Ok.Body.jsonPayload?)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.local_period_nudge.Output.Ok.Body.jsonPayload? {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.local_period_nudge.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.local_period_nudge.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//local/nudge/post(local.nudge)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.local_period_nudge.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.local_period_nudge.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/nudge/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/local/nudge/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.local_period_nudge.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.local_period_nudge.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//local/nudge/post(local.nudge)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.local_period_nudge.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.local_period_nudge.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
+                            response: self
+                        )
+                    }
+                }
+            }
+            /// Undocumented response.
+            ///
+            /// A response with a code that is not documented in the OpenAPI document.
+            case undocumented(statusCode: Swift.Int, OpenAPIRuntime.UndocumentedPayload)
+        }
+        @frozen public enum AcceptableContentType: AcceptableProtocol {
+            case json
+            case other(Swift.String)
+            public init?(rawValue: Swift.String) {
+                switch rawValue.lowercased() {
+                case "application/json":
+                    self = .json
+                default:
+                    self = .other(rawValue)
+                }
+            }
+            public var rawValue: Swift.String {
+                switch self {
+                case let .other(string):
+                    return string
+                case .json:
+                    return "application/json"
+                }
+            }
+            public static var allCases: [Self] {
+                [
+                    .json
+                ]
+            }
+        }
+    }
+    /// - Remark: HTTP `POST /local/commands`.
+    /// - Remark: Generated from `#/paths//local/commands/post(local.runCommand)`.
+    public enum local_period_runCommand {
+        public static let id: Swift.String = "local.runCommand"
+        public struct Input: Sendable, Hashable {
+            /// - Remark: Generated from `#/paths/local/commands/POST/header`.
+            public struct Headers: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/commands/POST/header/x-todo-incarnation`.
+                public var x_hyphen_todo_hyphen_incarnation: Swift.String
+                /// - Remark: Generated from `#/paths/local/commands/POST/header/x-todo-proof`.
+                public var x_hyphen_todo_hyphen_proof: Swift.String
+                public var accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.local_period_runCommand.AcceptableContentType>]
+                /// Creates a new `Headers`.
+                ///
+                /// - Parameters:
+                ///   - x_hyphen_todo_hyphen_incarnation:
+                ///   - x_hyphen_todo_hyphen_proof:
+                ///   - accept:
+                public init(
+                    x_hyphen_todo_hyphen_incarnation: Swift.String,
+                    x_hyphen_todo_hyphen_proof: Swift.String,
+                    accept: [OpenAPIRuntime.AcceptHeaderContentType<Operations.local_period_runCommand.AcceptableContentType>] = .defaultValues()
+                ) {
+                    self.x_hyphen_todo_hyphen_incarnation = x_hyphen_todo_hyphen_incarnation
+                    self.x_hyphen_todo_hyphen_proof = x_hyphen_todo_hyphen_proof
+                    self.accept = accept
+                }
+            }
+            public var headers: Operations.local_period_runCommand.Input.Headers
+            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody`.
+            @frozen public enum Body: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json`.
+                public struct jsonPayload: Codable, Hashable, Sendable {
+                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1`.
+                    public struct Value1Payload: Codable, Hashable, Sendable {
+                        private var _explicitNullKeys: Set<String> = []
+
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/kind`.
+                        @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                            case add = "add"
+                        }
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/kind`.
+                        public var kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.kindPayload
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/profile`.
+                        public var profile: Swift.String
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags`.
+                        public struct flagsPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/title`.
+                            public var title: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/desc`.
+                            public var desc: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/external_id`.
+                            public var external_id: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/project`.
+                            public var project: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/priority`.
+                            public var priority: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/scheduled`.
+                            public var scheduled: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/due`.
+                            public var due: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/recurrence`.
+                            public var recurrence: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/energy`.
+                            public var energy: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/estimate`.
+                            public var estimate: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/source`.
+                            public var source: Swift.String?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags/tag`.
+                            public var tag: [Swift.String]?
+                            /// Creates a new `flagsPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - title:
+                            ///   - desc:
+                            ///   - external_id:
+                            ///   - project:
+                            ///   - priority:
+                            ///   - scheduled:
+                            ///   - due:
+                            ///   - recurrence:
+                            ///   - energy:
+                            ///   - estimate:
+                            ///   - source:
+                            ///   - tag:
+                            public init(
+                                title: Swift.String? = nil,
+                                desc: Swift.String? = nil,
+                                external_id: Swift.String? = nil,
+                                project: Swift.String? = nil,
+                                priority: Swift.String? = nil,
+                                scheduled: Swift.String? = nil,
+                                due: Swift.String? = nil,
+                                recurrence: Swift.String? = nil,
+                                energy: Swift.String? = nil,
+                                estimate: Swift.String? = nil,
+                                source: Swift.String? = nil,
+                                tag: [Swift.String]? = nil
+                            ) {
+                                self.title = title
+                                self.desc = desc
+                                self.external_id = external_id
+                                self.project = project
+                                self.priority = priority
+                                self.scheduled = scheduled
+                                self.due = due
+                                self.recurrence = recurrence
+                                self.energy = energy
+                                self.estimate = estimate
+                                self.source = source
+                                self.tag = tag
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case title
+                                case desc
+                                case external_id
+                                case project
+                                case priority
+                                case scheduled
+                                case due
+                                case recurrence
+                                case energy
+                                case estimate
+                                case source
+                                case tag
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.title = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .title
+                                )
+                                self.desc = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .desc
+                                )
+                                self.external_id = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .external_id
+                                )
+                                self.project = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .project
+                                )
+                                self.priority = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .priority
+                                )
+                                self.scheduled = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .scheduled
+                                )
+                                self.due = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .due
+                                )
+                                self.recurrence = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .recurrence
+                                )
+                                self.energy = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .energy
+                                )
+                                self.estimate = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .estimate
+                                )
+                                self.source = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .source
+                                )
+                                self.tag = try container.decodeIfPresent(
+                                    [Swift.String].self,
+                                    forKey: .tag
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "title",
+                                    "desc",
+                                    "external_id",
+                                    "project",
+                                    "priority",
+                                    "scheduled",
+                                    "due",
+                                    "recurrence",
+                                    "energy",
+                                    "estimate",
+                                    "source",
+                                    "tag"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                if self.title == nil && _explicitNullKeys.contains(CodingKeys.title.stringValue) {
+                                    try container.encodeNil(forKey: .title)
+                                } else {
+                                    try container.encodeIfPresent(self.title, forKey: .title)
+                                }
+                                if self.desc == nil && _explicitNullKeys.contains(CodingKeys.desc.stringValue) {
+                                    try container.encodeNil(forKey: .desc)
+                                } else {
+                                    try container.encodeIfPresent(self.desc, forKey: .desc)
+                                }
+                                if self.external_id == nil && _explicitNullKeys.contains(CodingKeys.external_id.stringValue) {
+                                    try container.encodeNil(forKey: .external_id)
+                                } else {
+                                    try container.encodeIfPresent(self.external_id, forKey: .external_id)
+                                }
+                                if self.project == nil && _explicitNullKeys.contains(CodingKeys.project.stringValue) {
+                                    try container.encodeNil(forKey: .project)
+                                } else {
+                                    try container.encodeIfPresent(self.project, forKey: .project)
+                                }
+                                if self.priority == nil && _explicitNullKeys.contains(CodingKeys.priority.stringValue) {
+                                    try container.encodeNil(forKey: .priority)
+                                } else {
+                                    try container.encodeIfPresent(self.priority, forKey: .priority)
+                                }
+                                if self.scheduled == nil && _explicitNullKeys.contains(CodingKeys.scheduled.stringValue) {
+                                    try container.encodeNil(forKey: .scheduled)
+                                } else {
+                                    try container.encodeIfPresent(self.scheduled, forKey: .scheduled)
+                                }
+                                if self.due == nil && _explicitNullKeys.contains(CodingKeys.due.stringValue) {
+                                    try container.encodeNil(forKey: .due)
+                                } else {
+                                    try container.encodeIfPresent(self.due, forKey: .due)
+                                }
+                                if self.recurrence == nil && _explicitNullKeys.contains(CodingKeys.recurrence.stringValue) {
+                                    try container.encodeNil(forKey: .recurrence)
+                                } else {
+                                    try container.encodeIfPresent(self.recurrence, forKey: .recurrence)
+                                }
+                                if self.energy == nil && _explicitNullKeys.contains(CodingKeys.energy.stringValue) {
+                                    try container.encodeNil(forKey: .energy)
+                                } else {
+                                    try container.encodeIfPresent(self.energy, forKey: .energy)
+                                }
+                                if self.estimate == nil && _explicitNullKeys.contains(CodingKeys.estimate.stringValue) {
+                                    try container.encodeNil(forKey: .estimate)
+                                } else {
+                                    try container.encodeIfPresent(self.estimate, forKey: .estimate)
+                                }
+                                if self.source == nil && _explicitNullKeys.contains(CodingKeys.source.stringValue) {
+                                    try container.encodeNil(forKey: .source)
+                                } else {
+                                    try container.encodeIfPresent(self.source, forKey: .source)
+                                }
+                                if self.tag == nil && _explicitNullKeys.contains(CodingKeys.tag.stringValue) {
+                                    try container.encodeNil(forKey: .tag)
+                                } else {
+                                    try container.encodeIfPresent(self.tag, forKey: .tag)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/flags`.
+                        public var flags: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.flagsPayload
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft`.
+                        public struct draftPayload: Codable, Hashable, Sendable {
+                            private var _explicitNullKeys: Set<String> = []
+
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/title`.
+                            public var title: Swift.String
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at`.
+                            public struct due_atPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value1`.
+                                public struct Value1Payload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value1/kind`.
+                                    @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case instant = "instant"
+                                    }
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value1/kind`.
+                                    public var kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value1Payload.kindPayload
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value1/utc`.
+                                    public var utc: Swift.String
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value1/time_zone`.
+                                    public var time_zone: Swift.String
+                                    /// Creates a new `Value1Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - kind:
+                                    ///   - utc:
+                                    ///   - time_zone:
+                                    public init(
+                                        kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value1Payload.kindPayload,
+                                        utc: Swift.String,
+                                        time_zone: Swift.String
+                                    ) {
+                                        self.kind = kind
+                                        self.utc = utc
+                                        self.time_zone = time_zone
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case kind
+                                        case utc
+                                        case time_zone
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.kind = try container.decode(
+                                            Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value1Payload.kindPayload.self,
+                                            forKey: .kind
+                                        )
+                                        self.utc = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .utc
+                                        )
+                                        self.time_zone = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .time_zone
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "kind",
+                                            "utc",
+                                            "time_zone"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.kind, forKey: .kind)
+                                        try container.encode(self.utc, forKey: .utc)
+                                        try container.encode(self.time_zone, forKey: .time_zone)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value1`.
+                                public var value1: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value1Payload?
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value2`.
+                                public struct Value2Payload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value2/kind`.
+                                    @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case date = "date"
+                                    }
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value2/kind`.
+                                    public var kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value2Payload.kindPayload
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value2/date`.
+                                    public var date: Swift.String
+                                    /// Creates a new `Value2Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - kind:
+                                    ///   - date:
+                                    public init(
+                                        kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value2Payload.kindPayload,
+                                        date: Swift.String
+                                    ) {
+                                        self.kind = kind
+                                        self.date = date
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case kind
+                                        case date
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.kind = try container.decode(
+                                            Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value2Payload.kindPayload.self,
+                                            forKey: .kind
+                                        )
+                                        self.date = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "kind",
+                                            "date"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.kind, forKey: .kind)
+                                        try container.encode(self.date, forKey: .date)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at/value2`.
+                                public var value2: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value2Payload?
+                                /// Creates a new `due_atPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - value1:
+                                ///   - value2:
+                                public init(
+                                    value1: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value1Payload? = nil,
+                                    value2: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.Value2Payload? = nil
+                                ) {
+                                    self.value1 = value1
+                                    self.value2 = value2
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    var errors: [any Swift.Error] = []
+                                    do {
+                                        self.value1 = try .init(from: decoder)
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self.value2 = try .init(from: decoder)
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                        [
+                                            self.value1,
+                                            self.value2
+                                        ],
+                                        type: Self.self,
+                                        codingPath: decoder.codingPath,
+                                        errors: errors
+                                    )
+                                }
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    try self.value1?.encode(to: encoder)
+                                    try self.value2?.encode(to: encoder)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/due_at`.
+                            public var due_at: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at`.
+                            public struct scheduled_atPayload: Codable, Hashable, Sendable {
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value1`.
+                                public struct Value1Payload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value1/kind`.
+                                    @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case instant = "instant"
+                                    }
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value1/kind`.
+                                    public var kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value1Payload.kindPayload
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value1/utc`.
+                                    public var utc: Swift.String
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value1/time_zone`.
+                                    public var time_zone: Swift.String
+                                    /// Creates a new `Value1Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - kind:
+                                    ///   - utc:
+                                    ///   - time_zone:
+                                    public init(
+                                        kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value1Payload.kindPayload,
+                                        utc: Swift.String,
+                                        time_zone: Swift.String
+                                    ) {
+                                        self.kind = kind
+                                        self.utc = utc
+                                        self.time_zone = time_zone
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case kind
+                                        case utc
+                                        case time_zone
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.kind = try container.decode(
+                                            Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value1Payload.kindPayload.self,
+                                            forKey: .kind
+                                        )
+                                        self.utc = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .utc
+                                        )
+                                        self.time_zone = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .time_zone
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "kind",
+                                            "utc",
+                                            "time_zone"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.kind, forKey: .kind)
+                                        try container.encode(self.utc, forKey: .utc)
+                                        try container.encode(self.time_zone, forKey: .time_zone)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value1`.
+                                public var value1: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value1Payload?
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value2`.
+                                public struct Value2Payload: Codable, Hashable, Sendable {
+                                    private var _explicitNullKeys: Set<String> = []
+
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value2/kind`.
+                                    @frozen public enum kindPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                        case date = "date"
+                                    }
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value2/kind`.
+                                    public var kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value2Payload.kindPayload
+                                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value2/date`.
+                                    public var date: Swift.String
+                                    /// Creates a new `Value2Payload`.
+                                    ///
+                                    /// - Parameters:
+                                    ///   - kind:
+                                    ///   - date:
+                                    public init(
+                                        kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value2Payload.kindPayload,
+                                        date: Swift.String
+                                    ) {
+                                        self.kind = kind
+                                        self.date = date
+                                    }
+                                    public enum CodingKeys: String, CodingKey {
+                                        case kind
+                                        case date
+                                    }
+                                    public init(from decoder: any Swift.Decoder) throws {
+                                        let container = try decoder.container(keyedBy: CodingKeys.self)
+                                        self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                        self.kind = try container.decode(
+                                            Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value2Payload.kindPayload.self,
+                                            forKey: .kind
+                                        )
+                                        self.date = try container.decode(
+                                            Swift.String.self,
+                                            forKey: .date
+                                        )
+                                        try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                            "kind",
+                                            "date"
+                                        ])
+                                    }
+
+                                    public func encode(to encoder: any Swift.Encoder) throws {
+                                        var container = encoder.container(keyedBy: CodingKeys.self)
+                                        try container.encode(self.kind, forKey: .kind)
+                                        try container.encode(self.date, forKey: .date)
+                                    }
+                                }
+                                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at/value2`.
+                                public var value2: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value2Payload?
+                                /// Creates a new `scheduled_atPayload`.
+                                ///
+                                /// - Parameters:
+                                ///   - value1:
+                                ///   - value2:
+                                public init(
+                                    value1: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value1Payload? = nil,
+                                    value2: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.Value2Payload? = nil
+                                ) {
+                                    self.value1 = value1
+                                    self.value2 = value2
+                                }
+                                public init(from decoder: any Swift.Decoder) throws {
+                                    var errors: [any Swift.Error] = []
+                                    do {
+                                        self.value1 = try .init(from: decoder)
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    do {
+                                        self.value2 = try .init(from: decoder)
+                                    } catch {
+                                        errors.append(error)
+                                    }
+                                    try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                                        [
+                                            self.value1,
+                                            self.value2
+                                        ],
+                                        type: Self.self,
+                                        codingPath: decoder.codingPath,
+                                        errors: errors
+                                    )
+                                }
+                                public func encode(to encoder: any Swift.Encoder) throws {
+                                    try self.value1?.encode(to: encoder)
+                                    try self.value2?.encode(to: encoder)
+                                }
+                            }
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/scheduled_at`.
+                            public var scheduled_at: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload?
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/priority`.
+                            @frozen public enum priorityPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                                case P1 = "P1"
+                                case P2 = "P2"
+                                case P3 = "P3"
+                                case P4 = "P4"
+                            }
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/priority`.
+                            public var priority: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.priorityPayload
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/tags`.
+                            public var tags: [Swift.String]
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft/project`.
+                            public var project: Swift.String?
+                            /// Creates a new `draftPayload`.
+                            ///
+                            /// - Parameters:
+                            ///   - title:
+                            ///   - due_at:
+                            ///   - scheduled_at:
+                            ///   - priority:
+                            ///   - tags:
+                            ///   - project:
+                            public init(
+                                title: Swift.String,
+                                due_at: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload? = nil,
+                                scheduled_at: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload? = nil,
+                                priority: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.priorityPayload,
+                                tags: [Swift.String],
+                                project: Swift.String? = nil
+                            ) {
+                                self.title = title
+                                self.due_at = due_at
+                                self.scheduled_at = scheduled_at
+                                self.priority = priority
+                                self.tags = tags
+                                self.project = project
+                            }
+                            public enum CodingKeys: String, CodingKey {
+                                case title
+                                case due_at
+                                case scheduled_at
+                                case priority
+                                case tags
+                                case project
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                                self.title = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .title
+                                )
+                                self.due_at = try container.decodeIfPresent(
+                                    Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.due_atPayload.self,
+                                    forKey: .due_at
+                                )
+                                self.scheduled_at = try container.decodeIfPresent(
+                                    Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.scheduled_atPayload.self,
+                                    forKey: .scheduled_at
+                                )
+                                self.priority = try container.decode(
+                                    Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.priorityPayload.self,
+                                    forKey: .priority
+                                )
+                                self.tags = try container.decode(
+                                    [Swift.String].self,
+                                    forKey: .tags
+                                )
+                                self.project = try container.decodeIfPresent(
+                                    Swift.String.self,
+                                    forKey: .project
+                                )
+                                try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                    "title",
+                                    "due_at",
+                                    "scheduled_at",
+                                    "priority",
+                                    "tags",
+                                    "project"
+                                ])
+                            }
+
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                var container = encoder.container(keyedBy: CodingKeys.self)
+                                try container.encode(self.title, forKey: .title)
+                                if self.due_at == nil && _explicitNullKeys.contains(CodingKeys.due_at.stringValue) {
+                                    try container.encodeNil(forKey: .due_at)
+                                } else {
+                                    try container.encodeIfPresent(self.due_at, forKey: .due_at)
+                                }
+                                if self.scheduled_at == nil && _explicitNullKeys.contains(CodingKeys.scheduled_at.stringValue) {
+                                    try container.encodeNil(forKey: .scheduled_at)
+                                } else {
+                                    try container.encodeIfPresent(self.scheduled_at, forKey: .scheduled_at)
+                                }
+                                try container.encode(self.priority, forKey: .priority)
+                                try container.encode(self.tags, forKey: .tags)
+                                if self.project == nil && _explicitNullKeys.contains(CodingKeys.project.stringValue) {
+                                    try container.encodeNil(forKey: .project)
+                                } else {
+                                    try container.encodeIfPresent(self.project, forKey: .project)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/draft`.
+                        public var draft: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload?
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/attachmentsPayload`.
+                        @frozen public enum attachmentsPayloadPayload: Codable, Hashable, Sendable {
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/attachmentsPayload/SwiftTagged_file_660795b389d92e70`.
+                            case file(Components.Schemas.SwiftTagged_file_660795b389d92e70)
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/attachmentsPayload/SwiftTagged_image_3d8a86930a2c606b`.
+                            case image(Components.Schemas.SwiftTagged_image_3d8a86930a2c606b)
+                            /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/attachmentsPayload/SwiftTagged_link_c07227ae37504c97`.
+                            case link(Components.Schemas.SwiftTagged_link_c07227ae37504c97)
+                            public enum CodingKeys: String, CodingKey {
+                                case kind
+                            }
+                            public init(from decoder: any Swift.Decoder) throws {
+                                let container = try decoder.container(keyedBy: CodingKeys.self)
+                                let discriminator = try container.decode(
+                                    Swift.String.self,
+                                    forKey: .kind
+                                )
+                                switch discriminator {
+                                case "file":
+                                    self = .file(try .init(from: decoder))
+                                case "image":
+                                    self = .image(try .init(from: decoder))
+                                case "link":
+                                    self = .link(try .init(from: decoder))
+                                default:
+                                    throw Swift.DecodingError.unknownOneOfDiscriminator(
+                                        discriminatorKey: CodingKeys.kind,
+                                        discriminatorValue: discriminator,
+                                        codingPath: decoder.codingPath
+                                    )
+                                }
+                            }
+                            public func encode(to encoder: any Swift.Encoder) throws {
+                                switch self {
+                                case let .file(value):
+                                    try value.encode(to: encoder)
+                                case let .image(value):
+                                    try value.encode(to: encoder)
+                                case let .link(value):
+                                    try value.encode(to: encoder)
+                                }
+                            }
+                        }
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/attachments`.
+                        public typealias attachmentsPayload = [Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.attachmentsPayloadPayload]
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/attachments`.
+                        public var attachments: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.attachmentsPayload?
+                        /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1/depends_on`.
+                        public var depends_on: [Swift.String]?
+                        /// Creates a new `Value1Payload`.
+                        ///
+                        /// - Parameters:
+                        ///   - kind:
+                        ///   - profile:
+                        ///   - flags:
+                        ///   - draft:
+                        ///   - attachments:
+                        ///   - depends_on:
+                        public init(
+                            kind: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.kindPayload,
+                            profile: Swift.String,
+                            flags: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.flagsPayload,
+                            draft: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload? = nil,
+                            attachments: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.attachmentsPayload? = nil,
+                            depends_on: [Swift.String]? = nil
+                        ) {
+                            self.kind = kind
+                            self.profile = profile
+                            self.flags = flags
+                            self.draft = draft
+                            self.attachments = attachments
+                            self.depends_on = depends_on
+                        }
+                        public enum CodingKeys: String, CodingKey {
+                            case kind
+                            case profile
+                            case flags
+                            case draft
+                            case attachments
+                            case depends_on
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            self._explicitNullKeys = Set(try container.allKeys.filter { try container.decodeNil(forKey: $0) }.map(\.stringValue))
+                            self.kind = try container.decode(
+                                Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.kindPayload.self,
+                                forKey: .kind
+                            )
+                            self.profile = try container.decode(
+                                Swift.String.self,
+                                forKey: .profile
+                            )
+                            self.flags = try container.decode(
+                                Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.flagsPayload.self,
+                                forKey: .flags
+                            )
+                            self.draft = try container.decodeIfPresent(
+                                Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.draftPayload.self,
+                                forKey: .draft
+                            )
+                            self.attachments = try container.decodeIfPresent(
+                                Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload.attachmentsPayload.self,
+                                forKey: .attachments
+                            )
+                            self.depends_on = try container.decodeIfPresent(
+                                [Swift.String].self,
+                                forKey: .depends_on
+                            )
+                            try decoder.ensureNoAdditionalProperties(knownKeys: [
+                                "kind",
+                                "profile",
+                                "flags",
+                                "draft",
+                                "attachments",
+                                "depends_on"
+                            ])
+                        }
+
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            var container = encoder.container(keyedBy: CodingKeys.self)
+                            try container.encode(self.kind, forKey: .kind)
+                            try container.encode(self.profile, forKey: .profile)
+                            try container.encode(self.flags, forKey: .flags)
+                            if self.draft == nil && _explicitNullKeys.contains(CodingKeys.draft.stringValue) {
+                                try container.encodeNil(forKey: .draft)
+                            } else {
+                                try container.encodeIfPresent(self.draft, forKey: .draft)
+                            }
+                            if self.attachments == nil && _explicitNullKeys.contains(CodingKeys.attachments.stringValue) {
+                                try container.encodeNil(forKey: .attachments)
+                            } else {
+                                try container.encodeIfPresent(self.attachments, forKey: .attachments)
+                            }
+                            if self.depends_on == nil && _explicitNullKeys.contains(CodingKeys.depends_on.stringValue) {
+                                try container.encodeNil(forKey: .depends_on)
+                            } else {
+                                try container.encodeIfPresent(self.depends_on, forKey: .depends_on)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/json/value1`.
+                    public var value1: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload?
+                    /// Creates a new `jsonPayload`.
+                    ///
+                    /// - Parameters:
+                    ///   - value1:
+                    public init(value1: Operations.local_period_runCommand.Input.Body.jsonPayload.Value1Payload? = nil) {
+                        self.value1 = value1
+                    }
+                    public init(from decoder: any Swift.Decoder) throws {
+                        var errors: [any Swift.Error] = []
+                        do {
+                            self.value1 = try .init(from: decoder)
+                        } catch {
+                            errors.append(error)
+                        }
+                        try Swift.DecodingError.verifyAtLeastOneSchemaIsNotNil(
+                            [
+                                self.value1
+                            ],
+                            type: Self.self,
+                            codingPath: decoder.codingPath,
+                            errors: errors
+                        )
+                    }
+                    public func encode(to encoder: any Swift.Encoder) throws {
+                        try self.value1?.encode(to: encoder)
+                    }
+                }
+                /// - Remark: Generated from `#/paths/local/commands/POST/requestBody/content/application\/json`.
+                case json(Operations.local_period_runCommand.Input.Body.jsonPayload)
+            }
+            public var body: Operations.local_period_runCommand.Input.Body
+            /// Creates a new `Input`.
+            ///
+            /// - Parameters:
+            ///   - headers:
+            ///   - body:
+            public init(
+                headers: Operations.local_period_runCommand.Input.Headers,
+                body: Operations.local_period_runCommand.Input.Body
+            ) {
+                self.headers = headers
+                self.body = body
+            }
+        }
+        @frozen public enum Output: Sendable, Hashable {
+            public struct Ok: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/commands/POST/responses/200/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/local/commands/POST/responses/200/content/json`.
+                    @frozen public enum jsonPayload: Codable, Hashable, Sendable {
+                        /// - Remark: Generated from `#/paths/local/commands/POST/responses/200/content/json/SwiftTagged_failure_d505261d3c5b0075`.
+                        case failure(Components.Schemas.SwiftTagged_failure_d505261d3c5b0075)
+                        /// - Remark: Generated from `#/paths/local/commands/POST/responses/200/content/json/SwiftTagged_not_run_a902d24975468b33`.
+                        case not_run(Components.Schemas.SwiftTagged_not_run_a902d24975468b33)
+                        /// - Remark: Generated from `#/paths/local/commands/POST/responses/200/content/json/SwiftTagged_success_36d3aab4bfd6998a`.
+                        case success(Components.Schemas.SwiftTagged_success_36d3aab4bfd6998a)
+                        public enum CodingKeys: String, CodingKey {
+                            case outcome
+                        }
+                        public init(from decoder: any Swift.Decoder) throws {
+                            let container = try decoder.container(keyedBy: CodingKeys.self)
+                            let discriminator = try container.decode(
+                                Swift.String.self,
+                                forKey: .outcome
+                            )
+                            switch discriminator {
+                            case "failure":
+                                self = .failure(try .init(from: decoder))
+                            case "not_run":
+                                self = .not_run(try .init(from: decoder))
+                            case "success":
+                                self = .success(try .init(from: decoder))
+                            default:
+                                throw Swift.DecodingError.unknownOneOfDiscriminator(
+                                    discriminatorKey: CodingKeys.outcome,
+                                    discriminatorValue: discriminator,
+                                    codingPath: decoder.codingPath
+                                )
+                            }
+                        }
+                        public func encode(to encoder: any Swift.Encoder) throws {
+                            switch self {
+                            case let .failure(value):
+                                try value.encode(to: encoder)
+                            case let .not_run(value):
+                                try value.encode(to: encoder)
+                            case let .success(value):
+                                try value.encode(to: encoder)
+                            }
+                        }
+                    }
+                    /// - Remark: Generated from `#/paths/local/commands/POST/responses/200/content/application\/json`.
+                    case json(Operations.local_period_runCommand.Output.Ok.Body.jsonPayload)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Operations.local_period_runCommand.Output.Ok.Body.jsonPayload {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.local_period_runCommand.Output.Ok.Body
+                /// Creates a new `Ok`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.local_period_runCommand.Output.Ok.Body) {
+                    self.body = body
+                }
+            }
+            /// Success
+            ///
+            /// - Remark: Generated from `#/paths//local/commands/post(local.runCommand)/responses/200`.
+            ///
+            /// HTTP response code: `200 ok`.
+            case ok(Operations.local_period_runCommand.Output.Ok)
+            /// The associated value of the enum case if `self` is `.ok`.
+            ///
+            /// - Throws: An error if `self` is not `.ok`.
+            /// - SeeAlso: `.ok`.
+            public var ok: Operations.local_period_runCommand.Output.Ok {
+                get throws {
+                    switch self {
+                    case let .ok(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "ok",
+                            response: self
+                        )
+                    }
+                }
+            }
+            public struct BadRequest: Sendable, Hashable {
+                /// - Remark: Generated from `#/paths/local/commands/POST/responses/400/content`.
+                @frozen public enum Body: Sendable, Hashable {
+                    /// - Remark: Generated from `#/paths/local/commands/POST/responses/400/content/application\/json`.
+                    case json(Components.Schemas.BadRequestEncoded)
+                    /// The associated value of the enum case if `self` is `.json`.
+                    ///
+                    /// - Throws: An error if `self` is not `.json`.
+                    /// - SeeAlso: `.json`.
+                    public var json: Components.Schemas.BadRequestEncoded {
+                        get throws {
+                            switch self {
+                            case let .json(body):
+                                return body
+                            }
+                        }
+                    }
+                }
+                /// Received HTTP response body
+                public var body: Operations.local_period_runCommand.Output.BadRequest.Body
+                /// Creates a new `BadRequest`.
+                ///
+                /// - Parameters:
+                ///   - body: Received HTTP response body
+                public init(body: Operations.local_period_runCommand.Output.BadRequest.Body) {
+                    self.body = body
+                }
+            }
+            /// BadRequest
+            ///
+            /// - Remark: Generated from `#/paths//local/commands/post(local.runCommand)/responses/400`.
+            ///
+            /// HTTP response code: `400 badRequest`.
+            case badRequest(Operations.local_period_runCommand.Output.BadRequest)
+            /// The associated value of the enum case if `self` is `.badRequest`.
+            ///
+            /// - Throws: An error if `self` is not `.badRequest`.
+            /// - SeeAlso: `.badRequest`.
+            public var badRequest: Operations.local_period_runCommand.Output.BadRequest {
+                get throws {
+                    switch self {
+                    case let .badRequest(response):
+                        return response
+                    default:
+                        try throwUnexpectedResponseStatus(
+                            expectedStatus: "badRequest",
                             response: self
                         )
                     }
