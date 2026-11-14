@@ -215,6 +215,13 @@ for row in baseline['files']:
     assert digest(path) == row['sha256']
     assert path.stat().st_size == row['bytes']
     goldens.append({**row, 'byte_identical_to_base': True})
+# Goldens this repository introduced (no Go base): pinned by hash and size.
+order = root / 'apps/cli/test/golden-order'
+assert sorted('apps/cli/test/golden-order/' + path.name for path in order.iterdir()) == sorted(row['path'] for row in baseline['repository'])
+for row in baseline['repository']:
+    path = root / row['path']
+    assert digest(path) == row['sha256'] and path.stat().st_size == row['bytes'], row['path']
+    goldens.append({**row, 'pinned_by_manifest': True})
 assert not (root / 'legacy/go').exists()
 (evidence / 'golden-move.json').write_text(json.dumps(goldens, indent=2) + '\n')
 (evidence / 'result.json').write_text(json.dumps({

@@ -407,6 +407,17 @@ it.effect(
         (store) => Effect.orDie(store.close()),
       );
       const directory = join(root, "apps/cli/test/golden-order");
+      const manifest = JSON.parse(
+        readFileSync(
+          join(root, "apps/cli/test/fixtures/golden-baseline.json"),
+          "utf8",
+        ),
+      ).repository as { path: string; sha256: string; bytes: number }[];
+      expect(manifest.map((row) => row.path).sort()).toEqual(
+        readdirSync(directory)
+          .map((name) => `apps/cli/test/golden-order/${name}`)
+          .sort(),
+      );
       for (const [name, args] of [
         ["list_json.golden", ["--format", "json", "list"]],
         ["export_default_md.golden", ["export"]],
@@ -414,7 +425,17 @@ it.effect(
         const raw = ok(home, ["--profile", "u-order", ...args]);
         const actual = name.endsWith("json.golden") ? normalize(raw) : raw;
         if (evidence) writeFileSync(join(evidence, `order-${name}`), actual);
-        expect(actual).toBe(readFileSync(join(directory, name), "utf8"));
+        const expected = readFileSync(join(directory, name), "utf8");
+        // The same manifest as the Go goldens pins these bytes, so a code
+        // change and a golden change in one commit cannot pass without it.
+        const pinned = manifest.find(
+          (row) => row.path === `apps/cli/test/golden-order/${name}`,
+        );
+        expect([digest(expected), Buffer.byteLength(expected)], name).toEqual([
+          pinned?.sha256,
+          pinned?.bytes,
+        ]);
+        expect(actual).toBe(expected);
       }
     }),
 );
