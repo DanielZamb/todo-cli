@@ -5,10 +5,11 @@ Design and rulings: [catalog-contract-design.md](catalog-contract-design.md)
 and the coordinator's answer of 2026-11-13. Phase 2a is domain, server, CLI and
 contract only; neither app changes (2b is Electron, C10-S3 the Mac app).
 
-**Contract id: 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d**
-(after the corrections; 2a delivered 76f09fa6…, and only `operation_seq`'s
-description moved it). Product for every renewal:
-b110f4a8b286a737b1dc46e9093a66110b3589d5 (2a delivered f3039274).
+**Contract id: cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d**
+(after the seat's six findings and the owner's Q8 and Q9; 2a delivered
+76f09fa6…, the corrections 7de9226a…, the first seat round a49a9627…).
+Product for every renewal: de766e3c20e3efbd6967763714fb99e9c1727354 (2a
+delivered f3039274, the corrections b110f4a8, the first seat round beae37bc).
 
 ## The line
 
@@ -28,6 +29,15 @@ b110f4a8b286a737b1dc46e9093a66110b3589d5 (2a delivered f3039274).
 | 55035069 | Correction 2: `matching` reads the Dependency graph from columns and decodes after the lease |
 | b110f4a8 | architecture.md and this report (the corrected product) |
 | 7bed3ac5, 6c8a5c4f, aa559f2a, fdcb706e | Mapping candidates for b110f4a8: occ-atomicity, task-search-cache, dag-formal inputs and result |
+| f74d1b3f, d1a121e3, 7b8d993e, beae37bc | Seat F2 (`operation_seq` never too low) and F1 (`known`'s stamp), reported |
+| f9f07a1d, 35a2026c, 306864c3 | Mapping candidates for beae37bc |
+| a7eec435, 21ca901a, e1f766a2 | Seat F6 (an honest Swift identity) and F5 (`todo catalog` flags refused before the store), reported |
+| d3e6ab9d | Seat F3: the routed command's reply carries `operation_seq` |
+| c19d62aa | Seat F4: a blank Project or Tag name filter is `invalid_args` |
+| a9ab1930 | The seat's own schedules for F1 and F2 as tests |
+| 86f4314c | Owner's Q8: undated Tasks last inside a priority |
+| de766e3c | Owner's Q9: today from the sent zone, else the reader's own zone (the product) |
+| 187d610e, 9f397332, and the next | Mapping candidates for de766e3c: task-search formal and cache; dag-formal inputs and result |
 
 ## What changed for a person to see
 
@@ -37,7 +47,10 @@ Nothing changes in either app yet: both still use the older reads.
 - `todo profile list`, `GET /profiles`, `/projects` and `/tags` list names in one order: `9` before `10`, `a` before `á`, capitals beside lower case. Today `/projects` and `/tags` come in id order and `/profiles` in id order.
 - A writing command's JSON and a write reply carry `operation_seq`.
 - `--tag work` now also finds a migrated Tag stored as `" Work"` (D3's one change).
-- Once the apps use the Catalog (2b, C10-S3), the owner will see, as changes: Today counts a Task once; Electron's All badge counts open Tasks only; Projects and Tags in the name order above; Tasks inside each group in the CLI's order (priority, then due date with undated first, then age). Undated first or last is the owner's Q8: one line, `undatedDuePlacement` in catalog-order.ts, with a test for each setting.
+- A blank Project or Tag name filter (`?tag=`, `?project=%20`, `todo list --tag " "`, `todo catalog --tag ""`) is refused as `invalid_args`.
+- Undated Tasks come last inside a priority (Q8), in `todo list`, export and every read that orders Tasks.
+- Today and Overdue follow a zone (Q9): the zone a read sends, else the server's own zone, and for the CLI the machine's zone. The installed apps send no zone, so on the owner's Mac they become right as soon as this server is installed.
+- Once the apps use the Catalog (2b, C10-S3), the owner will see, as changes: Today counts a Task once; Electron's All badge counts open Tasks only; Projects and Tags in the name order above; Tasks inside each group in the one Task order (priority, then due date with undated last, then age).
 
 ## How each ruling was built
 
@@ -174,9 +187,10 @@ The schema description and the CLI schema text say this.
 | deleteProfile | ProfileDeletionReport | highest (Task Deletes and ProfileDeleted) |
 | snapshots restore | SnapshotRestoreReport | DatabaseRestored's seq, in the new `generation` the report carries |
 | issueToken | IssuedCredential | AuthChanged |
+| local runCommand (`POST /local/commands`, the routed `add`) | BackendReply, success and failure | highest (the Task and any Project, Tag, Attachment or Dependency it creates); added for the seat's F3 |
 | signIn | IssuedCredential | never carried: the session and its AuthChanged are issued in the passphrase queue, a promise callback outside the request's fiber |
 | signOut, revokeToken | 204, no body | never carried: no body to carry it; their AuthChanged changes no Catalog |
-| snapshots create, prune; local commands, nudge, proof; profiler ingest; quick-add parse | — | commit no History |
+| snapshots create, prune; local nudge, database proof; profiler ingest; quick-add parse | — | commit no History |
 
 CLI: the JSON object of the 23 committing commands (add, edit, done, cancel,
 reopen, rm, move, copy, revert, depend, undepend, batch-depend, attach, detach,
@@ -226,7 +240,10 @@ commit, 8c79738c; the route, type and command follow it.
 
 ## Seat findings at 9634a6e0 (CATALOG-S1), fixed on top
 
-**1. `known` answered "unchanged" after a Profile appeared without History**
+The seat's numbering: F1 and F2 here, F6 and F5 in the next section, F3 and
+F4 in the one after.
+
+**F1. `known` answered "unchanged" after a Profile appeared without History**
 (d1a121e3). Everything a reply holds that a committed operation does not write:
 - the Profiles this credential sees: `todo init --profile` and
   `todo login --profile` create one through `ensureProfile` with no History row,
@@ -253,7 +270,7 @@ on the next read, but nothing prompts that read: a Profile created from the CLI
 writes no History, so no stream operation reaches an open app. Closing it needs
 a History row or a stream notice for Profile creation.
 
-**2. `operation_seq` could be too low** (f74d1b3f, the commit before). Each note
+**F2. `operation_seq` could be too low** (f74d1b3f, the commit before). Each note
 also carries the columns Purge never rewrites (actor, profile, `from_version`,
 `to_version`, `occurred_at`; Purge rewrites only `event` and `entity_version`).
 When the request ends, each note stands as one of:
@@ -272,16 +289,19 @@ Tests:
   counted as unaccounted.
 - The fixed-clock reuse case still reports nothing.
 
-## Seat findings 3 and 4 (CATALOG-S1, confirmed on its head), fixed on top
+## Seat findings F6 and F5 (CATALOG-S1), fixed on top
 
-**3. The Swift contract identity lied** (commit "Make the Swift contract
-identity describe the Swift sources beside it").
+**F6. The Swift contract identity lied** (a7eec435).
 - `openapi.ts` used to write `ContractIdentity.swift` to the server's new id
   while the Mac's `openapi.json` and generated sources stayed older. A Mac app
-  built from this line (and from `integ/contract` since step 1, whose constant
-  claims dae320b0) would pass the health check (`Transport.swift:24`,
+  built from this line would pass the health check (`Transport.swift:24`,
   `TodoModel.swift:1367`). It would then fail to decode the reply of every
-  write the server had already committed.
+  write the server had already committed: `operation_seq` is a key its strict
+  decoders do not know, on 25 write replies.
+- The base's own bump of the constant (to dae320b0 on `integ/contract`) was
+  harmless, as the seat found: the base added only the three `/local` routes,
+  which the Mac never calls, and no reply field. My earlier report said the
+  base carried the same trap; it did not.
 - **The id the Mac sources implement, found rather than guessed.** The Mac
   `openapi.json` has exactly the content of `packages/api/openapi.json` at
   d304589f after `normalize-openapi.py`, and that document's contract id is
@@ -317,8 +337,7 @@ identity describe the Swift sources beside it").
   verify-install's drive now drives the new check (honest passes, dishonest
   refused) instead of `openapi.ts`'s Swift branch. Nothing is skipped silently.
 
-**4. `todo catalog --view tomorrow` threw** (commit "Refuse every invalid todo
-catalog flag with invalid_args before the store").
+**F5. `todo catalog --view tomorrow` threw** (21ca901a).
 - The parser threw synchronously inside the handler, which made it a defect.
   Flags defaulting to `""` also could not tell an empty value from an absent
   one.
@@ -337,9 +356,168 @@ catalog flag with invalid_args before the store").
   - dash values and repeated flags answer a reply or the envelope, never a
     defect.
 
+## Seat findings F3 and F4, the seat's schedules, and the owner's Q8 and Q9
+
+**F3. The routed command's reply had no `operation_seq`** (d3e6ab9d).
+`runCommand` (`POST /local/commands`) runs `executeBackendCommand` inside
+`withOperationSeq`; `BackendReply`'s success and failure branches carry the
+optional field. It is in the write table above. Test (server, routing.test.ts):
+a proved routed `add` replies with `operation_seq` equal to the database's
+highest seq; a refused one (unknown Profile) has none and commits nothing. Red
+without the wrap. Production routes nothing until ROUTING_PROTOCOL 2; the CLI
+decodes the field and has no use for it yet.
+
+**F4. A blank name filter matched a whitespace Tag** (c19d62aa). Decided: a
+Project or Tag name made only of whitespace is not a filter value.
+- One rule for both names: the value must contain a non-whitespace character
+  (`/\S/u`, which is exactly "ECMAScript trim leaves something", the Tag rule's
+  non-empty key). A test checks the two agree on `""`, spaces, tab and newline,
+  U+3000, U+00A0 and U+FEFF.
+- HTTP: `rejectUnknownQuery` answers 400 `invalid_args` for a blank `project`
+  or `tag` on `/tasks` and `/catalog`, before the Profile is resolved (a blank
+  filter on a missing Profile is still `invalid_args`, not `not_found`). The
+  schema carries the same check, so `TaskFilters` refuses it anywhere it is
+  decoded.
+- CLI: `todo catalog` refuses empty and blank values (its flags are optional);
+  `todo list --tag " "` is refused. `todo list --tag ""` stays what every empty
+  `todo list` value flag has always been, the flag's default meaning absent; it
+  cannot be told apart from an omitted flag. A test pins both.
+- No shipped client sends a blank name: stored names are `NonEmptyString`, and
+  Electron sends a Tag name only when it equals its own trim. A migrated
+  Project whose whole name is whitespace can no longer be filtered by name (by
+  `project_id` on the Catalog it still can).
+
+**The seat's schedules, as tests** (a9ab1930):
+- F1: "never answers unchanged after a change, over random histories" now also
+  draws `ensureProfile` (a Profile created without History) and expects a
+  changed reply after it. The draw uses the generator's high bits; the low bits
+  of a power-of-two LCG never produced the new step kind. Red without the stamp
+  comparison.
+- F2: request R edits X then Y (two seqs); another request deletes and purges Y
+  before R settles; R reports nothing, never X's seq. Red if an unaccounted
+  note is skipped (it reports 5).
+
+**Q8: undated Tasks last** (86f4314c). `undatedDuePlacement` is `"last"`.
+- The tests for each setting stay: `taskOrder("first")` still equals the old
+  `readTasks` comparator on all 802,816 pairs of real value shapes, and a
+  literal list orders both ways; `compareTasks` is pinned to the "last" order.
+- The Catalog's literal order changed, worked by hand: P1 `T1, T5` (T5
+  undated), P2 `T6, T2, T7` (T7 undated).
+- **Goldens: none changed.** There is no `todo list` golden. The three export
+  goldens (`export_default_md`, `export_jira_md`, `export_default_json`) and
+  the two review goldens are frozen Go bytes over three Tasks of three
+  different priorities, so the undated placement cannot move them; all five
+  pass byte for byte, unchanged. ADR-0009's dated line says so, instead of
+  "renewed", because nothing needed renewing.
+
+**Q9: today follows the reader's zone** (de766e3c).
+- One rule in planning-day.ts: today is the date of `now` in the zone the read
+  sends, else in the reader's own zone; an instant falls on its date in the
+  zone stored with it; a date is a date. The earlier no-zone branch (both on
+  their UTC date) is gone.
+- **The server's own zone** is `processTimeZone()`:
+  `Intl.DateTimeFormat().resolvedOptions().timeZone`, which is the `TZ`
+  environment variable when set and the system zone otherwise; a value the
+  runtime cannot name falls back to UTC. `apps/server/src/main.ts` reads it
+  once at start (a change of the machine's zone applies at the next server
+  start) and passes it to `serverLayer({ timeZone })`.
+- **Pinned in tests.** `ClientReads` and `CatalogReads` take the zone as a
+  constructor argument and `serverLayer`'s `timeZone` is required, so no test
+  or driver can fall through to the machine's zone: every server test and
+  driver names one (`"UTC"` where it relied on the old default). The CLI's
+  vitest config sets `TZ=UTC` for every compiled CLI it spawns unless a test
+  names another; the verify-server-api drive starts its server with `TZ=UTC`.
+- **Both reads alike**: the Catalog and the planning views (`/views/today` and
+  the others) use the same `planningDay`.
+- **The CLI** reads the database directly and uses the machine's zone.
+  Outputs that change: `todo catalog` (unless `--time-zone`), `todo list
+  --today` and `--overdue`, `todo review daily` (Overdue and Scheduled),
+  `todo review weekly`'s Overdue for date-only due dates (instants still
+  compare with now), `todo export --scope today`, and `move`/`copy` when they
+  select by `--today` or `--overdue`. `todo catalog --help` says "default:
+  this machine's zone" (the flag golden's one help hash).
+- Tests with literal counts (server, planning-zone.test.ts):
+  - a server in America/Bogota, no zone sent: at 18:59 and 19:01 local the day
+    stays 2026-11-13 (today 2, overdue 1; the Today view Overdue 1, Due today
+    1); at 00:01 local it is 2026-11-14 (3, 2);
+  - a client sending Asia/Tokyo to that server: 2026-11-14 (3, 2), while no
+    zone gives 2026-11-13 (2, 1);
+  - America/New_York across the end of daylight time: 23:59 EDT Oct 31, 00:01
+    EDT Nov 1, 23:59 EST Nov 1, 00:01 EST Nov 2 give Oct 31 (1, 0), Nov 1 (2,
+    1), Nov 1 (2, 1), Nov 2 (3, 2);
+  - the date line, one instant: Pago Pago (the server) 2026-11-13 (2, 1), UTC
+    2026-11-14 (3, 2), Kiritimati 2026-11-15 (4, 3);
+  - an unknown zone (`Mars/Olympus`, `+05:00`) is `invalid_args` on the Catalog
+    and the view;
+  - `known`'s day check uses the read's day: 19:01 Bogota after an 18:59 read
+    answers unchanged on 2026-11-13; Bogota's midnight and a Tokyo client
+    answer changed on 2026-11-14;
+  - `processTimeZone()` in a child process returns the `TZ` it was given.
+  Four of the server tests are red with the absent case put back to UTC.
+  Compiled CLI (machine-zone.test.ts), with Kiritimati and Pago Pago, whose
+  dates always differ: `list --today`, `--overdue`, `export --scope today` and
+  `review daily` follow `TZ`; `todo catalog --now 2026-11-14T00:01:00Z` gives
+  2026-11-13 under America/Bogota, 2026-11-14 under UTC and with
+  `--time-zone Asia/Tokyo`.
+- Two older domain tests encoded the no-zone UTC instant rule; their new values
+  were worked by hand and say why in a comment.
+- ADR-0006 has the dated amendment, and architecture.md and verify-server-api's
+  client-reads feature state the rule.
+
+## What the clients inherit
+
+- **The zone.** Electron sends its zone with each planning and Catalog read
+  when it adopts the read in 2b; the Mac app does in the catalog worker
+  (C10-S3). Until then both get the server's own zone, which on the owner's Mac
+  is the owner's zone.
+- **Undated last** inside a priority, through the Catalog's group order.
+- **Blank name filters** are refused; neither app sends one today.
+- **`operation_seq`** on every write reply, including the routed command's.
+- **The Swift client** must be regenerated with `generate-api.sh` (then
+  `swift-contract.ts --write` runs) before a Mac app can talk to this server;
+  until then `swift-client-pending.json` names the pair and what stays red.
+
 ## Proof
 
 Each item below is "logic passes"; nothing here is "used for real".
+
+**On the final product** (de766e3c; the head adds only mapping records and
+this report), all under the reference sandbox after its five controls:
+- Root check exit 0 at b57ba61b: domain 628, server 201, CLI 95, Electron 168
+  (1 skipped); the Swift step prints the honest "not regenerated" state for
+  55c6d138 against cae74594.
+- Controls made red, then restored: the routed reply without the wrap; the
+  random histories without the stamp comparison; the batch schedule with an
+  unaccounted note skipped (reports 5); the absent zone put back to UTC (four
+  server zone tests red).
+- Verify skills, each exit 0: verify-server-api and its reads, verify-filters,
+  verify-sse, verify-cli, verify-profiles, verify-task-search,
+  verify-cli-routing (after its own isolation controls passed), and
+  verify-install, whose drive passes the Swift identity's honest state and
+  sees the dishonest one refused (install-5; see Deviations for its two
+  earlier stops).
+- **Formal mappings**, every renewal a candidate until a seat accepts it:
+  - verify-occ-atomicity: none of its files changed; the check passes with no
+    renewal.
+  - verify-task-search-formal: the pre-renewal check passed every model run and
+    stopped only at the mapping (task-filters.ts, commands.ts,
+    presentation.ts); after renewal the one command passes (check-dX6xNd).
+  - verify-task-search-cache: before renewal check.mjs stopped only at
+    task-filters.ts and check-hygiene.mjs only at server.ts; after renewal both
+    pass, build-baseline `--uncached` passes and the full verify.mjs passes
+    (verify-7CjB25).
+  - verify-dag-formal: pinned at 187d610e (the product plus the two sibling
+    renewals); all 80 anchors match once; full default exit 0, "CONFORMANCE
+    CHECKPOINT PASS" (check-DUcvUj); 36 production controls (conformance-kBGpMi)
+    and 53 public mutants with 53 restores (public-7vSYRf); clean recheck 19,784
+    states. The pending Swift pair joined the public capture scopes, so the
+    identity property sees the named pair.
+  - verify-discovery-formal: TypeScript steps only, `prepare-inputs.ts` and
+    `check-electron.ts` exit 0 at b57ba61b (electron-WG2G96). The Swift step
+    and its renewal stay owed to step 2.
+- PIN_AUDIT_RESULT
+
+The earlier rounds' proof follows.
 
 - **Tests**, all under the reference sandbox after its five controls:
   - domain 618, server 193, CLI 89, Electron 168 (1 skipped);
@@ -460,10 +638,30 @@ What the tables show:
 - The OCC and formal checks need the preserved jar and baseline binary. Copied
   from the canonical checkout's `.storage-preserved/2026-11-13/dag-formal-inputs/`
   to the places its README names; digests checked.
-- Swift is not regenerated (step 2); `ContractIdentity.swift` moves with the
-  contract as the generator writes it.
+- verify-install stopped twice for its environment, not the product: its
+  scratch HOME hides pnpm's store from `pnpm licenses` (rerun with
+  `npm_config_store_dir` set to the checkout's own store on the command line),
+  and its swift-slot step times out after 10 s while another checkout's Swift
+  build holds the shared lock (rerun when the lock was free; I touched no
+  other process). The third run passed.
+- Swift is not regenerated (step 2). Since F6, `ContractIdentity.swift` stays
+  at the id its sources implement (55c6d138) and only `generate-api.sh` moves
+  it.
 
 ## What I would check first
+
+For the seat's delta (e1f766a2 to the head):
+- `planningDay` and `processTimeZone` in planning-day.ts, and that every
+  `ClientReads`/`CatalogReads` and `serverLayer` caller names its zone (the
+  type system requires it).
+- The CLI's `machineClock` in main.ts and the three flat views it feeds
+  (`filterTasks`, `exportScope`, `renderReview`), especially `review weekly`'s
+  date-only Overdue.
+- The blank-name refusal in `rejectUnknownQuery` and `TaskFilters`, and the
+  decision that `todo list --tag ""` stays absent.
+- `runCommand`'s wrap in local-routes.ts.
+
+From the earlier rounds:
 
 1. The settle rule and its two tests in committed-operations.ts, and the three
    insert sites binding the event text they note.
