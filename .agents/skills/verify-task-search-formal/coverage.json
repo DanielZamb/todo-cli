@@ -407,21 +407,48 @@
     ],
     "review": "Candidate 8: write paths keep a committed write's read-back when a later step fails (S1-19) and handle a current 401 first in every failure path (S1-20), reading discovery.credentialEpoch as before and comparing it with isCurrentCredential; supersession is per target and same-kind link failures merge (D1, D2); the Find field is hidden, not cleared, while the Compact editor is shown (ruling 5); confirmations expire by sequence; rows count timeline ticks for stall observation. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch, the healthy-ready predicate and every search generation guard are unchanged; searchError, taskLoadError and the picker and graph searchFailure stay outside the helper."
   },
-  "renewalReview": {
-    "product": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
-    "controls": "check-swift passed on 5a359ca6: docs/evidence/discovery-formal/swift-gRn8hO",
-    "changed": [
-      {
-        "path": "apps/macos/Sources/TodoModel.swift",
-        "from": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
-        "to": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d"
-      },
-      {
-        "path": "apps/macos/Sources/AppViews.swift",
-        "from": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
-        "to": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
+  "renewalReviews": [
+    {
+      "product": "1f281291641fcef42301443f09d5f0f2651153ed",
+      "controls": "check-swift passed on 1f281291: docs/evidence/discovery-formal/swift-hcIIdS",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "92f171587de6cff9c30f946cc15828e7c2be4fd65dcc714afb771fcc7731bf52",
+          "to": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "54d8624e14d90efef5c93e74fc50bbf918d48a2d6316fc83bcb394f6c5db4eee",
+          "to": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d"
+        }
+      ],
+      "review": "The Profile return fix (86549d65, coordinator ruling on the candidate 9 restore finding) changes TodoModel.swift and AppViews.swift. In TodoModel: replaceCredential gains a first line that drops the forced-leave record (no change to the credential epoch or its order); followChanges' reload branch reads whether the person acted before its resets and, after discoverProfiles, may return to a restored Profile through activateProfile, exactly as the existing profile-change branch beside it does; discoverProfiles says why when the shown Profile is gone; leaveDeletedProfile records the leave; the editor and quickAdd didSets, newTitle, setSearchText and changeProfile note a person's action. In AppViews: the notice capsule shows the offer's Switch button, and the list's selection notes a person's action. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "5a359ca66a9014be74f81f3f1baee25db1ca76f9",
+      "controls": "check-swift passed on 5a359ca6: docs/evidence/discovery-formal/swift-gRn8hO",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "4650f9dd4992523a4aeb6d9d5c5478e5ff1dab46ef3f2264388ae2c5f4d8177b",
+          "to": "21974e42db272bea7902d56b9bf8935fa78a7675bafa2137460912a978300b4d"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "cfc26acfa67d9e220dce8795024242dfa89306ff827bd2717cb3db0bcd8f758d",
+          "to": "1592456047df2944823f11df2867224eb45aa9a04ba0c33599bb305ab9df85d1"
+        }
+      ],
+      "review": "Candidate 10 (d6df6719, item 8 at 5a359ca6) changes six mapped Swift files. Discovery.swift: DiscoveryState.dialog gains a didSet that, from hidden to shown only, calls the model's presented() closure (a person-action count, MAC-C1-S1-32); openDiscovery, closeDiscovery, requestDiscovery and every publication guard are unchanged. TodoModel.swift: notePersonActed() now advances PersonInput's content-free count; every write function's first line notes a person's action (a counter, before and independent of its guards); sheet and dialog state notes a presentation from hidden to shown; the notice timer moved from the view into the model (noticeHeld, restartNoticeTimer, holdNotice with a cancellation check) with 6 s and 10 s notices; ForcedProfileLeave records the person-input count, and a second deletion carries the first leave only when forcedLeaveToCarry, asked before the switch, finds no action; discoverProfiles and leaveDeletedProfile ask it before switching; the Profile notices use curly quotes. AppViews.swift: the notice capsule reports hover and focus to the model instead of running its own timer; Quick Add's chip region tells the Dependency line when it cuts chips. AttachmentModel.swift, BatchEdit.swift and AttachmentBatch.swift: each write function's first line notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged.",
+      "seatAcceptance": {
+        "seat": "MAC-C1-S1",
+        "review": "candidate 10 (5702b2bb)",
+        "date": "2026-11-13",
+        "verdict": "Renewal ACCEPTED",
+        "report": "reports/mac-c1-seat1/candidate-10-review.md"
       }
-    ],
-    "review": "Candidate 10 (d6df6719, item 8 at 5a359ca6) changes six mapped Swift files. Discovery.swift: DiscoveryState.dialog gains a didSet that, from hidden to shown only, calls the model's presented() closure (a person-action count, MAC-C1-S1-32); openDiscovery, closeDiscovery, requestDiscovery and every publication guard are unchanged. TodoModel.swift: notePersonActed() now advances PersonInput's content-free count; every write function's first line notes a person's action (a counter, before and independent of its guards); sheet and dialog state notes a presentation from hidden to shown; the notice timer moved from the view into the model (noticeHeld, restartNoticeTimer, holdNotice with a cancellation check) with 6 s and 10 s notices; ForcedProfileLeave records the person-input count, and a second deletion carries the first leave only when forcedLeaveToCarry, asked before the switch, finds no action; discoverProfiles and leaveDeletedProfile ask it before switching; the Profile notices use curly quotes. AppViews.swift: the notice capsule reports hover and focus to the model instead of running its own timer; Quick Add's chip region tells the Dependency line when it cuts chips. AttachmentModel.swift, BatchEdit.swift and AttachmentBatch.swift: each write function's first line notes a person's action. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
-  }
+    }
+  ],
+  "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
 }
