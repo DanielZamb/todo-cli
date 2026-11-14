@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+  "confirmedCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -364,6 +364,18 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/catalog-contract-report.md",
     "scope": "Seat CATALOG-S1's findings and the owner's Q8 and Q9 on beae37bc: `todo catalog` refuses invalid flags before the store; the Swift identity describes the Swift sources beside it (55c6d138, with apps/macos/API/swift-client-pending.json naming the pair, now in the capture scopes); the routed command's reply carries operation_seq; a blank Project or Tag name filter is refused as invalid_args (TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); undated Tasks sort last inside a priority (compareTasks); planning reads take today from the sent zone or the server's own zone. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (commands.ts, presentation.ts, main.ts, help.ts, openapi.json) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": []
+  },
+  "seatDelta": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "pinCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+    "previous": [
+      "187d610e45779802bc3038d249f19879a69eb95b"
+    ],
+    "contract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's delta at 7f08409e: the Project name filter matches the stored name exactly again and only a blank Tag name is refused (seat F7: TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); a request reports no operation_seq when a restore moved the generation during it (seat F2b, committed-operations.ts only, its description moves the contract); a golden freezes undated-last. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (openapi.json, contract.ts) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
     "changes": []
   }
 }

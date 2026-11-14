@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "187d610e45779802bc3038d249f19879a69eb95b",
+  "confirmedCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -48,7 +48,7 @@
         "TaskFilters",
         "filterTaskRecords"
       ],
-      "sha256": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      "sha256": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
     },
     {
       "path": "packages/domain/src/dependency-delete.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b"
+      "sha256": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "901b27a087023d7193b29979243484c75f1e9548789d2071aa8a13dd18575f60"
+      "sha256": "5b90359666ebf1a9922ba9a421dea572267768b3e98b47a8e677f4935d5656fc"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,7 +304,7 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323",
+      "sha256": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374",
       "functions": [
         "contract identity"
       ]
@@ -916,6 +916,39 @@
         "path": "apps/cli/src/help.ts",
         "from": "7420d29a1ee9bc0d1c3c1154b3bb15c867fd83dcbbe7a81debf07965cb010049",
         "to": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83"
+      }
+    ]
+  },
+  "seatDelta": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "pinCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+    "previous": [
+      "187d610e45779802bc3038d249f19879a69eb95b"
+    ],
+    "contract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's delta at 7f08409e: the Project name filter matches the stored name exactly again and only a blank Tag name is refused (seat F7: TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); a request reports no operation_seq when a restore moved the generation during it (seat F2b, committed-operations.ts only, its description moves the contract); a golden freezes undated-last. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (openapi.json, contract.ts) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b",
+        "to": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "e1cf2b7500fe1bba61dcf303facfff10b63b217cbf8181fcc69386698071358b",
+        "to": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "901b27a087023d7193b29979243484c75f1e9548789d2071aa8a13dd18575f60",
+        "to": "5b90359666ebf1a9922ba9a421dea572267768b3e98b47a8e677f4935d5656fc"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323",
+        "to": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374"
       }
     ]
   }

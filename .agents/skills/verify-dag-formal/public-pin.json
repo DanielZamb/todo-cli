@@ -1,5 +1,5 @@
 {
-  "commit": "187d610e45779802bc3038d249f19879a69eb95b",
+  "commit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -46,7 +46,7 @@
     "apps/electron/package.json"
   ],
   "pendingCorrections": [],
-  "contract": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+  "contract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
   "awaitMergedIntegration": false,
   "integrationQualification": {
     "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
@@ -201,6 +201,25 @@
       {
         "scopes": {
           "added": "apps/macos/API/swift-client-pending.json"
+        }
+      }
+    ]
+  },
+  "seatDelta": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "pinCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+    "previous": [
+      "187d610e45779802bc3038d249f19879a69eb95b"
+    ],
+    "contract": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's delta at 7f08409e: the Project name filter matches the stored name exactly again and only a blank Tag name is refused (seat F7: TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); a request reports no operation_seq when a restore moved the generation during it (seat F2b, committed-operations.ts only, its description moves the contract); a golden freezes undated-last. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (openapi.json, contract.ts) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "contract": {
+          "from": "cae745943fdb7f2429156016ab09f958bb4b61cd951f329b2d7558262340234d",
+          "to": "dfade560add4d74f2a0b9b88206206f9e919fa6ed82a2f12b784058c58115797"
         }
       }
     ]
