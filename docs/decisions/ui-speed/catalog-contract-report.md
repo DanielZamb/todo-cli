@@ -720,8 +720,9 @@ statementNow with the exact lines).
   - verify-discovery-formal: TypeScript steps exit 0 (electron-fTEZpE); the
     Swift step and renewal belong to the next unit.
 - **Pin audit** (`pin-audit.mjs HEAD` with the ledger, at 10b78f9d):
-  `filesScanned 488, occurrences 657, unknown 0`. The two new manifest rows
-  are compared pins and match. One problem, the base's known drift (the next
+  `filesScanned 488, occurrences 657, unknown 0`. The audit scans
+  `.agents/skills` only, so golden-baseline.json is outside it; the order test
+  and verify-install's drive check its rows. One problem, the base's known drift (the next
   unit's): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
 
 ## What the clients inherit
