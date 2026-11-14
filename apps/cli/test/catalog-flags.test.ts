@@ -99,9 +99,9 @@ it("refuses every invalid catalog flag value with invalid_args before any store 
     invalid([`--${flag}`, ""], `--${flag} ""`);
   for (const flag of ["view", "tasks", "known-seq", "now", "priority"])
     invalid([`--${flag}`, "-x"], `--${flag} -x`);
-  for (const flag of ["project", "tag"])
-    for (const value of [" ", "\t", "\u3000"])
-      invalid([`--${flag}`, value], `--${flag} ${JSON.stringify(value)}`);
+  // A blank Tag name is refused; a blank Project name is a real name (F7).
+  for (const value of [" ", "\t", "\u3000"])
+    invalid(["--tag", value], `--tag ${JSON.stringify(value)}`);
   // A refused catalog never opened the store for --profile Fresh.
   expect(profiles()).toEqual(before);
 });
@@ -115,13 +115,13 @@ it("answers a dash value or a repeated flag with a reply or the envelope, never 
   handled(["--ready", "--ready"], "--ready --ready");
 });
 
-it("refuses a blank Project or Tag name on todo list, and keeps an empty one as the flag's absence", () => {
+it("refuses a blank Tag name on todo list, and keeps an empty one as the flag's absence", () => {
+  const blank = cli(["list", "--tag", " "]);
+  expect([blank.status, JSON.parse(blank.stdout).code]).toEqual([
+    2,
+    "invalid_args",
+  ]);
   for (const flag of ["project", "tag"]) {
-    const blank = cli(["list", `--${flag}`, " "]);
-    expect([blank.status, JSON.parse(blank.stdout).code], flag).toEqual([
-      2,
-      "invalid_args",
-    ]);
     // todo list gives every value flag the default "", which means absent.
     const empty = cli(["list", `--${flag}`, ""]);
     const absent = cli(["list"]);
@@ -134,4 +134,23 @@ it("refuses a blank Project or Tag name on todo list, and keeps an empty one as 
       shape(absent.stdout),
     ]);
   }
+});
+
+it("finds a Project named two spaces by its exact name on todo list and todo catalog (seat F7)", () => {
+  for (const [title, project] of [
+    ["Spaced", "  "],
+    ["One space", " "],
+    ["Plain", "Errands"],
+  ] as const)
+    expect(cli(["add", title, "--project", project]).status).toBe(0);
+  const listed = cli(["list", "--project", "  "]);
+  const catalog = cli(["catalog", "--project", "  ", "--tasks", "matching"]);
+  const titles = (stdout: string) =>
+    (JSON.parse(stdout).tasks as { title: string }[]).map((t) => t.title);
+  expect([
+    listed.status,
+    titles(listed.stdout),
+    catalog.status,
+    titles(catalog.stdout),
+  ]).toEqual([0, ["Spaced"], 0, ["Spaced"]]);
 });

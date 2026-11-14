@@ -121,14 +121,15 @@ describe("one Tag-name rule replaces the five copies", () => {
   });
 });
 
-it("refuses a blank Project or Tag name as a filter value, with one rule for both", () => {
+it("refuses a blank Tag name as a filter value and keeps a blank Project name exact (seat F7)", () => {
   const blank = ["", " ", "\t\n", "　", " ﻿"];
   const named = ["a", " work ", "　x"];
   const accepts = (value: string) => [
     Schema.is(TaskFilters)({ project: value }),
     Schema.is(TaskFilters)({ tag: value }),
   ];
-  expect(blank.map(accepts)).toEqual(blank.map(() => [false, false]));
+  // A Project may be named "  " and is compared exactly; a Tag never can be.
+  expect(blank.map(accepts)).toEqual(blank.map(() => [true, false]));
   expect(named.map(accepts)).toEqual(named.map(() => [true, true]));
   // The schema's blank is exactly the Tag rule's empty key.
   expect(blank.map((value) => tagKey(value))).toEqual(blank.map(() => ""));

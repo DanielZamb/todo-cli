@@ -47,9 +47,9 @@ export const TaskFilters = Schema.Struct({
   ),
   prefix: Schema.optionalKey(TaskIdPrefix),
   project: Schema.optionalKey(
-    Schema.String.check(Schema.isPattern(/\S/u)).annotate({
+    Schema.String.annotate({
       description:
-        "A Project name, compared exactly. A blank name is not a filter value and is refused as invalid_args.",
+        "A Project name, compared exactly with the stored name, whitespace included.",
     }),
   ),
   tag: Schema.optionalKey(

@@ -5546,8 +5546,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "pattern": "\\S",
-              "description": "A Project name, compared exactly. A blank name is not a filter value and is refused as invalid_args."
+              "description": "A Project name, compared exactly with the stored name, whitespace included."
             },
             "required": false
           },
@@ -30361,8 +30360,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "pattern": "\\S",
-              "description": "A Project name, compared exactly. A blank name is not a filter value and is refused as invalid_args."
+              "description": "A Project name, compared exactly with the stored name, whitespace included."
             },
             "required": false
           },
