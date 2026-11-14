@@ -2250,7 +2250,7 @@ final class TodoModel {
     func handleAuthorization(_ error: Error, credentialEpoch: Int) {
         if failure(error)?.status == 401 { expireSession(credentialEpoch: credentialEpoch) }
     }
-    private func failure(_ error: Error) -> RequestFailure? {
+    func failure(_ error: Error) -> RequestFailure? {
         (error as? RequestFailure) ?? (error as? ClientError)?.underlyingError as? RequestFailure
     }
     func describe(_ error: Error, at position: ClientErrorPosition = .message, dependencyContext: DependencyActionContext = .link) -> String {

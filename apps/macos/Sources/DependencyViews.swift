@@ -210,12 +210,15 @@ struct DependencyPickerView: View {
             }.frame(height: Self.rowHeight, alignment: .leading)
                 .accessibilityIdentifier("dependency-pending-\(task.id)").accessibilityLabel(task.title).accessibilityValue("Updating").focusable().focused($focusedCandidate, equals: task.id)
         } else {
-            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in model.clientDiagnosticsUI.perform(.toggleDependency, surface: .dependencyPicker) { await model.toggleDependency(task) } })) {
+            // The click acts on what this row showed when drawn: its checked state and the Version of
+            // the Task the link changes (candidate 11 ruling).
+            let drawn = TodoModel.DrawnPickerRow(checked: picker.checked(task.id), dependentVersion: picker.direction == .dependsOn ? picker.root.row_version : task.row_version)
+            Toggle(isOn: Binding(get: { picker.checked(task.id) }, set: { _ in model.clientDiagnosticsUI.perform(.toggleDependency, surface: .dependencyPicker) { await model.toggleDependency(task, drawn: drawn) } })) {
                 TaskRow(task: task, canWrite: false, compact: compact, projectName: projectName, tagNames: tagNames, showsCompletion: false, relation: true, complete: {})
             }.toggleStyle(.checkbox)
                 .frame(height: Self.rowHeight, alignment: .leading)
                 .focused($focusedCandidate, equals: task.id)
-                .disabled(!model.canWrite || picker.loading || picker.requiresReload || picker.pending.contains(task.id) || model.dependencies.pendingDependents.contains(picker.direction == .dependsOn ? picker.root.id : task.id))
+                .disabled(!model.canWrite || picker.loading || picker.requiresReload || picker.rootGone || picker.pending.contains(task.id) || model.dependencies.pendingDependents.contains(picker.direction == .dependsOn ? picker.root.id : task.id))
                 .accessibilityIdentifier("dependency-choice-\(task.id)")
                 .accessibilityValue(picker.pending.contains(task.id) ? "Pending" : picker.checked(task.id) ? "Checked" : "Unchecked")
                 .compactBounds("dependency-choice-\(task.id)")
