@@ -2033,7 +2033,6 @@ const config = Command.make("config").pipe(
 );
 const catalogCommand = makeCatalogCommand(
   {
-    string,
     optional: (name) => stringFlag(name).pipe(Flag.optional),
     bool,
   },
@@ -2055,8 +2054,15 @@ const catalogCommand = makeCatalogCommand(
                     ? new CommandError(3, "not_found", error.message)
                     : error,
               ),
+              Effect.catchDefect((error) =>
+                Effect.fail(
+                  new CommandError(1, "runtime_error", String(error)),
+                ),
+              ),
             );
-          yield* write(renderCatalog(reply, cfg.format, nowInstant()));
+          yield* write(
+            yield* io(() => renderCatalog(reply, cfg.format, nowInstant())),
+          );
         }),
       );
     }),

@@ -179,6 +179,30 @@ export type CatalogError =
   | CatalogProfileMissing;
 const calendarDate = Schema.decodeUnknownSync(CalendarDate);
 
+/**
+ * What makes a decoded CatalogQuery unusable, decided before any read: an
+ * unknown time zone, or a known position missing one of its four parts. The
+ * HTTP route and todo catalog both call it.
+ */
+export const catalogQueryError = (
+  query: CatalogQuery,
+): UnknownTimeZone | CatalogUsageError | undefined => {
+  const unknownZone = checkTimeZone(query.time_zone);
+  if (unknownZone) return unknownZone;
+  const known = [
+    query.known_generation,
+    query.known_seq,
+    query.known_day,
+    query.known_stamp,
+  ];
+  return known.some((value) => value === undefined) &&
+    known.some((value) => value !== undefined)
+    ? new CatalogUsageError(
+        "known_generation, known_seq, known_day and known_stamp go together; send all four from an earlier reply, or none.",
+      )
+    : undefined;
+};
+
 export class CatalogReads {
   constructor(private readonly store: OperationStore) {}
 
@@ -187,23 +211,8 @@ export class CatalogReads {
     query: CatalogQuery = {},
   ): Effect.Effect<CatalogReply, CatalogError> {
     return Effect.suspend((): Effect.Effect<CatalogReply, CatalogError> => {
-      const unknownZone = checkTimeZone(query.time_zone);
-      if (unknownZone) return Effect.fail(unknownZone);
-      const known = [
-        query.known_generation,
-        query.known_seq,
-        query.known_day,
-        query.known_stamp,
-      ];
-      if (
-        known.some((value) => value === undefined) &&
-        known.some((value) => value !== undefined)
-      )
-        return Effect.fail(
-          new CatalogUsageError(
-            "known_generation, known_seq, known_day and known_stamp go together; send all four from an earlier reply, or none.",
-          ),
-        );
+      const invalid = catalogQueryError(query);
+      if (invalid) return Effect.fail(invalid);
       const selected = Object.freeze({
         credential: request.credential,
         profile: request.profile,

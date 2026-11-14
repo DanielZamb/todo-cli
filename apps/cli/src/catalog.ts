@@ -5,6 +5,7 @@ import {
   CatalogQuery,
   type CatalogReply,
   CatalogUnchanged,
+  catalogQueryError,
 } from "@todo/domain";
 import { CommandError } from "@todo/domain/commands";
 import {
@@ -13,7 +14,7 @@ import {
   taskLine,
   taskView,
 } from "@todo/domain/presentation";
-import { type Effect, Option, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { Command, type Flag } from "effect/cli";
 import { withGuide } from "./help.ts";
 import { registerCommandSchema } from "./schema.ts";
@@ -25,12 +26,12 @@ export const CatalogResponse = Schema.Union([
 registerCommandSchema("catalog", CatalogResponse);
 
 type Flags = {
-  readonly string: (name: string, fallback?: string) => Flag.Flag<string>;
   readonly optional: (name: string) => Flag.Flag<Option.Option<string>>;
   readonly bool: (name: string) => Flag.Flag<boolean>;
 };
 
-const textFlags = [
+// Every value flag is optional, so an explicit empty value is seen and refused.
+const valueFlags = [
   "view",
   "tasks",
   "project-id",
@@ -51,7 +52,14 @@ const textFlags = [
   "known-seq",
   "known-day",
   "known-stamp",
+  "text",
+  "prefix",
 ] as const;
+type ValueFlag = (typeof valueFlags)[number];
+type Input = Record<ValueFlag, Option.Option<string>> & {
+  readonly ready: boolean;
+  readonly blocked: boolean;
+};
 
 export const makeCatalogCommand = <A, E, R>(
   flags: Flags,
@@ -61,57 +69,56 @@ export const makeCatalogCommand = <A, E, R>(
     "catalog",
     {
       ...(Object.fromEntries(
-        textFlags.map((name) => [name, flags.string(name)]),
-      ) as Record<(typeof textFlags)[number], Flag.Flag<string>>),
-      text: flags.optional("text"),
-      prefix: flags.optional("prefix"),
+        valueFlags.map((name) => [name, flags.optional(name)]),
+      ) as Record<ValueFlag, Flag.Flag<Option.Option<string>>>),
       ready: flags.bool("ready"),
       blocked: flags.bool("blocked"),
     },
-    (input) => handle(catalogQuery(input)),
+    (input) => Effect.flatMap(parseCatalogQuery(input), handle),
   ).pipe(withGuide("catalog"));
 
-/** Flags to the same CatalogQuery the HTTP route decodes; a bad value is exit 2. */
-const catalogQuery = (
-  input: Record<(typeof textFlags)[number], string> & {
-    readonly text: Option.Option<string>;
-    readonly prefix: Option.Option<string>;
-    readonly ready: boolean;
-    readonly blocked: boolean;
-  },
-): CatalogQuery => {
-  const value: Record<string, unknown> = {};
-  for (const name of textFlags) {
-    const flag = input[name];
-    if (flag !== "") value[name.replaceAll("-", "_")] = flag;
-  }
-  if (value.known_seq !== undefined) {
-    const seq = Number(value.known_seq);
-    if (!Number.isSafeInteger(seq) || String(seq) !== value.known_seq)
-      throw new CommandError(
-        2,
-        "invalid_args",
-        "--known-seq must be a whole number",
-      );
-    value.known_seq = seq;
-  }
-  for (const [name, flag] of [
-    ["text", input.text],
-    ["prefix", input.prefix],
-  ] as const)
-    if (Option.isSome(flag)) value[name] = flag.value;
-  if (input.ready) value.ready = true;
-  if (input.blocked) value.blocked = true;
-  try {
-    return Schema.decodeUnknownSync(CatalogQuery)(value);
-  } catch (error) {
-    throw new CommandError(
-      2,
-      "invalid_args",
-      `Invalid catalog query: ${String(error)}`,
-    );
-  }
-};
+const usage = (message: string) => new CommandError(2, "invalid_args", message);
+
+/**
+ * Flags to the same CatalogQuery the HTTP route decodes, checked by the same
+ * catalogQueryError, before any store is opened. Every refusal is a failure
+ * with invalid_args and exit 2, never a thrown defect.
+ */
+export const parseCatalogQuery = (input: Input) =>
+  Effect.try({
+    try: (): CatalogQuery => {
+      const value: Record<string, unknown> = {};
+      for (const name of valueFlags) {
+        const flag = input[name];
+        if (Option.isNone(flag)) continue;
+        // Blank text is a documented search (empty search_matches).
+        if (flag.value === "" && name !== "text")
+          throw usage(`--${name} needs a value`);
+        value[name.replaceAll("-", "_")] = flag.value;
+      }
+      if (value.known_seq !== undefined) {
+        const seq = Number(value.known_seq);
+        if (!Number.isSafeInteger(seq) || String(seq) !== value.known_seq)
+          throw usage("--known-seq must be a whole number");
+        value.known_seq = seq;
+      }
+      if (input.ready) value.ready = true;
+      if (input.blocked) value.blocked = true;
+      let decoded: CatalogQuery;
+      try {
+        decoded = Schema.decodeUnknownSync(CatalogQuery)(value);
+      } catch (error) {
+        throw usage(`Invalid catalog flags: ${String(error)}`);
+      }
+      const invalid = catalogQueryError(decoded);
+      if (invalid) throw usage(invalid.message);
+      return decoded;
+    },
+    catch: (error) =>
+      error instanceof CommandError
+        ? error
+        : usage(`Invalid catalog flags: ${String(error)}`),
+  });
 
 const viewTitles = {
   all: "All",
