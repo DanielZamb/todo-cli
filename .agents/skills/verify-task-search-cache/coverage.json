@@ -13,19 +13,19 @@
     },
     {
       "path": "task-filters.ts",
-      "sha256": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27"
+      "sha256": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
     },
     {
       "path": "commands.ts",
-      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
+      "sha256": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
     },
     {
       "path": "store/store.ts",
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
+      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4"
+      "sha256": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
     },
     {
       "path": "store/search-cache-events.ts",
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725"
+      "sha256": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -49,15 +49,15 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4"
+      "sha256": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
     },
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f"
+      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
+      "sha256": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce"
     }
   ],
   "integrationReview": {
@@ -227,5 +227,54 @@
         "after": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572"
       }
     ]
+  },
+  "catalogIntegration": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "previous": "29927cb04cc49bb706be602127557f43602ed5b2",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27",
+        "to": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3",
+        "to": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4",
+        "to": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "1a0686e755625f2c3debf5a8d42e3770c9a64d7ffd7095d3a0aaffcda12b8725",
+        "to": "00f4b4c3f09706d44b1bf86d59778430bff908dae69e8c74752c021438013b5a"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "9620996e87135d98f5ef352fd9348d97946dd106132eb4088cce937c287476c4",
+        "to": "33666b098373699ea14610d140aae82756cbd9c7a411b622c500c518a9ccf15e"
+      },
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "489f3471e589e2fcd0347946b2efdd7569b66687d243b3de2294bcbb1c30a12f",
+        "to": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "39aaac18eb91769d170a38d7e5aded8c564ce9fd84d893fe68d4dceac9b05572",
+        "to": "83b0f8faf67ce76656862e27f76225a0b6465e1029f2f6ab2350f7a144e1ebce"
+      }
+    ],
+    "review": "No cache, matcher, runner, admission, accounting or erasure body changes. task-filters.ts: the Tag predicate calls tagNameMatches. commands.ts: readTasks sorts with compareTasks; the tag rule goes through tag-name.ts; both list helpers keep the token taken before the lease. store/store.ts: the catalog members, the operation_seq note in record and the preview mark in the constructor. store/snapshots.ts: the restore notes its DatabaseRestored seq. server.ts: the Catalog route and operation_seq on write handlers; hygiene still gets the raw store and is forked before the scheduler. main.ts: todo catalog and operation_seq stamping. One new cache consumer: CatalogReads.read takes searchWords.read(profile) before its lease and prepares through searchWords.words(search, text), the same shape as the two list helpers.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

@@ -249,3 +249,18 @@ cache controls and three observer controls failed and restored, and both
 commands stopped only on those hashes. The uncached oracle was built for the
 product, and the full `verify.mjs 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c` passed all nine stages. Candidate until
 the seat accepts it.
+
+## Catalog contract renewal, 2026-11-13
+
+Candidate: product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5). Four
+protected domain files move (task-filters.ts, commands.ts, store/store.ts,
+store/snapshots.ts) and both hygiene rows (server.ts, main.ts); no cache,
+matcher, runner, admission, accounting or erasure body changes. One new cache
+consumer: CatalogReads.read takes `searchWords.read(profile)` before its lease
+and prepares through `searchWords.words(search, text)`, the shape of the two
+list helpers. Before renewal check.mjs ran its six controls and restored run
+(PASS_BEFORE_MAPPING_GATE) and stopped only at task-filters.ts; check-hygiene.mjs
+ran clean, three observer controls (exit 1 each) and restored, then stopped
+only at server.ts. After renewal both exit 0 (generated-ufsr29, hygiene-1KQne8);
+build-baseline.mjs --uncached and the full verify.mjs on the product exit 0
+(verify-gnRcYs). Candidate until the seats accept it.
