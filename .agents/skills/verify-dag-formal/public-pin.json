@@ -1,5 +1,5 @@
 {
-  "commit": "f30392745e53c524dffa9915814ec1ec208baea7",
+  "commit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -138,6 +138,8 @@
           "to": "76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af"
         }
       }
-    ]
+    ],
+    "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+    "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
   }
 }

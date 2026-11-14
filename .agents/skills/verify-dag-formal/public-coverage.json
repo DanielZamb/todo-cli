@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "f30392745e53c524dffa9915814ec1ec208baea7",
+  "confirmedCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -776,6 +776,8 @@
         "from": "56a8659c172018d7756ee1c0bbf15beb5e05d9c5379946d3a08593a120d8534b",
         "to": "aaccc058e8e3f0526e4c99db852e8526435316630e689ced8db1edcd54bef471"
       }
-    ]
+    ],
+    "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+    "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
   }
 }

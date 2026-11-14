@@ -1,5 +1,5 @@
 {
-  "commit": "f30392745e53c524dffa9915814ec1ec208baea7",
+  "commit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -81,6 +81,8 @@
     "review": "docs/decisions/ui-speed/catalog-contract-report.md",
     "status": "candidate for the seats",
     "scope": "feat/catalog-contract (C10-S5) on integ/contract 9a372e86: compareTasks and tag-name.ts extractions, the Catalog read, operation_seq on writes, todo catalog and the one name order. Mapped items that change: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite gain optional operation_seq; the depend, undepend, batchDepend and importTasks handlers are wrapped by withOperationSeq; executeImport's tag parts and filterTaskRecordSteps' Tag predicate go through tag-name.ts (same arrays on the corpus; the filter now trims stored names); the contract moves to 76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af. Unchanged: DependRequest, BatchEdgeRequest, TaskFilters, filterTaskRecords, rejectUnknownQuery, TaskCommands.result, TaskCommands.change, cliResult, mutateTask, dependencyCommand, batchDependCommand, registerCommandSchema, the rm wording, the graph response schema, and every production row's listed function (OperationStore.transaction, validate, appendSync, recordRejection, graph, dependencies, rebuild, takeSnapshot, resolveRevertSync, move, startSeriesSync; Authentication.startSeries, append, requireCredential, mutate). All 80 mutant anchors match exactly once on the product. No model, invariant or bound change. Candidate for the seats.",
-    "changes": []
+    "changes": [],
+    "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+    "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
   }
 }

@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "f30392745e53c524dffa9915814ec1ec208baea7",
+  "confirmedCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",
@@ -304,6 +304,8 @@
         "from": "d01346091850736bf1cb205dde3d30f4a7408ad9e4a82b8f6382e10def5834ca",
         "to": "4134d78cc989853f113d54e5b27b5af14f0071e8e47fba931913b71167cd3ada"
       }
-    ]
+    ],
+    "pinCommit": "45b86ff9c8ea32ada0a65d83350c5239e99ba027",
+    "pinNote": "The pin names 45b86ff9, whose product files are byte-identical to f3039274 and which carries the occ-atomicity, task-search-formal and task-search-cache renewals; the candidate capture runs those sibling checks with their own skill files, so a pin at f3039274 stopped at the occ mapping inside production conformance (check-lGvvEP)."
   }
 }
