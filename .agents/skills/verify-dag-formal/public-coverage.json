@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "04f0d7b1ca6366e6257bb2d11ed5b49a202ff156",
+  "confirmedCommit": "c2359f293ebbaafed0401539f8137fbb25e82c39",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -419,7 +419,7 @@
         "actual Delete review pair",
         "existing picker state and row/menu UI"
       ],
-      "sha256": "b98e07c1b55d8c5e22ee54d81404976854d44092b93bcf70ab33feba6f357ded"
+      "sha256": "c6731224de0c771e00b616a55d2d7236d58392ed9d3526096bdc5fdf21e4f290"
     },
     {
       "path": "packages/domain/src/task-read.ts",
@@ -685,6 +685,26 @@
       },
       "checkEvidence": [
         "docs/evidence/dag-formal/public-aGUYki"
+      ]
+    },
+    {
+      "product": "c2359f293ebbaafed0401539f8137fbb25e82c39",
+      "previousConfirmedCommit": "04f0d7b1ca6366e6257bb2d11ed5b49a202ff156",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/DependencyViews.swift",
+          "from": "b98e07c1b55d8c5e22ee54d81404976854d44092b93bcf70ab33feba6f357ded",
+          "to": "c6731224de0c771e00b616a55d2d7236d58392ed9d3526096bdc5fdf21e4f290"
+        }
+      ],
+      "review": {
+        "summary": "Candidate 11 changes three fenced Swift files. Dependencies.swift: DependencyPicker gains a row index (linked ids, Tasks by id, row ids in a frozen order, positions) rebuilt on data changes, an explicit memberwise initializer, a write clock per row, and rootGone; the picker's root, linked and candidates reads run concurrently and decode off the main actor, published once, with the same supersession guards (credential epoch, Dependency generation, picker id, reload and search request, search text) checked after the awaits; a person's read freezes the order. The coordinator's ruled behaviour change (014d84ea): a background read (a link's read-back, a stream refresh) no longer sets loading and stands aside while the person's read is in flight; a read that began before a toggle's reply keeps that row and the root; a toggle carries the checked state and dependent Version its row showed (DrawnPickerRow); the list is disabled when the root's read answers 404. Writes still send the dependent's Version (the server's OCC refuses a stale one, and the row then asks for Reload, unchanged); message ownership, per-target supersession, hand-off on close, the committed-link read-back and pendingDependents release are unchanged. DependencyViews.swift: the picker is a native List (in Compact its Task count sits at the end of the search row, 1b on the record of 9a0ba687) with the same identifiers (dependency-count added), presented by DependencyPickerSheet; the arrow keys go through DependencyPickerView.next. DependencyGraphView.swift: its picker sheet is presented through DependencyPickerSheet. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, candidate 11 (design accepted; question 1 ruled)",
+        "pendingSeat": true
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-J9FsG0"
       ]
     }
   ],
