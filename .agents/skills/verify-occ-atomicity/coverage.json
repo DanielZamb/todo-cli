@@ -1,9 +1,9 @@
 {
-  "confirmedCommit": "f30392745e53c524dffa9915814ec1ec208baea7",
+  "confirmedCommit": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
   "files": [
     {
       "path": "packages/domain/src/store/store.ts",
-      "sha256": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+      "sha256": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf",
       "functions": [
         "OperationStore.constructor",
         "OperationStore.transaction",
@@ -108,7 +108,7 @@
     }
   ],
   "reviewedCandidate": false,
-  "review": "Candidate for the seat: C10-S5 catalog contract product f30392745e53c524dffa9915814ec1ec208baea7. Two covered functions change, both pending the coordinator's source review. OperationStore.record notes a committed row's seq, actor and occurred_at in the request's fiber-local cell after the unchanged INSERT; it issues no SQL, opens no transaction and changes no ordering. OperationStore.constructor marks a preview (forked) store's connection so its notes are ignored; the constructor's statement trace and seed are identical to 9a372e86 for a normal store. attachments.ts changes only AttachManyReport (an optional operation_seq field); Attachment and validAttachmentLocation are byte-identical. Every other covered declaration is byte-identical. Models, invariants, bounds and crash insertion points are unchanged.",
+  "review": "Candidate for the seat: C10-S5 catalog contract product b110f4a8b286a737b1dc46e9093a66110b3589d5 after the coordinator's source review. OperationStore.constructor (accepted as reviewed): one WeakSet.add for a preview store. OperationStore.record: the INSERT's statement, bound values, returned entry and transaction are unchanged; the event text is computed once and bound unchanged; after the INSERT a total, guarded noteCommitted records seq and that exact text in the request's fiber-local cell (no SQL, no throw, no reordering). Settlement after the request confirms a note only by seq, outcome='committed' and byte-identical event text. Models, invariants, bounds and crash insertion points are unchanged.",
   "integrationReview": {
     "product": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "parents": [
@@ -138,7 +138,7 @@
     "evidence": "docs/decisions/ui-speed/diag-recordings-report.md"
   },
   "catalogReview": {
-    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
     "previous": "ae9c5be3d2869bcec2553a75cc110f67350e2ad0",
     "changed": [
       {
@@ -157,6 +157,22 @@
       "OperationStore.constructor"
     ],
     "coordinatorSourceReview": "pending",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "catalogCorrection": {
+    "product": "b110f4a8b286a737b1dc46e9093a66110b3589d5",
+    "previous": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/store.ts",
+        "from": "ec832d30b2d1aa4cc0ef4f511feb2a7e953f7f426a62a605a1ac62469d496251",
+        "to": "80441ff456e8fab038139334c32bd97f8195b538b6ee20f6c1a652ac4886e8cf"
+      }
+    ],
+    "changedFunctions": [
+      "OperationStore.record"
+    ],
+    "coordinatorSourceReview": "constructor accepted; record accepted on three conditions, now met: total note (guarded, test with a failing collector), identity by event bytes (fixed-clock reused-seq test, red on the earlier rule), absence means read to find out",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

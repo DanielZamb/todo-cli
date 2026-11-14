@@ -354,3 +354,16 @@ mapping (store.ts and attachments.ts); the renewed check passed
 (fv01-check-ZpFAlV); both real-code breaks failed and the restored source passed
 (sensitivity-DJfLoV). Candidate (`reviewedCandidate: false`) until the seat and
 the source review accept it.
+
+## Catalog contract correction, 2026-11-13
+
+Product b110f4a8b286a737b1dc46e9093a66110b3589d5, after the coordinator's
+source review. The constructor is accepted as reviewed (unchanged since
+f3039274). `OperationStore.record` changes once more: the event text is
+computed once and bound unchanged, and the note after the INSERT carries seq
+and that text; `noteCommitted` is guarded so bookkeeping never costs a commit,
+and settlement confirms a note only by seq, outcome='committed' and
+byte-identical event text. The pre-renewal check stopped only at the mapping
+(fv01-check-dvHBJT); the renewed check passed (fv01-check-qGPaQj); both
+real-code breaks failed and the restored source passed (sensitivity-VCmWB1).
+Candidate (`reviewedCandidate: false`) until the seat accepts it.
