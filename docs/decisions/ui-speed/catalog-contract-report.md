@@ -5,8 +5,10 @@ Design and rulings: [catalog-contract-design.md](catalog-contract-design.md)
 and the coordinator's answer of 2026-11-13. Phase 2a is domain, server, CLI and
 contract only; neither app changes (2b is Electron, C10-S3 the Mac app).
 
-**New contract id: 76f09fa65d88bb4f8f37805f85311ed0c29c0e0256a7e3a49ba3949bf74ee9af.**
-Product for every renewal: f30392745e53c524dffa9915814ec1ec208baea7.
+**Contract id: 7de9226a29a1f76afbf1533417fb73787e56043beb64a958a50e80d9b50a0a8d**
+(after the corrections; 2a delivered 76f09fa6…, and only `operation_seq`'s
+description moved it). Product for every renewal:
+b110f4a8b286a737b1dc46e9093a66110b3589d5 (2a delivered f3039274).
 
 ## The line
 
@@ -21,7 +23,11 @@ Product for every renewal: f30392745e53c524dffa9915814ec1ec208baea7.
 | 5407a0bb | One name order on `/profiles`, `/projects`, `/tags`, `todo profile list` |
 | 397e2800 | verify-server-api drives the Catalog and `operation_seq` |
 | f3039274 | architecture.md (the product) |
-| 2732fbc3, 8f47dc56, 45b86ff9, ba392967 | Mapping candidates: occ-atomicity, task-search-formal, task-search-cache, dag-formal |
+| 2732fbc3, 8f47dc56, 45b86ff9, ba392967 | Mapping candidates for f3039274: occ-atomicity, task-search-formal, task-search-cache, dag-formal |
+| eb9e12bf | Correction 1: the `operation_seq` note is total and settles on the row's own bytes |
+| 55035069 | Correction 2: `matching` reads the Dependency graph from columns and decodes after the lease |
+| b110f4a8 | architecture.md and this report (the corrected product) |
+| 7bed3ac5, 6c8a5c4f, aa559f2a, fdcb706e | Mapping candidates for b110f4a8: occ-atomicity, task-search-cache, dag-formal inputs and result |
 
 ## What changed for a person to see
 
@@ -241,42 +247,47 @@ Each item below is "logic passes"; nothing here is "used for real".
   reply equals Show, now false by design; the drive was corrected (397e2800).
   The first verify-sse run failed because I passed a CLI outside the checkout;
   rerun with `apps/cli/dist/todo` as its recipe says.
-- **Formal mappings**, every renewal a candidate until a seat accepts it:
+- **On the corrected product** (b110f4a8), sandboxed:
+  - root check exit 0 (domain 622, server 193, CLI 89, Electron 168 plus 1
+    skipped);
+  - verify-server-api and verify-cli exit 0 again;
+  - new mutants made red, then restored: no guard on the note (the
+    failing-collector test), a settle rule on seq alone (the reused-seq test),
+    and `energy` dropped from the column graph (the equivalence test).
+- **Formal mappings on the corrected product**, every renewal a candidate until
+  a seat accepts it:
   - **verify-occ-atomicity**:
-    - the pre-renewal check stopped only at the mapping;
-    - the constructor statement trace and seed are equal to 9a372e86;
-    - the renewed check passed (fv01-check-ZpFAlV);
+    - the coordinator reviewed the source: the constructor is accepted, and
+      `record` is accepted on three conditions, now met;
+    - the pre-renewal check stopped only at the mapping (fv01-check-dvHBJT);
+    - the renewed check passed (fv01-check-qGPaQj);
     - sensitivity: both real-code breaks fail and the restored source passes
-      (sensitivity-DJfLoV);
-    - `OperationStore.record` and `OperationStore.constructor` changed: **your
-      source review is required**.
-  - **verify-task-search-formal**:
-    - the pre-renewal check stopped at the mapping;
-    - after renewal it passed: every broken variant reached its counterexample,
-      and the restored model ran 378,091 states (check-1JvnDb).
+      (sensitivity-VCmWB1).
+  - **verify-task-search-formal**: none of its files changed since its
+    f3039274 renewal; the check passes on the product with no further renewal.
   - **verify-task-search-cache**:
-    - check.mjs passed its controls and stopped at task-filters.ts;
-    - check-hygiene.mjs passed its controls and stopped at server.ts;
+    - check.mjs and check-hygiene.mjs ran their controls and stopped only at
+      the mapping;
     - after renewal both pass, build-baseline `--uncached` passes, and the full
-      `verify.mjs` passes (verify-gnRcYs).
+      `verify.mjs` passes (verify-838Kse).
   - **verify-dag-formal**:
-    - inputs renewed in ba392967 after the review above; all 80 mutant anchors
-      match once on the product;
-    - pinned at 45b86ff9, whose product files are byte-identical to f3039274
-      and which carries the three sibling renewals the candidate capture runs
-      (pinned at f3039274, production conformance stopped at the occ mapping
-      inside the capture);
-    - full default exits 0, "CONFORMANCE CHECKPOINT PASS" (check-A4oZvO);
-    - 36 production controls each broken 1 and restored 0 (conformance-QfjXiq);
-    - 53 public mutants exit 1 and restore 0 (public-mZ3Vme);
+    - pinned at 6c8a5c4f: product identical to b110f4a8, plus the two sibling
+      renewals its capture runs;
+    - all 80 mutant anchors match once;
+    - a first full default stopped in public conformance: I had deleted the
+      preserved baseline CLI from `.scratch/bin` while cleaning up. With it
+      restored (digest dd1918fc…), the full default exits 0, "CONFORMANCE
+      CHECKPOINT PASS" (check-lzAjVT);
+    - 36 production controls broken 1 and restored 0 (conformance-L0LBad);
+    - 53 public mutants exit 1 and restore 0 (public-7kBasA);
     - clean recheck: 19,784 distinct states.
-  - **verify-discovery-formal**: TypeScript steps only, as in step 1.
-    `prepare-inputs.ts` (fresh domain, compiled CLI and HTTP discovery checks)
-    and `check-electron.ts` both exit 0 on 6bf78a7f. No covered function
-    changed here. Its Swift step and renewal stay owed to step 2.
-- **Pin audit** (`pin-audit.mjs HEAD` with the ledger, at 6bf78a7f):
-  `filesScanned 488, occurrences 482, unknown 0`. One problem, the same as on
-  the base (owed to step 2): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
+  - **verify-discovery-formal**: TypeScript steps only; `prepare-inputs.ts` and
+    `check-electron.ts` exit 0 on fdcb706e. Its Swift step and renewal stay
+    owed to step 2.
+- **2a's own runs** on f3039274 (superseded by the above): the occ, Task search
+  formal and cache renewals, the dag-formal full default at 45b86ff9
+  (check-A4oZvO), and all seven verify recipes exited 0.
+- **Pin audit**: PIN_AUDIT.
 
 ## Measurements
 
