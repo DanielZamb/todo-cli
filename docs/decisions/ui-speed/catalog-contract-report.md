@@ -576,7 +576,9 @@ mapping's seatFindings record as coordinatorSourceReview, and in its SKILL.md
     states.
   - verify-discovery-formal: TypeScript steps exit 0 (electron-HqZpbQ); the
     Swift step and renewal stay owed to step 2.
-- PIN_AUDIT_DELTA
+- **Pin audit** (`pin-audit.mjs HEAD` with the ledger, at d25b1d67):
+  `filesScanned 488, occurrences 616, unknown 0`. One problem, the base's known
+  drift (owed to step 2): `drift .agents/skills/verify-discovery-formal/coverage.json:69 apps/electron/src/task-client.ts file pin`.
 
 ## What the clients inherit
 
