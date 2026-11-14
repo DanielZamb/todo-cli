@@ -63,7 +63,7 @@
     },
     {
       "path": "packages/domain/src/attachments.ts",
-      "sha256": "181a97202acc0de468b736889f2de1966f9f0fa0c1d317d180d915d5fcfece32",
+      "sha256": "901bec77e54dcb7f6e8d50af94a72dfe7be90b1466f1836248c96b2cddcac265",
       "functions": [
         "Attachment",
         "validAttachmentLocation"
@@ -191,5 +191,23 @@
     "review": "Seat CATALOG-S1 findings: OperationStore.record's guarded noteCommitted call now also passes the columns Purge never rewrites (actor, profile, from_version, to_version, occurred_at) so the settle can tell a rollback from a redaction; the INSERT, its bound values, the returned entry and the transaction are unchanged. The new store member catalogSchemaVersion reads PRAGMA user_version only. Models, invariants, bounds and crash insertion points are unchanged.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md",
     "coordinatorSourceReview": "2026-11-14, the coordinator's source review of OperationStore.record as it stands at 7f08409ecc76d818a32584cc9227f45b0449b842 (byte-identical to this candidate's body): the event text is computed once and bound unchanged; the INSERT, its other bound values, the returned entry and the transaction are unchanged; the note after it now also carries the actor, the Profile, the two Versions and occurred_at, and is guarded so it cannot cost a commit. Accepted."
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "previous": "beae37bceef38fb46325e14ccb45e4d03ddc5e9f",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/attachments.ts",
+        "from": "181a97202acc0de468b736889f2de1966f9f0fa0c1d317d180d915d5fcfece32",
+        "to": "901bec77e54dcb7f6e8d50af94a72dfe7be90b1466f1836248c96b2cddcac265"
+      }
+    ],
+    "changedFunctions": [],
+    "review": "attachments.ts moves only in AttachManyReport, whose operation_seq field becomes operation_position (seat F8); Attachment and validAttachmentLocation are byte-identical. store.ts, projection.ts, events.ts, entities.ts, ids.ts and the dependency files are byte-identical. Models, invariants, bounds and crash insertion points are unchanged.",
+    "noSqlCorrection": "The catalogReview record's sentence 'no SQL, no throw, no reordering' described the note at b110f4a8, where it was true. From 180f929d (seat F2b) the note at a request's first commit ran one guarded SELECT inside the write transaction; from 8a646594 (seat F8) it runs that SELECT only on writing paths that classify no Profile first. The note still cannot throw out of the transaction and does not reorder anything.",
+    "coordinatorStatementReview": "2026-11-14, the coordinator's source review of committed-operations.ts at 106f22fa93838da816904ec2b7b72f7d90e38f0d: generationOf runs, inside the transaction of a request's first committed insert, the newest committed DatabaseRestored among rows with profile IS NULL, by json_extract on each. It cannot fail a write (guarded twice: its own try/catch and noteCommitted's) and it writes nothing, so it does not touch atomicity: accepted on that ground. Cost was raised (the statement scans every profile IS NULL row when no restore exists).",
+    "statementNow": "At ec16d45d, for the coordinator to read: committed-operations.ts:129 (generationOf's SELECT) runs inside the write transaction only from committed-operations.ts:102, the first note of a request that classified no Profile before writing (owner-only AuthChanged writes: setupOwner, resetPassphrase, issueToken, revokeToken, signOut), once per request and database. Every other writing request notes the generation its Profile classification already read inside the same transaction (auth.ts:791, noteGeneration, no SQL); the restore notes the generation it starts (store/snapshots.ts:588, no SQL). The settle reads no generation: committed-operations.ts:187 is an index range scan (op_log_profile_seq, profile IS NULL AND seq >= the request's first noted seq) run after the request, outside any transaction; it cannot throw out (try/catch: a failure means nothing is reported) and writes nothing. Measured on 50,000 profile IS NULL rows: generationOf 9.7 ms median (0.55 ms at 5,000), with or without a restore far back; the settle's scan 0.001 ms.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

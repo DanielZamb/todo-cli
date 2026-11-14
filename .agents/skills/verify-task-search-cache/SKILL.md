@@ -311,3 +311,15 @@ only at apps/server/src/server.ts. After renewal check.mjs and
 check-hygiene.mjs exit 0, build-baseline.mjs --uncached exits 0 and the full
 verify.mjs exits 0 (verify-Qd7WS0). Candidate until the seats accept it;
 `coverage.json` carries the record as seatDelta.
+
+## Seat delta 2, 2026-11-14
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa (seat F8 on top of 5da90607).
+store/snapshots.ts (the restore's note carries the generation it starts),
+apps/server/src/server.ts and apps/cli/src/main.ts (operation_seq becomes
+operation_position) move; no cache, matcher, runner, admission, accounting or
+erasure body changes. Before renewal check.mjs stopped only at
+store/snapshots.ts and check-hygiene.mjs only at apps/server/src/server.ts.
+After renewal check.mjs and check-hygiene.mjs exit 0, build-baseline.mjs
+--uncached exits 0 and the full verify.mjs exits 0 (verify-IZ25yY). Candidate
+until the seats accept it; `coverage.json` carries the record as seatDelta2.

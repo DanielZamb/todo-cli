@@ -140,7 +140,7 @@
       "functions": [
         "TaskRead"
       ],
-      "sha256": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6"
+      "sha256": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
     },
     {
       "path": "packages/domain/src/limits.ts",
@@ -342,6 +342,20 @@
       }
     ],
     "review": "TaskFilters: the project field is a plain string again, compared exactly (seat F7); the tag field keeps its blank refusal. filterTaskRecords, filterTaskRecordSteps, runTaskRecordSteps and filterTaskRecordsEffect are byte-identical. The matcher and both clients are byte-identical.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDelta2Review": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "previous": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6",
+        "to": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
+      }
+    ],
+    "review": "Seat F8: operation_seq becomes operation_position in the write reply schemas (task-read.ts TaskWrite only); TaskRead, the matcher, filters and both clients are byte-identical.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

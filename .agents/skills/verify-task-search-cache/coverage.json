@@ -25,7 +25,7 @@
     },
     {
       "path": "store/snapshots.ts",
-      "sha256": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
+      "sha256": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
     },
     {
       "path": "store/search-cache-events.ts",
@@ -41,7 +41,7 @@
     },
     {
       "path": "apps/server/src/server.ts",
-      "sha256": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682"
+      "sha256": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
     },
     {
       "path": "packages/domain/src/store/search-cache-events.ts",
@@ -49,7 +49,7 @@
     },
     {
       "path": "packages/domain/src/store/snapshots.ts",
-      "sha256": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68"
+      "sha256": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
+      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
     }
   ],
   "integrationReview": {
@@ -381,6 +381,35 @@
       }
     ],
     "review": "task-filters.ts: the Project name filter is a plain string again (seat F7). apps/server/src/server.ts: rejectUnknownQuery refuses only a blank tag. No cache, matcher, runner, admission, accounting or erasure body changes.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "previous": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68",
+        "to": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682",
+        "to": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
+      },
+      {
+        "path": "packages/domain/src/store/snapshots.ts",
+        "from": "46723a395fa2a2435436f915c59cb5af08f8363c93db2794d37661e85c299e68",
+        "to": "9edbc92f7bb149703baa2c5b6fae7ccf52ef69750477758609255c7c24946959"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93",
+        "to": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      }
+    ],
+    "review": "Seat F8: store/snapshots.ts passes the generation the restore starts to its note; apps/server/src/server.ts and apps/cli/src/main.ts rename operation_seq to operation_position. No cache, matcher, runner, admission, accounting or erasure body changes.",
     "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   }
 }

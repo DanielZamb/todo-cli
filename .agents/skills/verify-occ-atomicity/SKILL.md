@@ -389,3 +389,31 @@ occurred_at, and is guarded so it cannot cost a commit. Accepted. Recorded in
 `coverage.json` as seatFindings.coordinatorSourceReview. The seat accepted the
 candidate on its check and sensitivity rerun (fv01-check-tsfnEu,
 sensitivity-fTmIHV).
+
+## Seat delta 2, 2026-11-14: the generation statement, and a correction
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa. attachments.ts moves only in
+AttachManyReport (operation_seq becomes operation_position, seat F8); every
+covered function is byte-identical.
+
+**Correction.** The catalog-contract record above says the note runs "no SQL".
+That was true at b110f4a8. From 180f929d the note at a request's first commit
+ran one guarded SELECT (the newest committed DatabaseRestored) inside the write
+transaction; from 8a646594 it runs it only on writing paths that classify no
+Profile first (owner-only AuthChanged writes: setupOwner, resetPassphrase,
+issueToken, revokeToken, signOut). Every other writing request notes the
+generation its Profile classification already read in the same transaction
+(auth.ts noteGeneration, no SQL); the restore notes the one it starts. The note
+still cannot throw out of the transaction and does not reorder anything.
+
+**The coordinator's review of the statement** (committed-operations.ts at
+106f22fa, 2026-11-14): it runs inside the transaction of a request's first
+committed insert, cannot fail a write (guarded twice) and writes nothing, so it
+does not touch atomicity: accepted on that ground. Recorded as
+seatDelta2.coordinatorStatementReview, with seatDelta2.statementNow giving the
+exact lines at ec16d45d and the measured cost.
+
+The pre-renewal check stopped only at the mapping (attachments.ts); after
+renewal the check passes (fv01-check-q79Wfp) and both real-code breaks fail
+while the restored source passes (sensitivity-KLHclt). Candidate until the
+seat accepts it.

@@ -291,3 +291,12 @@ again, compared exactly; tag keeps its blank refusal. Every filter body, the
 matcher and both clients are byte-identical. The pre-renewal check passed every
 model run (restored 378,091 states) and stopped only at the mapping. Candidate
 for the seats; `coverage.json` carries the record as seatDeltaReview.
+
+## Seat delta 2, 2026-11-14
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa (seat F8 on top of 5da90607).
+Only task-read.ts moves: TaskWrite's operation_seq becomes operation_position;
+TaskRead, the matcher, filters and both clients are byte-identical. The
+pre-renewal check stopped only at the mapping; after renewal the one command
+passes. Candidate for the seats; `coverage.json` carries the record as
+seatDelta2Review.
