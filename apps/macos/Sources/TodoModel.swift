@@ -469,10 +469,20 @@ final class TodoModel {
     /// Tests receive a fired reminder here instead of the notification centre, which a test process
     /// cannot use (MAC-C1-S1-36's liveness check). Nil in the app.
     @ObservationIgnored var reminderDelivery: ((CommittedOperation) async throws -> Void)?
+    /// When the stream loop began waiting on a refresh it started for an operation (nil while it
+    /// reads the stream). S1-39: a loop can follow the right stream and still have stopped reading
+    /// it, waiting on a refresh that never ends.
+    @ObservationIgnored private(set) var streamLoopWaitingSince: TimeInterval?
+    /// How long the stream loop may wait on one operation's refresh before it counts as not reading.
+    static let streamLoopReadBound: TimeInterval = 10
     /// The invariant: whenever `connection` reads live, a stream for the current Profile, credential
-    /// epoch and generation is running.
+    /// epoch and generation is running, and its loop reads the next frame within
+    /// `streamLoopReadBound` after a refresh it waits on (S1-39: following alone did not catch a loop
+    /// that had stopped reading).
     var streamFollowsCurrentProfile: Bool {
-        followingStream == StreamIdentity(profile: profile, credentialEpoch: discovery.credentialEpoch, generation: generation)
+        guard followingStream == StreamIdentity(profile: profile, credentialEpoch: discovery.credentialEpoch, generation: generation) else { return false }
+        guard let since = streamLoopWaitingSince else { return true }
+        return ProcessInfo.processInfo.systemUptime - since < Self.streamLoopReadBound
     }
     private var restored = false
     private var generation = 0
@@ -1203,6 +1213,8 @@ final class TodoModel {
                                 }
                             }
                             catalogStale = true
+                            streamLoopWaitingSince = ProcessInfo.processInfo.systemUptime
+                            defer { streamLoopWaitingSince = nil }
                             let applied = await refresh(generation: run, trigger: .streamOperation)
                             guard generation == run, !Task.isCancelled else { return } // exit: owner
                             await refreshDependencyReads(erased: operation.event.kind == "TaskPurged" || operation.event.original_kind == "TaskPurged")
