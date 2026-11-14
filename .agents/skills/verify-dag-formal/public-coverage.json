@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+  "confirmedCommit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -40,7 +40,7 @@
         "EdgeReport",
         "BatchEdgeReport"
       ],
-      "sha256": "2c39c1c8d0f0fcb4649928cbb7d5268f672fd4639e1f43f2a20e4a231ac127f3"
+      "sha256": "d2f9ac315bc3320f766d55bfdc91ecf7530b5c4ba7740a13e736bf64389ce4ea"
     },
     {
       "path": "packages/domain/src/task-filters.ts",
@@ -73,7 +73,7 @@
         "requireCredential",
         "mutate"
       ],
-      "sha256": "9405afa2140ef593b0c9374e18fabbd5ba002c0784fe641a6821d3bfcbb97f5b"
+      "sha256": "c6a6e1771cac47fb35017d3fe89ad8c0d2c620214e8457b2a0d4d23a82e6c829"
     },
     {
       "path": "packages/domain/src/import-dependencies.ts",
@@ -96,7 +96,7 @@
         "ImportReport",
         "parseImportText"
       ],
-      "sha256": "9d26f4d1a598a8a8a36c3e855550a2236caa6fea5f6814982484822b0cd46efd"
+      "sha256": "b42e6f16bf6d2b7c2f9ff71d86567ff5e7cf6573df727e2aa69399fa26738868"
     },
     {
       "path": "packages/domain/src/presentation.ts",
@@ -180,7 +180,7 @@
         "BatchEdgeRequest",
         "TaskFilters"
       ],
-      "sha256": "f48a94d96404e1215e2926afa6d5c4fcbd944af20a45cb73edec51f0c161d089"
+      "sha256": "58bf524862b43c3f6b8cd4f2b0c2ee95f251673e3b6b6abbb3102695cda21fe3"
     },
     {
       "path": "apps/server/src/server.ts",
@@ -188,7 +188,7 @@
         "rejectUnknownQuery",
         "TasksApi handlers: depend, undepend, batchDepend, importTasks"
       ],
-      "sha256": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682"
+      "sha256": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
     },
     {
       "path": "apps/cli/src/main.ts",
@@ -199,14 +199,14 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93"
+      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
     },
     {
       "path": "apps/cli/src/schema.ts",
       "functions": [
         "registerCommandSchema"
       ],
-      "sha256": "7a20fd465564053d29d76123c25171e015ccd8beba8388a1dee938f7525a752b"
+      "sha256": "c2c5e7843dabd85df81ab43adb5a1c4f64eb8a81a94d8af6ae3c694915ccea77"
     },
     {
       "path": "apps/cli/src/input.ts",
@@ -265,7 +265,7 @@
       "functions": [
         "graph response schema"
       ],
-      "sha256": "5b90359666ebf1a9922ba9a421dea572267768b3e98b47a8e677f4935d5656fc"
+      "sha256": "ae00393c81d817b5e8175ca351232b72089eda4d1d75491c199b60320a197179"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
@@ -304,7 +304,7 @@
     },
     {
       "path": "packages/api/src/contract.ts",
-      "sha256": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374",
+      "sha256": "b19cab34e1daf6ad9b4c3a3b632f6194bcc85d9ecbe265498be759bb373fed49",
       "functions": [
         "contract identity"
       ]
@@ -426,7 +426,7 @@
       "functions": [
         "TaskWrite optional confirm_from_version"
       ],
-      "sha256": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6"
+      "sha256": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
     },
     {
       "path": "apps/cli/src/help.ts",
@@ -949,6 +949,69 @@
         "path": "packages/api/src/contract.ts",
         "from": "baf334d884e26ae6408df9c5663a49495bbdb403b55b27654b7a859674918323",
         "to": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374"
+      }
+    ]
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "pinCommit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
+    "previous": [
+      "cee500f063e321a9bbbfca65dbfc8919b052d632"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's second delta at 106f22fa (F8): every write reply and committing CLI command carries operation_position {generation, seq} instead of operation_seq; the generation is the one the request's Profile classification already read (auth.ts credentialCheck calls noteGeneration), the restore's new one, or one read at the first note on owner-only writes; the settle checks for a restore with an index range scan. Mapped public bodies that change are field renames only: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite carry operation_position where they carried operation_seq; the depend, undepend, batchDepend and importTasks handlers pipe withOperationPosition; registerCommandSchema's post-processing adds operation_position. Authentication.startSeries, Authentication.append, requireCredential, mutate, DependRequest, ImportRow, parseImportText, rejectUnknownQuery and every listed production function are byte-identical (auth.ts moves only in credentialCheck). The order goldens are pinned in golden-baseline.json. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the atomic-commit, task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/dependency-contract.ts",
+        "from": "2c39c1c8d0f0fcb4649928cbb7d5268f672fd4639e1f43f2a20e4a231ac127f3",
+        "to": "d2f9ac315bc3320f766d55bfdc91ecf7530b5c4ba7740a13e736bf64389ce4ea"
+      },
+      {
+        "path": "packages/domain/src/auth/auth.ts",
+        "from": "9405afa2140ef593b0c9374e18fabbd5ba002c0784fe641a6821d3bfcbb97f5b",
+        "to": "c6a6e1771cac47fb35017d3fe89ad8c0d2c620214e8457b2a0d4d23a82e6c829"
+      },
+      {
+        "path": "packages/domain/src/import.ts",
+        "from": "9d26f4d1a598a8a8a36c3e855550a2236caa6fea5f6814982484822b0cd46efd",
+        "to": "b42e6f16bf6d2b7c2f9ff71d86567ff5e7cf6573df727e2aa69399fa26738868"
+      },
+      {
+        "path": "packages/api/src/index.ts",
+        "from": "f48a94d96404e1215e2926afa6d5c4fcbd944af20a45cb73edec51f0c161d089",
+        "to": "58bf524862b43c3f6b8cd4f2b0c2ee95f251673e3b6b6abbb3102695cda21fe3"
+      },
+      {
+        "path": "apps/server/src/server.ts",
+        "from": "6c076733b61345ec861a9ae534a6edee5d5828385445676c9aa13463ac098682",
+        "to": "f37fe2eafa033436f98401887dbd3781f461164c91ade92d617cf966f7b16ef5"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "83eb240251bba75a2e552ff5c53c28276b33318ba7242cb5188ce65e18db9c93",
+        "to": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      },
+      {
+        "path": "apps/cli/src/schema.ts",
+        "from": "7a20fd465564053d29d76123c25171e015ccd8beba8388a1dee938f7525a752b",
+        "to": "c2c5e7843dabd85df81ab43adb5a1c4f64eb8a81a94d8af6ae3c694915ccea77"
+      },
+      {
+        "path": "packages/api/openapi.json",
+        "from": "5b90359666ebf1a9922ba9a421dea572267768b3e98b47a8e677f4935d5656fc",
+        "to": "ae00393c81d817b5e8175ca351232b72089eda4d1d75491c199b60320a197179"
+      },
+      {
+        "path": "packages/api/src/contract.ts",
+        "from": "23dc7dea6029106b055ee1f8ac9caa53bc84cac3b0a2ece88b9def14d2c46374",
+        "to": "b19cab34e1daf6ad9b4c3a3b632f6194bcc85d9ecbe265498be759bb373fed49"
+      },
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6",
+        "to": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
       }
     ]
   }

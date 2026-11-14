@@ -1,5 +1,5 @@
 {
-  "commit": "cee500f063e321a9bbbfca65dbfc8919b052d632",
+  "commit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -131,6 +131,18 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/catalog-contract-report.md",
     "scope": "Seat CATALOG-S1's delta at 7f08409e: the Project name filter matches the stored name exactly again and only a blank Tag name is refused (seat F7: TaskFilters and rejectUnknownQuery, the two mapped public items whose bodies change); a request reports no operation_seq when a restore moved the generation during it (seat F2b, committed-operations.ts only, its description moves the contract); a golden freezes undated-last. Every listed production function is byte-identical; the other mapped public items are byte-identical inside whole files that moved (openapi.json, contract.ts) apart from the contract identity. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the task-search formal and cache renewals. No model, invariant or bound change.",
+    "changes": []
+  },
+  "seatDelta2": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "pinCommit": "7131f133b1ef79469dc6736d3a6f5bd86b758060",
+    "previous": [
+      "cee500f063e321a9bbbfca65dbfc8919b052d632"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/catalog-contract-report.md",
+    "scope": "Seat CATALOG-S1's second delta at 106f22fa (F8): every write reply and committing CLI command carries operation_position {generation, seq} instead of operation_seq; the generation is the one the request's Profile classification already read (auth.ts credentialCheck calls noteGeneration), the restore's new one, or one read at the first note on owner-only writes; the settle checks for a restore with an index range scan. Mapped public bodies that change are field renames only: EdgeReport, BatchEdgeReport, ImportReport and TaskWrite carry operation_position where they carried operation_seq; the depend, undepend, batchDepend and importTasks handlers pipe withOperationPosition; registerCommandSchema's post-processing adds operation_position. Authentication.startSeries, Authentication.append, requireCredential, mutate, DependRequest, ImportRow, parseImportText, rejectUnknownQuery and every listed production function are byte-identical (auth.ts moves only in credentialCheck). The order goldens are pinned in golden-baseline.json. All 80 mutant anchors match once at the pin, which carries byte-identical product plus the atomic-commit, task-search formal and cache renewals. No model, invariant or bound change.",
     "changes": []
   }
 }
