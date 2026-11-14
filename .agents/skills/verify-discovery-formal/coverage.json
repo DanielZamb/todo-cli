@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "12c45efb03a285b6e8eb876fb8abaaefb20a9cb6",
+  "productionSyncCommit": "da48e7909520b433310f52e70d433a8d649380fa",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4",
+      "sha256": "bde3fa770a3faa645cd88413f4ff44547228acf9b145ade7649ab796b82f15ea",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -238,7 +238,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
+  "previousProductionSyncCommit": "12c45efb03a285b6e8eb876fb8abaaefb20a9cb6",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -684,6 +684,18 @@
         }
       ],
       "review": "The candidate 11 fix head (ef67c488, with its DAG public renewal on top). Of the mapped files only ClientErrors.swift changed: ClientErrorNotice gains dependencyShowsDetail, passed to DependencyNoticeContent, so the Dependency picker's notices leave out the exit-code line; no server-failure projection, discovery notice or Task lookup notice changed. MAC-C11-S1-5: ProfileReturn.swift, moved out of TodoModel.swift in 6cc45ab9 (27 declarations byte-identical, unchanged since), is now pinned here with its whole-file hash. It holds the forced-leave credential epoch comparisons (forcedLeaveToCarry, recordForcedLeave, resolveForcedLeave, goToRestoredProfile) and the return path (returnToProfile, which calls applyTaskFilters and scheduleSearch), which this mapping's records already speak for. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "da48e7909520b433310f52e70d433a8d649380fa",
+      "controls": "check-swift passed on da48e790: docs/evidence/discovery-formal/swift-0vcN48",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4",
+          "to": "bde3fa770a3faa645cd88413f4ff44547228acf9b145ade7649ab796b82f15ea"
+        }
+      ],
+      "review": "Candidate 12 (0f643c52, with its DAG public renewal on top). Of the mapped files only AppViews.swift changed: TaskListView gains the sidebar's scene-stored visibility bound to NavigationSplitView(columnVisibility:), setSidebar and the SidebarRoom rule (grow the window or close the inspector when the sidebar is asked for without room), the inspector moved inside detail: (unchanged content, toolbar button and inspectorColumnWidth), a WindowReader for the window, View > Hide/Show Sidebar through a focused scene value, and FlowLayout for the filter bar's buttons. The search field, searchBinding, searchFocused, taskFilters' pickers, taskContent's rows, closeInspector and openSelection are unchanged; no discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."

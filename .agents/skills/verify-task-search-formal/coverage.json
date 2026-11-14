@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4"
+      "sha256": "bde3fa770a3faa645cd88413f4ff44547228acf9b145ade7649ab796b82f15ea"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -497,6 +497,18 @@
         }
       ],
       "review": "The candidate 11 fix head (ef67c488, with its DAG public renewal on top). Of the mapped files only ClientErrors.swift changed: ClientErrorNotice gains dependencyShowsDetail, passed to DependencyNoticeContent, so the Dependency picker's notices leave out the exit-code line; no server-failure projection, discovery notice or Task lookup notice changed. MAC-C11-S1-5: ProfileReturn.swift, moved out of TodoModel.swift in 6cc45ab9 (27 declarations byte-identical, unchanged since), is now pinned here with its whole-file hash. It holds the forced-leave credential epoch comparisons (forcedLeaveToCarry, recordForcedLeave, resolveForcedLeave, goToRestoredProfile) and the return path (returnToProfile, which calls applyTaskFilters and scheduleSearch), which this mapping's records already speak for. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "da48e7909520b433310f52e70d433a8d649380fa",
+      "controls": "check-swift passed on da48e790: docs/evidence/discovery-formal/swift-0vcN48",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "06eea13d13c32481db3070c9b0275f8c3a85a7186e9787c7fef8e65fac4c3fe4",
+          "to": "bde3fa770a3faa645cd88413f4ff44547228acf9b145ade7649ab796b82f15ea"
+        }
+      ],
+      "review": "Candidate 12 (0f643c52, with its DAG public renewal on top). Of the mapped files only AppViews.swift changed: TaskListView gains the sidebar's scene-stored visibility bound to NavigationSplitView(columnVisibility:), setSidebar and the SidebarRoom rule (grow the window or close the inspector when the sidebar is asked for without room), the inspector moved inside detail: (unchanged content, toolbar button and inspectorColumnWidth), a WindowReader for the window, View > Hide/Show Sidebar through a focused scene value, and FlowLayout for the filter bar's buttons. The search field, searchBinding, searchFocused, taskFilters' pickers, taskContent's rows, closeInspector and openSelection are unchanged; no discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
