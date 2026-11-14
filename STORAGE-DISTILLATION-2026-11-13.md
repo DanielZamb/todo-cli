@@ -16,7 +16,7 @@ These are conclusions from the units' reports and reviews, not new acceptance cl
 | `perf-stream-wake`, `review-stream-wake-s1` | `integ/c9-server` 675aab82 | Installed in candidate 9 | Release |
 | `fix-durable-denial` | `fix/durable-denial` 366398fe | Installed in candidate 9 | Release |
 | `feat-cli-through-server`, `review-cli-route-s1` | `feat/cli-through-server` 062e242f | Merged into `integ/contract` | Release |
-| `feat-diag-core`, `review-diag-core-s1` | `feat/diag-core` 2538e94b, `integ/contract` (this branch) | Passed both seats; step 2 parked | Push the branch, release |
+| `feat-diag-core`, `review-diag-core-s1` | `feat/diag-core` 2538e94b, `integ/contract` 8028628d | Passed both seats; step 2 parked | Push the branch, release |
 | `feat-diag-electron`, `review-diag-electron-s1` | `feat/diag-electron` 18632759 | Passed its seat; joins in step 2 | Release |
 | `feat-mac-verification-a`, `review-mac-verify-s1` | `feat/mac-verification-app` 71d80343, `review/mac-verify-s1` eceedba4 | Parked; never fully run | Push the branch, release |
 | `exp-sync-experiment` | `exp/sync-experiment` de3f0897 | Experiment finished | Push the branch, release |
@@ -76,7 +76,7 @@ Built: Diagnostics recordings of interactions in a separate private SQLite file,
 
 Proved over nine reviews, each finding a real schedule: initialization decided before exclusive ownership, expired samples revived by a reply, a refusal that changed the main file. Stream delivery costs nothing measurable with recording on.
 
-### Recordings and CLI routing on one line (`integ/contract`, this branch)
+### Recordings and CLI routing on one line (`integ/contract`)
 
 Built: one merge of the two units, one new contract id, and one fix found by the merge itself. Routing recognized a newly opened descriptor by its number; the recordings worker opens and closes files on its own thread, so a number can be reused and a genuine store was refused (3 of 200 starts under churn). The rule now recognizes a new open by identity as well.
 
@@ -161,3 +161,13 @@ Kept, in `.storage-preserved/2026-11-13/` of the canonical checkout (ignored by 
 Kept already, outside the worktrees: the two run stores under `.orchestrator/runs/` hold every brief, every seat's report with its probes, and the decision logs. The units' own reports are tracked under `docs/decisions/`.
 
 Given up: every other ignored file in the released worktrees. That is compiled binaries, scratch databases, dependency installs, Swift build folders, and the raw output of test runs whose results are in the reports above. A test run can be repeated from its commit; its exact bytes cannot.
+
+## Results, and what closed the same day
+
+Released with `git worktree remove` (no `--force`), each rechecked clean, on a branch and unused, then `git worktree prune`: the 23 worktrees marked Release or Push above. Every branch is kept, and `integ/contract`, `feat/mac-verification-app` and `exp/sync-experiment` were pushed first. Kept: the Mac line's worktree and its review's. Free space went from 69.2 GiB to 106.4 GiB.
+
+Later on 2026-11-13:
+- The stream-loop defect was fixed and candidate 10 (`81387de3`) was installed after its correctness review passed. The delete-then-restore schedule that left 26 of 80 clients not following on candidate 9 leaves 0 of 80. Follow-ups 34 to 38 and 51 are done. One rare residual is open as follow-up 53 (Task 2c3e16c4): about once in 600 plain Profile deletions the Mac app does not leave the deleted Profile; cause unknown.
+- The owner accepted ADR-0023 and the dated sentence in ADR-0007.
+- A design for one read that returns counts, groups, one sort order and the History position it reflects (the Catalog) was built on `feat/catalog-contract` and is in review. It found that Today and Overdue use the UTC date, against ADR-0006: follow-up 52 (Task f091d2e8).
+
