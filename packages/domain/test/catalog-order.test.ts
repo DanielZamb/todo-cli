@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { compareTasks, taskOrder } from "../src/catalog-order.ts";
+import { compareNames, compareTasks, taskOrder } from "../src/catalog-order.ts";
 import type { Task } from "../src/entities.ts";
+import names from "./fixtures/catalog/names.json" with { type: "json" };
 import { readTasksComparator } from "./fixtures/extracted/pre-catalog-rules.ts";
 
 type Ordered = Parameters<typeof compareTasks>[0];
@@ -122,5 +123,27 @@ describe("compareTasks", () => {
         .sort(compareTasks)
         .map((t) => t.id),
     ).toEqual(["B", "a", "b"]);
+  });
+});
+
+describe("compareNames", () => {
+  it("orders the 22 names of the design note literally", () => {
+    const items = names.input.map((name, index) => ({
+      id: `id${String(names.input.length - index).padStart(2, "0")}`,
+      name,
+    }));
+    expect(items.sort(compareNames).map((item) => item.name)).toEqual(
+      names.ordered,
+    );
+  });
+  it("breaks equal names by id", () => {
+    expect(
+      [
+        { id: "b", name: "Home" },
+        { id: "a", name: "Home" },
+      ]
+        .sort(compareNames)
+        .map((item) => item.id),
+    ).toEqual(["a", "b"]);
   });
 });

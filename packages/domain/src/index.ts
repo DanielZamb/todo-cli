@@ -6,6 +6,9 @@ export type {
 } from "./auth/authorized-read.ts";
 export * from "./auth/model.ts";
 export * from "./batch-edit.ts";
+export * from "./catalog.ts";
+export * from "./catalog-contract.ts";
+export * from "./catalog-order.ts";
 export * from "./client-diagnostics.ts";
 export * from "./client-reads.ts";
 export * from "./dependencies.ts";
@@ -32,6 +35,7 @@ export * from "./ids.ts";
 export * from "./import.ts";
 export * from "./interaction-categories.ts";
 export * from "./limits.ts";
+export * from "./planning-day.ts";
 export * from "./profile-commands.ts";
 export * from "./quick-add.ts";
 export * from "./recording-admission.ts";

@@ -53,6 +53,7 @@ import {
 } from "../recurrence.ts";
 import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
+import { CatalogProjection } from "./catalog-projection.ts";
 import { ClientProjection } from "./client-projection.ts";
 import { incidentRemoval, putEdge, readEdges } from "./dependencies.ts";
 import {
@@ -597,6 +598,30 @@ export class OperationStore {
   readonly graphRead = (read: AuthorizedRead) =>
     checkedRead(read, "read", this.db).pipe(
       Effect.flatMap((value) => this.graph(value.profile)),
+    );
+
+  readonly catalogRows = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).rows(read)),
+      ),
+    );
+
+  readonly catalogTasks = (
+    read: AuthorizedRead,
+    ids: readonly TaskId[] | null,
+  ) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).tasks(read, ids)),
+      ),
+    );
+
+  readonly committedSince = (read: AuthorizedRead, seq: number) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).committedSince(read, seq)),
+      ),
     );
 
   readonly terminalChangesRead = (read: AuthorizedTerminalRead) =>

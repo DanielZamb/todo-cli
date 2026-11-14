@@ -1,4 +1,4 @@
-// The one Task order every read and client shares.
+// The one Task order and the one name order every read and client shares.
 import type { Task } from "./entities.ts";
 
 export type UndatedDuePlacement = "first" | "last";
@@ -44,3 +44,22 @@ export const taskOrder =
   };
 
 export const compareTasks = taskOrder(undatedDuePlacement);
+
+const nameCollator = new Intl.Collator("und", {
+  usage: "sort",
+  sensitivity: "accent",
+  numeric: true,
+});
+
+/**
+ * Profiles, Projects and Tags: the root collation (case-insensitive,
+ * accent-sensitive, digit runs as numbers), then the name and then the id by
+ * code units, so equal names still sort the same way everywhere.
+ */
+export const compareNames = (
+  a: { readonly name: string; readonly id: string },
+  b: { readonly name: string; readonly id: string },
+) =>
+  nameCollator.compare(a.name, b.name) ||
+  units(a.name, b.name) ||
+  units(a.id, b.id);

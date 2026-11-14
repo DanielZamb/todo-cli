@@ -43,7 +43,14 @@ type AuthorityValue<Kind extends AuthorityKind, P, Fields> = Readonly<{
   fields: Readonly<Fields>;
   profiles: readonly Profile[];
   profileInfo: Readonly<Pick<Profile, "id" | "name">> | null;
+  position: ReadPosition | null;
 }>;
+/**
+ * The History a read reflects: every committed operation with seq up to
+ * `seq` in restore generation `generation`, and none after. Taken from the
+ * Profile classification inside the same lease as the data.
+ */
+export type ReadPosition = Readonly<{ generation: string; seq: number }>;
 const authorityCreation = Symbol("credential-checked read authority");
 type ReadLease = {
   active: boolean;
@@ -237,6 +244,9 @@ class ReadAuthority<Kind extends AuthorityKind, P, Fields> {
   get credential() {
     return ReadAuthority.inspect(this).credential;
   }
+  get position() {
+    return ReadAuthority.inspect(this).position;
+  }
 }
 Object.freeze(ReadAuthority.prototype);
 Object.freeze(ReadAuthority);
@@ -274,6 +284,9 @@ export const readAuthority = <K extends AuthorityKind, P, F>(
   kind: K,
   origin: Database,
 ) => ReadAuthority.inspect(read, kind, origin);
+/** The History position of a read bound by a Profile read lease, or null. */
+export const readPosition = <F>(read: AuthorizedRead<F>, origin: Database) =>
+  ReadAuthority.inspect(read, "read", origin).position;
 export const checkedRead = <K extends AuthorityKind, P, F>(
   read: ReadAuthority<K, P, F>,
   kind: K,
@@ -293,6 +306,7 @@ const createAuthority = <K extends AuthorityKind, P, F>(
   info: CredentialInfo,
   profiles: readonly Profile[] = [],
   profileInfo: Readonly<Pick<Profile, "id" | "name">> | null = null,
+  position: ReadPosition | null = null,
 ): ReadAuthority<K, P, F> =>
   new ReadAuthority(
     authorityCreation,
@@ -305,6 +319,7 @@ const createAuthority = <K extends AuthorityKind, P, F>(
       scope: info.scope,
       profiles: freezeRead(profiles),
       profileInfo,
+      position,
     }),
     info,
   );
@@ -315,6 +330,7 @@ const bindRead = <F>(
   fields: F,
   info: CredentialInfo,
   profileInfo: Readonly<Pick<Profile, "id" | "name">>,
+  position: ReadPosition | null = null,
 ) =>
   createAuthority(
     "read",
@@ -325,6 +341,7 @@ const bindRead = <F>(
     info,
     [],
     profileInfo,
+    position,
   );
 const bindProfiles = <F>(
   db: Database,
@@ -1751,6 +1768,10 @@ export class Authentication<Read> {
             classification.kind === "present"
               ? classification.profile
               : this.presentProfile(request.profile),
+            freezeRead({
+              generation: classification.snapshot.generation,
+              seq: classification.snapshot.seq,
+            }),
           ),
         );
       },

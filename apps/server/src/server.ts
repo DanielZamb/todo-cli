@@ -7,6 +7,7 @@ import {
   BUILD_ID,
   CONTRACT_ID,
   Conflict,
+  FilterUsageError,
   InternalError,
   InvalidTask,
   NotFound,
@@ -24,6 +25,9 @@ import {
   batchDepend,
   batchEditTasks,
   boundDiagnostics,
+  type CatalogError,
+  CatalogReads,
+  CatalogReply,
   ClientReads,
   DependencyCommands,
   type DependencyError,
@@ -106,6 +110,55 @@ const encodedRead =
         ),
       ),
     );
+const usageError = (message: string) =>
+  Effect.fail(
+    Schema.decodeUnknownSync(FilterUsageError)({
+      ...exitStatus(2),
+      generated_at: new Date().toISOString(),
+      code: "invalid_args",
+      message,
+    }),
+  );
+const profileNotFound = () =>
+  Effect.fail(
+    Schema.decodeUnknownSync(ProfileNotFound)({
+      ...exitStatus(3),
+      generated_at: new Date().toISOString(),
+      code: "not_found",
+      message: "Profile not found; choose a Profile from GET /profiles",
+    }),
+  );
+type ReadFailure =
+  | Effect.Error<ReturnType<typeof translate>>
+  | typeof SearchTooBroadResponse.Type
+  | typeof FilterUsageError.Type
+  | typeof ProfileNotFound.Type;
+const catalogFailure = (
+  error: CatalogError,
+): Effect.Effect<never, ReadFailure> =>
+  error._tag === "SearchTooBroad"
+    ? Effect.fail(
+        Schema.decodeUnknownSync(SearchTooBroadResponse)({
+          ...exitStatus(2),
+          generated_at: new Date().toISOString(),
+          code: error.code,
+          message: error.message,
+        }),
+      )
+    : error._tag === "UnknownTimeZone" || error._tag === "CatalogUsageError"
+      ? usageError(error.message)
+      : error._tag === "CatalogProfileMissing"
+        ? profileNotFound()
+        : translate(Effect.fail(error));
+const planningFailure = (
+  error: Effect.Error<ReturnType<ClientReads["view"]>>,
+): Effect.Effect<
+  never,
+  Effect.Error<ReturnType<typeof translate>> | typeof FilterUsageError.Type
+> =>
+  error._tag === "UnknownTimeZone"
+    ? usageError(error.message)
+    : translate(Effect.fail(error));
 const taskResult = (
   result: TaskCommandResult,
 ): Effect.Effect<
@@ -559,6 +612,7 @@ export const serverLayer = (options: {
       );
       const attachments = new AttachmentCommands(store);
       const reads = new ClientReads(store);
+      const catalogs = new CatalogReads(store);
       const discovery = new Discovery(store);
       const ValidationHistoryLive = HttpApiMiddleware.layerSchemaErrorTransform(
         ValidationHistory,
@@ -1076,18 +1130,26 @@ export const serverLayer = (options: {
                 }),
               );
             }).pipe(encodedRead(Schema.Array(TagSummary))),
+          catalog: ({ params, query }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* catalogs
+                .read({ credential, profile: params.profile }, query)
+                .pipe(Effect.catch(catalogFailure));
+            }).pipe(encodedRead(CatalogReply)),
           view: ({ params, query }) =>
             Effect.gen(function* () {
-              return yield* translate(
-                reads.view(
+              return yield* reads
+                .view(
                   {
                     credential: yield* BearerCredential,
                     profile: params.profile,
                   },
                   params.view,
                   query.now,
-                ),
-              );
+                  query.time_zone,
+                )
+                .pipe(Effect.catch(planningFailure));
             }).pipe(encodedRead(PlanningView)),
           history: ({ params }) =>
             Effect.gen(function* () {

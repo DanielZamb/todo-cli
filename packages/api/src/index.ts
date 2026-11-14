@@ -7,6 +7,8 @@ import {
   BatchEdgeRequest,
   BatchEditReport,
   BatchEditRequest,
+  CatalogQuery,
+  CatalogReply,
   CreateSeries,
   CreateTask,
   CredentialInfo,
@@ -435,6 +437,12 @@ const Reads = HttpApiGroup.make("reads")
       params: profile,
       success: Schema.Array(TagSummary),
       error: taskErrors,
+    }),
+    HttpApiEndpoint.get("catalog", "/profiles/:profile/catalog", {
+      params: profile,
+      query: CatalogQuery,
+      success: CatalogReply,
+      error: [...taskErrors, SearchTooBroadResponse],
     }),
     HttpApiEndpoint.get("view", "/profiles/:profile/views/:view", {
       params: { ...profile, view: PlanningViewName },
