@@ -470,10 +470,22 @@ extension TodoModel {
         } catch {
             authorize(error, epoch: epoch, profile: picker.profile)
             guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
-            // A committed edge whose reply could not be used still reads the catalog back (S1-19).
+            // A reply with a 2xx status whose body could not be read is a commit (MAC-C12-S1-8): the
+            // same path as any committed toggle. The picker reads itself back at once, and the notice
+            // says the reply could not be read, never that the link failed; if that read fails, its
+            // own notice stands. The catalog is read back too (S1-19).
             if committed || committedBeforeFailure(error) {
-                await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket)))
+                if dependencies.picker?.id == picker.id {
+                    let readBack = await readDependencyPicker(.background)
+                    if readBack != nil, currentDependencyScope(profile: picker.profile, epoch: epoch, run: run), dependencies.picker?.id == picker.id,
+                       dependencies.picker?.messages.succeed(linkTicket) == true {
+                        dependencies.picker?.feedback = Self.unreadableCommitFeedback(candidate.title)
+                    }
+                }
                 guard signedIn, profile == picker.profile, isCurrentCredential(epoch) else { return }
+                if linkTicket.isNewest { clearMessage([.dependencyLink], since: mark, onlyTarget: dependent.id) }
+                await refreshAfterWrite("Dependencies updated", owner: .surface(.dependencyPicker(picker.id), .init(linkTicket)))
+                return
             }
             var notice = dependencyNotice(error, context: dependent.status == "done" ? .linkDone : .link)
             notice.attemptTitle = candidate.title
@@ -505,6 +517,11 @@ extension TodoModel {
                 dependencies.picker?.requiresReload = ["occ_conflict", "not_found"].contains(notice.failure?.code ?? "")
             }
         }
+    }
+    /// MAC-C12-S1-8, provisional text for the UI seat: the link was made (or removed), so not
+    /// "Couldn't add".
+    static func unreadableCommitFeedback(_ title: String) -> String {
+        "The server's reply about \u{201C}\(title)\u{201D} couldn't be read. The list has been read again and shows what the server has."
     }
     func currentDependencyScope(profile expected: String, epoch: Int, run: Int) -> Bool {
         signedIn && profile == expected && isCurrentCredential(epoch) && dependencies.generation == run

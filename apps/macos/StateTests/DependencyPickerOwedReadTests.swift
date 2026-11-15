@@ -29,6 +29,12 @@ actor OwedReadServer: ClientTransport {
     func failTheNextList() { failNextList = true }
     func refuseTheNextAsALoop() { cycleNext = true }
     func refuseTheNextAsGone() { goneNext = true }
+    private var unreadableNext = false
+    private var failNextShow = false
+    /// The next link commits but its 2xx reply's body cannot be read (MAC-C12-S1-8).
+    func commitTheNextUnreadably() { unreadableNext = true }
+    /// The next Task read fails (the picker's read-back after a commit).
+    func failTheNextShow() { failNextShow = true }
     /// Another client changes `dependent`'s Dependencies.
     func link(_ dependent: String, to blockers: [String]) { deps[dependent] = blockers; versions[dependent, default: 1] += 1 }
     func version(_ id: String) -> Int { versions[id] ?? 1 } // the Version its replies give a Task never written
@@ -52,7 +58,9 @@ actor OwedReadServer: ClientTransport {
     }
     private func answer(_ operationID: String, segments: [String], body: HTTPBody?) async throws -> (HTTPResponse, HTTPBody?) {
         switch operationID {
-        case "tasks.show": return json(.ok, task(segments.last ?? ""))
+        case "tasks.show":
+            if failNextShow { failNextShow = false; throw URLError(.networkConnectionLost) }
+            return json(.ok, task(segments.last ?? ""))
         case "tasks.list":
             if failNextList { failNextList = false; throw URLError(.networkConnectionLost) }
             return json(.ok, "[" + listed.map(task).joined(separator: ",") + "]")
@@ -76,6 +84,7 @@ actor OwedReadServer: ClientTransport {
             if operationID == "tasks.depend" { if !current.contains(blocker) { current.append(blocker) } } else { current.removeAll { $0 == blocker } }
             deps[dependent] = current
             versions[dependent, default: 1] += 1
+            if unreadableNext { unreadableNext = false; return json(.ok, #"{"generated_at":"2026-11-14T00:00:00Z","outcome":"#) }
             // "unchanged" keeps the catalog read-back (refreshAfterWrite) out of these schedules, as
             // PickerServer does; the picker's own read-back, which they test, still runs.
             return json(.ok, #"{"generated_at":"2026-11-14T00:00:00Z","outcome":"unchanged","dependent_id":"\#(dependent)","blocker_id":"\#(blocker)","from_version":\#(from),"to_version":\#(versions[dependent] ?? 1),"seq":1,"warnings":[]}"#)
