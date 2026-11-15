@@ -68,10 +68,8 @@ import TodoAPI
         #expect(await server.writes.last?.op == "tasks.undepend")
     }
 
-    /// Holds by supersession, not by the write clock (MAC-C11-S1-3): the toggle's read-back starts a
-    /// newer read, and the old refresh is not published. With the stand-aside and the owed read, no
-    /// schedule was found in which the clock decides; removing it leaves every picker suite and the
-    /// seat's probes green (fix head evidence, `noclock-run`).
+    /// Holds by supersession (MAC-C11-S1-3): the toggle's read-back starts a newer read, and the old
+    /// refresh is not published. The write clock that was meant to hold this is gone (candidate 12).
     @Test func aRefreshStartedBeforeAToggleReplyNeverUndoesIt() async throws {
         let server = PickerServer()
         let model = try await opened(server)

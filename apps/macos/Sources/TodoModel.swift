@@ -329,7 +329,15 @@ final class TodoModel {
         case profile(String)
         case openTransfer(TaskTransferResult)
         case showDiscovery(DiscoveryShowIntent)
+        /// Closing the editor: by a person (Escape, Close, the inspector button, the system dismissing
+        /// the inspector, Compact's back button), or by the room rule to make room for the sidebar (Q13).
+        case close(EditorClose)
+        /// Complete, Cancel or Reopen of the Task the editor shows, which closes the editor (Q13).
+        /// (Delete needs no question: its review is the question, and only a validated delete
+        /// discards the draft.)
+        case transition(TaskSnapshot, action: String)
     }
+    enum EditorClose: Equatable { case person, sidebar }
     var pendingNavigation: EditorNavigation? { didSet { notePresented(pendingNavigation != nil, oldValue != nil) } }
     enum NoticeKind: Hashable { case notice }
     /// The main window's quiet confirmation ("Task added", "Task deleted", a Profile switch after
@@ -1408,6 +1416,48 @@ final class TodoModel {
         editor != nil && (editor?.changedFields.isEmpty == false || conflict != nil || recurrenceDraft != nil)
     }
 
+    /// The one close a person can cause (Q13, owner's decision): with unsaved changes (changed
+    /// fields, a pending Series edit, or a Conflict's merge choices) it asks the draft question and
+    /// leaves the editor as it is; Save closes after the save succeeds, Discard closes, Cancel keeps
+    /// editing. A second close while the question is up asks nothing more. Clean, it closes now and
+    /// returns true.
+    @discardableResult
+    func closeEditor(_ reason: EditorClose = .person) -> Bool {
+        guard editor != nil else { return true }
+        if hasUnsavedEditor {
+            // A second close while the question is up asks nothing more. It sets the question again
+            // unchanged, which re-renders the window: the system may have collapsed the inspector, and
+            // it must show again while the editor stays.
+            if let pending = pendingNavigation { pendingNavigation = pending } else { pendingNavigation = .close(reason) }
+            return false
+        }
+        endEditing()
+        return true
+    }
+    private func endEditing() {
+        editor = nil
+        conflict = nil
+        writeIntent = nil
+        recurrenceDraft = nil
+        series = nil
+    }
+    /// Counts the times Save or Discard closed the editor for the sidebar; the window shows the
+    /// sidebar on each (the room rule, Q13).
+    private(set) var sidebarRequest = 0
+    /// A clean close by the room rule says so: in the notice, held on hover, and to VoiceOver.
+    func noteClosedForSidebar(_ title: String) {
+        let notice = Self.closedForSidebarNotice(title)
+        publishNotice(notice, seconds: 6)
+        announce(notice)
+    }
+    static func closedForSidebarNotice(_ title: String) -> String { "Closed \u{201C}\(title)\u{201D} to make room for the sidebar." }
+    /// Whether an action on `task` would close an editor with unsaved changes, so it asks first (Q13).
+    private func asksBefore(_ task: TaskSnapshot, _ target: EditorNavigation) -> Bool {
+        guard editor?.id == task.id, hasUnsavedEditor else { return false }
+        if pendingNavigation == nil { pendingNavigation = target }
+        return true
+    }
+
     @discardableResult
     func navigate(_ target: EditorNavigation) async -> Bool {
         guard !busy else { return false }
@@ -1426,10 +1476,12 @@ final class TodoModel {
 
     @discardableResult
     func discardAndNavigate(_ target: EditorNavigation) async -> Bool {
+        notePersonActed() // answering the draft question (Q13)
         guard !busy else { return false }
         if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         if case .move = target, !canWrite { return false }
         if case .copy = target, !canWrite { return false }
+        if case .transition = target, !canWrite { return false }
         pendingNavigation = nil
         if let base = editor?.base { beginEditing(base) }
         return await applyNavigation(target)
@@ -1437,6 +1489,7 @@ final class TodoModel {
 
     @discardableResult
     func saveAndNavigate(_ target: EditorNavigation) async -> Bool {
+        notePersonActed() // answering the draft question (Q13)
         guard canWrite, conflict == nil, let draft = editor else { return false }
         if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         pendingNavigation = nil
@@ -1455,6 +1508,9 @@ final class TodoModel {
         }
         if case .copy(let task, let destination) = target, task.id == draft.id, saved.id == task.id {
             return await applyNavigation(.copy(saved, to: destination))
+        }
+        if case .transition(let task, let action) = target, task.id == draft.id, saved.id == task.id {
+            return await applyNavigation(.transition(saved, action: action))
         }
         return await applyNavigation(target)
     }
@@ -1476,6 +1532,12 @@ final class TodoModel {
             if editor?.id != task.id { beginEditing(task) }
             await write(.copy(destination))
             return editorError == nil && conflict == nil
+        case .close(let reason):
+            endEditing()
+            if reason == .sidebar { sidebarRequest += 1 }
+        case .transition(let task, let action):
+            await performTransition(task, action: action)
+            return editor?.id != task.id
         case .openTransfer(let result):
             editor = nil
             conflict = nil
@@ -1501,6 +1563,7 @@ final class TodoModel {
     }
 
     func cancelNavigation() {
+        notePersonActed() // answering the draft question (Q13)
         dismissNavigationPrompt()
         discovery.showIntent = nil
     }
@@ -1536,7 +1599,15 @@ final class TodoModel {
         else { await save() }
     }
 
+    /// Complete, Cancel or Reopen. On the Task the editor shows with unsaved changes, the draft
+    /// question comes first, because the transition closes the editor (Q13).
     func transition(_ task: TaskSnapshot, action: String) async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
+        guard !asksBefore(task, .transition(task, action: action)) else { return }
+        await performTransition(task, action: action)
+    }
+
+    private func performTransition(_ task: TaskSnapshot, action: String) async {
         notePersonActed() // a write the person started (MAC-C1-S1-32)
         var committed = false // the write's reply came back OK: its read-back cannot be skipped (S1-19)
         let credentialEpoch = discovery.credentialEpoch

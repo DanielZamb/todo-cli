@@ -33,6 +33,7 @@ struct TodoApp: App {
                 Button("Quick add in menu bar") { model.notePersonActed(); openMenuBarQuickAdd() }
                     .keyboardShortcut("n", modifiers: [.command, .option]).disabled(!model.signedIn)
             }
+            TodoSidebarCommands()
             CommandGroup(after: .sidebar) {
                 Toggle("Compact mode", isOn: Binding(get: { compactMode }, set: { model.notePersonActed(); compactMode = $0 }))
                     .keyboardShortcut("m", modifiers: [.command, .shift])

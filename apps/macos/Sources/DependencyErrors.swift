@@ -19,12 +19,14 @@ struct DependencyNotice {
     var followUpFailure: String? = nil
     /// The text for a failure without a more specific one.
     static let genericFailure = "Couldn't update Dependencies. Try again."
+    /// The text for a reply that could not be read.
+    static let unreadable = "The server response could not be read. Your draft is preserved."
     static func countAdvice(_ count: Int) -> String {
         "This Task depends on \(count) Tasks. That's a lot for one Task. It might be a whole Project, or it might be clearer split under a few more parent Tasks."
     }
     static func project(_ failure: ServerFailure, context: DependencyActionContext) -> Self {
         if let nested = failure.nestedDependencyFailure { return project(nested, context: context) }
-        if failure.hasMalformedDependencyError { return .init(message: "The server response could not be read. Your draft is preserved.") }
+        if failure.hasMalformedDependencyError { return .init(message: unreadable) }
         do {
             if let error = failure.dependencyError {
                 if let value = error.value1 {
@@ -42,8 +44,8 @@ struct DependencyNotice {
                 if error.value5 != nil { return .init(message: "Review these Dependencies before deleting this Task.", detail: failure.exitDetail, failure: failure) }
                 if error.value6 != nil { return .init(message: "A Task and its Dependency must be in the same Profile.", detail: failure.exitDetail, recovery: "Choose a Task in this Profile", failure: failure) }
             }
-        } catch { return .init(message: "The server response could not be read. Your draft is preserved.") }
-        if ServerFailure.dependencyCodes.contains(failure.code ?? "") { return .init(message: "The server response could not be read. Your draft is preserved.") }
+        } catch { return .init(message: unreadable) }
+        if ServerFailure.dependencyCodes.contains(failure.code ?? "") { return .init(message: unreadable) }
         let message: String
         switch failure.code {
         case "occ_conflict": message = "This Task changed. Reload its Dependencies before trying again."
@@ -51,10 +53,10 @@ struct DependencyNotice {
         case "search_too_broad": message = "This search is too broad. Narrow the words or add more of the Task title."
         case "validation": message = "Check this Dependency and try again."
         case "unauthorized", "auth_required": message = "Your Session ended. Sign in again."
-        case "forbidden": message = "This credential can't update Dependencies."
+        case "forbidden": message = "This credential can't change Dependencies." // the merged notice's verb (UI seat)
         default: message = genericFailure
         }
-        guard failure.exitDetail != nil else { return .init(message: "The server response could not be read. Your draft is preserved.") }
+        guard failure.exitDetail != nil else { return .init(message: unreadable) }
         return .init(message: message, detail: failure.exitDetail, failure: failure)
     }
 }
@@ -67,7 +69,7 @@ extension TodoModel {
         return ServerFailure(message: "This Task changed. Reload its Dependencies before trying again.", code: "occ_conflict", exitCode: pair.exit_code, exitMeaning: pair.exit_meaning)
     }
     func dependencyNotice(_ error: Error, context: DependencyActionContext) -> DependencyNotice {
-        if error is DecodingError || error is DependencyGraphReply.ProtocolError { return .init(message: "The server response could not be read. Your draft is preserved.") }
+        if error is DecodingError || error is DependencyGraphReply.ProtocolError { return .init(message: DependencyNotice.unreadable) }
         if let request = (error as? RequestFailure) ?? (error as? ClientError)?.underlyingError as? RequestFailure { return .project(request.body, context: context) }
         if let server = error as? ServerFailure { return .project(server, context: context) }
         return .init(message: DependencyNotice.genericFailure)
