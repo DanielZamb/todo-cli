@@ -271,8 +271,21 @@ struct TaskListView: View {
     @State private var selection: String?
     @State private var showingTaskFilters = false
     /// Whether the sidebar is shown (candidate 12, the owner's report): the app owns this state, so
-    /// the toolbar button and View ▸ Hide/Show Sidebar always act on a known value.
-    @SceneStorage("sidebar-shown") private var sidebarShown = true
+    /// the toolbar button and View ▸ Hide/Show Sidebar always act on a known value. Kept per window
+    /// across launches in scene storage. Scene storage holds no value outside a SwiftUI scene (a hosted
+    /// window in the state tests), so the window's current state lives in `sidebarState` too, written
+    /// with it; there every write was lost, and the room rule was never reached.
+    @SceneStorage("sidebar-shown") private var storedSidebarShown = true
+    @State private var sidebarState: Bool?
+    @Environment(\.sidebarControlProbe) private var sidebarControlProbe
+    private var sidebarControl: SidebarControl { SidebarControl(shown: sidebarShown, notePersonActed: { model.notePersonActed() }) { toggleSidebarFromMenu() } }
+    /// View ▸ Hide/Show Sidebar acts as the toolbar's button does, through the split view controller,
+    /// which shows the sidebar in place. Changing the binding instead made AppKit grow the window by
+    /// the sidebar's 228 pt on every show (900 to 1,128 pt), whether or not anything was cut.
+    private func toggleSidebarFromMenu() {
+        if let controller = window.window.flatMap(SidebarRoom.sidebarController) { controller.toggleSidebar(nil) } else { setSidebar(!sidebarShown) }
+    }
+    private var sidebarShown: Bool { sidebarState ?? storedSidebarShown }
     @State private var window = WindowReference()
     /// The notice holds while the pointer is over it or its button has keyboard focus (UI check, c10).
     @State private var noticeHovered = false
@@ -396,7 +409,8 @@ struct TaskListView: View {
     /// the inspector closes first (candidate 12).
     func setSidebar(_ shown: Bool) {
         if shown && !sidebarShown { SidebarRoom.make(in: window.window, inspectorOpen: model.editor != nil && !model.busy) { closeInspector() } }
-        sidebarShown = shown
+        sidebarState = shown
+        storedSidebarShown = shown
     }
 
     private var expandedContent: some View {
@@ -454,7 +468,8 @@ struct TaskListView: View {
                 }
         }
         .background(WindowReader(reference: window))
-        .focusedSceneValue(\.sidebarControl, SidebarControl(shown: sidebarShown, notePersonActed: { model.notePersonActed() }) { setSidebar(!sidebarShown) })
+        .focusedSceneValue(\.sidebarControl, sidebarControl)
+        .onAppear { sidebarControlProbe?.control = sidebarControl }
     }
 
     var compactContent: some View {
@@ -1495,8 +1510,12 @@ struct OutdatedServerView: View {
 /// bar's buttons wrapping, the columns fit at the window's 900 pt minimum. Showing the sidebar
 /// still makes room first, measured from what AppKit enforces, in case content is wider.
 @MainActor enum SidebarRoom {
-    /// The sidebar's ideal width plus its inset: what showing it adds to the window's needs.
-    static let sidebarShare: CGFloat = 228
+    /// What showing the sidebar adds to what AppKit enforces, measured: the sidebar's 228 pt (its
+    /// ideal width plus its inset) counted twice, once in the detail item and once in the list's own
+    /// split item, with the inspector closed (52 pt hidden, 508 pt shown) and open (432 pt, 888 pt).
+    /// Candidate 12 added 228 pt, so it would have let the columns overflow by 228 pt when the content
+    /// is wider than the window's 900 pt minimum allows.
+    static let sidebarShare: CGFloat = 456
     enum Outcome: Equatable { case fits, grew(to: CGFloat), closedInspector, noRoom }
     /// What AppKit enforces now: the widest fitting width among the split view's columns (each
     /// column's hosting view carries a minimum-width constraint SwiftUI derives from its content).
@@ -1507,13 +1526,26 @@ struct OutdatedServerView: View {
             .flatMap(\.splitViewItems).filter { !$0.isCollapsed }
             .map { $0.viewController.view.fittingSize.width }.max() ?? 0
     }
+    /// The split view controller that holds the sidebar.
+    static func sidebarController(in window: NSWindow) -> NSSplitViewController? {
+        func splits(_ view: NSView) -> [NSSplitView] { ((view as? NSSplitView).map { [$0] } ?? []) + view.subviews.flatMap(splits) }
+        guard let content = window.contentView else { return nil }
+        return splits(content).compactMap { $0.delegate as? NSSplitViewController }.first { $0.splitViewItems.contains { $0.behavior == .sidebar } }
+    }
+    /// Whether the sidebar's split item is collapsed now (true when there is none).
+    static func sidebarCollapsed(in window: NSWindow) -> Bool {
+        sidebarController(in: window)?.splitViewItems.first { $0.behavior == .sidebar }?.isCollapsed ?? true
+    }
     /// Makes room for the sidebar before it is shown: when the columns would need more than the
     /// window has, grows the window by what is missing if the screen has room, and otherwise closes
     /// the inspector (`closeInspector`).
     @discardableResult
     static func make(in window: NSWindow?, inspectorOpen: Bool, closeInspector: () -> Void) -> Outcome {
         guard let window else { return .fits }
-        let need = enforcedMinimum(in: window) + sidebarShare
+        // The toolbar's button and the menu command go through AppKit, which may already have
+        // expanded the sidebar when this measures (it did from the toolbar in the owner's scenario):
+        // its share is then inside what AppKit enforces. Added only while it is still collapsed.
+        let need = enforcedMinimum(in: window) + (sidebarCollapsed(in: window) ? sidebarShare : 0)
         let width = window.frame.width
         guard need > width + 0.5 else { return .fits }
         if let screen = window.screen?.visibleFrame, screen.width >= need {
@@ -1526,6 +1558,17 @@ struct OutdatedServerView: View {
         guard inspectorOpen else { return .noRoom }
         closeInspector()
         return .closedInspector
+    }
+}
+
+/// The state tests' hold on the window's `SidebarControl`, the one View ▸ Hide/Show Sidebar uses: a
+/// hosted window has no scene, so its focused scene value reaches no menu.
+@MainActor final class SidebarControlProbe { var control: SidebarControl? }
+private struct SidebarControlProbeKey: EnvironmentKey { static let defaultValue: SidebarControlProbe? = nil }
+extension EnvironmentValues {
+    var sidebarControlProbe: SidebarControlProbe? {
+        get { self[SidebarControlProbeKey.self] }
+        set { self[SidebarControlProbeKey.self] = newValue }
     }
 }
 
