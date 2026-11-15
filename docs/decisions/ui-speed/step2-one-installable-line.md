@@ -226,7 +226,9 @@ Nothing is migrated in the Task database: no schema change since candidate 10.
 Beside the real database, the server creates at its start:
 - `.todo-routing/` (mode 0700), holding the guard file
   `<device>-<inode>-<birth>.sqlite` (one server per database; held while the
-  server runs) and `<hex of the database name>/endpoint.json`, the private
+  server runs) with its `-journal` (512 bytes, mode 0600: present while the
+  server runs and after a SIGKILL, removed on a clean stop; server seat N3),
+  and `<hex of the database name>/endpoint.json`, the private
   record the CLI reads to find and prove the server (withdrawn when the server
   stops). Not created when the database file has more than one hard link.
 - `diagnostic-recordings/` (mode 0700) with `recordings.db` and its `-wal` and
