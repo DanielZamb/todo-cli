@@ -107,7 +107,7 @@ private actor DependencySearchRecoveryTransport: ClientTransport {
             for query in ["broad", "current", ""] {
                 model.dependencies.picker?.text = query
                 await model.searchDependencyCandidates()
-                #expect(model.dependencies.picker?.failure?.message == "This Task changed. Reload its Dependencies before trying again.")
+                #expect(model.dependencies.picker?.failure?.message == "The Tasks changed since this list loaded.")
                 #expect(model.dependencies.picker?.failure?.detail == "error 4 - Conflict")
                 #expect(model.dependencies.picker?.requiresReload == true)
                 #expect(model.dependencies.batch?.id == batch)

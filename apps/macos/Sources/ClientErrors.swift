@@ -53,11 +53,12 @@ struct ClientErrorNotice: View {
     let position: ClientErrorPosition
     var dependency: DependencyNotice? = nil
     var dependencyWarning = false
+    var dependencyShowsDetail = true
     var retry: (() -> Void)? = nil
     var body: some View {
         if let dependency {
             VStack(alignment: .leading, spacing: 8) {
-                DependencyNoticeContent(model: model, notice: dependency, warning: dependencyWarning)
+                DependencyNoticeContent(model: model, notice: dependency, warning: dependencyWarning, showsDetail: dependencyShowsDetail)
                 if let retry {
                     Button("Retry", action: retry).accessibilityIdentifier("dependency-graph-retry")
                 }

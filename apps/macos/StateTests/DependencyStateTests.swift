@@ -463,7 +463,7 @@ extension DependencyStateTests {
         _ = try await api.tasks_period_edit(path: .init(profile: "work", task: root.id), body: .json(edit)).ok.body.json
         await value.toggleDependency(blocker)
         #expect(value.dependencies.picker?.requiresReload == true)
-        #expect(value.dependencies.picker?.failure?.message == "This Task changed. Reload its Dependencies before trying again.")
+        #expect(value.dependencies.picker?.failure?.message == "The Tasks changed since this list loaded.")
         #expect(value.dependencies.picker?.failure?.detail == "error 4 - Conflict")
         #expect(value.dependencies.picker?.text == "Conflict blocker")
         #expect(value.dependencies.picker?.checked(blocker.id) == false)

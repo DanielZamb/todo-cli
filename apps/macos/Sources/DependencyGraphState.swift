@@ -139,12 +139,18 @@ extension TodoModel {
             dependencies.deletion?.fingerprint = nil
             dependencies.deletion?.acceptedFromVersion = nil
         }
-        if let picker = dependencies.picker, !picker.requiresReload, picker.pending.isEmpty {
-            // A background read refreshes the picker's data and clears no message (nothing is saved
-            // and restored: whatever is showing stays, and anything newer stays too).
-            let warnings = picker.warnings
-            await refreshDependencyPicker()
-            if dependencies.picker?.id == picker.id { dependencies.picker?.warnings = warnings }
+        if let picker = dependencies.picker, !picker.requiresReload {
+            if picker.pending.isEmpty {
+                // A background read refreshes the picker's data and clears no message (nothing is
+                // saved and restored: whatever is showing stays, and anything newer stays too).
+                let warnings = picker.warnings
+                await refreshDependencyPicker()
+                if dependencies.picker?.id == picker.id { dependencies.picker?.warnings = warnings }
+            } else {
+                // A toggle is pending, and its read-back may have read the server before this
+                // change: one read is owed, and runs when the toggle ends (MAC-C11-S1-1).
+                dependencies.picker?.owedRead = true
+            }
         }
         guard isCurrentCredential(epoch), dependencies.generation == run else { return }
         await readDependencyGraph()

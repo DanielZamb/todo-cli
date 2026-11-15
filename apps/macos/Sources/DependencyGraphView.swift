@@ -99,7 +99,7 @@ struct DependencyGraphView: View {
             .task { focused = model.dependencies.graph?.focused.map { .init(task: $0, section: .shown) } }
             .onChange(of: focused) { _, row in if let row { model.dependencies.graph?.focused = row.task } }
             .onChange(of: model.dependencies.graph?.report?.nodes.count) { before, count in if compact && before == nil && (count ?? 0) > 50 { diagram = false } }
-            .sheet(item: Binding(get: { model.dependencies.picker }, set: { if $0 == nil { model.closeDependencyPicker() } })) { _ in DependencyPickerView(model: model, compact: compact) }
+            .modifier(DependencyPickerSheet(model: model, compact: compact))
     }
     private func shownTasks(_ graph: DependencyGraphState, report: DependencyGraphReport) -> some View {
         VStack(alignment: .leading, spacing: 12) {
