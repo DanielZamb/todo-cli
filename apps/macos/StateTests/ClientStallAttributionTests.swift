@@ -7,7 +7,7 @@ import TodoAPI
 
 /// Stall attribution (candidate 8, approved design): what a stall record says the main thread was
 /// doing, what it keeps, and when sampling turns itself off.
-@Suite(.serialized) struct ClientStallAttributionTests {
+extension MainThreadExclusive { @Suite(.serialized) struct ClientStallAttributionTests {
     private func own(_ symbol: String) -> ClientStallSymbol { .init(imagePath: "/Applications/Todo.app/Contents/MacOS/Todo", symbol: symbol, own: true) }
     private func system(_ image: String, _ symbol: String) -> ClientStallSymbol { .init(imagePath: "/System/Library/Frameworks/\(image).framework/Versions/A/\(image)", symbol: symbol, own: false) }
 
@@ -135,7 +135,7 @@ import TodoAPI
         #expect(ClientStallAttributor.encodedSize(attribution) <= ClientStallAttributor.recordLimit)
         monitor.stop(); recorder.clear(); await recorder.flush()
     }
-}
+} }
 
 @inline(never) @MainActor func stallTheMainThreadForAttribution(milliseconds: Double) {
     let end = ProcessInfo.processInfo.systemUptime + milliseconds / 1000
@@ -163,7 +163,7 @@ private final class SpinCounter: @unchecked Sendable {
 }
 
 /// Observed events (candidate 8): passive, coalesced, nothing while idle.
-@Suite(.serialized) struct ClientObservedActivityTests {
+extension MainThreadExclusive { @Suite(.serialized) struct ClientObservedActivityTests {
     @Test func countsAreCoalescedAndAnIdleWindowRecordsNothing() {
         let activity = ClientObservedActivity()
         #expect(activity.drain(nowMS: 1000) == nil, "nothing happened")
@@ -198,4 +198,4 @@ private final class SpinCounter: @unchecked Sendable {
         #expect(observed.count <= 2, "coalesced: at most one record a second")
         monitor.stop(); recorder.clear(); await recorder.flush()
     }
-}
+} }

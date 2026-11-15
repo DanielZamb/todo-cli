@@ -47,7 +47,7 @@ private func taskJSON(version: Int, title: String, status: String = "open") -> S
     #"{"id":"t003","profile_id":"work","entity_version":1,"row_version":\#(version),"title":"\#(title)","description":null,"priority":"P1","status":"\#(status)","project_id":null,"tags":["focus"],"due_at":null,"scheduled_at":null,"energy":2,"estimate_min":30,"source":"manual","occurrence":null,"created_at":"2026-10-27T12:00:00Z","updated_at":"2026-10-27T12:00:00Z","completed_at":null,"deleted_at":null}"#
 }
 
-@MainActor @Suite(.serialized) struct EditorCloseTests {
+extension MainThreadExclusive { @MainActor @Suite(.serialized) struct EditorCloseTests {
     enum Unsaved: String, CaseIterable { case fields, series, conflict }
     private static let original = "Review the long launch checklist with the whole team 3"
 
@@ -318,4 +318,4 @@ private func taskJSON(version: Int, title: String, status: String = "open") -> S
         }
         #expect(room.model.personInput.count > before)
     }
-}
+} }

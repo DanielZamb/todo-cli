@@ -104,7 +104,7 @@ private struct NoNetwork: ClientTransport {
     }
 }
 
-@MainActor @Suite(.serialized) struct SidebarRoomTests {
+extension MainThreadExclusive { @MainActor @Suite(.serialized) struct SidebarRoomTests {
     /// (c) The share is what showing the sidebar adds, with the inspector closed and open. Also what
     /// `enforcedMinimum` relies on: it takes the widest column's fitting width, which holds the list and
     /// the inspector only while the inspector is a column inside the detail item.
@@ -175,4 +175,4 @@ private struct NoNetwork: ClientTransport {
         #expect(room.inspectorWidth == 480)
         #expect(room.outside.isEmpty)
     }
-}
+} }
