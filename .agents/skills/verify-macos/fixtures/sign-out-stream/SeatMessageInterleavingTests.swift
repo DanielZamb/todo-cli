@@ -3,12 +3,14 @@ import HTTPTypes
 import OpenAPIRuntime
 import OpenAPIURLSession
 import Testing
-import TodoAPI
+@testable import TodoAPI
 @testable import TodoState
 
 private actor SeatMessageGate: ClientTransport {
     let session: URLSession
-    let base: URLSessionTransport
+    /// The production stack under the gate (S1-39, coordinator 2026-11-14 13:45, point 4): a send
+    /// the library never returns after cancellation is released by ScopedTransport here too.
+    let base: any ClientTransport
     var streams: [AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.Continuation] = []
     var catalogArmed = false
     var showArmed = false
@@ -17,7 +19,10 @@ private actor SeatMessageGate: ClientTransport {
     var failHealthOnce = false
     private var catalogCompletion: CheckedContinuation<Void, Never>?
     private var showCompletion: CheckedContinuation<Void, Never>?
-    init() { let s = URLSession(configuration: .ephemeral); session = s; base = URLSessionTransport(configuration: .init(session: s)) }
+    init() {
+        let s = URLSession(configuration: .ephemeral); session = s
+        base = ScopedTransport(session: s, base: StreamTransport(ordinary: URLSessionTransport(configuration: .init(session: s)), diagnostics: .disabled))
+    }
     func arm() { catalogArmed = true; showArmed = true }
     func failHealth() { failHealthOnce = true }
     func releaseShow() { showCompletion?.resume(); showCompletion = nil }

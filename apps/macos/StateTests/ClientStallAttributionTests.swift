@@ -7,7 +7,7 @@ import TodoAPI
 
 /// Stall attribution (candidate 8, approved design): what a stall record says the main thread was
 /// doing, what it keeps, and when sampling turns itself off.
-@Suite(.serialized) struct ClientStallAttributionTests {
+extension MainThreadExclusive { @Suite(.serialized) struct ClientStallAttributionTests {
     private func own(_ symbol: String) -> ClientStallSymbol { .init(imagePath: "/Applications/Todo.app/Contents/MacOS/Todo", symbol: symbol, own: true) }
     private func system(_ image: String, _ symbol: String) -> ClientStallSymbol { .init(imagePath: "/System/Library/Frameworks/\(image).framework/Versions/A/\(image)", symbol: symbol, own: false) }
 
@@ -111,7 +111,10 @@ import TodoAPI
         var info = Dl_info()
         #expect(dladdr(#dsohandle, &info) != 0)
         let testImage = String(cString: try #require(info.dli_fname))
-        let sampler = ClientStallSampler(ownImages: [testImage])
+        // Its own window limit and budget, far above production's 1 ms and 2 ms, so a suspend slowed
+        // by the machine's load cannot turn sampling off (follow-up 59: it failed once at load 31.6).
+        // The production limits are covered by the controls above, which inject durations.
+        let sampler = ClientStallSampler(thread: mach_thread_self(), ownImages: [testImage], windowLimitNS: 50_000_000, stallBudgetNS: 1_000_000_000)
         let monitor = ClientDiagnosticsMonitor(recorder: recorder, applicationActive: { true }, notifications: NotificationCenter(), stallSampler: sampler)
         monitor.start(); defer { monitor.stop() }
         // Idle while active: no stall, no sample.
@@ -119,7 +122,8 @@ import TodoAPI
         let idleStalls = (await recorder.snapshot()).recent.filter { $0.name == .stall }.count
         if idleStalls == 0 { #expect(sampler.samplesTaken == 0, "an idle main thread is never suspended") }
         let samplesBefore = sampler.samplesTaken
-        stallTheMainThreadForAttribution(milliseconds: 450)
+        // 900 ms, so at least four samples arrive even if the 50 ms cadence slows under load.
+        stallTheMainThreadForAttribution(milliseconds: 900)
         try await Task.sleep(for: .milliseconds(400))
         let stall = try #require((await recorder.snapshot()).recent.last { $0.name == .stall && $0.stallAttribution != nil }, "the stall was recorded with an attribution")
         let attribution = try #require(stall.stallAttribution)
@@ -131,7 +135,7 @@ import TodoAPI
         #expect(ClientStallAttributor.encodedSize(attribution) <= ClientStallAttributor.recordLimit)
         monitor.stop(); recorder.clear(); await recorder.flush()
     }
-}
+} }
 
 @inline(never) @MainActor func stallTheMainThreadForAttribution(milliseconds: Double) {
     let end = ProcessInfo.processInfo.systemUptime + milliseconds / 1000
@@ -159,7 +163,7 @@ private final class SpinCounter: @unchecked Sendable {
 }
 
 /// Observed events (candidate 8): passive, coalesced, nothing while idle.
-@Suite(.serialized) struct ClientObservedActivityTests {
+extension MainThreadExclusive { @Suite(.serialized) struct ClientObservedActivityTests {
     @Test func countsAreCoalescedAndAnIdleWindowRecordsNothing() {
         let activity = ClientObservedActivity()
         #expect(activity.drain(nowMS: 1000) == nil, "nothing happened")
@@ -194,4 +198,4 @@ private final class SpinCounter: @unchecked Sendable {
         #expect(observed.count <= 2, "coalesced: at most one record a second")
         monitor.stop(); recorder.clear(); await recorder.flush()
     }
-}
+} }

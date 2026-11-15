@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "16228a45d70ee2cc3dcde3406cec27169915a8ea",
+  "productionSyncCommit": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "5512dae1dd7003bf7ee3c22d4a25c3c1f83c28d99e0b3a7df9f74744b98d53a2",
+      "sha256": "1b2d051924739a267a2d3225feee6dd738581ad006230cd7063a50825959a8a3",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -238,7 +238,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "26084932d8b191a421efc6dbe341a2428df930e1",
+  "previousProductionSyncCommit": "16228a45d70ee2cc3dcde3406cec27169915a8ea",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -745,6 +745,18 @@
       "changed": [],
       "controls": "check.ts passes on the merged head without a hash change: docs/evidence/discovery-formal/check-m8EiN5; Swift step swift-kuEIA4 standalone (keychainLinked false), reused in swift-JGlGIA.",
       "review": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12) into integ/step2 (8d901d96), plus server seat N3 (docs) and N6 (generated-sources check, apps/macos/scripts and package.json). Every mapped Swift row is main's candidate 12 renewal; apps/electron/src/task-client.ts is this line's renewal. The regenerated Swift client is unchanged (contract 4c932cfc). No model, invariant or bound change."
+    },
+    {
+      "product": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
+      "controls": "check-swift passed on 5a5349aa: docs/evidence/discovery-formal/swift-EXEfh9",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "5512dae1dd7003bf7ee3c22d4a25c3c1f83c28d99e0b3a7df9f74744b98d53a2",
+          "to": "1b2d051924739a267a2d3225feee6dd738581ad006230cd7063a50825959a8a3"
+        }
+      ],
+      "review": "Candidate 13 (84dddaf6 the S1-39 transport fix, ddbd687b MAC-C11-S1-12). Of the mapped files only TodoModel.swift changed since b968f31a. followChanges: before it awaits an operation's refresh it records streamLoopWaitingSince and clears it when the refresh returns; streamFollowsCurrentProfile additionally requires that the loop is not waiting on a refresh for more than streamLoopReadBound (10 s). No event handling, reconnect, cursor, hand-over or exit path changed. replaceCredential: when the credential changes it also ends the editor and the draft question (editor, conflict, writeIntent, recurrenceDraft, series, pendingNavigation); the epoch advance, the Discovery and dependency resets and the message end are unchanged and come first. pendingNavigation records the credential epoch it is asked under (questionEpoch); saveAndNavigate and discardAndNavigate refuse an answer under another epoch, otherwise unchanged. expireSession captures the unsaved draft's title before the reset and appends one sentence to its sessionEnded message; its epoch guard and order are unchanged. No discovery publication, Show or Close guard, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."

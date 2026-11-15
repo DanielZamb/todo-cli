@@ -58,6 +58,14 @@ const pinPaths = [
   "apps/macos/API/Package.resolved",
   "apps/macos/Todo.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
 ];
+/** Stops a step's whole process group (it runs in its own): a lockf waiter, a Swift test and any
+ * server it started go with it (follow-up 68). SIGTERM first, SIGKILL for what is left 3 s later. */
+function stopGroup(pid: number | undefined) {
+  if (pid === undefined) return;
+  try { process.kill(-pid, "SIGTERM"); } catch { /* already gone */ }
+  setTimeout(() => { try { process.kill(-pid, "SIGKILL"); } catch { /* already gone */ } }, 3_000).unref();
+}
+const SLOT_ACQUIRED = "SWIFT-SLOT-ACQUIRED";
 async function execute(
   label: string,
   command: string,
@@ -65,32 +73,45 @@ async function execute(
   cwd = root,
   env: NodeJS.ProcessEnv = process.env,
 ) {
+  // A step run through the Swift slot is timed from when it holds the slot, not from when it began
+  // waiting for it (follow-up 68): the slot prints SLOT_ACQUIRED once held, and this process reports
+  // its waits on its own stderr so a runner above it can pause its own timer too.
+  const throughSlot = command === slot;
   const child = spawn(command, args, {
     cwd,
-    env,
+    env: throughSlot ? { ...env, SWIFT_SLOT_ANNOUNCE: "1" } : env,
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
   });
   record(`${label}-started`, { command, args, cwd, pid: child.pid });
   let out = "",
     err = "",
-    timedOut = false;
+    timedOut = false,
+    timer: ReturnType<typeof setTimeout> | undefined;
+  const stop = () => stopGroup(child.pid);
+  const startTimer = () => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      stop();
+    }, 600_000);
+  };
+  if (throughSlot) process.stderr.write(`SWIFT-SLOT-WAITING ${label}\n`);
+  else startTimer();
   child.stdout.on("data", (chunk: Buffer) => {
     out += chunk.toString();
     appendFileSync(join(evidence, `${label}.stdout`), chunk);
   });
   child.stderr.on("data", (chunk: Buffer) => {
-    err += chunk.toString();
+    const text = chunk.toString();
+    if (timer === undefined && throughSlot && text.includes(SLOT_ACQUIRED)) {
+      process.stderr.write(`SWIFT-SLOT-ACQUIRED ${label}\n`);
+      startTimer();
+    }
+    err += text;
     appendFileSync(join(evidence, `${label}.stderr`), chunk);
   });
-  const stop = () => {
-    child.kill("SIGTERM");
-  };
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
-  const timer = setTimeout(() => {
-    timedOut = true;
-    stop();
-  }, 600_000);
   try {
     const result = await new Promise<{
       exit: number | null;
@@ -99,6 +120,7 @@ async function execute(
       child.on("error", reject);
       child.on("close", (exit, signal) => done({ exit, signal }));
     });
+    if (throughSlot && timer === undefined) process.stderr.write(`SWIFT-SLOT-ACQUIRED ${label}\n`); // ended while waiting
     writeFileSync(join(evidence, `${label}.stdout`), out);
     writeFileSync(join(evidence, `${label}.stderr`), err);
     record(label, { command, args, cwd, ...result, timedOut });
@@ -106,7 +128,7 @@ async function execute(
     assert.equal(result.signal, null, "Interrupted proof");
     return { ...result, out, err };
   } finally {
-    clearTimeout(timer);
+    if (timer !== undefined) clearTimeout(timer);
     process.removeListener("SIGINT", stop);
     process.removeListener("SIGTERM", stop);
   }
