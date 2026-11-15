@@ -836,11 +836,14 @@ final class TodoModel {
         guard let next = latest.first else { return .nowhereToGo }
         let left = ProfileViewState(self)
         let carried = forcedLeaveToCarry(leaving: deleted)
+        // This close cannot ask: the Profile is gone. A draft it loses is named where the person
+        // lands (UI seat on b968f31a).
+        let lostDraft = hasUnsavedEditor ? editor?.base.title : nil
         editor = nil
         conflict = nil
         history = []
         activateProfile(next.id)
-        let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)."
+        let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)." + (lostDraft.map { " " + Self.lostDraftSentence($0) } ?? "")
         recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice, carrying: carried)
         publishNotice(notice, seconds: 6)
         return .switched
@@ -1188,6 +1191,9 @@ final class TodoModel {
                             searchError = nil
                             taskFilters = .init(); matchingTaskIDs = nil
                             requestedTaskFilters = .init()
+                            // This close cannot ask: the restore replaced the whole scope. A draft it loses
+                            // is named once the window shows the restored scope (UI seat on b968f31a).
+                            let lostDraft = hasUnsavedEditor ? editor?.base.title : nil
                             editor = nil; conflict = nil; history = []; series = nil
                             pendingNavigation = nil; recurrenceDraft = nil; writeIntent = nil
                             transferRequest = nil; transferResult = nil
@@ -1196,6 +1202,7 @@ final class TodoModel {
                             showingSeries = false; showingHistory = false; seriesLoading = false
                             editorError = nil; historyError = nil; snapshotRestore = nil; snapshotRestoreTarget = nil
                             refreshGeneration += 1; historyGeneration += 1; seriesGeneration += 1
+                            if let lostDraft { publishNotice(Self.lostDraftSentence(lostDraft, when: "the Snapshot was restored"), seconds: 6) }
                             let previousProfile = profile
                             try await discoverProfiles(afterRestore: true)
                             if let (leave, acted) = leaveBeforeReload, resolveForcedLeave(leave, acted: acted) {
@@ -1477,6 +1484,10 @@ final class TodoModel {
         let notice = Self.closedForSidebarNotice(title)
         publishNotice(notice, seconds: 6)
         announce(notice)
+    }
+    /// A draft a close that cannot ask has lost (UI seat on b968f31a).
+    static func lostDraftSentence(_ title: String, when: String? = nil) -> String {
+        "Unsaved changes to \u{201C}\(title)\u{201D} were lost" + (when.map { " when \($0)." } ?? ".")
     }
     static func closedForSidebarNotice(_ title: String) -> String { "Closed \u{201C}\(title)\u{201D} to make room for the sidebar." }
     /// Whether an action on `task` would close an editor with unsaved changes, so it asks first (Q13).
