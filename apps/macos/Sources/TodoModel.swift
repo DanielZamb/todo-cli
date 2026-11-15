@@ -338,7 +338,14 @@ final class TodoModel {
         case transition(TaskSnapshot, action: String)
     }
     enum EditorClose: Equatable { case person, sidebar }
-    var pendingNavigation: EditorNavigation? { didSet { notePresented(pendingNavigation != nil, oldValue != nil) } }
+    var pendingNavigation: EditorNavigation? { didSet {
+        notePresented(pendingNavigation != nil, oldValue != nil)
+        if pendingNavigation != nil { questionEpoch = discovery.credentialEpoch }
+    } }
+    /// The credential epoch the open draft question was asked under (MAC-C11-S1-12): an answer that
+    /// arrives under another credential does nothing.
+    @ObservationIgnored private var questionEpoch: Int?
+    private var answersUnderTheQuestionsCredential: Bool { questionEpoch.map { $0 == discovery.credentialEpoch } ?? true }
     enum NoticeKind: Hashable { case notice }
     /// The main window's quiet confirmation ("Task added", "Task deleted", a Profile switch after
     /// deletion) under the one message rule: each notice has a sequence, and its timer ends only
@@ -452,6 +459,15 @@ final class TodoModel {
             endMessage()
             // Import belongs to the credential that opened it, as the picker does (reset above).
             showingImport = false
+            // MAC-C11-S1-12 (the S1-24 class): nothing typed under one credential is saved under
+            // another, so the editor and its draft question end with the credential. A Session end
+            // names the lost draft (expireSession); a person's sign-out ends it as it always did.
+            editor = nil
+            conflict = nil
+            writeIntent = nil
+            recurrenceDraft = nil
+            series = nil
+            pendingNavigation = nil
         }
         credential = value
         busy = false
@@ -1489,7 +1505,7 @@ final class TodoModel {
     @discardableResult
     func discardAndNavigate(_ target: EditorNavigation) async -> Bool {
         notePersonActed() // answering the draft question (Q13)
-        guard !busy else { return false }
+        guard !busy, answersUnderTheQuestionsCredential else { return false }
         if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         if case .move = target, !canWrite { return false }
         if case .copy = target, !canWrite { return false }
@@ -1502,7 +1518,7 @@ final class TodoModel {
     @discardableResult
     func saveAndNavigate(_ target: EditorNavigation) async -> Bool {
         notePersonActed() // answering the draft question (Q13)
-        guard canWrite, conflict == nil, let draft = editor else { return false }
+        guard answersUnderTheQuestionsCredential, canWrite, conflict == nil, let draft = editor else { return false }
         if case .showDiscovery(let intent) = target, !canShowDiscovery(intent) { return false }
         pendingNavigation = nil
         let saved: TaskSnapshot
@@ -2282,6 +2298,9 @@ final class TodoModel {
     /// was cancelled meanwhile (a reply already on its way); retiring a credential changes the epoch.
     private func expireSession(credentialEpoch: Int) {
         guard isCurrentEpoch(credentialEpoch) else { return }
+        // This close cannot ask: the Session is gone, and the draft cannot be saved under another
+        // credential (MAC-C11-S1-12). It is named on the sign-in screen (UI seat on b968f31a).
+        let lostDraft = hasUnsavedEditor ? editor?.base.title : nil
         disconnect()
         try? vault.delete()
         signedIn = false
@@ -2293,7 +2312,7 @@ final class TodoModel {
         catalogStale = true
         searchError = nil
         searchPhase = .idle
-        publishMessage("Your Session ended. Sign in again.", kind: .sessionEnded)
+        publishMessage("Your Session ended. Sign in again." + (lostDraft.map { " Unsaved changes to \u{201C}\($0)\u{201D} were lost when the Session ended." } ?? ""), kind: .sessionEnded)
     }
 
     func checkServerContract() async throws -> Bool {
