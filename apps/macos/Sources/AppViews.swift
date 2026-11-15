@@ -392,13 +392,13 @@ struct TaskListView: View {
         }
         .sheet(item: $model.transferRequest) { request in TaskTransferPicker(model: model, request: request) }
         .alert(
-            DraftNavigationPrompt.title(hasConflict: model.conflict != nil),
+            DraftNavigationPrompt.title(model),
             isPresented: Binding(get: { model.pendingNavigation != nil && model.discovery.dialog == nil }, set: { if !$0 { model.dismissNavigationPrompt() } }),
             presenting: model.pendingNavigation
         ) { target in
             DraftNavigationActions(model: model, target: target)
-        } message: { _ in
-            DraftNavigationMessage(hasConflict: model.conflict != nil)
+        } message: { target in
+            DraftNavigationMessage(hasConflict: model.conflict != nil, target: target)
         }
         .onChange(of: model.editor?.id) { _, id in if let id { selection = id } }
         .onChange(of: model.profile) { _, _ in showingTaskFilters = false; selection = nil }
@@ -1510,22 +1510,38 @@ struct DraftNavigationActions: View {
 
 struct DraftNavigationMessage: View {
     let hasConflict: Bool
-    var body: some View {
-        Text(
-            hasConflict
-                ? "Resolve the Conflict in the inspector before saving. Discard changes to continue without them, or cancel to keep editing."
-                : "Save your changes, discard them, or cancel to keep editing this task.")
+    var target: TodoModel.EditorNavigation? = nil
+    var body: some View { Text(Self.text(hasConflict: hasConflict, target: target)) }
+    /// The room rule says why the Task would close (UI seat on b968f31a).
+    static func text(hasConflict: Bool, target: TodoModel.EditorNavigation?) -> String {
+        if hasConflict { return "Resolve the Conflict in the inspector before saving. Discard changes to continue without them, or cancel to keep editing." }
+        if case .close(.sidebar)? = target { return "It closes to make room for the sidebar. Save your changes, discard them, or cancel to keep editing this task." }
+        return "Save your changes, discard them, or cancel to keep editing this task."
     }
 }
 
 struct DraftNavigationPrompt: View {
-    static func title(hasConflict: Bool) -> String { hasConflict ? "Resolve the Conflict first" : "Save changes before continuing?" }
+    /// The question names the Task, and for a status change what waits on the answer (UI seat on
+    /// b968f31a). The name is the Task's saved title, the one the list shows.
+    static func title(hasConflict: Bool, target: TodoModel.EditorNavigation?, task: String?) -> String {
+        if hasConflict { return "Resolve the Conflict first" }
+        guard let task, !task.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "Save changes before continuing?" }
+        let name = "\u{201C}\(task)\u{201D}"
+        if case .transition(_, let action)? = target {
+            let doing = ["complete": "completing", "cancel": "cancelling", "reopen": "reopening"][action] ?? "changing"
+            return "Save changes to \(name) before \(doing) it?"
+        }
+        return "Save changes to \(name)?"
+    }
+    static func title(_ model: TodoModel) -> String {
+        title(hasConflict: model.conflict != nil, target: model.pendingNavigation, task: model.editor?.base.title)
+    }
     @Bindable var model: TodoModel
     let target: TodoModel.EditorNavigation
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(Self.title(hasConflict: model.conflict != nil)).font(.headline)
-            DraftNavigationMessage(hasConflict: model.conflict != nil).foregroundStyle(.secondary)
+            Text(Self.title(hasConflict: model.conflict != nil, target: target, task: model.editor?.base.title)).font(.headline)
+            DraftNavigationMessage(hasConflict: model.conflict != nil, target: target).foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 DraftNavigationActions(model: model, target: target, saveFirst: false)
