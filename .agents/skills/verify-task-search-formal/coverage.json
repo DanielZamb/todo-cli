@@ -634,6 +634,13 @@
         }
       ],
       "review": "Candidate 12's fix head (39421fbe the room rule, 337db345 Q13). AppViews.swift: the sidebar's state lives in @State as well as scene storage; the room rule adds the sidebar's share (now 456 pt) only while the sidebar item is collapsed; View > Hide/Show Sidebar goes through the split view controller; the inspector's closes call TodoModel.closeEditor, and the room rule asks the draft question before closing; the TaskListView sheet/alert bindings and DraftNavigationActions (target capture, explicit Cancel) are unchanged. TodoModel.swift: EditorNavigation gains close and transition; navigate is unchanged; saveAndNavigate, discardAndNavigate and cancelNavigation each mark the person acting first, saveAndNavigate passes the saved Version to a transition as it does for Move and Copy, and discardAndNavigate requires a write for a transition as for Move and Copy; applyNavigation's new cases clear the editor (close) or run the transition, and its showDiscovery case and every existing case are unchanged; dismissNavigationPrompt is unchanged. transition asks first for the open Task with unsaved changes, then runs performTransition, the previous body. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "c3e9282050758cb20aeae1c5788c0c8f6408b7b5",
+      "status": "candidate for the seats",
+      "changed": [],
+      "controls": "check.ts passes on the merged head without a hash change (under the reference profile).",
+      "review": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12): main's renewed Mac rows (TodoModel.swift, AppViews.swift, TaskSnapshot.swift) and this line's server rows each equal the merged product's bytes. The matcher, models and bounds are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
