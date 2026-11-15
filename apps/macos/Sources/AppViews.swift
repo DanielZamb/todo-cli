@@ -1516,6 +1516,7 @@ struct DraftNavigationMessage: View {
     static func text(hasConflict: Bool, target: TodoModel.EditorNavigation?) -> String {
         if hasConflict { return "Resolve the Conflict in the inspector before saving. Discard changes to continue without them, or cancel to keep editing." }
         if case .close(.sidebar)? = target { return "It closes to make room for the sidebar. Save your changes, discard them, or cancel to keep editing this task." }
+        if case .signOut? = target { return "Save your changes, discard them, or cancel to stay signed in." }
         return "Save your changes, discard them, or cancel to keep editing this task."
     }
 }
@@ -1527,6 +1528,7 @@ struct DraftNavigationPrompt: View {
         if hasConflict { return "Resolve the Conflict first" }
         guard let task, !task.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "Save changes before continuing?" }
         let name = "\u{201C}\(task)\u{201D}"
+        if case .signOut? = target { return "Save changes to \(name) before signing out?" }
         if case .transition(_, let action)? = target {
             let doing = ["complete": "completing", "cancel": "cancelling", "reopen": "reopening"][action] ?? "changing"
             return "Save changes to \(name) before \(doing) it?"

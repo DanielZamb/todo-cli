@@ -336,6 +336,9 @@ final class TodoModel {
         /// (Delete needs no question: its review is the question, and only a validated delete
         /// discards the draft.)
         case transition(TaskSnapshot, action: String)
+        /// The person's Sign Out with unsaved changes (candidate 13): Save signs out only after the
+        /// save succeeds, Discard signs out, Cancel stays signed in with the editor as it was.
+        case signOut
     }
     enum EditorClose: Equatable { case person, sidebar }
     var pendingNavigation: EditorNavigation? { didSet {
@@ -713,7 +716,19 @@ final class TodoModel {
         }
     }
 
+    /// The person's Sign Out. With unsaved changes it asks the draft question first (candidate 13);
+    /// a Session the server ends cannot ask (expireSession).
     func signOut() async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
+        guard !busy else { return }
+        if hasUnsavedEditor {
+            if pendingNavigation == nil { pendingNavigation = .signOut }
+            return
+        }
+        await performSignOut()
+    }
+
+    private func performSignOut() async {
         notePersonActed() // a write the person started (MAC-C1-S1-32)
         guard !busy else { return }
         // Sign-out keeps the credential epoch until the server has revoked the
@@ -842,6 +857,8 @@ final class TodoModel {
         editor = nil
         conflict = nil
         history = []
+        // The question ends with the editor it was about (MAC-C11-S1-14).
+        pendingNavigation = nil
         activateProfile(next.id)
         let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)." + (lostDraft.map { " " + Self.lostDraftSentence($0) } ?? "")
         recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice, carrying: carried)
@@ -1494,8 +1511,12 @@ final class TodoModel {
     private func asksBefore(_ task: TaskSnapshot, _ target: EditorNavigation) -> Bool {
         guard editor?.id == task.id, hasUnsavedEditor else { return false }
         if pendingNavigation == nil { pendingNavigation = target }
+        // A status change while another question is up does not replace it, and is not dropped
+        // without a word: the person answers the open question first (correctness seat's P3 note).
+        else { publishNotice(Self.answerTheOpenQuestionFirst, seconds: 6); announce(Self.answerTheOpenQuestionFirst) }
         return true
     }
+    static let answerTheOpenQuestionFirst = "Answer the open question about your unsaved changes first."
 
     @discardableResult
     func navigate(_ target: EditorNavigation) async -> Bool {
@@ -1522,7 +1543,9 @@ final class TodoModel {
         if case .copy = target, !canWrite { return false }
         if case .transition = target, !canWrite { return false }
         pendingNavigation = nil
-        if let base = editor?.base { beginEditing(base) }
+        // Sign-out needs no fresh editor: re-opening one would start its reads under the credential
+        // that is about to end (candidate 13).
+        if case .signOut = target {} else if let base = editor?.base { beginEditing(base) }
         return await applyNavigation(target)
     }
 
@@ -1575,8 +1598,14 @@ final class TodoModel {
             endEditing()
             if reason == .sidebar { sidebarRequest += 1 }
         case .transition(let task, let action):
-            await performTransition(task, action: action)
+            // The Version the model holds now, not the one from the click: the stream may have brought
+            // a newer one while the question was up (MAC-C11-S1-13). After Save, the saved Version.
+            let held = (tasks + (appliedSearchSnapshot?.rows ?? [])).filter { $0.id == task.id }.max { $0.row_version < $1.row_version }
+            await performTransition(held.map { $0.row_version > task.row_version ? $0 : task } ?? task, action: action)
             return editor?.id != task.id
+        case .signOut:
+            await performSignOut()
+            return !signedIn
         case .openTransfer(let result):
             editor = nil
             conflict = nil
