@@ -140,8 +140,11 @@ import Testing
         let reason = MergedFailureWording.reason(codes: [code, code], differing: "fallback")
         #expect(reason == expected, "\(code): \(reason)")
         // forbidden is a fact about the credential, not one Task's outcome (see above): since
-        // candidate 12 its single sentence uses the merged notice's verb (UI seat) and so equals it.
-        if code != "forbidden" {
+        // candidate 12 its single sentence uses the merged notice's verb (UI seat), so the two are
+        // pinned equal rather than skipped (correctness seat).
+        if code == "forbidden" {
+            #expect(reason == single, "forbidden: the merged reason is its single sentence")
+        } else {
             #expect(reason != single && !reason.contains(single), "\(code): the merged reason is not the single-Task sentence \(single)")
         }
     }
