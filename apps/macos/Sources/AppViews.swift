@@ -282,6 +282,16 @@ struct TaskListView: View {
     /// View ▸ Hide/Show Sidebar acts as the toolbar's button does, through the split view controller,
     /// which shows the sidebar in place. Changing the binding instead made AppKit grow the window by
     /// the sidebar's 228 pt on every show (900 to 1,128 pt), whether or not anything was cut.
+    /// After Save or Discard closed the inspector for the sidebar: shows it in place, as the toolbar's
+    /// button would, on the next turn of the main loop. Toggled inside this view update, SwiftUI undid
+    /// the expansion and redid it through the binding, which grew the window by 228 pt.
+    private func showSidebarAfterClose() {
+        DispatchQueue.main.async {
+            guard !sidebarShown else { return }
+            if let window = window.window, SidebarRoom.sidebarCollapsed(in: window), let controller = SidebarRoom.sidebarController(in: window) { controller.toggleSidebar(nil) }
+            else { setSidebar(true) }
+        }
+    }
     private func toggleSidebarFromMenu() {
         if let controller = window.window.flatMap(SidebarRoom.sidebarController) { controller.toggleSidebar(nil) } else { setSidebar(!sidebarShown) }
     }
@@ -406,9 +416,13 @@ struct TaskListView: View {
     }
     /// Shows or hides the sidebar. Showing it never does nothing: when the sidebar, the list's
     /// minimum and the inspector do not fit, the window grows if the screen has room, and otherwise
-    /// the inspector closes first (candidate 12).
+    /// the inspector closes first (candidate 12). Unsaved edits are never lost to that close: the draft
+    /// question comes first, and the sidebar waits for its answer (Q13).
     func setSidebar(_ shown: Bool) {
-        if shown && !sidebarShown { SidebarRoom.make(in: window.window, inspectorOpen: model.editor != nil && !model.busy) { closeInspector() } }
+        if shown && !sidebarShown {
+            let outcome = SidebarRoom.make(in: window.window, inspectorOpen: model.editor != nil && !model.busy) { closeInspectorForSidebar() }
+            if outcome == .askedFirst { return }
+        }
         sidebarState = shown
         storedSidebarShown = shown
     }
@@ -470,6 +484,8 @@ struct TaskListView: View {
         .background(WindowReader(reference: window))
         .focusedSceneValue(\.sidebarControl, sidebarControl)
         .onAppear { sidebarControlProbe?.control = sidebarControl }
+        // Save or Discard in the draft question closed the inspector for the sidebar: show it now (Q13).
+        .onChange(of: model.sidebarRequest) { _, _ in showSidebarAfterClose() }
     }
 
     var compactContent: some View {
@@ -821,11 +837,19 @@ struct TaskListView: View {
             Button(action, action: perform).buttonStyle(.borderedProminent).controlSize(.large).frame(minHeight: 28).compactBounds("state-action")
         }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity).compactBounds("state")
     }
+    /// Every close a person causes: Escape, the inspector button, the system dismissing the inspector,
+    /// Compact's back button. With unsaved changes it asks the draft question first (Q13).
     private func closeInspector() {
-        model.clientDiagnosticsUI.performSync(.closeInspector) {
-            model.editor = nil
-            model.conflict = nil
-        }
+        model.clientDiagnosticsUI.performSync(.closeInspector) { _ = model.closeEditor() }
+    }
+    /// The room rule's close: asks first when the editor has unsaved changes (and returns false);
+    /// otherwise closes the inspector and says so (Q13).
+    private func closeInspectorForSidebar() -> Bool {
+        guard let draft = model.editor else { return true }
+        var closed = false
+        model.clientDiagnosticsUI.performSync(.closeInspector) { closed = model.closeEditor(.sidebar) }
+        if closed { model.noteClosedForSidebar(draft.base.title) }
+        return closed
     }
     private func openSelection() -> KeyPress.Result {
         guard !model.busy, let task = selectedTask else { return .ignored }
@@ -1516,7 +1540,7 @@ struct OutdatedServerView: View {
     /// Candidate 12 added 228 pt, so it would have let the columns overflow by 228 pt when the content
     /// is wider than the window's 900 pt minimum allows.
     static let sidebarShare: CGFloat = 456
-    enum Outcome: Equatable { case fits, grew(to: CGFloat), closedInspector, noRoom }
+    enum Outcome: Equatable { case fits, grew(to: CGFloat), closedInspector, askedFirst, noRoom }
     /// What AppKit enforces now: the widest fitting width among the split view's columns (each
     /// column's hosting view carries a minimum-width constraint SwiftUI derives from its content).
     static func enforcedMinimum(in window: NSWindow) -> CGFloat {
@@ -1538,9 +1562,9 @@ struct OutdatedServerView: View {
     }
     /// Makes room for the sidebar before it is shown: when the columns would need more than the
     /// window has, grows the window by what is missing if the screen has room, and otherwise closes
-    /// the inspector (`closeInspector`).
+    /// the inspector (`closeInspector`, which returns false when it asked the draft question first).
     @discardableResult
-    static func make(in window: NSWindow?, inspectorOpen: Bool, closeInspector: () -> Void) -> Outcome {
+    static func make(in window: NSWindow?, inspectorOpen: Bool, closeInspector: () -> Bool) -> Outcome {
         guard let window else { return .fits }
         // The toolbar's button and the menu command go through AppKit, which may already have
         // expanded the sidebar when this measures (it did from the toolbar in the owner's scenario):
@@ -1556,8 +1580,7 @@ struct OutdatedServerView: View {
             return .grew(to: need)
         }
         guard inspectorOpen else { return .noRoom }
-        closeInspector()
-        return .closedInspector
+        return closeInspector() ? .closedInspector : .askedFirst
     }
 }
 

@@ -99,7 +99,7 @@ struct EditorView: View {
                     }
                     Spacer()
                     Button("Close") {
-                        model.clientDiagnosticsUI.performSync(.closeInspector) { model.editor = nil; model.conflict = nil }
+                        model.clientDiagnosticsUI.performSync(.closeInspector) { _ = model.closeEditor() }
                     }.buttonStyle(.bordered).tint(nil as Color?).keyboardShortcut(.cancelAction).disabled(model.busy)
                     if let conflict = model.conflict {
                         Button(model.writeIntent == nil ? "Save resolution" : "Retry action") { Task { await model.resolveConflict() } }
