@@ -254,7 +254,8 @@ keeps its code-unit order (its ADR and mapping): a follow-up.
 
 **The term.** CONTEXT.md had none for "the views and their counts". I proposed
 **Catalog** (the word the code and architecture.md already used) in its own
-commit, 8c79738c; the route, type and command follow it.
+commit, 8c79738c; the route, type and command follow it. The owner accepted
+the word as `CONTEXT.md` defines it on 2026-11-14 (decision Q11).
 
 ## Seat findings at 9634a6e0 (CATALOG-S1), fixed on top
 
