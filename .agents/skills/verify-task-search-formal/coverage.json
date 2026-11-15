@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "0507aa473d5f57d10863cf274d8c8a4b64895c2e4ee2d61c0cb1780d86943316"
+      "sha256": "5512dae1dd7003bf7ee3c22d4a25c3c1f83c28d99e0b3a7df9f74744b98d53a2"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -99,7 +99,7 @@
         "taskContent",
         "searchField"
       ],
-      "sha256": "92b1dc954e6c817edc66cfdef29f98fdf305b9b4e4b855051685f8e33be1d75a"
+      "sha256": "ccbf2ac0b72fed520a79c69f7052240b9c784eace5b4b4349b56250c62a3d1cb"
     },
     {
       "path": "apps/macos/Sources/TaskSnapshot.swift",
@@ -521,6 +521,23 @@
         }
       ],
       "review": "Candidate 12's head after HOLD's person-input finding. Of the mapped files only AppViews.swift changed since fd26808a: SidebarControl carries the model's notePersonActed, and View > Hide/Show Sidebar calls it before toggling (MAC-C1-S1-32). The sidebar state, the room rule, the inspector inside detail: and FlowLayout are as recorded for fd26808a. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "16228a45d70ee2cc3dcde3406cec27169915a8ea",
+      "controls": "check-swift passed on 16228a45: docs/evidence/discovery-formal/swift-XfHRCm",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "0507aa473d5f57d10863cf274d8c8a4b64895c2e4ee2d61c0cb1780d86943316",
+          "to": "5512dae1dd7003bf7ee3c22d4a25c3c1f83c28d99e0b3a7df9f74744b98d53a2"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "92b1dc954e6c817edc66cfdef29f98fdf305b9b4e4b855051685f8e33be1d75a",
+          "to": "ccbf2ac0b72fed520a79c69f7052240b9c784eace5b4b4349b56250c62a3d1cb"
+        }
+      ],
+      "review": "Candidate 12's fix head (39421fbe the room rule, 337db345 Q13). AppViews.swift: the sidebar's state lives in @State as well as scene storage; the room rule adds the sidebar's share (now 456 pt) only while the sidebar item is collapsed; View > Hide/Show Sidebar goes through the split view controller; the inspector's closes call TodoModel.closeEditor, and the room rule asks the draft question before closing; the TaskListView sheet/alert bindings and DraftNavigationActions (target capture, explicit Cancel) are unchanged. TodoModel.swift: EditorNavigation gains close and transition; navigate is unchanged; saveAndNavigate, discardAndNavigate and cancelNavigation each mark the person acting first, saveAndNavigate passes the saved Version to a transition as it does for Move and Copy, and discardAndNavigate requires a write for a transition as for Move and Copy; applyNavigation's new cases clear the editor (close) or run the transition, and its showDiscovery case and every existing case are unchanged; dismissNavigationPrompt is unchanged. transition asks first for the open Task with unsaved changes, then runs performTransition, the previous body. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
