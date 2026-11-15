@@ -220,6 +220,147 @@ date. My first expected Mac group string omitted the empty "Scheduled today"
 group; the model keeps it as Electron does. The counts matched in that run
 too; I corrected the expectation, not the product.
 
+## The merge of main at candidate 12 (2026-11-15)
+
+The coordinator's ruling of 2026-11-14 13:20: merge origin/main once, after
+candidate 12 is on main, and run the Mac gate cycle once on that head. The
+server seat passed the server side at ba633f60 (STEP2-S1: PASS, INSTALL
+server side SAFE, every renewal accepted).
+
+| Commit | What |
+| --- | --- |
+| 8d901d96 | Merge of origin/main e6a7b702 (pull request #17; its tree is Mac candidate 12, b968f31a, the installed build). It carries candidates 11 and 12. |
+| 511c212a | Server seat N3: the guard's `-journal` named among the files beside the database (documents only). |
+| c3e92820 | Server seat N6 (follow-up 67): the generated Swift client is checked against what `generate-api.sh` made. **The product.** |
+| c65e8cad | Records for Discovery and Task search. **The Dependency pin.** |
+| 87c7cd61 | The Dependency mapping renewed at c65e8cad (verification only). **The gated head.** |
+
+**The merge.** Four mapping files conflicted (`verify-dag-formal`
+`public-coverage.json` and `public-pin.json`, `verify-discovery-formal` and
+`verify-task-search-formal` `coverage.json`). The same three-way JSON merge
+keeps every record of both sides: no file row was renewed on both sides, the
+appended renewal records add up (3 at the base, 1 of ours, 5 of main's: 9),
+and the two pin commits kept this line's value until 87c7cd61. Per-file
+comparison of all 1,580 paths against both parents: 1,243 equal in both, 300
+the first parent's, 34 the second's, **3 neither**, all three the resolved
+mapping files; no product file. The generated Swift client is this line's
+(byte-identical to the first parent); the Mac app's sources are main's:
+against e6a7b702, `apps/macos` differs only in the regenerated client, the
+identity, the pending file, `README.md` and `generate-api.sh` (this line's).
+
+**The server side did not move.** `git diff --quiet ba633f60 <head>` exits 0
+for `packages`, `apps/server`, `apps/cli`, `apps/electron` and `scripts`, at
+8d901d96 and at 87c7cd61. The server, CLI and contract gates above stay valid
+and were not rerun; the root check runs again inside the gate cycle because
+N6 changed `package.json`'s check.
+
+**The contract did not change.** `openapi.ts --check` exits 0; the Swift
+identity check prints "regenerated for contract 4c932cfc…"; the strict diff
+reports nothing (51 operations). Nothing was regenerated for the merge.
+
+**Candidate 12 compiles against the regenerated client unchanged:** the Mac
+package with its tests, 0 errors (load 5 → 8), and the unsigned app, BUILD
+SUCCEEDED (load 8 → 7). No generated type forced a change in what the app
+does.
+
+**N6.** `apps/macos/scripts/generated-sources.py --write`, called at the end of
+`generate-api.sh` after `preserve-null.py`, records the SHA-256 of the Mac
+`openapi.json` and of every file in `GeneratedSources` in
+`apps/macos/API/generated-sources.json`. The check (in the root check after
+`swift-contract.ts`, and in `make sign-desktop`) refuses a different
+document, a changed generated file, an added one or a missing one. The record
+was written by a real `generate-api.sh` run on this head (load 4 → 2), which
+left every generated file, the identity and the server document
+byte-identical. Red on a scratch copy: a hand edit of `Types.swift`, a
+changed document, an added `Extra.swift` and a missing `Client.swift` each
+exit 1 with their own message; restored, exit 0. It lives in
+`apps/macos/scripts`, so the server side's unchanged-files proof still holds.
+
+**Renewals at the merged product** (candidates until a seat accepts them):
+
+| Mapping | Result | Evidence |
+| --- | --- | --- |
+| Discovery | passes, no hash change (main renewed the Swift rows, this line `task-client.ts`) | check-m8EiN5; Swift step swift-kuEIA4 standalone (keychainLinked false), reused in swift-JGlGIA |
+| Task search formal | passes, no hash change | under the profile, load 3 → 5 |
+| Atomic commit | passes, no covered file changed; no record needed | fv01-check-SHA8PJ |
+| Dependency | no row hash moves; both pins to c65e8cad; full default CONFORMANCE CHECKPOINT PASS (load 6 → 3) | check-Ha7IK8; 36 production controls broken 1, restored 0, byte-identical (conformance-TZV8dz); 53 public mutants exit 1, restore 0 (public-q5ujHB); clean recheck 19,784 states |
+
+Premise gate at 87c7cd61: both pins differ in nothing from c65e8cad; the
+public check exits 0 (public-xMpzEW). Pin audit at 87c7cd61: **filesScanned
+535, occurrences 879, match 138, drift 0, unknown 0**, problems none;
+selftest 0. The Task search cache mapping has no file in this change and was
+not rerun.
+
+**The Mac gate cycle at 87c7cd61** (`docs/evidence/mac-perf/c4/controls-final-87c7cd61`),
+exit and 1-minute load at start and end, stopped by the pause during design:
+
+| Gate | Exit | Load |
+| --- | --- | --- |
+| hold | 0 | 2.9 → 2.1 |
+| sign-out-stream | 0 | 2.1 → 3.1 |
+| stress | 0 | 1.7 → 2.9 |
+| race | 0 | 1.9 → 2.2 |
+| connections | 0 | 2.5 → 3.4 |
+| sockets | 0 | 3.5 → 3.6 |
+| restart | 0 | 3.7 → 3.8 |
+| design | stopped (the pause), no result | — |
+
+Not run: design (to completion), state, diagnostics, unsigned, idle,
+subscribers, discovery-prepare, discovery-formal, task-search-formal,
+dag-public, root, doc-links. In the sign-out-stream gate on the merged server
+with candidate 12: the delete-then-restore schedule left **0 of 80** clients
+not following; 200 plain deletions, 200 left, 0 stuck, 0 untold. The stuck
+deletion signature (S1-39) did not appear.
+
+**Steps 7 and 8 at the merged head: not run** (the pause came first). The
+refresh pair against candidate 12 and the Bogota drive through the Mac model
+are owed; the drivers are described in the sections above.
+
+## State at the pause, 2026-11-15
+
+The owner paused the orchestration on 2026-11-15 ("this prototype is
+usable"). This is where `integ/step2` stands.
+
+- **Head:** the commit that adds this subsection, on top of 87c7cd61. Nothing
+  is uncommitted and nothing is pushed.
+- **The merge of main at candidate 12 (8d901d96):** 1,580 paths; 3 are
+  neither parent's, all mapping files resolved by keeping every record of
+  both sides; no product file. The generated Swift client is this line's; the
+  Mac app's sources are candidate 12's.
+- **The server paths did not move since ba633f60:** `git diff --quiet` exits
+  0 for `packages`, `apps/server`, `apps/cli`, `apps/electron` and `scripts`
+  at 87c7cd61. The server seat's PASS for ba633f60 carries.
+- **Renewals done** (candidates): Discovery and Task search, records only
+  (both pass without a hash change); the Dependency pins at c65e8cad with a
+  full default pass; premise gate and pin audit clean at 87c7cd61. **Owed:**
+  none of the mappings is mid-renewal. Any change to the head before the gate
+  cycle completes needs the pins checked again.
+- **Gate cycle at 87c7cd61:** seven of twenty gates passed (hold through
+  restart); design was stopped by the pause; the other twelve did not run.
+- **Steps 7 and 8 at the merged head:** not run.
+- **N3:** done (511c212a). **N6:** done (c3e92820), with red controls.
+- **The Catalog "accepted" docs commit (Q11):** not done. It was held until
+  after the gates; the one place to change is "The term." in
+  `docs/decisions/ui-speed/catalog-contract-report.md` ("I proposed
+  **Catalog**…"): add that the owner accepted it on 2026-11-14 (Q11).
+
+**What remains before an install:** the rest of the gate cycle (the whole
+cycle, once, on the head); steps 7 and 8 against candidate 12; the server
+seat's short delta for the merge and N6; the Mac-side review; the Catalog
+docs commit; the owner's notice of what the install changes (the list in
+"What the installed build does differently", now with the guard's
+`-journal`).
+
+**What the next person must do first:** check that main has not moved past
+e6a7b702 (if it has, merge it first, as before, and renew the mappings it
+touches), then run `python3 .agents/skills/verify-macos/scripts/gates.py`
+whole on the head under the load rule (1-minute load under 30 for two
+minutes), after `bun .agents/skills/verify-cli/scripts/cache-binaries.ts` has
+built the head's server, CLI and seed into `.scratch/bin` (this worktree's
+build products are deleted at the pause), and with the preserved Dependency
+inputs copied from `.storage-preserved/2026-11-13/dag-formal-inputs/` of the
+canonical checkout to the places its README names.
+
 ## What the installed build does differently on the owner's machine
 
 Nothing is migrated in the Task database: no schema change since candidate 10.
