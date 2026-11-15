@@ -944,24 +944,8 @@ struct TaskRow: View {
                     HStack(spacing: 6) { dependencyState; CompactRowMetadata(items: compactMetadata) }.compactBounds("metadata-\(task.id)")
                 } else { HStack(spacing: 4) {
                     dependencyState
-                    if let projectName { Label(projectName, systemImage: "folder").help(projectName) }
-                    if projectName != nil && !tagNames.isEmpty { Text("·") }
-                    ForEach(compact ? Array(presentation.tags.prefix(1)) : presentation.tags, id: \.self) { name in
-                        Text("#\(name)").padding(.horizontal, 4).padding(.vertical, 1).background(.quaternary.opacity(0.5), in: Capsule()).help(name)
-                    }
-                    if compact && presentation.tags.count > 1 {
-                        Text("+\(presentation.tags.count - 1)").help(presentation.tags.joined(separator: ", "))
-                    }
-                    if let due = presentation.due {
-                        if projectName != nil || !tagNames.isEmpty { Text("·") }
-                        Label(due, systemImage: "calendar").foregroundStyle(overdue ? TodoColors.color("destructive") : .secondary).help(
-                            "Due \(due)")
-                    }
-                    if let externalID = task.external_id { Text(externalID).font(.caption2).foregroundStyle(.tertiary).lineLimit(1).frame(maxWidth: compact ? 100 : 180, alignment: .leading).help(externalID) }
-                    if let scheduled = presentation.scheduled {
-                        if projectName != nil || !tagNames.isEmpty || presentation.due != nil { Text("·") }
-                        Label(scheduled, systemImage: "calendar").help("Scheduled \(scheduled)")
-                    }
+                    FullRowMetadata(items: FullRowMetadata.items(project: projectName, tags: presentation.tags, due: presentation.due, overdue: overdue,
+                                                                 external: task.external_id, scheduled: presentation.scheduled))
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 }.compactBounds("metadata-\(task.id)")
                     .compactBounds("metadata-text-\(task.id)", when: hasMetadataText && metadataOverride == nil)
@@ -1026,6 +1010,69 @@ struct CompactRowMetadata: View {
         }.font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
             .help(items.map(\.text).joined(separator: " · "))
             .accessibilityLabel(items.map(\.text).joined(separator: " · "))
+    }
+}
+
+/// The full row's metadata line (UI seat on candidate 12). When it does not fit, whole items are
+/// left out from the end and counted as "+N", as Compact's `CompactRowMetadata` does: each item keeps
+/// its whole text or is left out. The "+N" names what it stands for on hover, and VoiceOver reads every
+/// item. Before, the line was clipped mid-item.
+struct FullRowMetadata: View {
+    enum Item: Hashable {
+        case project(String), tag(String), due(String, overdue: Bool), external(String), scheduled(String)
+        var text: String {
+            switch self {
+            case .project(let name): name
+            case .tag(let name): "#" + name
+            case .due(let date, _): "Due " + date
+            case .external(let id): id
+            case .scheduled(let date): "Scheduled " + date
+            }
+        }
+    }
+    let items: [Item]
+    /// In the row's order: the Project, the Tags, the due date, the external id, the scheduled date.
+    static func items(project: String?, tags: [String], due: String?, overdue: Bool, external: String?, scheduled: String?) -> [Item] {
+        (project.map { [Item.project($0)] } ?? []) + tags.map(Item.tag) + (due.map { [Item.due($0, overdue: overdue)] } ?? [])
+            + (external.map { [Item.external($0)] } ?? []) + (scheduled.map { [Item.scheduled($0)] } ?? [])
+    }
+    /// Whether a "·" comes before item `index`, as the row drew them before: between the Project and
+    /// the first Tag, before the due date, and before the scheduled date when a Project, a Tag or a due
+    /// date comes before it. Never before the external id or between Tags.
+    static func separated(_ items: [Item], before index: Int) -> Bool {
+        guard index > 0 else { return false }
+        switch items[index] {
+        case .tag: if case .project = items[index - 1] { return true } else { return false }
+        case .due: return true
+        case .scheduled: return items[..<index].contains { if case .external = $0 { false } else { true } }
+        case .project, .external: return false
+        }
+    }
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            ForEach((0...items.count).reversed(), id: \.self) { count in
+                HStack(spacing: 4) {
+                    ForEach(0..<count, id: \.self) { index in
+                        if Self.separated(items, before: index) { Text("·") }
+                        view(items[index]).fixedSize()
+                    }
+                    if count < items.count {
+                        Text("+\(items.count - count)").fixedSize().help(items[count...].map(\.text).joined(separator: " · "))
+                    }
+                }.fixedSize()
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(items.map(\.text).joined(separator: " · "))
+    }
+    @ViewBuilder private func view(_ item: Item) -> some View {
+        switch item {
+        case .project(let name): Label(name, systemImage: "folder").help(name)
+        case .tag(let name): Text("#\(name)").padding(.horizontal, 4).padding(.vertical, 1).background(.quaternary.opacity(0.5), in: Capsule()).help(name)
+        case .due(let date, let overdue): Label(date, systemImage: "calendar").foregroundStyle(overdue ? TodoColors.color("destructive") : .secondary).help("Due \(date)")
+        case .external(let id): Text(id).font(.caption2).foregroundStyle(.tertiary).help(id)
+        case .scheduled(let date): Label(date, systemImage: "calendar").help("Scheduled \(date)")
+        }
     }
 }
 
@@ -1573,7 +1620,11 @@ struct OutdatedServerView: View {
         let width = window.frame.width
         guard need > width + 0.5 else { return .fits }
         if let screen = window.screen?.visibleFrame, screen.width >= need {
+            // Grows to the left, keeping the right edge where it was, so the list moves as little as it
+            // can under the pointer; to the right only by what the screen's left edge leaves out (UI
+            // seat on candidate 12).
             var frame = window.frame
+            frame.origin.x = max(screen.minX, frame.maxX - need)
             frame.size.width = need
             if frame.maxX > screen.maxX { frame.origin.x = max(screen.minX, screen.maxX - frame.width) }
             window.setFrame(frame, display: true)
