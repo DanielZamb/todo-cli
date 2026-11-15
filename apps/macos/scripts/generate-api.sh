@@ -13,3 +13,5 @@ swift build --package-path "$api" --disable-automatic-resolution -c release --pr
 python3 "$root/apps/macos/scripts/preserve-null.py" "$api/Sources/TodoAPI/GeneratedSources" "$api/Sources/TodoAPI/openapi.json"
 # The Swift identity names the contract these sources implement, written only here.
 (cd "$root" && bun packages/api/scripts/swift-contract.ts --write)
+# The generated files and the document they came from, recorded for the root check (N6).
+python3 "$root/apps/macos/scripts/generated-sources.py" --write

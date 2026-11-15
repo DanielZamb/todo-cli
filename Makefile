@@ -43,6 +43,7 @@ check-signing-config:
 sign-desktop: check-signing-config
 	bun scripts/check-package-age.ts 7
 	bun packages/api/scripts/swift-contract.ts
+	python3 apps/macos/scripts/generated-sources.py
 	"$(CURDIR)/scripts/disk-guard.sh"
 	rm -f dist/signed.noindex/signing-receipt.json
 	mkdir -p dist/signed.noindex/macos dist/signed.noindex/electron
