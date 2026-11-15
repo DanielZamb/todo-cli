@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "5bb51604db586c775df095509a4cf764bfd82250",
+  "confirmedCommit": "c65e8cad58849d60656cba9aface695224114575",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -1251,5 +1251,18 @@
         "after": "ec5c6c868920e78cda3811ecef038222254c3b223f9f701dfcd3ebdb986a4538"
       }
     ]
+  },
+  "step2MainC12": {
+    "product": "c3e9282050758cb20aeae1c5788c0c8f6408b7b5",
+    "pinCommit": "c65e8cad58849d60656cba9aface695224114575",
+    "previous": [
+      "5bb51604db586c775df095509a4cf764bfd82250",
+      "0f643c52af563a6e4100dcb8836944e1e938f790"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/step2-one-installable-line.md",
+    "scope": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12, tree of b968f31a) into integ/step2 (8d901d96), then server seat N3 (docs) and N6 (apps/macos/scripts/generated-sources.py, its record, package.json's check and the Makefile). Every production row and every TypeScript public row equals ba633f60's accepted bytes (no file under packages, apps/server, apps/cli, apps/electron or scripts changed). The Dependency client Swift rows are main's candidate 12 renewal (0f643c52), kept by the merge; the generated Swift rows are this line's regeneration, unchanged. No row hash moves; both pins move together to the pin commit, which carries the product plus the Discovery and Task search records. No model, invariant or bound change.",
+    "changes": []
   }
 }
