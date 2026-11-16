@@ -77,7 +77,7 @@
         "catalogSignalRevision and full-read debt",
         "lastCatalogReadAt and activation age"
       ],
-      "sha256": "6f4f6be6142c8152268505c26577e7437e7a011c0d4d1342d78f905fae7f43ec"
+      "sha256": "4db81322340825446c138d03f544e8a0151f939fd7a18c9b850f5201e17fb0a4"
     },
     {
       "path": "apps/macos/Sources/TaskSearch.swift",
@@ -694,6 +694,18 @@
         }
       ],
       "review": "Candidate 14 merge head (9ea0c66a: origin/main a6cdd0f3 merged into mac-c13), with the DAG renewal after it. Since the last renewal (370f6485) the mapped Swift files TodoModel.swift and AppViews.swift changed on the Mac line only; the merge changes none of them. TodoModel.swift: openForEditingNow is new (follow-up 80, change 1): a clean selection opens the Task through beginEditing in the selection's turn, and it refuses (returns false) while busy, with a question up or with unsaved changes, which still go through navigate unchanged. followChanges' reload branch keeps its lost-draft sentence in reloadLostDraft while the reload is handled, so publishNotice appends it to a notice the same reload publishes, and announces it; the deletionNotice setter keeps a restored Profile's offer while the notice starts with the offer's text; the status-change notice under an open question names the Task; announce keeps its last 16 texts for tests. AppViews.swift: the list's onChange(of: selection) calls openForEditingNow before the navigate path and hands Diagnostics the selected Task as counts; the restored-Profile offer button compares by prefix; FullRowMetadata orders dates first. navigate, applyNavigation, discardAndNavigate, signOut, visibleTasks, taskGroups, row and searchField are unchanged. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "683204f94cab7b7f7bb9eabccca666766d7fe930",
+      "controls": "check-swift passed on 683204f9: docs/evidence/discovery-formal/swift-JdIjce",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "6f4f6be6142c8152268505c26577e7437e7a011c0d4d1342d78f905fae7f43ec",
+          "to": "4db81322340825446c138d03f544e8a0151f939fd7a18c9b850f5201e17fb0a4"
+        }
+      ],
+      "review": "Follow-ups 94 and 95 on candidate 14 (f8cad9ef): 9ee1be66 (MAC-C11-S1-19) and 5559e6ac (MAC-C11-S1-18). Of the mapped files only TodoModel.swift changed, in the mapped signOut: with unsaved changes and another draft question already up, Sign Out now publishes and announces \"Answer the question about \u201cX\u201d first.\" (as a status change does in that state) and still keeps the open question and sends nothing; with no question up it asks as before, and with its own question up it adds nothing. 9ee1be66 changes only TodoAPI's transport (ScopedTransport invalidates a retired session only when no admitted inner send can still create a task in it, with a bounded grace for a send that never ends; the Diagnostics recorder records a request only in the scope it was admitted in), which no mapping covers; replaceCredential, the credential epoch, isCurrentCredential and every publication guard are unchanged. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
