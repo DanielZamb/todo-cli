@@ -361,6 +361,67 @@ build products are deleted at the pause), and with the preserved Dependency
 inputs copied from `.storage-preserved/2026-11-13/dag-formal-inputs/` of the
 canonical checkout to the places its README names.
 
+## Resumed: the merge of Mac candidate 13 (2026-11-15, evening)
+
+The owner resumed the orchestration at 18:27. The coordinator's order:
+merge candidate 13 (the commit cfe01e85, not the head of `mac-c13`), so that
+the gate cycle and steps 7 and 8 run once on a head that carries the stuck
+deletion fix (S1-39) and the draft fix (S1-12).
+
+| Commit | What |
+| --- | --- |
+| 412ff4b3 | The Catalog docs commit: the owner accepted the word on 2026-11-14 (Q11), stated in `catalog-contract-report.md`'s "The term." Documents only. |
+| 7b85a5d0 | Merge of cfe01e85 (Mac candidate 13). |
+| c101ac0b | Records for Discovery and Task search at the merge (verification only). **The head.** |
+
+Before the merge, the head's server, CLI and seed were rebuilt with
+`cache-binaries.ts` (source hash 43fed142…, the same as before the pause) and
+the preserved Dependency inputs were copied from the canonical checkout's
+`.storage-preserved/2026-11-13/dag-formal-inputs/` (digests dd1918fc… and
+936a2620…, as its README names). The same jar was copied, digest checked,
+into the atomic-commit, Task search and Discovery tool caches, whose
+downloads the profile blocks.
+
+**The merge.** Two mapping files conflicted (the Discovery and Task search
+coverage); the three-way JSON merge kept every record of both sides (8 at
+the base, 2 of ours, 1 of candidate 13's: 11 each). Per-file comparison of
+all 1,585 paths: 1,263 equal in both, 303 the first parent's, 17 the
+second's, **2 neither**, both those coverage files; no product file.
+
+**The server side.** `git diff --quiet ba633f60 <head>` exits 0 for
+`packages`, `apps/server`, `apps/cli` and `apps/electron`. Under `scripts`,
+candidate 13 changes `swift-slot.sh` only: two default-off variables
+(`SWIFT_SLOT_LOCK`, a private lock for a proof; `SWIFT_SLOT_ANNOUNCE`, a line
+on stderr when the slot is held, follow-up 68). The default command is the
+same `lockf` on the same lock, and no server or CLI code runs it.
+
+**The contract.** Unchanged (4c932cfc): the identity check, the
+generated-sources record (N6) and `openapi.ts --check` pass. Candidate 13
+touches no generated file.
+
+**Candidate 13 compiles against the regenerated client unchanged:** the Mac
+package with its tests, 0 errors (load 2.5 → 5.5), and the unsigned app,
+BUILD SUCCEEDED (load 5.5 → 4.5).
+
+**Renewals at the merged head** (candidates):
+- Discovery: passes without a hash change (check-dE4B60; Swift step
+  swift-1OEM56, keychain false, live source unchanged). A first run stopped
+  before its Swift build because the pause cleanup had deleted the Swift
+  seed `apps/macos/API/.build`; `scripts/swift-slot.sh make generate-api`
+  restored it, and its regeneration was byte-identical.
+- Task search formal: passes without a hash change.
+- Atomic commit: passes, no covered file changed (fv01-check-t9w1gv).
+- Dependency: no file in either pin's scopes changed since c65e8cad, so the
+  pins stay; the premise gate and the public check (with candidate 13's
+  `public-check.mjs`) pass at the merge (public-0JK3rt), and the scopes are
+  unchanged at the head.
+- Pin audit at c101ac0b: **filesScanned 535, occurrences 883, match 138,
+  drift 0, unknown 0**.
+
+**Next, on the coordinator's word that MAC-PERF's cycle on cfe01e85 has
+ended:** the whole Mac gate cycle once on the head, then steps 7 and 8. With
+the fix merged, a stuck deletion is a finding, not a rerun.
+
 ## What the installed build does differently on the owner's machine
 
 Nothing is migrated in the Task database: no schema change since candidate 10.
