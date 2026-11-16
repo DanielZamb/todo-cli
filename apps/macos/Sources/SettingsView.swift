@@ -2,6 +2,17 @@ import AppKit
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(\.openWindow) private var openWindow
+    /// The main window ("tasks") in front: SwiftUI reopens it if it was closed; AppKit restores it
+    /// from the Dock if it was minimised and makes it key.
+    private func showMainWindow() {
+        openWindow(id: "tasks")
+        for window in NSApp.windows where window.identifier?.rawValue.hasPrefix("tasks") == true {
+            if window.isMiniaturized { window.deminiaturize(nil) }
+            window.makeKeyAndOrderFront(nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+    }
     enum Tab: String, CaseIterable {
         case general = "General"
         case server = "Server"
@@ -79,7 +90,13 @@ struct SettingsView: View {
                 }
                 Section {
                     LabeledContent("Session", value: model.signedIn ? "Signed in" : "Signed out")
-                    Button("Sign out") { Task { await model.signOut() } }.disabled(!model.signedIn || model.busy)
+                    Button("Sign out") {
+                        // With unsaved changes Sign Out asks the draft question, which is the main
+                        // window's: bring that window forward first (reopened if closed, restored if
+                        // minimised), so the question is where the person is looking (UI seat on 370f6485).
+                        if model.hasUnsavedEditor { showMainWindow() }
+                        Task { await model.signOut() }
+                    }.disabled(!model.signedIn || model.busy)
                     // A failed sign-out is reported where it was asked for, as well as in the main window.
                     if model.messageKind == .signOut, let failure = model.message {
                         Text(failure).font(.caption).foregroundStyle(TodoColors.color("destructive"))

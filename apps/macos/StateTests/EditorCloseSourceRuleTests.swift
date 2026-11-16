@@ -87,4 +87,20 @@ import Testing
         // The editor's Close button (Escape's cancel shortcut).
         #expect(editor.contains("model.clientDiagnosticsUI.performSync(.closeInspector) { _ = model.closeEditor() }"))
     }
+
+    /// Sign Out lives in Settings, its question in the main window: with unsaved changes the button
+    /// brings the main window forward (reopened if closed, restored if minimised) before it asks
+    /// (UI seat on 370f6485). A hosted test has no SwiftUI scenes to open, so this is checked in source.
+    @Test func signOutBringsTheMainWindowForwardBeforeItAsks() throws {
+        let settings = try code("SettingsView.swift")
+        let button = try #require(settings.range(of: #"Button\("Sign out"\) \{[^}]*\}[^}]*\}"#, options: .regularExpression))
+        let action = String(settings[button])
+        let show = try #require(action.range(of: "if model.hasUnsavedEditor { showMainWindow() }"))
+        let signOut = try #require(action.range(of: "await model.signOut()"))
+        #expect(show.lowerBound < signOut.lowerBound)
+        let helper = try #require(settings.range(of: #"private func showMainWindow\(\) \{[\s\S]*?\n    \}"#, options: .regularExpression))
+        #expect(settings[helper].contains(#"openWindow(id: "tasks")"#))
+        #expect(settings[helper].contains("deminiaturize"))
+        #expect(settings[helper].contains("makeKeyAndOrderFront"))
+    }
 }
