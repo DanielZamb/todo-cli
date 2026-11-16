@@ -383,10 +383,12 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             appendLocked(record)
         }
     }
-    public func requestStarted(operation: String) -> UUID? {
+    /// `ifScope`: the scope the send was admitted in; a send that starts after the next scope began
+    /// is not recorded (nil records in the current scope).
+    public func requestStarted(operation: String, ifScope scope: Int? = nil) -> UUID? {
         guard isEnabled else { return nil }
         return lock.withLock {
-            guard authorized else { return nil }
+            guard authorized, scope == nil || scope == epoch else { return nil }
             guard requests.count < 1024 else { dropped += 1; return nil }
             let id = ClientDiagnosticContext.requestID ?? UUID(), refresh = ClientDiagnosticContext.refreshID, action = ClientDiagnosticContext.actionID
             let routine = ClientDiagnosticContext.periodicPoll && action == nil && (polls[operation] != nil || polls.count < 16)

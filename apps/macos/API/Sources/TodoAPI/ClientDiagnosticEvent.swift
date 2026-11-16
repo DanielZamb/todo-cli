@@ -493,4 +493,8 @@ public enum ClientDiagnosticContext {
     @TaskLocal public static var actionID: UUID?
     @TaskLocal public static var refreshID: UUID?
     @TaskLocal public static var requestID: UUID?
+    /// The recorder's scope when the client admitted the send (ScopedTransport): a send admitted
+    /// under one credential whose inner send starts after the next one's scope began is not
+    /// recorded there (the stress's scope check, with MAC-C11-S1-19's fix).
+    @TaskLocal public static var admittedScope: Int?
 }
