@@ -30,7 +30,7 @@ gate's environment. GATE_DISCOVERY_SWIFT_REUSE stays allowed: check-swift.ts ass
 sources hash equal to this head's.
 Nothing is signed, launched or pushed.
 """
-import hashlib, json, os, subprocess, sys, time
+import hashlib, json, os, re, subprocess, sys, time
 from pathlib import Path
 root = Path(__file__).resolve().parents[4]
 os.chdir(root)
@@ -165,6 +165,26 @@ def isolation_summary():
             rows[gate] = {'binariesUnderProfile': None, 'reason': isolation_none.get(gate) or isolation_outside.get(gate, 'unknown gate')}
     missing = sorted(gate for gate, row in rows.items() if gate in isolation_receipts and row['binariesUnderProfile'] is not True)
     return dict(gates=rows, runnersNotIsolated=missing)
+# Follow-up 90: a test process that ends mid-test can let `swift test` exit 0 with no summary. The
+# runners now refuse that themselves (state_package.py, verify-design.py, verify-write-state.py,
+# check-swift.ts exit 7); this scan checks the whole evidence folder as well. Every Swift Testing run
+# that started ("Test run started.") must end with a summary line, passed or failed (a red control
+# fails by design and its runner says so); a start with no summary at all is a run that ended early.
+STARTED = re.compile(r'Test run started\.')
+ENDED = re.compile(r'Test run with \d+ tests?(?: in \d+ suites?)? (?:passed|failed)')
+PASSED = re.compile(r'Test run with \d+ tests?(?: in \d+ suites?)? passed')
+def summary_line_scan():
+    files, unfinished = [], []
+    for path in sorted(evidence.rglob('*')):
+        if not path.is_file() or path.stat().st_size > 64 * 1024 * 1024: continue
+        text = path.read_text(errors='replace')
+        started = len(STARTED.findall(text))
+        if not started: continue
+        ended, passed = len(ENDED.findall(text)), len(PASSED.findall(text))
+        row = dict(file=str(path.relative_to(evidence)), started=started, ended=ended, passed=passed)
+        files.append(row)
+        if ended < started: unfinished.append(row)
+    return dict(filesWithSwiftTestRuns=len(files), filesWithEveryRunSummarized=len(files) - len(unfinished), unfinished=unfinished, files=files)
 try:
     helper = '.agents/skills/verify-client-diagnostics/scripts/verify.py'
     # HOLD (the live state tests against the scratch server) is a gate from now on, so a ruling
@@ -210,7 +230,11 @@ try:
     assert keychain['anyLinked'] is False, ('Keychain answer is not a clean no', keychain)
     isolated = isolation_summary()
     assert not isolated['runnersNotIsolated'], ('a Mac runner\'s binaries did not run under the isolation profile', isolated['runnersNotIsolated'])
-    result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain, isolation=isolated, pushed=False)
+    summaries = summary_line_scan()
+    (evidence / 'summary-lines.json').write_text(json.dumps(summaries, indent=2) + '\n')
+    assert summaries['filesWithSwiftTestRuns'] > 0 and not summaries['unfinished'], ('a Swift test run ended without a summary line', summaries['unfinished'])
+    result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain, isolation=isolated,
+                  summary_lines={k: v for k, v in summaries.items() if k != 'files'}, pushed=False)
 except BaseException as error:
     result = dict(result='FAIL', errors=1, head=head, gates_finished=len(commands), reason=repr(error), carried=carried, isolation=isolation_summary())
     raise

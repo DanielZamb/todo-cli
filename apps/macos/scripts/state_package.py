@@ -14,7 +14,9 @@ Coordinator ruling, 2026-11-13: no test run links or calls the Keychain.
 
 CLI:
   state_package.py swift <swift args...>    the args may say --package-path apps/macos; a test run is
-                                            split into build, guard, then test with --skip-build
+                                            split into build, guard, then test with --skip-build; a
+                                            test run that exits 0 without Swift Testing's passing
+                                            summary line exits 7 (follow-up 90)
   state_package.py guard <path> [receipt]   exit 3 if a keychain call is linked, 4 if no product was
                                             found, 2 if the path is empty or not a build product
   state_package.py prepare [--production-vault <dir>]   the mirror path; the production vault is
@@ -266,6 +268,54 @@ def grouped_run(argv, timeout=None, **popen):
             signal.signal(sig, handler)
 
 
+# Follow-up 90: a test process that ends mid-test (exit(0) from a test, a crash the runner does not
+# report) makes `swift test` exit 0 without a summary. Swift Testing always ends a completed run with
+# "✔ Test run with N test(s) [in M suite(s)] passed …" (also when XCTest ran first and when every
+# test was skipped); a failed run says "failed" and already exits non-zero.
+PASSING_SUMMARY = re.compile(r'Test run with \d+ tests?(?: in \d+ suites?)? passed')
+NO_SUMMARY_EXIT = 7
+
+
+def _tee(source, sink, seen):
+    """Copies a pipe line by line to `sink` (the caller's stdout or stderr, unchanged) and records
+    whether the passing summary line went by."""
+    for raw in iter(source.readline, b''):
+        sink.buffer.write(raw); sink.flush()
+        if PASSING_SUMMARY.search(raw.decode('utf-8', 'replace')): seen.append(True)
+    source.close()
+
+
+def summarized_test_run(argv, timeout=None) -> int:
+    """`grouped_run` for `swift test`: the output still reaches this process's stdout and stderr as
+    it comes, and an exit 0 without the passing summary line becomes NO_SUMMARY_EXIT."""
+    import threading
+    global _running
+    previous = {sig: signal.signal(sig, _stop_requested) for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+    seen = []
+    try:
+        _running = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        readers = [threading.Thread(target=_tee, args=(_running.stdout, sys.stdout, seen), daemon=True),
+                   threading.Thread(target=_tee, args=(_running.stderr, sys.stderr, seen), daemon=True)]
+        for reader in readers: reader.start()
+        try:
+            code = _running.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            print(f'state_package: time limit of {timeout} s reached; stopping the run and everything it started', file=sys.stderr, flush=True)
+            _stop_tree(_running)
+            _running.wait()
+            code = 124
+        for reader in readers: reader.join()
+    finally:
+        _running = None
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
+    if code == 0 and not seen:
+        print("state_package: swift test exited 0 without Swift Testing's passing summary line (\"Test run with … passed\");"
+              f' the test process ended before the run completed. Exit {NO_SUMMARY_EXIT} (follow-up 90).', file=sys.stderr, flush=True)
+        return NO_SUMMARY_EXIT
+    return code
+
+
 def _option(args, *names):
     for index, arg in enumerate(args):
         if arg in names and index + 1 < len(args): return args[index + 1]
@@ -302,7 +352,9 @@ def swift(args: list) -> int:
             if code: return code
             args.append('--skip-build')
         checked(scratch, receipt)
-        return grouped_run(['swift'] + args, timeout=_limit())[0]
+        if '--list-tests' in args or (len(args) > 1 and args[1] == 'list'):
+            return grouped_run(['swift'] + args, timeout=_limit())[0]
+        return summarized_test_run(['swift'] + args, timeout=_limit())
     code = grouped_run(['swift'] + args, timeout=_limit())[0]
     if code == 0 and '--build-tests' in args: checked(scratch, receipt)
     return code

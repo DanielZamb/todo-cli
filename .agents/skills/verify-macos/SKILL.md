@@ -51,6 +51,17 @@ script's `pidIdentity` case proves both without a build (`RUNNER_CLEANUP_CASES=p
 covered: a descendant whose parent ended before the freeze (re-parented to launchd), and a SIGKILL
 of the runner itself.
 
+## A test run that ends early does not pass
+
+A test process that ends mid-test (an `exit(0)` in a test, a crash the runner does not report) lets
+`swift test` exit 0 without Swift Testing's summary. `state_package.py` therefore exits 7 when a
+test run exits 0 without a "Test run with … passed" line. `verify-design.py`, `verify-write-state.py`
+and verify-discovery-formal's `check-swift.ts` run `swift test` themselves and apply the same rule.
+`scripts/gates.py` also scans its whole evidence folder: every Swift Testing run that started must end
+with a summary, passed or failed (`summary-lines.json`). `scripts/verify-test-summary.py <evidence>`
+is the control: a scratch package whose test calls `exit(0)` exits 0 under plain `swift test` and 7
+under the runner, and a passing test still exits 0.
+
 ## Native verification is on HOLD
 
 The user stopped the 2026-10-27 run after repeated Keychain prompts. Do not

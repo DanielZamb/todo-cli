@@ -52,8 +52,16 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
         result = subprocess.CompletedProcess(command, code, stdout, None)
         if capture_stdout:
             output.write(result.stdout)
+    # Follow-up 90: a test run that exits 0 without Swift Testing's passing summary line ended early.
+    summary = None
+    if command[:2] == ['swift', 'test'] and result.returncode == 0:
+        summary = bool(state_package.PASSING_SUMMARY.search((evidence / log).read_text(errors='replace')))
+        if not summary:
+            result = subprocess.CompletedProcess(command, state_package.NO_SUMMARY_EXIT, stdout, None)
     packages = package_state(log, 'after') if swift else None
     entry = {'argv': command, 'exit': result.returncode, 'log': log, 'packageResolvedDiffExit': packages}
+    if summary is not None:
+        entry['passingSummaryLine'] = summary
     if capture_stdout:
         entry['stdout'] = result.stdout
     commands.append(entry)
