@@ -85,6 +85,7 @@ import {
   nowInstant,
   profileId,
   readTasks,
+  resolveTypedTime,
   revertTarget,
   revertTask,
   type TaskFlags,
@@ -447,7 +448,19 @@ function taskInput(options: ParsedTaskOptions): TaskFlags {
     ),
     ...(options.tag.length ? { tag: options.tag } : {}),
   };
-  return Schema.decodeUnknownSync(taskFlags)(fields);
+  const flags = Schema.decodeUnknownSync(taskFlags)(fields);
+  // A typed time is resolved here, in the zone of the machine it was typed on (ADR-0006,
+  // follow-up 86), so a server that parses a routed command never falls back to its own zone.
+  const zone = processTimeZone();
+  return {
+    ...flags,
+    ...(flags.due === undefined
+      ? {}
+      : { due: resolveTypedTime(flags.due, zone) }),
+    ...(flags.scheduled === undefined
+      ? {}
+      : { scheduled: resolveTypedTime(flags.scheduled, zone) }),
+  };
 }
 const init = Command.make(
   "init",

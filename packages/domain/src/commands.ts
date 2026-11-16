@@ -1,4 +1,5 @@
 import { Clock, Effect, Schema } from "effect";
+import { Temporal } from "temporal-polyfill";
 import { resolveAttachments } from "./attachment-input.ts";
 import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
@@ -25,7 +26,7 @@ import { Event, type TaskMutationKind } from "./events.ts";
 import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
-import type { PlanningClock } from "./planning-day.ts";
+import { type PlanningClock, processTimeZone } from "./planning-day.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -65,7 +66,7 @@ import {
 import type { TaskLookupDetails } from "./task-lookup-error.ts";
 import type { TaskRead } from "./task-read.ts";
 import { type SearchTooBroad, taskSearchExecution } from "./task-search.ts";
-import { CalendarDate, Instant, TaskTime } from "./time.ts";
+import { CalendarDate, Instant, TaskTime, TimeZoneId } from "./time.ts";
 
 export class CommandError extends Error {
   readonly _tag = "CommandError";
@@ -107,7 +108,20 @@ export const taskFlags = Schema.Struct({
   tag: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 export type TaskFlags = typeof taskFlags.Type;
-export function parseTime(input: string): TaskTime | null {
+/**
+ * A time typed as text, resolved as ADR-0006 stores instants: in UTC together with the IANA zone
+ * the person meant (follow-up 86). `zone` is the zone of the machine where the text was typed.
+ * - A date (`YYYY-MM-DD`, `MM/DD/YYYY`) is a calendar date.
+ * - A local time (`YYYY-MM-DD HH[:MM]`, `MM/DD/YYYY HH[:MM]`) is that wall-clock time in `zone`.
+ *   One that does not exist there or exists twice (a daylight-saving change) is refused, as
+ *   quick-add refuses it; an offset says which is meant.
+ * - A time with `Z` or an offset keeps its instant.
+ * - Both are stored with `zone`: never UTC by default, never a zone made up from an offset.
+ * - RFC 9557 text with a bracketed zone (`2026-11-16T21:00:00-05:00[America/Bogota]`, what the
+ *   CLI sends after resolveTypedTime) keeps its instant and that zone, so whichever process parses
+ *   it, the zone is the typing machine's.
+ */
+export function parseTime(input: string, zone: string): TaskTime | null {
   const value = input.trim();
   if (!value) return null;
   if (Schema.is(CalendarDate)(value))
@@ -122,23 +136,81 @@ export function parseTime(input: string): TaskTime | null {
       kind: "date",
       date: Schema.decodeUnknownSync(CalendarDate)(normalized),
     };
+  const instant = (utc: string, timeZone: string) =>
+    Schema.decodeUnknownSync(TaskTime)({
+      kind: "instant",
+      utc,
+      time_zone: timeZone,
+    });
+  const bracketed = /^\d{4}-\d{2}-\d{2}T[^[\]]+\[([^[\]]+)\]$/.exec(normalized);
+  if (bracketed) {
+    if (!Schema.is(TimeZoneId)(bracketed[1]))
+      throw invalid(`unknown time zone: ${bracketed[1]}`);
+    let zoned: Temporal.ZonedDateTime;
+    try {
+      zoned = Temporal.ZonedDateTime.from(normalized, {
+        offset: "reject",
+        disambiguation: "reject",
+        overflow: "reject",
+      });
+    } catch {
+      throw invalid(`invalid datetime format: ${value}`);
+    }
+    return instant(
+      new Date(zoned.epochMilliseconds).toISOString(),
+      zoned.timeZoneId,
+    );
+  }
+  if (!Schema.is(TimeZoneId)(zone)) throw invalid(`unknown time zone: ${zone}`);
   const human = /^(\d{4}-\d{2}-\d{2}) (\d{2})(?::(\d{2}))?$/.exec(normalized);
-  const rfc = human
-    ? `${human[1]}T${human[2]}:${human[3] ?? "00"}:00Z`
-    : normalized;
+  if (human) {
+    let local: Temporal.PlainDateTime;
+    try {
+      local = Temporal.PlainDateTime.from(
+        `${human[1]}T${human[2]}:${human[3] ?? "00"}:00`,
+        { overflow: "reject" },
+      );
+    } catch {
+      throw invalid(`invalid datetime format: ${value}`);
+    }
+    let zoned: Temporal.ZonedDateTime;
+    try {
+      zoned = local.toZonedDateTime(zone, { disambiguation: "reject" });
+    } catch {
+      throw invalid(
+        `${value} does not exist or occurs twice in ${zone} (a daylight-saving change); add the offset you mean, for example ${human[1]}T${human[2]}:${human[3] ?? "00"}:00-05:00`,
+      );
+    }
+    return instant(new Date(zoned.epochMilliseconds).toISOString(), zone);
+  }
   if (
     !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(
-      rfc,
+      normalized,
     ) ||
-    !Schema.is(CalendarDate)(rfc.slice(0, 10)) ||
-    !Number.isFinite(Date.parse(rfc))
+    !Schema.is(CalendarDate)(normalized.slice(0, 10)) ||
+    !Number.isFinite(Date.parse(normalized))
   )
     throw invalid(`invalid datetime format: ${value}`);
-  return Schema.decodeUnknownSync(TaskTime)({
-    kind: "instant",
-    utc: new Date(rfc).toISOString(),
-    time_zone: "UTC",
-  });
+  return instant(new Date(normalized).toISOString(), zone);
+}
+/**
+ * The text the CLI passes on for a typed time: a time becomes RFC 9557 text carrying the zone it
+ * resolved in, so a server that parses a routed command never falls back to its own zone. A date,
+ * an empty value or text parseTime refuses is passed on unchanged (parseTime refuses it again,
+ * with the same error, where it is applied).
+ */
+export function resolveTypedTime(input: string, zone: string): string {
+  let time: TaskTime | null;
+  try {
+    time = parseTime(input, zone);
+  } catch {
+    return input;
+  }
+  return time?.kind === "instant"
+    ? Temporal.Instant.from(time.utc)
+        .toZonedDateTimeISO(time.time_zone)
+        .toString()
+    : input;
 }
 const numberValue = (value: string) => {
   if (value === "") return null;
@@ -1121,10 +1193,12 @@ const prepareFlags = (
         : { tags: tags.map((tag) => tag.id) }),
       ...(flags.priority === undefined ? {} : { priority: flags.priority }),
       ...(flags.source === undefined ? {} : { source: flags.source }),
-      ...(flags.due === undefined ? {} : { due_at: parseTime(flags.due) }),
+      ...(flags.due === undefined
+        ? {}
+        : { due_at: parseTime(flags.due, processTimeZone()) }),
       ...(flags.scheduled === undefined
         ? {}
-        : { scheduled_at: parseTime(flags.scheduled) }),
+        : { scheduled_at: parseTime(flags.scheduled, processTimeZone()) }),
       ...(flags.energy === undefined
         ? {}
         : { energy: numberValue(flags.energy) }),
