@@ -1040,20 +1040,20 @@ struct FullRowMetadata: View {
     }
     let items: [Item]
     /// In the row's order: the Project, the Tags, the due date, the external id, the scheduled date.
+    /// In Compact's order (UI seat on 370f6485): the dates first, then the Project, the Tags and the
+    /// external id, so "+N" leaves out the Tags before it would leave out a date.
     nonisolated static func items(project: String?, tags: [String], due: String?, overdue: Bool, external: String?, scheduled: String?) -> [Item] {
-        (project.map { [Item.project($0)] } ?? []) + tags.map(Item.tag) + (due.map { [Item.due($0, overdue: overdue)] } ?? [])
-            + (external.map { [Item.external($0)] } ?? []) + (scheduled.map { [Item.scheduled($0)] } ?? [])
+        (due.map { [Item.due($0, overdue: overdue)] } ?? []) + (scheduled.map { [Item.scheduled($0)] } ?? [])
+            + (project.map { [Item.project($0)] } ?? []) + tags.map(Item.tag) + (external.map { [Item.external($0)] } ?? [])
     }
-    /// Whether a "·" comes before item `index`, as the row drew them before: between the Project and
-    /// the first Tag, before the due date, and before the scheduled date when a Project, a Tag or a due
-    /// date comes before it. Never before the external id or between Tags.
+    /// Whether a "·" comes before item `index`: between every two kinds of item, never between Tags and
+    /// never before the external id (which is set apart by its smaller type, as before).
     nonisolated static func separated(_ items: [Item], before index: Int) -> Bool {
         guard index > 0 else { return false }
-        switch items[index] {
-        case .tag: if case .project = items[index - 1] { return true } else { return false }
-        case .due: return true
-        case .scheduled: return items[..<index].contains { if case .external = $0 { false } else { true } }
-        case .project, .external: return false
+        switch (items[index - 1], items[index]) {
+        case (_, .external): return false
+        case (.tag, .tag): return false
+        default: return true
         }
     }
     var body: some View {
