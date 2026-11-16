@@ -171,7 +171,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+      "sha256": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -691,6 +691,19 @@
       ],
       "controls": "Before renewal check.ts passed every model stage and stopped only at the mapping (commands.ts); after renewal the one command passes (under the reference profile).",
       "review": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone: TaskViewSchema, taskView, readTasks and TaskCommands are byte-identical to 6d0407c6 (declaration text compared). commands.ts changes parseTime (zone-aware), prepareFlags (passes the process zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first). No search, matcher, filter, order or publication code changes; both clients are byte-identical."
+    },
+    {
+      "product": "98deaaacc0b6e5390e62b9fc730d7934ffe616ed",
+      "status": "candidate for the seats",
+      "changed": [
+        {
+          "path": "packages/domain/src/commands.ts",
+          "from": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d",
+          "to": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
+        }
+      ],
+      "controls": "Before renewal check.ts passed every model stage and stopped only at the mapping; after renewal the one command passes (under the reference profile).",
+      "review": "Server seat F1 and F2 on follow-up 86: commands.ts changes parseTime (offset-true daylight-saving messages, a refused 60th second in the bracketed form, a 64-character echo), resolveTypedTime (refuses instead of passing raw text on) and adds resolveTaskFlagTimes; main.ts changes taskInput (decode only) and adds resolvedTimes, called by add and by the edit line inside mutation. Every mapped declaration (readTasks, TaskCommands, cliResult, mutateTask, the main.ts Dependency items including the deletion Prompt.Confirm in mutation) is byte-identical to 8434a7e1."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
