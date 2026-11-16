@@ -33,8 +33,10 @@ import {
   BatchEditRequest,
   batchDepend,
   batchEditTasks,
+  CatalogReads,
   ClientReads,
   CreateTask,
+  collectCommitted,
   DeleteTask,
   DependencyCommands,
   DependRequest,
@@ -46,9 +48,13 @@ import {
   inputLimits,
   LookupQuery,
   LookupResponse,
+  observeDiagnostic,
   ProfileDeletionReport,
   ProfileListResponse,
   parseQuickAdd,
+  planningClock,
+  planningDay,
+  processTimeZone,
   QuickAddDraft,
   QuickAddInput,
   RevertTask,
@@ -60,15 +66,16 @@ import {
   TaskStatus,
   taskLookupError,
   Version,
+  withDiagnosticRoot,
 } from "@todo/domain";
 import { attachmentInput } from "@todo/domain/attachment-input";
 import { attachmentCopyStats } from "@todo/domain/attachment-store";
 import { AttachmentCommands } from "@todo/domain/attachments";
+import { executeAdd } from "@todo/domain/backend-command";
 import {
   authFailure,
   CommandError,
   copyTask,
-  createTask,
   ensureProfile,
   exportScope,
   filterTasks,
@@ -102,6 +109,7 @@ import {
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
 import { Console, Effect, Option, Redacted, Schema, Struct } from "effect";
 import { Argument, CliError, Command, Flag, Prompt } from "effect/cli";
+import { recordingCommand } from "./diagnostic-recordings.ts";
 import "./diagnostics.schema.ts";
 import { AttachmentCommandResponse } from "./attachments.schema.ts";
 import {
@@ -110,18 +118,27 @@ import {
   labelAttachment,
   withAttachmentStatus,
 } from "./attachments.ts";
+import { makeCatalogCommand, renderCatalog } from "./catalog.ts";
 import {
   credentialProfileName,
   loadCredential,
   credentialFile as sessionFile,
   validateProfileSelectors,
 } from "./credential-profile.ts";
+import {
+  loadConfig,
+  selectDatabase,
+  WriteMode,
+  writeMode,
+} from "./database-selection.ts";
 import { diagnosticsOutput, diagnosticsRead } from "./diagnostics.ts";
+import { closeThenNudge } from "./direct-write.ts";
 import { directoryOutput, lookupOutput } from "./discovery.ts";
 import { manualPage, withGuide } from "./help.ts";
 import { makeImportCommand, readImportFile, renderImport } from "./import.ts";
 import { decodeInput } from "./input.ts";
 import { verifyMacPassword } from "./macos-password.ts";
+import { stampOperationPosition } from "./operation-position.ts";
 import { resolveProfile } from "./profile-selection.ts";
 import {
   ConfigResponse,
@@ -141,6 +158,7 @@ import {
   StatusResponse,
   TextResponse,
 } from "./schema.ts";
+import { discoverServer, routable } from "./server-connection.ts";
 import { isTerminalUnsafe, runTop } from "./top.ts";
 import { TransferResponse, type TransferResult } from "./transfer-schema.ts";
 
@@ -162,7 +180,7 @@ const terminalSafe = (text: string) => {
 };
 const write = (text: string) =>
   Effect.sync(() => {
-    process.stdout.write(terminalSafe(text));
+    process.stdout.write(terminalSafe(stampOperationPosition(text)));
   });
 const response = <S extends Schema.ConstraintEncoder<unknown>>(
   format: Format,
@@ -188,13 +206,6 @@ const io = <A>(run: () => A) =>
           : new CommandError(1, "runtime_error", String(error)),
   });
 const localDir = join(homedir(), ".todo-cli");
-const Config = Schema.Struct({ db_path: Schema.optionalKey(Schema.String) });
-const loadConfig = () =>
-  existsSync(join(localDir, "config.json"))
-    ? Schema.decodeUnknownSync(Config)(
-        JSON.parse(readFileSync(join(localDir, "config.json"), "utf8")),
-      )
-    : {};
 const canonicalPath = (path: string): string => {
   if (lstatSync(path, { throwIfNoEntry: false })) return realpathSync(path);
   return join(canonicalPath(dirname(path)), basename(path));
@@ -230,6 +241,14 @@ const stringFlag = (name: string) => {
   stringFlags.add(`--${name}`);
   return Flag.String(name);
 };
+/**
+ * The CLI reads the database directly, so Today and Overdue take today in
+ * this machine's zone (ADR-0006); todo catalog --time-zone overrides it.
+ */
+const machineClock = (
+  tasks: Parameters<typeof planningClock>[0],
+  now = nowInstant(),
+) => planningClock(tasks, planningDay(now, undefined, processTimeZone()));
 const string = (name: string, fallback = "") =>
   stringFlag(name).pipe(Flag.withDefault(fallback));
 const bool = (name: string) => Flag.Boolean(name).pipe(Flag.withDefault(false));
@@ -244,6 +263,8 @@ const root = Command.make("todo").pipe(
     credentialProfile: stringFlag("credential-profile").pipe(Flag.optional),
     noColor: bool("no-color"),
     helpHuman: bool("help-human-flag"),
+    direct: bool("direct"),
+    requireServer: bool("require-server"),
   }),
 );
 type Settings = Effect.Success<typeof root>;
@@ -251,22 +272,60 @@ const withStore = <A, E, R>(
   cfg: Settings,
   action: AuthAction,
   use: (store: OperationStore) => Effect.Effect<A, E, R>,
+  options: { readonly writing?: boolean } = {},
 ) =>
   Effect.gen(function* () {
-    const path = yield* io(
-      () =>
-        cfg.db ||
-        process.env.TODO_DB ||
-        loadConfig().db_path ||
-        join(localDir, "todo.db"),
-    );
+    const path = yield* io(() => selectDatabase(cfg.db));
+    const mode = yield* io(() => writeMode(cfg.direct, cfg.requireServer));
+    const writing = options.writing ?? action !== "read";
+    const provisioning =
+      action === "setupOwner" || action === "resetPassphrase";
+    const server = writing
+      ? yield* Effect.promise(() =>
+          discoverServer(path, mode === "server" && !provisioning ? 1000 : 50),
+        )
+      : undefined;
+    // ADR-0023: route a writing command only when routable(server), a
+    // MAC-proved ROUTING_PROTOCOL (2) that ships with the reviewed durable
+    // repeated-denial fix. Protocol 1 is discovery, proof and nudge only, so
+    // this slice routes nothing and server mode refuses every writing command.
+    if (writing && !provisioning && mode === "server") {
+      server?.close();
+      return yield* Effect.fail(
+        new CommandError(
+          1,
+          server ? "server_command_unsupported" : "server_required",
+          server
+            ? routable(server)
+              ? "This build routes no production command. Use --direct or config write-mode automatic."
+              : "Protocol 1 supports proof and nudge only. Production routing requires protocol 2 and reviewed durable auth-denial handling. Use --direct or config write-mode automatic."
+            : "A proven server is required for this database. Use --direct or config write-mode automatic.",
+        ),
+      );
+    }
     yield* io(() =>
       mkdirSync(dirname(resolve(path)), { recursive: true, mode: 0o700 }),
     );
     return yield* Effect.acquireUseRelease(
       openStore({ path }),
       (store) =>
-        use(store).pipe(
+        (() => {
+          observeDiagnostic(store.diagnostics.profiler, () =>
+            store.diagnostics.profiler.configure({
+              enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+              build_id: BUILD_ID,
+              contract_id: CONTRACT_ID,
+            }),
+          );
+          return withDiagnosticRoot(
+            {
+              recorder: store.diagnostics.profiler,
+              role: "cli",
+              stage: "command",
+            },
+            collectCommitted(use(store)).pipe(Effect.map(({ value }) => value)),
+          );
+        })().pipe(
           Effect.catch((error) =>
             Effect.gen(function* () {
               if (
@@ -295,8 +354,8 @@ const withStore = <A, E, R>(
             }),
           ),
         ),
-      (store) => Effect.orDie(store.close()),
-    );
+      (store) => closeThenNudge(Effect.orDie(store.close()), server),
+    ).pipe(Effect.ensuring(Effect.sync(() => server?.close())));
   });
 const access = (cfg: Settings) =>
   io(() => ({
@@ -575,25 +634,29 @@ const logout = Command.make("logout", {}, () =>
 const whoami = Command.make("whoami", {}, () =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    yield* withStore(cfg, "authenticate", (store) =>
-      Effect.gen(function* () {
-        const request = yield* selectProfile(store, cfg, "authenticate");
-        const credential = yield* store.auth.authenticate({
-          ...request,
-          access: "read",
-        });
-        yield* response(
-          cfg.format,
-          IdentityResponse,
-          {
-            generated_at: iso(nowInstant()),
-            owner: "owner",
-            profile: request.profile,
-            expires_at: iso(credential.expires_at),
-          },
-          `owner (${request.profile}) expires ${iso(credential.expires_at)}\n`,
-        );
-      }),
+    yield* withStore(
+      cfg,
+      "authenticate",
+      (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg, "authenticate");
+          const credential = yield* store.auth.authenticate({
+            ...request,
+            access: "read",
+          });
+          yield* response(
+            cfg.format,
+            IdentityResponse,
+            {
+              generated_at: iso(nowInstant()),
+              owner: "owner",
+              profile: request.profile,
+              expires_at: iso(credential.expires_at),
+            },
+            `owner (${request.profile}) expires ${iso(credential.expires_at)}\n`,
+          );
+        }),
+      { writing: false },
     );
   }),
 ).pipe(withGuide("whoami"));
@@ -675,15 +738,15 @@ const add = Command.make(
       yield* withStore(cfg, "mutate", (store) =>
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg, "mutate");
-          const result = yield* createTask(
-            store,
-            request,
-            {
+          const result = yield* executeAdd(store, request, {
+            kind: "add",
+            profile: cfg.profile,
+            flags: {
               ...flags,
               title: draft?.title ?? Option.getOrElse(titleArg, () => ""),
             },
-            draft,
-            yield* Effect.try({
+            ...(draft ? { draft } : {}),
+            attachments: yield* Effect.try({
               try: () => [
                 ...input.attach.map((path) =>
                   attachmentInput(
@@ -703,15 +766,11 @@ const add = Command.make(
               catch: (error) =>
                 new CommandError(2, "invalid_args", String(error)),
             }),
-            dependencies.depends_on,
-          );
-          const data = yield* readTasks(store, request);
+            ...dependencies,
+          });
           yield* write(
             renderTask(
-              withAttachmentStatus(
-                taskView(result.task, data.projects, data.tags, data.series),
-                result.task.attachments ?? [],
-              ),
+              withAttachmentStatus(result.view, result.task.attachments ?? []),
               cfg.format,
               nowInstant(),
               result.dependency_warnings,
@@ -812,7 +871,7 @@ const list = Command.make(
                   overdue: input.overdue,
                   inbox: input.inbox,
                 },
-                nowInstant(),
+                machineClock(data.tasks),
               ),
               cfg.format,
               nowInstant(),
@@ -921,7 +980,11 @@ const transfer = (kind: "move" | "copy") =>
               access: "write",
             });
             const data = yield* readTasks(store, request);
-            const matching = filterTasks(data.views, input, nowInstant());
+            const matching = filterTasks(
+              data.views,
+              input,
+              machineClock(data.tasks),
+            );
             const ids = input.ids.length
               ? [...new Set(input.ids)]
               : matching.map((t) => t.id);
@@ -1374,7 +1437,10 @@ const history = Command.make(
         Effect.gen(function* () {
           const request = yield* selectProfile(store, cfg, "read");
           const task_id = yield* io(() => Schema.decodeUnknownSync(TaskId)(id));
-          const entries = yield* new ClientReads(store).history({
+          const entries = yield* new ClientReads(
+            store,
+            processTimeZone(),
+          ).history({
             ...request,
             task_id,
           });
@@ -1797,7 +1863,13 @@ const reviewCommand = (period: "daily" | "weekly") =>
             yield* selectProfile(store, cfg, "read"),
           );
           yield* write(
-            renderReview(data.views, period, cfg.format, nowInstant()),
+            renderReview(
+              data.views,
+              period,
+              cfg.format,
+              nowInstant(),
+              machineClock(data.tasks),
+            ),
           );
         }),
       );
@@ -1826,7 +1898,13 @@ const exportCommand = Command.make(
             yield* selectProfile(store, cfg, "read"),
           );
           const tasks = yield* Effect.try({
-            try: () => exportScope(data.views, input.scope, nowInstant()),
+            try: () =>
+              exportScope(
+                data.views,
+                input.scope,
+                nowInstant(),
+                machineClock(data.tasks),
+              ),
             catch: (error) => error,
           });
           const text = renderExport(
@@ -1919,7 +1997,7 @@ const man = Command.make(
 const configRead = (key?: string) =>
   Effect.gen(function* () {
     const cfg = yield* root;
-    if (key !== undefined && key !== "db.path")
+    if (key !== undefined && key !== "db.path" && key !== "write-mode")
       return yield* Effect.fail(
         new CommandError(2, "invalid_args", "unknown config key"),
       );
@@ -1929,11 +2007,16 @@ const configRead = (key?: string) =>
       ConfigResponse,
       {
         generated_at: iso(nowInstant()),
-        config: { db_path: config.db_path ?? null },
+        config: {
+          db_path: config.db_path ?? null,
+          write_mode: Schema.decodeUnknownSync(WriteMode)(
+            config.write_mode ?? "automatic",
+          ),
+        },
       },
       key
-        ? `${config.db_path ?? ""}\n`
-        : `db.path=${config.db_path || "(unset)"}\n`,
+        ? `${key === "write-mode" ? (config.write_mode ?? "automatic") : (config.db_path ?? "")}\n`
+        : `db.path=${config.db_path || "(unset)"}\nwrite-mode=${config.write_mode ?? "automatic"}\n`,
     );
   });
 const config = Command.make("config").pipe(
@@ -1948,14 +2031,27 @@ const config = Command.make("config").pipe(
       ({ key, value }) =>
         Effect.gen(function* () {
           const cfg = yield* root;
-          if (key !== "db.path")
+          if (key !== "db.path" && key !== "write-mode")
             return yield* Effect.fail(
               new CommandError(2, "invalid_args", "unknown config key"),
+            );
+          if (key === "write-mode" && !Schema.is(WriteMode)(value))
+            return yield* Effect.fail(
+              new CommandError(
+                2,
+                "invalid_args",
+                "write-mode must be automatic, direct or server",
+              ),
             );
           yield* io(() =>
             writeFileSync(
               join(localDir, "config.json"),
-              JSON.stringify({ db_path: value }),
+              JSON.stringify({
+                ...loadConfig(),
+                ...(key === "db.path"
+                  ? { db_path: value }
+                  : { write_mode: value }),
+              }),
               { mode: 0o600 },
             ),
           );
@@ -1964,6 +2060,42 @@ const config = Command.make("config").pipe(
     ).pipe(withGuide("config set")),
   ]),
   withGuide("config"),
+);
+const catalogCommand = makeCatalogCommand(
+  {
+    optional: (name) => stringFlag(name).pipe(Flag.optional),
+    bool,
+  },
+  (query) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      yield* withStore(cfg, "read", (store) =>
+        Effect.gen(function* () {
+          const request = yield* selectProfile(store, cfg, "read");
+          const reply = yield* new CatalogReads(store, processTimeZone())
+            .read(request, query)
+            .pipe(
+              Effect.mapError((error) =>
+                error._tag === "SearchTooBroad" ||
+                error._tag === "UnknownTimeZone" ||
+                error._tag === "CatalogUsageError"
+                  ? new CommandError(2, error.code, error.message)
+                  : error._tag === "CatalogProfileMissing"
+                    ? new CommandError(3, "not_found", error.message)
+                    : error,
+              ),
+              Effect.catchDefect((error) =>
+                Effect.fail(
+                  new CommandError(1, "runtime_error", String(error)),
+                ),
+              ),
+            );
+          yield* write(
+            yield* io(() => renderCatalog(reply, cfg.format, nowInstant())),
+          );
+        }),
+      );
+    }),
 );
 const importCommand = makeImportCommand((input) =>
   Effect.gen(function* () {
@@ -2040,6 +2172,82 @@ const schema = Command.make(
         );
   },
 ).pipe(withGuide("schema"));
+const recordingServer = () =>
+  string("server", process.env.TODO_SERVER_URL || "http://127.0.0.1:4310");
+const runRecording = (
+  name: "runs" | "show" | "export" | "import" | "compare",
+  input: Partial<Parameters<typeof recordingCommand>[1]> & { server: string },
+) =>
+  Effect.gen(function* () {
+    const cfg = yield* root;
+    const credential = yield* io(() => loadCredential(cfg));
+    yield* recordingCommand(
+      name,
+      {
+        run: "",
+        before: "",
+        after: "",
+        file: "",
+        cursor: "",
+        dryRun: false,
+        ndjson: false,
+        ...input,
+      },
+      credential,
+      (value, ndjson) =>
+        write(
+          ndjson
+            ? JSON.stringify(value) + "\n"
+            : JSON.stringify(value, null, 2) + "\n",
+        ),
+    );
+  });
+const recordingSubcommands = [
+  Command.make(
+    "runs",
+    {
+      server: recordingServer(),
+      cursor: string("cursor"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("runs", input),
+  ).pipe(withGuide("diagnostics runs")),
+  Command.make(
+    "show",
+    { server: recordingServer(), run: string("run"), ndjson: bool("ndjson") },
+    (input) => runRecording("show", input),
+  ).pipe(withGuide("diagnostics show")),
+  Command.make(
+    "export",
+    {
+      server: recordingServer(),
+      run: string("run"),
+      cursor: string("cursor"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("export", input),
+  ).pipe(withGuide("diagnostics export")),
+  Command.make(
+    "import",
+    {
+      server: recordingServer(),
+      file: string("file"),
+      dryRun: bool("dry-run"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("import", input),
+  ).pipe(withGuide("diagnostics import")),
+  Command.make(
+    "compare",
+    {
+      server: recordingServer(),
+      before: string("before"),
+      after: string("after"),
+      ndjson: bool("ndjson"),
+    },
+    (input) => runRecording("compare", input),
+  ).pipe(withGuide("diagnostics compare")),
+] as const;
 const diagnostics = Command.make(
   "diagnostics",
   {
@@ -2048,12 +2256,25 @@ const diagnostics = Command.make(
       process.env.TODO_SERVER_URL || "http://127.0.0.1:4310",
     ),
     follow: bool("follow"),
+    detail: bool("detail"),
   },
   (input) =>
     Effect.gen(function* () {
       const cfg = yield* root;
+      if (input.follow && input.detail)
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "--detail is a one-shot sample and cannot be combined with --follow",
+          ),
+        );
       const credential = yield* io(() => loadCredential(cfg));
-      const snapshot = diagnosticsRead(input.server, credential).pipe(
+      const snapshot = diagnosticsRead(
+        input.server,
+        credential,
+        input.detail,
+      ).pipe(
         Effect.flatMap((snapshot) =>
           write(diagnosticsOutput(snapshot, cfg.format, input.follow)),
         ),
@@ -2064,7 +2285,7 @@ const diagnostics = Command.make(
         );
       yield* snapshot;
     }),
-).pipe(withGuide("diagnostics"));
+).pipe(Command.withSubcommands(recordingSubcommands), withGuide("diagnostics"));
 const top = Command.make(
   "top",
   {
@@ -2134,7 +2355,7 @@ const profiles = Command.make("profile").pipe(
             const credential = yield* io(() => loadCredential(cfg));
             const profiles = yield* input.projects
               ? new Discovery(store).directory(credential)
-              : new ClientReads(store).profiles(credential);
+              : new ClientReads(store, processTimeZone()).profiles(credential);
             yield* write(
               cfg.format === "json"
                 ? encodeResponse(ProfileListResponse, {
@@ -2275,22 +2496,26 @@ function snapshotReadUse<
 ) {
   return Effect.gen(function* () {
     const cfg = yield* root;
-    yield* withStore(cfg, "authenticate", (store) =>
-      Effect.gen(function* () {
-        const credential = yield* io(() => loadCredential(cfg));
-        const result = yield* store.auth.withOwnerRead(
-          { credential },
-          fieldsSchema,
-          fields,
-          (read) => use(store, read, iso(nowInstant())),
-        );
-        yield* response(
-          cfg.format,
-          schema,
-          result,
-          `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
-        );
-      }),
+    yield* withStore(
+      cfg,
+      "authenticate",
+      (store) =>
+        Effect.gen(function* () {
+          const credential = yield* io(() => loadCredential(cfg));
+          const result = yield* store.auth.withOwnerRead(
+            { credential },
+            fieldsSchema,
+            fields,
+            (read) => use(store, read, iso(nowInstant())),
+          );
+          yield* response(
+            cfg.format,
+            schema,
+            result,
+            `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
+          );
+        }),
+      { writing: false },
     );
   });
 }
@@ -2303,19 +2528,23 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
 ) {
   return Effect.gen(function* () {
     const cfg = yield* root;
-    yield* withStore(cfg, "authenticate", (store) =>
-      Effect.gen(function* () {
-        yield* store.auth.requireOwner({
-          credential: yield* io(() => loadCredential(cfg)),
-        });
-        const result = yield* use(store, iso(nowInstant()));
-        yield* response(
-          cfg.format,
-          schema,
-          result,
-          `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
-        );
-      }),
+    yield* withStore(
+      cfg,
+      "authenticate",
+      (store) =>
+        Effect.gen(function* () {
+          yield* store.auth.requireOwner({
+            credential: yield* io(() => loadCredential(cfg)),
+          });
+          const result = yield* use(store, iso(nowInstant()));
+          yield* response(
+            cfg.format,
+            schema,
+            result,
+            `# Snapshots\n\n${JSON.stringify(result, null, 2)}\n`,
+          );
+        }),
+      { writing: true },
     );
   });
 }
@@ -2331,6 +2560,7 @@ const app = root.pipe(
     resetPassphrase,
     whoami,
     importCommand,
+    catalogCommand,
     profiles,
     lookup,
     add,
@@ -2438,6 +2668,15 @@ const program = Effect.gen(function* () {
     return yield* Effect.fail(
       new CommandError(2, "invalid_args", "--format can be supplied only once"),
     );
+  yield* io(() => {
+    const enabled = (flag: string) =>
+      flagArgs.some(
+        (arg, index) =>
+          (arg === flag || arg === `${flag}=true`) &&
+          !stringFlags.has(flagArgs[index - 1] ?? ""),
+      );
+    writeMode(enabled("--direct"), enabled("--require-server"));
+  });
   yield* io(() => {
     mkdirSync(localDir, { recursive: true, mode: 0o700 });
     const marker = join(localDir, ".first_run_disclaimer_seen");

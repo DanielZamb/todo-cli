@@ -70,8 +70,22 @@ export function verifyContractArtifacts(candidate, evidence) {
   const apiIdentity = readFileSync(join(candidate, "packages/api/src/contract.ts"), "utf8")
     .match(/"([a-f0-9]{64})"/)?.[1];
   assert.ok(apiIdentity);
-  assert.ok(readFileSync(join(candidate, "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"), "utf8")
-    .includes('"' + apiIdentity + '"'));
+  // The Swift identity names the contract its sources implement. It may differ
+  // from the API identity only while apps/macos/API/swift-client-pending.json
+  // names that exact pair (the Swift client is not regenerated yet).
+  const swiftIdentity = readFileSync(join(candidate, "apps/macos/API/Sources/TodoAPI/ContractIdentity.swift"), "utf8")
+    .match(/"([a-f0-9]{64})"/)?.[1];
+  assert.ok(swiftIdentity);
+  const pending = JSON.parse(readFileSync(join(candidate, "apps/macos/API/swift-client-pending.json"), "utf8"));
+  if (swiftIdentity !== apiIdentity) {
+    assert.equal(pending.swiftContract, swiftIdentity, "Swift identity differs and is not named as pending");
+    assert.equal(pending.serverContract, apiIdentity, "Swift identity differs and is not named as pending");
+  } else {
+    // Regenerated (generate-api.sh, step 2): nothing may stay named as pending.
+    assert.equal(pending.swiftContract, apiIdentity, "Swift client regenerated but the pending file names another Swift contract");
+    assert.equal(pending.serverContract, apiIdentity, "Swift client regenerated but the pending file names another server contract");
+    assert.deepEqual(pending.expectedRed, [], "Swift client regenerated but the pending file still lists expected red checks");
+  }
   const factory = readFileSync(
     join(candidate, "apps/electron/src/http-client.ts"),
     "utf8",

@@ -1,8 +1,16 @@
+import { Database } from "bun:sqlite";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterAll, beforeAll, expect, it } from "@effect/vitest";
+import { afterAll, afterEach, beforeAll, expect, it } from "@effect/vitest";
 import { JsonSchema, Schema, SchemaRepresentation } from "effect";
 
 const scratch = mkdtempSync(join(tmpdir(), "todo-c12-contract-"));
@@ -62,6 +70,46 @@ function run(args: readonly string[], input = "", home = scratch) {
   });
   return action;
 }
+// A write reported as success and then not seen must be decidable: when any
+// test in this file fails, its scratch databases and their History are kept
+// (history-on-failure.json beside them) instead of being removed.
+let failed = false;
+afterEach((context) => {
+  if (context.task.result?.state === "fail") failed = true;
+});
+const databases = (directory: string): string[] =>
+  readdirSync(directory).flatMap((name) => {
+    const path = join(directory, name);
+    return statSync(path).isDirectory()
+      ? databases(path)
+      : name.endsWith(".db")
+        ? [path]
+        : [];
+  });
+const keepHistory = () => {
+  const history = databases(scratch).map((path) => {
+    const db = new Database(path, { readonly: true });
+    try {
+      return {
+        path,
+        op_log: db
+          .query(
+            "SELECT seq,actor,profile,outcome,from_version,to_version,json_extract(event,'$.kind') AS kind,json_extract(event,'$.task.id') AS task_id,json_extract(event,'$.task.title') AS title FROM op_log ORDER BY seq",
+          )
+          .all(),
+      };
+    } catch (error) {
+      return { path, error: String(error) };
+    } finally {
+      db.close();
+    }
+  });
+  writeFileSync(
+    join(scratch, "history-on-failure.json"),
+    `${JSON.stringify({ history, actions }, null, 2)}\n`,
+  );
+  console.error(`contract.test.ts failed: scratch kept at ${scratch}`);
+};
 beforeAll(() => {
   if (!process.env.TODO_SERVER_BINARY) {
     const build = spawnSync(
@@ -117,7 +165,8 @@ afterAll(async () => {
       join(process.env.TODO_CLI_EVIDENCE, "contract-actions.json"),
       `${JSON.stringify(actions, null, 2)}\n`,
     );
-  rmSync(scratch, { recursive: true, force: true });
+  if (failed) keepHistory();
+  else rmSync(scratch, { recursive: true, force: true });
 });
 it("keeps typed search-budget refusals as CLI usage errors after graph reads", () => {
   const home = mkdtempSync(join(tmpdir(), "todo-search-dag-contract-"));
@@ -1118,5 +1167,26 @@ it("locks login after 10 wrong passphrases and requires the macOS password to re
   expect(schema.code, schema.err).toBe(0);
   expect(JSON.parse(schema.out)).toMatchObject({
     required: ["generated_at", "status", "sessions_revoked"],
+  });
+});
+
+it("rejects polling detailed Diagnostics before reading a Session or contacting a server", () => {
+  expect(run(["--help"]).code).toBe(0);
+  const result = run([
+    "diagnostics",
+    "--detail",
+    "--follow",
+    "--credential-profile",
+    "missing-diagnostics-session",
+    "--format",
+    "json",
+  ]);
+  expect(result.code).toBe(2);
+  expect(result.out).toBe("");
+  expect(JSON.parse(result.err)).toMatchObject({
+    code: "invalid_args",
+    message:
+      "--detail is a one-shot sample and cannot be combined with --follow",
+    exit_code: 2,
   });
 });

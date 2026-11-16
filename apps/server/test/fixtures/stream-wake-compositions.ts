@@ -84,6 +84,12 @@ const members = {
     revert: (s, f) =>
       s.revert({ actor, profile: f.profile.id, seq, occurred_at: time }),
     graphRead: (s, f) => within(s, f, (read) => s.graphRead(read)),
+    catalogRows: (s, f) => within(s, f, (read) => s.catalogRows(read)),
+    catalogPayloads: (s, f) =>
+      within(s, f, (read) => s.catalogPayloads(read, null)),
+    catalogSchemaVersion: (s, f) =>
+      within(s, f, (read) => s.catalogSchemaVersion(read)),
+    committedSince: (s, f) => within(s, f, (read) => s.committedSince(read, 0)),
     terminalChangesRead: (s) =>
       Effect.suspend(() => s.terminalChangesRead(null as never)),
     committedHistory: (s, f) => s.committedHistory(f.profile.id, 0),

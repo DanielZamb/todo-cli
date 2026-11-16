@@ -1,9 +1,18 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "@effect/vitest";
 import { ChangeEvent } from "@todo/api";
 import { Profile, ProfileId, Task } from "@todo/domain";
+import { endpointPath } from "@todo/domain/database-route";
 import { openStore, TaskCommands } from "@todo/domain/store";
 import { Context, Effect, Fiber, Layer, Schema } from "effect";
 import { HttpServer } from "effect/http";
@@ -31,7 +40,9 @@ const fixture = Effect.gen(function* () {
       }),
     );
   const session = yield* store.auth.signIn("sse test passphrase");
-  const context = yield* Layer.build(serverLayer({ path, port: 0 }));
+  const context = yield* Layer.build(
+    serverLayer({ timeZone: "UTC", path, port: 0 }),
+  );
   const base = HttpServer.formatAddress(
     Context.get(context, HttpServer.HttpServer).address,
   );
@@ -414,6 +425,14 @@ it.effect(
       const reader = frames((yield* connect()).response);
       expect(yield* next(reader)).toEqual({ event: "ready", data: null });
       const received = yield* next(reader).pipe(Effect.forkScoped);
+      // Hide the server's routing record so the CLI finds no server and sends
+      // no nudge: this case proves the fallback timer, not the nudge.
+      const record = endpointPath(realpathSync(path));
+      expect(existsSync(record)).toBe(true);
+      yield* Effect.acquireRelease(
+        Effect.sync(() => renameSync(record, `${record}.hidden`)),
+        () => Effect.sync(() => renameSync(`${record}.hidden`, record)),
+      );
       const child = Bun.spawn(
         [
           binary,

@@ -1,9 +1,11 @@
 import { Effect, Schema } from "effect";
+import { diagnosticSpan } from "./diagnostic-context.ts";
 import { type Project, type Tag, type Task, TaskPriority } from "./entities.ts";
 import { graphEnergy } from "./graph-energy.ts";
 import { dependencyState, indexGraph, type TaskGraph } from "./graph-model.ts";
 import { topologicalOrder } from "./graph-order.ts";
 import { inputLimits, TaskIdPrefix } from "./limits.ts";
+import { tagNameMatches } from "./tag-name.ts";
 import type { TaskRead } from "./task-read.ts";
 import {
   matchTaskSearchSteps,
@@ -44,8 +46,18 @@ export const TaskFilters = Schema.Struct({
     }),
   ),
   prefix: Schema.optionalKey(TaskIdPrefix),
-  project: Schema.optionalKey(Schema.String),
-  tag: Schema.optionalKey(Schema.String),
+  project: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "A Project name, compared exactly with the stored name, whitespace included.",
+    }),
+  ),
+  tag: Schema.optionalKey(
+    Schema.String.check(Schema.isPattern(/\S/u)).annotate({
+      description:
+        "A Tag name, compared by its stored form (trimmed, lowercase). A blank name is not a filter value and is refused as invalid_args.",
+    }),
+  ),
   status: Schema.optionalKey(
     Schema.Literals(["open", "done", "cancelled", "snoozed", "closed"]),
   ),
@@ -121,7 +133,7 @@ function* filterTaskRecordSteps(
           (tag) =>
             tag.profile_id === task.profile_id &&
             task.tags.includes(tag.id) &&
-            tag.name.toLowerCase() === filters.tag?.trim().toLowerCase(),
+            tagNameMatches(tag.name, filters.tag ?? ""),
         )) &&
       (filters.status === undefined ||
         (filters.status === "closed"
@@ -232,7 +244,8 @@ export function runTaskRecordSteps<E = never>(
 export function filterTaskRecordsEffect(
   ...args: Parameters<typeof filterTaskRecordSteps>
 ) {
-  return Effect.suspend(() =>
-    runTaskRecordSteps(filterTaskRecordSteps(...args)),
+  return diagnosticSpan(
+    "search_evaluation",
+    Effect.suspend(() => runTaskRecordSteps(filterTaskRecordSteps(...args))),
   );
 }

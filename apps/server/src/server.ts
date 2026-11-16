@@ -1,3 +1,4 @@
+import { dirname, join, resolve } from "node:path";
 import { BunHttpServer } from "@effect/platform-bun";
 import {
   Authorization,
@@ -6,6 +7,7 @@ import {
   BUILD_ID,
   CONTRACT_ID,
   Conflict,
+  FilterUsageError,
   InternalError,
   InvalidTask,
   NotFound,
@@ -22,24 +24,38 @@ import {
   authorizedTaskLookupError,
   batchDepend,
   batchEditTasks,
+  boundDiagnostics,
+  type CatalogError,
+  CatalogReads,
+  CatalogReply,
   ClientReads,
   DependencyCommands,
   type DependencyError,
+  type DiagnosticRecorder,
   Discovery,
+  diagnosticSpan,
   type EdgeCommandResult,
   type EdgeReport,
   ExpectedVersion,
   exitStatus,
   Instant,
+  observeDiagnostic,
+  PlanningView,
   ProfileId,
+  ProfileSummary,
+  ProjectSummary,
   parseQuickAdd,
+  provideDiagnosticContext,
   QuickAddInput,
   readGraphQuery,
   SnapshotError,
+  TagSummary,
   TaskId,
   type TaskMutationKind,
+  TaskRead,
   type TaskWrite,
   taskLookupError,
+  withOperationPosition,
 } from "@todo/domain";
 import { AttachmentCommands } from "@todo/domain/attachments";
 import {
@@ -50,17 +66,21 @@ import {
   revertTask,
   skipOccurrence,
 } from "@todo/domain/commands";
+import { DiagnosticRecordings } from "@todo/domain/diagnostic-recordings";
 import { importTasks } from "@todo/domain/import";
+import { RecordingService } from "@todo/domain/recording-service";
 import {
   type OperationStore,
   openStore,
   type TaskCommandResult,
   TaskCommands,
 } from "@todo/domain/store";
-import { Effect, Layer, Option, Redacted, Schema } from "effect";
+import { Effect, Exit, Layer, Option, Redacted, Schema, Stream } from "effect";
 import {
+  HttpBody,
   HttpEffect,
   HttpRouter,
+  HttpServer,
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/http";
@@ -70,13 +90,76 @@ import {
   HttpApiSchema,
   OpenApi,
 } from "effect/http-api";
+import { databaseEndpoint } from "./database-endpoint.ts";
+import { recordingGuard, recordingRoutes } from "./diagnostic-recordings.ts";
 import { translate } from "./errors.ts";
+import { localRoutes } from "./local-routes.ts";
 import { scheduler } from "./scheduler.ts";
 import { changesLayer } from "./sse.ts";
 import { StreamWake } from "./stream-wake.ts";
 import { streamWakeStore } from "./stream-wake-store.ts";
 import { taskSearchCacheHygiene } from "./task-search-cache-hygiene.ts";
 
+const encodedRead =
+  <S extends Schema.ConstraintCodec<unknown, unknown>>(schema: S) =>
+  <E, R>(effect: Effect.Effect<S["Type"], E, R>) =>
+    effect.pipe(
+      Effect.flatMap((value) =>
+        diagnosticSpan(
+          "encoding",
+          HttpServerResponse.schemaJson(schema)(value).pipe(Effect.orDie),
+        ),
+      ),
+    );
+const usageError = (message: string) =>
+  Effect.fail(
+    Schema.decodeUnknownSync(FilterUsageError)({
+      ...exitStatus(2),
+      generated_at: new Date().toISOString(),
+      code: "invalid_args",
+      message,
+    }),
+  );
+const profileNotFound = () =>
+  Effect.fail(
+    Schema.decodeUnknownSync(ProfileNotFound)({
+      ...exitStatus(3),
+      generated_at: new Date().toISOString(),
+      code: "not_found",
+      message: "Profile not found; choose a Profile from GET /profiles",
+    }),
+  );
+type ReadFailure =
+  | Effect.Error<ReturnType<typeof translate>>
+  | typeof SearchTooBroadResponse.Type
+  | typeof FilterUsageError.Type
+  | typeof ProfileNotFound.Type;
+const catalogFailure = (
+  error: CatalogError,
+): Effect.Effect<never, ReadFailure> =>
+  error._tag === "SearchTooBroad"
+    ? Effect.fail(
+        Schema.decodeUnknownSync(SearchTooBroadResponse)({
+          ...exitStatus(2),
+          generated_at: new Date().toISOString(),
+          code: error.code,
+          message: error.message,
+        }),
+      )
+    : error._tag === "UnknownTimeZone" || error._tag === "CatalogUsageError"
+      ? usageError(error.message)
+      : error._tag === "CatalogProfileMissing"
+        ? profileNotFound()
+        : translate(Effect.fail(error));
+const planningFailure = (
+  error: Effect.Error<ReturnType<ClientReads["view"]>>,
+): Effect.Effect<
+  never,
+  Effect.Error<ReturnType<typeof translate>> | typeof FilterUsageError.Type
+> =>
+  error._tag === "UnknownTimeZone"
+    ? usageError(error.message)
+    : translate(Effect.fail(error));
 const taskResult = (
   result: TaskCommandResult,
 ): Effect.Effect<
@@ -191,6 +274,26 @@ export const rejectUnknownQuery = <E, R>(
           { status: 400 },
         ),
       );
+    // A blank Tag name is not a filter value: the Tag rule trims, so it could
+    // never be meant exactly. Refused before any read. A Project name is
+    // compared exactly, so a blank one is a real name (seat F7).
+    const blankName = ["tag"].find(
+      (name) =>
+        route?.parameters.has(name) &&
+        url.searchParams.getAll(name).some((value) => value.trim() === ""),
+    );
+    if (blankName && !unknown.length)
+      return Effect.succeed(
+        HttpServerResponse.jsonUnsafe(
+          {
+            ...exitStatus(2),
+            generated_at: new Date().toISOString(),
+            code: "invalid_args",
+            message: `${blankName} needs a name; leave the parameter out to match every Tag.`,
+          },
+          { status: 400 },
+        ),
+      );
     return unknown.length
       ? Effect.succeed(
           HttpServerResponse.jsonUnsafe(
@@ -266,36 +369,200 @@ export const allowedHostsFrom = (value: string | undefined) =>
       .map((host) => host.trim().toLowerCase())
       .filter(Boolean),
   );
-export const diagnosticsMiddleware =
-  (diagnostics: OperationStore["diagnostics"]) =>
-  <E, R>(
+export const diagnosticsMiddleware = (
+  diagnostics: OperationStore["diagnostics"],
+  profiler = diagnostics.profiler,
+) => {
+  const visited = new Set<string>();
+  return <E, R>(
     httpEffect: Effect.Effect<HttpServerResponse.HttpServerResponse, E, R>,
   ) =>
     Effect.flatMap(HttpServerRequest.HttpServerRequest, (request) => {
       const query = request.url.indexOf("?");
       const path = query === -1 ? request.url : request.url.slice(0, query);
       const route = `${request.method} ${knownRoutes.find((value) => value.pattern.test(path))?.path ?? "unmatched"}`;
-      const start = performance.now();
-      HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) => {
+      const root = observeDiagnostic(
+        profiler,
+        () =>
+          profiler.root({
+            trace: request.headers["x-todo-trace"],
+            request: request.headers["x-todo-request"],
+            action: request.headers["x-todo-action"],
+          }),
+        "start",
+      );
+      const start = root?.monotonic_ms ?? performance.now();
+      const entry = root
+        ? observeDiagnostic(
+            profiler,
+            () => {
+              const method = [
+                "GET",
+                "POST",
+                "PATCH",
+                "DELETE",
+                "PUT",
+                "HEAD",
+                "OPTIONS",
+              ].includes(request.method)
+                ? request.method
+                : "OTHER";
+              const firstKey = `${method} ${knownRoutes.find((value) => value.pattern.test(path))?.path ?? "unmatched"}`;
+              const first_use = !visited.has(firstKey);
+              visited.add(firstKey);
+              return profiler.start(root, "entry", { first_use });
+            },
+            "start",
+          )
+        : undefined;
+      let handed = false;
+      const handoffResponse = (
+        response: HttpServerResponse.HttpServerResponse,
+      ) => {
+        if (handed) return response;
+        handed = true;
         const end = performance.now();
-        diagnostics.request(route, end - start, response.status, end);
-        return Effect.succeed(response);
-      });
-      return httpEffect;
+        observeDiagnostic(profiler, () =>
+          diagnostics.request(route, end - start, response.status, end),
+        );
+        const handoff = root
+          ? observeDiagnostic(
+              profiler,
+              () => profiler.start(root, "response_handoff"),
+              "start",
+            )
+          : undefined;
+        observeDiagnostic(profiler, () => profiler.end(handoff, "completed"));
+        observeDiagnostic(profiler, () =>
+          profiler.end(
+            entry,
+            response.status === 499
+              ? "cancelled"
+              : response.status === 409
+                ? "conflicted"
+                : response.status >= 500
+                  ? "failed"
+                  : response.status >= 400
+                    ? "refused"
+                    : "completed",
+            end,
+          ),
+        );
+        const body = response.body;
+        const accepted =
+          root && body._tag === "Stream"
+            ? HttpServerResponse.setBody(
+                response,
+                HttpBody.stream(
+                  body.stream.pipe(
+                    Stream.tap((chunk) =>
+                      Effect.sync(() =>
+                        observeDiagnostic(profiler, () =>
+                          profiler.transport(root.request_id, chunk),
+                        ),
+                      ),
+                    ),
+                  ),
+                  body.contentType,
+                  body.contentLength,
+                ),
+              )
+            : response;
+        const joined = root
+          ? HttpServerResponse.setHeader(
+              accepted,
+              "x-todo-request",
+              root.request_id,
+            )
+          : accepted;
+        const timing =
+          !root || response.status === 401 || response.status === 403
+            ? undefined
+            : observeDiagnostic(profiler, () =>
+                profiler.serverTiming(root, end - start),
+              );
+        return timing
+          ? HttpServerResponse.setHeader(joined, "server-timing", timing)
+          : joined;
+      };
+      HttpEffect.appendPreResponseHandlerUnsafe(request, (_, response) =>
+        Effect.succeed(handoffResponse(response)),
+      );
+      return provideDiagnosticContext(
+        root ? { recorder: profiler, envelope: root } : undefined,
+        diagnosticSpan("handler", httpEffect),
+      ).pipe(
+        Effect.map(handoffResponse),
+        Effect.onExit((exit) =>
+          Effect.sync(() => {
+            if (Exit.isFailure(exit))
+              observeDiagnostic(profiler, () =>
+                profiler.end(
+                  entry,
+                  Exit.hasInterrupts(exit) ? "cancelled" : "failed",
+                ),
+              );
+          }),
+        ),
+      );
     });
+};
 
 export const serverLayer = (options: {
   readonly path: string;
   readonly port: number;
+  readonly profiler?: DiagnosticRecorder;
   readonly allowedHosts?: ReadonlySet<string>;
+  readonly wake?: StreamWake;
+  /**
+   * The server's own IANA zone: "today" for a planning read or Catalog that
+   * sends no time_zone (ADR-0006). main.ts passes processTimeZone(); a test
+   * names its zone.
+   */
+  readonly timeZone: string;
 }) =>
   Layer.unwrap(
     Effect.gen(function* () {
+      const endpoint = yield* Effect.acquireRelease(
+        Effect.try({
+          try: () => databaseEndpoint(options.path),
+          catch: (cause) =>
+            cause instanceof Error ? cause : new Error(String(cause)),
+        }),
+        (endpoint) => Effect.sync(() => endpoint?.close()),
+      );
+      // Start-up evidence window. verifyStore accepts the store only if a new
+      // descriptor on the kept database file appeared while it opened. Nothing
+      // else in this process may open the database path between beforeStore()
+      // and verifyStore(): an extra open of the kept file would supply that
+      // evidence even if the store had opened a different file (the swap-back
+      // case). Keep this window to the store acquisition alone; a test in
+      // apps/server/test/database-endpoint.test.ts pins it. The wake decorator
+      // is built after the window; it opens nothing. The recordings service
+      // starts its worker after verifyStore, so this server's own worker
+      // opens nothing in the window. A number another thread closes and the
+      // store's open reuses still counts (openedInWindow in
+      // database-endpoint.ts), but a number that named the database before
+      // the window is never counted, and an extra open of the database path
+      // inside the window remains false evidence.
+      const beforeStore = endpoint?.beforeStore();
       const rawStore = yield* Effect.acquireRelease(
         openStore({ path: options.path }),
         (store) => Effect.orDie(store.close()),
       );
-      const wake = new StreamWake();
+      yield* Effect.sync(() => endpoint?.verifyStore(beforeStore));
+      const recordings = yield* Effect.acquireRelease(
+        Effect.sync(
+          () =>
+            new RecordingService(() =>
+              DiagnosticRecordings.start(
+                join(dirname(resolve(options.path)), "diagnostic-recordings"),
+              ),
+            ),
+        ),
+        (value) => Effect.promise(() => value.close()),
+      );
+      const wake = options.wake ?? new StreamWake();
       const store = streamWakeStore(rawStore, wake);
       const cacheHygiene = yield* taskSearchCacheHygiene(rawStore);
       yield* cacheHygiene.run.pipe(Effect.forkScoped);
@@ -361,8 +628,18 @@ export const serverLayer = (options: {
             return yield* taskResult(result);
           });
       const diagnostics = store.diagnostics;
+      const profiler = options.profiler ?? diagnostics.profiler;
+      diagnostics.profiler = profiler;
+      observeDiagnostic(profiler, () =>
+        profiler.configure({
+          enabled: process.env.TODO_DIAGNOSTICS_RECORDING !== "0",
+          build_id: BUILD_ID,
+          contract_id: CONTRACT_ID,
+        }),
+      );
       const attachments = new AttachmentCommands(store);
-      const reads = new ClientReads(store);
+      const reads = new ClientReads(store, options.timeZone);
+      const catalogs = new CatalogReads(store, options.timeZone);
       const discovery = new Discovery(store);
       const ValidationHistoryLive = HttpApiMiddleware.layerSchemaErrorTransform(
         ValidationHistory,
@@ -472,14 +749,51 @@ export const serverLayer = (options: {
         "diagnostics",
         (handlers) =>
           handlers.handleAll({
-            snapshot: () =>
+            snapshot: ({ query }) =>
               Effect.gen(function* () {
                 const body = yield* translate(
-                  diagnostics.read({ credential: yield* BearerCredential }),
+                  diagnostics.read({
+                    credential: yield* BearerCredential,
+                    detail: query.detail === "true",
+                  }),
                 );
+                const health = recordings.health();
                 return HttpApiSchema.withHeaders({
                   headers: { "cache-control": "no-store" },
-                  body,
+                  body:
+                    health.condition !== "available" || health.failures > 0
+                      ? boundDiagnostics({
+                          ...body,
+                          errors: [
+                            ...(health.condition !== "available" ||
+                            health.failures > 0
+                              ? [
+                                  {
+                                    id: Number.MAX_SAFE_INTEGER,
+                                    time: body.generated_at,
+                                    code:
+                                      recordings.health().condition ===
+                                      "held_reader"
+                                        ? `Recording storage held open by another reader; dropped batches: ${health.droppedBatches}; dropped events: ${health.droppedEvents}`
+                                        : `Recordings ${health.condition}; failures: ${health.failures}; dropped batches: ${health.droppedBatches}; dropped events: ${health.droppedEvents}`,
+                                    route: "Recording storage",
+                                  },
+                                ]
+                              : []),
+                            ...(health.refusal
+                              ? [
+                                  {
+                                    id: Number.MAX_SAFE_INTEGER - 1,
+                                    time: body.generated_at,
+                                    code: `Recordings ${health.refusal.state}: ${health.refusal.reason}. ${health.refusal.explanation}`,
+                                    route: `Recording storage. ${health.refusal.recovery}`,
+                                  },
+                                ]
+                              : []),
+                            ...body.errors,
+                          ],
+                        })
+                      : body,
                 });
               }),
           }),
@@ -498,7 +812,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           detach: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -511,7 +825,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           labelAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -524,7 +838,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           uploadAttachment: ({ params, payload }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -537,7 +851,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           attachmentImage: ({ params }) =>
             Effect.gen(function* () {
               const {
@@ -570,7 +884,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           batchEdit: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -581,7 +895,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           importTasks: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -592,7 +906,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           depend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -603,7 +917,7 @@ export const serverLayer = (options: {
                   "depend",
                 ),
               ).pipe(Effect.flatMap(dependencyResult));
-            }),
+            }).pipe(withOperationPosition),
           undepend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -614,7 +928,7 @@ export const serverLayer = (options: {
                   "undepend",
                 ),
               ).pipe(Effect.flatMap(dependencyResult));
-            }),
+            }).pipe(withOperationPosition),
           batchDepend: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -625,7 +939,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               );
-            }),
+            }).pipe(withOperationPosition),
           graph: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -664,7 +978,7 @@ export const serverLayer = (options: {
                         : translate(Effect.fail(error)),
                   ),
                 );
-            }),
+            }).pipe(encodedRead(Schema.Array(TaskRead))),
           show: ({ params }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -686,7 +1000,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           edit: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -696,7 +1010,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           transition: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -706,7 +1020,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           move: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -717,7 +1031,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
-            }),
+            }).pipe(withOperationPosition),
           copy: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -728,7 +1042,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "authenticate")));
-            }),
+            }).pipe(withOperationPosition),
           revert: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -739,7 +1053,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "read")));
-            }),
+            }).pipe(withOperationPosition),
           createSeries: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -750,7 +1064,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           editSeries: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -761,7 +1075,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           skipOccurrence: ({ params, payload }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -772,7 +1086,7 @@ export const serverLayer = (options: {
                   payload,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
           delete: ({ params, query }) =>
             Effect.gen(function* () {
               const credential = yield* BearerCredential;
@@ -782,7 +1096,7 @@ export const serverLayer = (options: {
                   query,
                 ),
               ).pipe(Effect.flatMap(taskResultFor(params, "mutate")));
-            }),
+            }).pipe(withOperationPosition),
         }),
       ).pipe(
         Layer.provide(ValidationHistoryLive),
@@ -809,7 +1123,7 @@ export const serverLayer = (options: {
                     : { ...result.error, ...exitStatus(2) },
                 );
               return result.report;
-            }),
+            }).pipe(withOperationPosition),
           lookup: ({ query }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -824,7 +1138,7 @@ export const serverLayer = (options: {
                   ? discovery.directory(credential)
                   : reads.profiles(credential),
               );
-            }),
+            }).pipe(encodedRead(Schema.Array(ProfileSummary))),
           projects: ({ params }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -833,7 +1147,7 @@ export const serverLayer = (options: {
                   profile: params.profile,
                 }),
               );
-            }),
+            }).pipe(encodedRead(Schema.Array(ProjectSummary))),
           tags: ({ params }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -842,20 +1156,28 @@ export const serverLayer = (options: {
                   profile: params.profile,
                 }),
               );
-            }),
+            }).pipe(encodedRead(Schema.Array(TagSummary))),
+          catalog: ({ params, query }) =>
+            Effect.gen(function* () {
+              const credential = yield* BearerCredential;
+              return yield* catalogs
+                .read({ credential, profile: params.profile }, query)
+                .pipe(Effect.catch(catalogFailure));
+            }).pipe(encodedRead(CatalogReply)),
           view: ({ params, query }) =>
             Effect.gen(function* () {
-              return yield* translate(
-                reads.view(
+              return yield* reads
+                .view(
                   {
                     credential: yield* BearerCredential,
                     profile: params.profile,
                   },
                   params.view,
                   query.now,
-                ),
-              );
-            }),
+                  query.time_zone,
+                )
+                .pipe(Effect.catch(planningFailure));
+            }).pipe(encodedRead(PlanningView)),
           history: ({ params }) =>
             Effect.gen(function* () {
               return yield* translate(
@@ -936,7 +1258,9 @@ export const serverLayer = (options: {
               Effect.gen(function* () {
                 const credential = yield* BearerCredential;
                 return yield* translate(
-                  store.auth.issueToken({ credential, token: payload }),
+                  withOperationPosition(
+                    store.auth.issueToken({ credential, token: payload }),
+                  ),
                 );
               }),
             listTokens: () =>
@@ -1029,9 +1353,11 @@ export const serverLayer = (options: {
               }),
             restore: ({ params, payload }) =>
               snapshotOwner(
-                store.snapshots.restore(params.snapshot, {
-                  dryRun: payload.dry_run,
-                }),
+                withOperationPosition(
+                  store.snapshots.restore(params.snapshot, {
+                    dryRun: payload.dry_run,
+                  }),
+                ),
               ),
             prune: ({ payload }) =>
               snapshotOwner(store.snapshots.prune({ dryRun: payload.dry_run })),
@@ -1047,7 +1373,11 @@ export const serverLayer = (options: {
           CredentialsLive,
           SystemLive,
           DiagnosticsLive,
+          recordingRoutes(recordings, store).pipe(
+            Layer.provide(AuthorizationLive),
+          ),
           SnapshotsLive,
+          localRoutes(store, endpoint, wake),
           changesLayer(rawStore, wake).pipe(Layer.provide(AuthorizationLive)),
         ]),
         Layer.provide(
@@ -1064,9 +1394,12 @@ export const serverLayer = (options: {
       );
       return HttpRouter.serve(routes, {
         middleware: (effect) =>
-          diagnosticsMiddleware(diagnostics)(
+          diagnosticsMiddleware(
+            diagnostics,
+            profiler,
+          )(
             rejectForeignRequests(options.allowedHosts)(
-              rejectUnknownQuery(effect),
+              recordingGuard(store)(rejectUnknownQuery(effect)),
             ),
           ),
       }).pipe(
@@ -1077,6 +1410,14 @@ export const serverLayer = (options: {
             idleTimeout: 0,
             maxRequestBodySize: 28 * 1024 * 1024,
           }),
+        ),
+        Layer.tap((context) =>
+          Effect.gen(function* () {
+            const server = yield* HttpServer.HttpServer;
+            const address = server.address;
+            if ("port" in address)
+              yield* Effect.try(() => endpoint?.publish(address.port));
+          }).pipe(Effect.provideContext(context)),
         ),
       );
     }),

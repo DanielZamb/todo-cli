@@ -312,3 +312,120 @@ The seed contains a committed Version-1 Task and no Purge, matching Init.
 constructor renewal and its statement trace. A later preview cleanup guard
 changes only an uncovered method; all 45 covered declarations remain byte-identical.
 Its new whole-file renewal remains a candidate until the seat re-checks it.
+
+## U06 attribution mapping review, 2026-11-12
+
+Reviewed immutable product 3ef9e674307378dde914059cb7581d6bdccb05d0 against
+f25fbfc4, whose store/projection hashes equal the previous anchors. Only two
+mapped files change. readTasks wraps the same ordered Task JSON/schema map in
+one guarded task_materialization span; historySync wraps the same ordered
+OpLogEntry map in one guarded history_decode span after the unchanged SQL read.
+The writer-lock span adds the scalar external_or_unknown class before BEGIN.
+No await, yield, filesystem work, SQL mutation, order change or new transaction
+boundary occurs in those changes. applyEvent is byte-identical, SHA-256
+f17a6f4792bf970de03b2a5889403c54c670aefa0d6ee98102001ea6dc333863.
+The new private journal is not called by a Task mutation or transaction.
+Recorder calls retain the shared non-throwing guard; the 47 compiled fault
+controls pass. Models, invariants, bounds and crash insertion points are unchanged.
+The recording report names the full check and real-code sensitivity receipts.
+
+## Diagnostics and server-integration merge candidate, 2026-11-13
+
+Merge ae9c5be3 joins feat/diag-core 6d653742 and integ/server 2a840b55. No
+covered function has new content: each is byte-identical to one parent's
+certified body and the other parent left it at base. The constructor (Init)
+is integ/server's; transaction, record, appendSync, historySync and readTasks
+are the reviewed Diagnostics bodies. Only the whole-file store.ts hash moves.
+The pre-renewal check stopped only on that hash, both real-code breaks failed,
+the restored source passed and the renewed check passed. The renewal is a
+candidate (`reviewedCandidate: false`) until the seat re-checks it.
+
+## Catalog contract candidate, 2026-11-13
+
+Product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5, feat/catalog-contract).
+Two covered functions change, and both wait for the coordinator's source review:
+`OperationStore.record` notes a committed row's seq, actor and occurred_at in the
+request's fiber-local cell after the unchanged INSERT (no SQL, no transaction,
+no reordering), and `OperationStore.constructor` marks a preview store's
+connection so its notes are ignored. The constructor statement trace and seed
+equal 9a372e86's for a normal store (10 statements, 2 boundaries). attachments.ts
+changes only AttachManyReport. The pre-renewal check stopped only at the source
+mapping (store.ts and attachments.ts); the renewed check passed
+(fv01-check-ZpFAlV); both real-code breaks failed and the restored source passed
+(sensitivity-DJfLoV). Candidate (`reviewedCandidate: false`) until the seat and
+the source review accept it.
+
+## Catalog contract correction, 2026-11-13
+
+Product b110f4a8b286a737b1dc46e9093a66110b3589d5, after the coordinator's
+source review. The constructor is accepted as reviewed (unchanged since
+f3039274). `OperationStore.record` changes once more: the event text is
+computed once and bound unchanged, and the note after the INSERT carries seq
+and that text; `noteCommitted` is guarded so bookkeeping never costs a commit,
+and settlement confirms a note only by seq, outcome='committed' and
+byte-identical event text. The pre-renewal check stopped only at the mapping
+(fv01-check-dvHBJT); the renewed check passed (fv01-check-qGPaQj); both
+real-code breaks failed and the restored source passed (sensitivity-VCmWB1).
+Candidate (`reviewedCandidate: false`) until the seat accepts it.
+
+## Seat findings correction, 2026-11-13
+
+Product beae37bceef38fb46325e14ccb45e4d03ddc5e9f, after seat CATALOG-S1's two
+findings. `OperationStore.record`'s guarded note now also carries the columns
+Purge never rewrites (actor, profile, from_version, to_version, occurred_at),
+so a rollback can be told from a redaction; the INSERT, its bound values, the
+returned entry and the transaction are unchanged. The pre-renewal check stopped
+only at the mapping; the renewed check passed (fv01-check-Qv0eoV); both
+real-code breaks failed and the restored source passed (sensitivity-M3o6h1).
+Candidate until the seat accepts it.
+
+## Coordinator's source review of OperationStore.record, 2026-11-14
+
+For the seat-findings candidate (beae37bc; the body is byte-identical at
+7f08409e): the event text is computed once and bound unchanged; the INSERT,
+its other bound values, the returned entry and the transaction are unchanged;
+the note after it now also carries the actor, the Profile, the two Versions and
+occurred_at, and is guarded so it cannot cost a commit. Accepted. Recorded in
+`coverage.json` as seatFindings.coordinatorSourceReview. The seat accepted the
+candidate on its check and sensitivity rerun (fv01-check-tsfnEu,
+sensitivity-fTmIHV).
+
+## Seat delta 2, 2026-11-14: the generation statement, and a correction
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa. attachments.ts moves only in
+AttachManyReport (operation_seq becomes operation_position, seat F8); every
+covered function is byte-identical.
+
+**Correction.** The catalog-contract record above says the note runs "no SQL".
+That was true at b110f4a8. From 180f929d the note at a request's first commit
+ran one guarded SELECT (the newest committed DatabaseRestored) inside the write
+transaction; from 8a646594 it runs it only on writing paths that classify no
+Profile first (owner-only AuthChanged writes: setupOwner, resetPassphrase,
+issueToken, revokeToken, signOut). Every other writing request notes the
+generation its Profile classification already read in the same transaction
+(auth.ts noteGeneration, no SQL); the restore notes the one it starts. The note
+still cannot throw out of the transaction and does not reorder anything.
+
+**The coordinator's review of the statement** (committed-operations.ts at
+106f22fa, 2026-11-14): it runs inside the transaction of a request's first
+committed insert, cannot fail a write (guarded twice) and writes nothing, so it
+does not touch atomicity: accepted on that ground. Recorded as
+seatDelta2.coordinatorStatementReview, with seatDelta2.statementNow giving the
+exact lines at ec16d45d and the measured cost.
+
+The pre-renewal check stopped only at the mapping (attachments.ts); after
+renewal the check passes (fv01-check-q79Wfp) and both real-code breaks fail
+while the restored source passes (sensitivity-KLHclt). Candidate until the
+seat accepts it.
+
+## Seat delta 3 (F9), 2026-11-14
+
+Product 5150042c (seat F9 on top of ec16d45d). No covered file changes; the
+check passes without renewal. The settle reads the current generation again
+(committed-operations.ts:189, after the request, outside any transaction) and
+compares it with the noted one; the range scan of ec16d45d is removed because
+it missed a restore below the request's lowest noted seq. Inside a write
+transaction the generation SELECT still runs only at committed-operations.ts:102
+(owner-only writes with no Profile classification). Both are guarded, write
+nothing, and cannot fail or change a write. Recorded as seatDelta3, with the
+coordinator's acceptance of 66dee60e. The check passes (fv01-check-iKGXt3).

@@ -14,7 +14,7 @@ export type StreamReads = Pick<
   readonly snapshots: Pick<OperationStore["snapshots"], "generation">;
   readonly diagnostics: Pick<
     OperationStore["diagnostics"],
-    "connect" | "disconnect" | "delivered"
+    "connect" | "disconnect" | "delivered" | "profiler"
   >;
 };
 

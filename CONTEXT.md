@@ -97,6 +97,10 @@ Open tasks whose due date has passed.
 A daily or weekly pass over open tasks to decide what to do next.
 _Avoid_: Digest, summary
 
+**Catalog**:
+What a client shows of one profile, as of one point in its history: how many open tasks each view holds (All, Today, Overdue, Scheduled, Inbox), the profile's projects and tags, and the tasks of one view in order, cut by project, tag, filters and search.
+_Avoid_: Dashboard, overview, sync state
+
 ### Profile lifecycle
 
 **Delete a Profile**:

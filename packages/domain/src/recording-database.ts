@@ -1,0 +1,722 @@
+import { Database } from "bun:sqlite";
+import {
+  chmodSync,
+  closeSync,
+  constants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  openSync,
+  readSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import {
+  releaseRecordingExclusion,
+  tryRecordingExclusion,
+} from "./recording-exclusion.ts";
+import {
+  inspectRecordingCatalog,
+  recognizeRecordingFormat,
+  recordingApplicationId,
+  recordingDDL,
+  recordingMinimumBytes,
+  recordingSchemaVersion,
+} from "./recording-format.ts";
+export type RecordingOpenPoint =
+  | "before_exclusion"
+  | "excluded"
+  | "initialized";
+export const recordingOpenRefusals = {
+  foreign_header:
+    "recordings.db is not a Todo recordings database (its header is not ours).",
+  foreign_catalog:
+    "recordings.db carries the recordings identifier, but its committed tables differ from this version's.",
+  foreign_sidecar:
+    "recordings.db is missing or empty, and a -wal, -shm or -journal file beside it either holds data the store cannot prove is its own or is not a private regular file.",
+  interrupted_initialization:
+    "recordings.db is empty beside a non-empty -journal: initialization stopped before its first commit, and the store cannot prove the journal is its own.",
+  hot_journal:
+    "A non-empty recordings.db-journal is beside the store; the store never writes one after initialization.",
+  oversized: "A recordings file is larger than the recordings disk ceiling.",
+  not_private:
+    "recordings.db or its -wal is not a private regular file of this user: it is a link or a directory, it has another link, or its owner or owner read and write permission is not the server's.",
+  directory_not_private:
+    "The recordings directory is not this user's private directory: it is not a directory, or its owner or owner read, write and search permission is not the server's, so the store cannot create or open its files.",
+  replaced: "recordings.db was replaced while the store was opening it.",
+  integrity: "recordings.db failed SQLite's integrity check.",
+  initialization_busy:
+    "Another process held recordings.db while it was being created; the server retries in one minute.",
+  store_busy:
+    "Another process kept writing recordings.db while it was being checked, so no consistent reading was possible; the server retries in one minute.",
+  open_failed:
+    "The recordings directory could not be opened; the server retries in one minute.",
+  check_unavailable:
+    "The store could not finish its own check of recordings.db, so nothing was decided about the files; the server retries in one minute.",
+} as const;
+export type RecordingOpenRefusalReason = keyof typeof recordingOpenRefusals;
+export const recordingStoreFiles = [
+  "recordings.db",
+  "recordings.db-wal",
+  "recordings.db-shm",
+  "recordings.db-journal",
+] as const;
+export function recordingRefusalGuidance(
+  directory: string,
+  reason: RecordingOpenRefusalReason,
+  present: readonly string[],
+  detail?: string,
+) {
+  const retrying =
+    reason === "initialization_busy" ||
+    reason === "store_busy" ||
+    reason === "open_failed" ||
+    reason === "check_unavailable";
+  const files = retrying
+    ? []
+    : reason === "directory_not_private"
+      ? [directory]
+      : present
+          .map((name) => join(directory, name))
+          .slice(0, recordingStoreFiles.length);
+  return {
+    state: retrying ? ("retrying" as const) : ("refused" as const),
+    reason,
+    explanation: detail
+      ? `${recordingOpenRefusals[reason]} What failed: ${detail}.`
+      : recordingOpenRefusals[reason],
+    files,
+    recovery: retrying
+      ? "Recording retries automatically every minute; Task service is unaffected."
+      : reason === "directory_not_private"
+        ? `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, give ${directory} back to this user as a directory with owner read, write and search permission, or remove it, then start it again.`
+        : `Recordings are diagnostic data and may be discarded; Task service is unaffected. Stop the server, remove ${files.join(", ")}, then start it again to create an empty store.`,
+  };
+}
+export function presentRecordingFiles(directory: string) {
+  return recordingStoreFiles.filter((name) => {
+    try {
+      lstatSync(join(directory, name));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+}
+export class RecordingOpenRefusal extends Error {
+  constructor(
+    readonly reason: RecordingOpenRefusalReason,
+    message = reason === "initialization_busy"
+      ? "Recording initialization busy"
+      : reason === "store_busy"
+        ? "Recording store busy"
+        : reason === "integrity"
+          ? "Recording integrity"
+          : reason === "open_failed"
+            ? "Recording directory unavailable"
+            : reason === "check_unavailable"
+              ? "Recording check unavailable"
+              : "Foreign database refused",
+    readonly detail?: string,
+  ) {
+    super(message);
+  }
+}
+const refuse = (reason: RecordingOpenRefusalReason): never => {
+  throw new RecordingOpenRefusal(reason);
+};
+const errorCode = (error: unknown) => {
+  const code =
+    error !== null && typeof error === "object" && "code" in error
+      ? String(error.code)
+      : error instanceof Error
+        ? error.name
+        : "unknown";
+  return /^[A-Za-z0-9_]{1,40}$/.test(code) ? code : "unknown";
+};
+const missing = (error: unknown) => errorCode(error) === "ENOENT";
+const fileNature = new Set([
+  "ELOOP",
+  "EISDIR",
+  "ENOTDIR",
+  "ENXIO",
+  "EACCES",
+  "EPERM",
+  "EFTYPE",
+]);
+const notPrivateFile = (path: string) => {
+  try {
+    const stat = lstatSync(path);
+    return (
+      !stat.isFile() ||
+      stat.nlink !== 1 ||
+      stat.uid !== process.getuid?.() ||
+      (stat.mode & 0o600) !== 0o600
+    );
+  } catch {
+    return false;
+  }
+};
+const notPrivateDirectory = (path: string) => {
+  try {
+    const stat = lstatSync(path);
+    return (
+      !stat.isDirectory() ||
+      stat.uid !== process.getuid?.() ||
+      (stat.mode & 0o700) !== 0o700
+    );
+  } catch {
+    return false;
+  }
+};
+const aboutTheFile = (error: unknown, path: string) =>
+  fileNature.has(errorCode(error)) && notPrivateFile(path);
+const unavailable = (stage: string, error: unknown): never => {
+  throw new RecordingOpenRefusal(
+    "check_unavailable",
+    undefined,
+    `${stage}: ${errorCode(error)}`,
+  );
+};
+const sqliteContent = (error: unknown) => {
+  const code = errorCode(error);
+  return code === "SQLITE_NOTADB" || code.startsWith("SQLITE_CORRUPT");
+};
+const ourCatalogVerdict = (error: unknown) =>
+  error instanceof Error && error.message === "Foreign database refused";
+function ownedHeader(fd: number, cap: number) {
+  const stat = fstatSync(fd);
+  if (stat.size > cap) refuse("oversized");
+  const header = Buffer.alloc(100);
+  let size = 0;
+  try {
+    size = readSync(fd, header, 0, 100, 0);
+  } catch (error) {
+    unavailable("header read", error);
+  }
+  return (
+    size === 100 &&
+    header.subarray(0, 16).equals(Buffer.from("SQLite format 3\0")) &&
+    header.readUInt32BE(68) === recordingApplicationId &&
+    header.readUInt32BE(60) === recordingSchemaVersion
+  );
+}
+const sizeOf = (path: string) => {
+  try {
+    return lstatSync(path).size;
+  } catch (error) {
+    if (missing(error)) return undefined;
+    return unavailable("file size", error);
+  }
+};
+const sameFile = (fd: number, path: string) => {
+  const current = fstatSync(fd);
+  try {
+    const named = lstatSync(path);
+    return current.ino === named.ino && current.dev === named.dev;
+  } catch (error) {
+    if (missing(error)) return false;
+    return unavailable("path check", error);
+  }
+};
+function clearEmptySidecars(path: string, sides: readonly string[]) {
+  const decided: Array<{ file: string; fd: number }> = [];
+  try {
+    for (const side of sides) {
+      const file = path + side;
+      let fd: number;
+      try {
+        fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+      } catch (error) {
+        if (missing(error)) continue;
+        if (aboutTheFile(error, file)) return refuse("foreign_sidecar");
+        return unavailable("sidecar open", error);
+      }
+      decided.push({ file, fd });
+      const stat = fstatSync(fd);
+      if (
+        !stat.isFile() ||
+        stat.nlink !== 1 ||
+        (side !== "-shm" && stat.size !== 0)
+      )
+        refuse("foreign_sidecar");
+      if (!sameFile(fd, file)) refuse("replaced");
+    }
+    for (const { file } of decided)
+      try {
+        unlinkSync(file);
+      } catch (error) {
+        unavailable("sidecar removal", error);
+      }
+  } finally {
+    for (const { fd } of decided) closeSync(fd);
+  }
+}
+function inspect(fd: number, path: string, image: () => number) {
+  let wal: number | undefined;
+  try {
+    wal = openSync(path + "-wal", constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if (!missing(error)) {
+      if (aboutTheFile(error, `${path}-wal`)) refuse("not_private");
+      unavailable("wal open", error);
+    }
+  }
+  try {
+    if (wal !== undefined) {
+      const stat = fstatSync(wal);
+      if (!stat.isFile() || stat.nlink !== 1) refuse("not_private");
+    }
+    const read = (descriptor: number) => (target: Buffer, position: number) => {
+      try {
+        return readSync(descriptor, target, 0, target.length, position);
+      } catch (error) {
+        return unavailable("store read", error);
+      }
+    };
+    const verdict = inspectRecordingCatalog(
+      { size: fstatSync(fd).size, read: read(fd) },
+      wal === undefined
+        ? undefined
+        : { size: fstatSync(wal).size, read: read(wal) },
+      (offset, page) => {
+        const target = image();
+        let written = 0;
+        try {
+          written = writeSync(target, page, 0, page.length, offset);
+        } catch (error) {
+          unavailable("temporary image write", error);
+        }
+        if (written !== page.length)
+          unavailable("temporary image write", { code: "short" });
+      },
+    );
+    if (verdict.kind !== "owned") return refuse(verdict.kind);
+    return verdict;
+  } finally {
+    if (wal !== undefined) closeSync(wal);
+  }
+}
+function preflight(path: string) {
+  const uri = pathToFileURL(path);
+  uri.searchParams.set("immutable", "1");
+  let existing: Database;
+  try {
+    existing = new Database(uri.href, { readonly: true, strict: true });
+  } catch (error) {
+    if (sqliteContent(error)) return refuse("foreign_catalog");
+    return unavailable("catalog check open", error);
+  }
+  try {
+    try {
+      recognizeRecordingFormat(existing);
+    } catch (error) {
+      if (busy(error)) throw error;
+      if (ourCatalogVerdict(error) || sqliteContent(error))
+        refuse("foreign_catalog");
+      unavailable("catalog check", error);
+    }
+    checkIntegrity(existing);
+  } finally {
+    existing.close();
+  }
+}
+const fileStamp = (fd: number, path: string) => {
+  const main = fstatSync(fd, { bigint: true });
+  let wal = "absent";
+  try {
+    const stat = lstatSync(`${path}-wal`, { bigint: true });
+    const header = Buffer.alloc(32);
+    const walFd = openSync(
+      `${path}-wal`,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
+    try {
+      readSync(walFd, header, 0, 32, 0);
+    } finally {
+      closeSync(walFd);
+    }
+    wal = `${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}:${header.toString("hex")}`;
+  } catch {}
+  return `${main.ino}:${main.size}:${main.mtimeNs}:${main.ctimeNs}|${wal}`;
+};
+export const recordingInspectionPolicy = {
+  boundMs: 500,
+} as const;
+function consistentInspection(fd: number, path: string) {
+  const deadline = performance.now() + recordingInspectionPolicy.boundMs;
+  let confirmed: RecordingOpenRefusalReason | undefined;
+  for (;;) {
+    const before = fileStamp(fd, path);
+    let refusal: RecordingOpenRefusal | undefined;
+    let scratch: string | undefined;
+    let imageFd: number | undefined;
+    const image = () => {
+      if (imageFd === undefined) {
+        try {
+          scratch = mkdtempSync(join(tmpdir(), "todo-recording-check-"));
+          imageFd = openSync(
+            join(scratch, "image.db"),
+            constants.O_RDWR |
+              constants.O_CREAT |
+              constants.O_EXCL |
+              constants.O_NOFOLLOW,
+            0o600,
+          );
+        } catch (error) {
+          return unavailable("temporary image create", error);
+        }
+      }
+      return imageFd;
+    };
+    const release = () => {
+      const open = imageFd;
+      imageFd = undefined;
+      if (open !== undefined)
+        try {
+          closeSync(open);
+        } catch {}
+    };
+    try {
+      const inspected = inspect(fd, path, image);
+      release();
+      preflight(inspected.imaged && scratch ? join(scratch, "image.db") : path);
+    } catch (error) {
+      refusal =
+        error instanceof RecordingOpenRefusal
+          ? error
+          : new RecordingOpenRefusal(
+              "check_unavailable",
+              undefined,
+              `inspection: ${errorCode(error)}`,
+            );
+    } finally {
+      release();
+      if (scratch) rmSync(scratch, { recursive: true, force: true });
+    }
+    if (!refusal) return;
+    const stable = before === fileStamp(fd, path);
+    if (stable && refusal.reason === "check_unavailable") throw refusal;
+    if (stable && confirmed === refusal.reason) throw refusal;
+    confirmed = stable ? refusal.reason : undefined;
+    if (performance.now() > deadline)
+      throw new RecordingOpenRefusal("store_busy");
+    wait();
+  }
+}
+function checkIntegrity(db: Database) {
+  let ok = false;
+  try {
+    ok =
+      db.query<{ quick_check: string }, []>("PRAGMA quick_check").get()
+        ?.quick_check === "ok" && !db.query("PRAGMA foreign_key_check").get();
+  } catch (error) {
+    if (busy(error)) throw error;
+    if (!sqliteContent(error)) unavailable("integrity check", error);
+  }
+  if (!ok) refuse("integrity");
+}
+const busy = (error: unknown) =>
+  error instanceof Error && /busy|locked/iu.test(error.message);
+const wait = () =>
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2);
+export function openRecordingDatabase(
+  directory: string,
+  totalBytes: number,
+  boundary?: (point: RecordingOpenPoint) => void,
+) {
+  if (totalBytes < recordingMinimumBytes) throw new Error("Recording capacity");
+  try {
+    mkdirSync(directory, { recursive: true, mode: 0o700 });
+  } catch (error) {
+    throw new RecordingOpenRefusal(
+      "open_failed",
+      undefined,
+      `directory create: ${errorCode(error)}`,
+    );
+  }
+  const dir = lstatSync(directory);
+  if (!dir.isDirectory() || dir.isSymbolicLink())
+    throw new RecordingOpenRefusal(
+      "directory_not_private",
+      "Private directory required",
+    );
+  const path = join(directory, "recordings.db"),
+    sides = ["-wal", "-shm", "-journal"];
+  if (sizeOf(path) === undefined) {
+    for (const side of sides) {
+      let stat: ReturnType<typeof lstatSync>;
+      try {
+        stat = lstatSync(path + side);
+      } catch (error) {
+        if (missing(error)) continue;
+        return unavailable("sidecar check", error);
+      }
+      if (
+        !stat.isFile() ||
+        stat.nlink !== 1 ||
+        (side !== "-shm" && stat.size > 0)
+      )
+        refuse("foreign_sidecar");
+    }
+  }
+  let created = false;
+  let fd: number;
+  try {
+    fd = openSync(
+      path,
+      constants.O_RDWR |
+        constants.O_CREAT |
+        constants.O_EXCL |
+        constants.O_NOFOLLOW,
+      0o600,
+    );
+    created = true;
+  } catch (error) {
+    if (errorCode(error) !== "EEXIST") {
+      if (aboutTheFile(error, path)) return refuse("not_private");
+      if (fileNature.has(errorCode(error)) && notPrivateDirectory(directory))
+        return refuse("directory_not_private");
+      return unavailable("main create", error);
+    }
+    try {
+      fd = openSync(path, constants.O_RDWR | constants.O_NOFOLLOW);
+    } catch (error) {
+      if (missing(error)) return refuse("replaced");
+      if (aboutTheFile(error, path)) return refuse("not_private");
+      return unavailable("main open", error);
+    }
+  }
+  let db: Database | undefined;
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1) refuse("not_private");
+    if (stat.size === 0) {
+      boundary?.("before_exclusion");
+      let excluded = false;
+      const until = performance.now() + 100;
+      do {
+        excluded = tryRecordingExclusion(fd);
+        if (excluded) break;
+        if (
+          ownedHeader(fd, totalBytes) &&
+          !existsSync(path + "-journal") &&
+          tryRecordingExclusion(fd, true)
+        )
+          break;
+        wait();
+      } while (performance.now() < until);
+      if (excluded) {
+        boundary?.("excluded");
+        if (!sameFile(fd, path)) refuse("replaced");
+        if (fstatSync(fd).size === 0) {
+          const journal = sizeOf(path + "-journal");
+          if (journal !== undefined && journal > 0)
+            refuse("interrupted_initialization");
+          clearEmptySidecars(path, sides);
+          if (sides.some((s) => existsSync(path + s)))
+            refuse("foreign_sidecar");
+          const uri = pathToFileURL(path);
+          uri.searchParams.set("vfs", "unix-none");
+          try {
+            const initial = new Database(uri.href, { strict: true });
+            try {
+              initial.exec(
+                "PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;",
+              );
+              initial.transaction(() => {
+                initial.exec(recordingDDL);
+                initial.exec(
+                  `PRAGMA application_id=${recordingApplicationId};PRAGMA user_version=${recordingSchemaVersion};`,
+                );
+              })();
+              boundary?.("initialized");
+            } finally {
+              initial.close();
+            }
+          } catch (error) {
+            if (busy(error)) throw error;
+            unavailable("initialization", error);
+          }
+        } else if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
+      } else if (!ownedHeader(fd, totalBytes))
+        throw new RecordingOpenRefusal("initialization_busy");
+      releaseRecordingExclusion(fd);
+    }
+    for (const s of sides) {
+      const size = sizeOf(path + s);
+      if (size !== undefined && size > totalBytes) refuse("oversized");
+    }
+    const held = performance.now() + 100;
+    while (!tryRecordingExclusion(fd, true)) {
+      if (performance.now() > held)
+        throw new RecordingOpenRefusal("initialization_busy");
+      wait();
+    }
+    try {
+      if (!ownedHeader(fd, totalBytes)) refuse("foreign_header");
+      const journal = sizeOf(path + "-journal");
+      if (journal !== undefined && journal > 0) refuse("hot_journal");
+    } finally {
+      releaseRecordingExclusion(fd);
+    }
+    consistentInspection(fd, path);
+    for (let attempt = 0; ; attempt++) {
+      if (!sameFile(fd, path)) refuse("replaced");
+      if (!tryRecordingExclusion(fd, true)) {
+        if (attempt < 49) {
+          wait();
+          continue;
+        }
+        throw new RecordingOpenRefusal(
+          "initialization_busy",
+          "database is locked",
+        );
+      }
+      try {
+        db = new Database(path, {
+          strict: true,
+          readwrite: true,
+          create: false,
+        });
+      } catch (error) {
+        if (!sameFile(fd, path)) return refuse("replaced");
+        return unavailable("connection open", error);
+      }
+      try {
+        if (!sameFile(fd, path)) refuse("replaced");
+        db.exec("PRAGMA busy_timeout=1");
+        try {
+          recognizeRecordingFormat(db);
+        } catch (error) {
+          if (busy(error)) throw error;
+          if (ourCatalogVerdict(error) || sqliteContent(error))
+            refuse("foreign_catalog");
+          unavailable("live catalog check", error);
+        }
+      } catch (error) {
+        db.close();
+        db = undefined;
+        releaseRecordingExclusion(fd);
+        if (attempt < 49 && busy(error)) {
+          wait();
+          continue;
+        }
+        throw error;
+      }
+      releaseRecordingExclusion(fd);
+      break;
+    }
+  } catch (error) {
+    if (db) db.close();
+    try {
+      if (created && fstatSync(fd).size === 0 && sameFile(fd, path))
+        unlinkSync(path);
+    } catch {}
+    closeSync(fd);
+    if (error instanceof RecordingOpenRefusal) throw error;
+    if (busy(error))
+      throw new RecordingOpenRefusal(
+        "initialization_busy",
+        "database is locked",
+      );
+    return unavailable("open", error);
+  }
+  if (!db) {
+    closeSync(fd);
+    return unavailable("open", new Error("no connection"));
+  }
+  const opened = db;
+  let held = true;
+  const handle = {
+    db: opened,
+    close: () => {
+      if (!held) return;
+      held = false;
+      closeSync(fd);
+    },
+  };
+  for (let attempt = 0; ; attempt++) {
+    try {
+      chmodSync(directory, 0o700);
+      chmodSync(path, 0o600);
+      opened.exec(
+        `PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1; PRAGMA wal_autocheckpoint=64; PRAGMA cache_size=-8192; PRAGMA cache_spill=OFF; PRAGMA journal_size_limit=1048576;`,
+      );
+      for (const name of [
+        "dropped_batches",
+        "dropped_events",
+        "expired_events",
+        "capacity_events",
+        "storage_failures",
+        "corrupt_segments",
+        "duplicate_batches",
+        "uncertain_restarts",
+      ])
+        opened.query("INSERT OR IGNORE INTO counters VALUES(?,0)").run(name);
+      const cap = totalBytes;
+      opened.exec(
+        `PRAGMA max_page_count=${Math.floor(Math.max(2097152, cap - 16777216) / 4096)}`,
+      );
+      for (const suffix of ["", "-wal", "-shm"])
+        try {
+          chmodSync(path + suffix, 0o600);
+        } catch {}
+      return handle;
+    } catch (error) {
+      if (attempt < 49 && busy(error)) {
+        wait();
+        continue;
+      }
+      opened.close();
+      handle.close();
+      if (busy(error))
+        throw new RecordingOpenRefusal(
+          "initialization_busy",
+          "database is locked",
+        );
+      return unavailable("store setup", error);
+    }
+  }
+}
+
+export function guardRecordingCommit(db: Database, cap: number) {
+  const pages =
+    db.query<{ page_count: number }, []>("PRAGMA page_count").get()
+      ?.page_count ?? 0;
+  const pageSize =
+    db.query<{ page_size: number }, []>("PRAGMA page_size").get()?.page_size ??
+    4096;
+  const allocation = (path: string) => {
+    try {
+      const s = statSync(path);
+      return Math.max(s.size, s.blocks * 512);
+    } catch (error) {
+      if (
+        error !== null &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "ENOENT"
+      )
+        return 0;
+      throw error;
+    }
+  };
+  const main = Math.max(allocation(db.filename), pages * pageSize),
+    wal = allocation(db.filename + "-wal");
+  if (
+    main +
+      wal +
+      pages * (pageSize + 24) +
+      Math.min(1048576, Math.floor(cap / 16)) >
+    cap
+  )
+    throw new Error("Recording physical capacity");
+}

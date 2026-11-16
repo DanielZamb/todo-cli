@@ -16,6 +16,7 @@ import {
 import { planImportDependencies } from "./import-dependencies.ts";
 import { StoreError } from "./store/error.ts";
 import type { OperationStore } from "./store/store.ts";
+import { tagNameParts } from "./tag-name.ts";
 import { CreateTask, TaskPatch } from "./task-commands.ts";
 import { taskLookupError } from "./task-lookup-error.ts";
 import { Instant } from "./time.ts";
@@ -225,10 +226,7 @@ const executeImport = Effect.fn(function* (
                 }),
             });
           const data = yield* store.auth.read(request);
-          const normalizedNames = (changes.tag_names ?? [])
-            .flatMap((name) => name.split(","))
-            .map((name) => name.trim().toLowerCase())
-            .filter(Boolean);
+          const normalizedNames = tagNameParts(changes.tag_names ?? []);
           const requestedTags = [
             ...new Set([
               ...(changes.tags ?? []).map((id) => JSON.stringify(["id", id])),

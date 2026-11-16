@@ -23,6 +23,7 @@ import {
   type AuthorizedOwnerRead,
   checkedRead,
 } from "../auth/authorized-read.ts";
+import { noteCommitted } from "../committed-operations.ts";
 import { DatabaseRestored, OpLogEntry } from "../events.ts";
 import { TaskId } from "../ids.ts";
 import {
@@ -578,11 +579,25 @@ export class Snapshots {
             generation,
             snapshot_id: id,
           });
-          this.db
+          const text = JSON.stringify(event);
+          const restored = this.db
             .query(
               "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES ('snapshot-restore',NULL,1,?,NULL,NULL,'committed',NULL)",
             )
-            .run(JSON.stringify(event));
+            .run(text);
+          noteCommitted(
+            this.db,
+            {
+              seq: Number(restored.lastInsertRowid),
+              event: text,
+              actor: "snapshot-restore",
+              profile: null,
+              from_version: null,
+              to_version: null,
+              occurred_at: event.occurred_at,
+            },
+            generation,
+          );
           for (const trigger of triggers) this.db.exec(trigger.sql);
           if (this.db.query("PRAGMA foreign_key_check").all().length)
             throw new SnapshotError(

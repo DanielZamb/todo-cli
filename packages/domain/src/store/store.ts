@@ -16,7 +16,17 @@ import {
   type AuthorizedTerminalRead,
   checkedRead,
 } from "../auth/authorized-read.ts";
+import {
+  markPreviewConnection,
+  noteCommitted,
+} from "../committed-operations.ts";
 import { DependencyError, Edge, RejectionDetails } from "../dependencies.ts";
+import {
+  beginDiagnosticSpan,
+  diagnosticSpan,
+  diagnosticSync,
+  finishDiagnosticSpan,
+} from "../diagnostic-context.ts";
 import {
   Profile,
   Project,
@@ -47,6 +57,7 @@ import {
 } from "../recurrence.ts";
 import { TaskSearchCache } from "../task-search-cache.ts";
 import { Instant } from "../time.ts";
+import { CatalogProjection } from "./catalog-projection.ts";
 import { ClientProjection } from "./client-projection.ts";
 import { incidentRemoval, putEdge, readEdges } from "./dependencies.ts";
 import {
@@ -102,7 +113,10 @@ class AttachmentCleanupError extends Error {
 }
 
 const attempt = <A>(run: () => A) =>
-  Effect.try({ try: run, catch: (cause) => new StoreError(cause) });
+  Effect.try({
+    try: () => diagnosticSync("domain", run),
+    catch: (cause) => new StoreError(cause),
+  });
 const identity = Schema.Struct({ actor: ActorId, profile: ProfileId });
 const commandEnvelope = Schema.Struct({
   ...identity.fields,
@@ -183,6 +197,7 @@ export class OperationStore {
           readwrite: true,
           strict: true,
         });
+    if (this.isPreview) markPreviewConnection(this.db);
     try {
       this.db.function("domain_write_allowed", () => (this.writing ? 1 : 0));
       this.db.exec(
@@ -303,17 +318,28 @@ export class OperationStore {
   }
 
   private transaction<A>(run: () => A): A {
-    const result = this.db
-      .transaction(() => {
-        const writing = this.writing;
-        this.writing = true;
-        try {
-          return run();
-        } finally {
-          this.writing = writing;
-        }
-      })
-      .immediate();
+    const waiting = beginDiagnosticSpan("writer_lock_wait", {
+      lock_holder: "external_or_unknown",
+    });
+    let entered = false;
+    let result: A;
+    try {
+      result = this.db
+        .transaction(() => {
+          entered = true;
+          finishDiagnosticSpan(waiting, "completed");
+          const writing = this.writing;
+          this.writing = true;
+          try {
+            return run();
+          } finally {
+            this.writing = writing;
+          }
+        })
+        .immediate();
+    } finally {
+      if (!entered) finishDiagnosticSpan(waiting, "failed");
+    }
     if (!this.writing && this.attachmentCleanupRequested) {
       this.attachmentCleanupRequested = false;
       this.cleanupAttachmentsSync();
@@ -558,17 +584,20 @@ export class OperationStore {
   readonly series = () => attempt(() => readSeries(this.db));
   readonly dependencies = () => attempt(() => readEdges(this.db));
   readonly graph = (profile: ProfileId) =>
-    attempt(() =>
-      this.db.transaction(() => ({
-        tasks: new ClientProjection(this.db).tasksForMutation(profile),
-        edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
-          this.db
-            .query(
-              "SELECT * FROM task_dependencies WHERE profile_id=? ORDER BY profile_id,dependent_id,blocker_id",
-            )
-            .all(profile),
-        ),
-      }))(),
+    diagnosticSpan(
+      "graph",
+      attempt(() =>
+        this.db.transaction(() => ({
+          tasks: new ClientProjection(this.db).tasksForMutation(profile),
+          edges: Schema.decodeUnknownSync(Schema.Array(Edge))(
+            this.db
+              .query(
+                "SELECT * FROM task_dependencies WHERE profile_id=? ORDER BY profile_id,dependent_id,blocker_id",
+              )
+              .all(profile),
+          ),
+        }))(),
+      ),
     );
 
   readonly graphRead = (read: AuthorizedRead) =>
@@ -576,11 +605,42 @@ export class OperationStore {
       Effect.flatMap((value) => this.graph(value.profile)),
     );
 
+  readonly catalogRows = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).rows(read)),
+      ),
+    );
+
+  readonly catalogPayloads = (
+    read: AuthorizedRead,
+    ids: readonly TaskId[] | null,
+  ) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).payloads(read, ids)),
+      ),
+    );
+
+  readonly catalogSchemaVersion = (read: AuthorizedRead) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).schemaVersion(read)),
+      ),
+    );
+
+  readonly committedSince = (read: AuthorizedRead, seq: number) =>
+    checkedRead(read, "read", this.db).pipe(
+      Effect.flatMap(() =>
+        attempt(() => new CatalogProjection(this.db).committedSince(read, seq)),
+      ),
+    );
+
   readonly terminalChangesRead = (read: AuthorizedTerminalRead) =>
     attempt(() => terminalHistory(this.db, read));
 
   private historySync(after: number): OpLogEntry[] {
-    return this.db
+    const rows = this.db
       .query<
         {
           seq: number;
@@ -594,13 +654,15 @@ export class OperationStore {
         },
         [number]
       >("SELECT * FROM op_log WHERE seq>? ORDER BY seq")
-      .all(after)
-      .map((row) =>
+      .all(after);
+    return diagnosticSync("history_decode", () =>
+      rows.map((row) =>
         Schema.decodeUnknownSync(OpLogEntry)({
           ...row,
           event: JSON.parse(row.event),
         }),
-      );
+      ),
+    );
   }
 
   readonly fork = () =>
@@ -645,20 +707,36 @@ export class OperationStore {
     input: Pick<Append, "actor" | "profile">,
     entry: Omit<OpLogEntry, "seq" | "actor" | "profile">,
   ): OpLogEntry {
-    const result = this.db
-      .query(
-        "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,?,?,?,?,?,?)",
-      )
-      .run(
-        input.actor,
-        input.profile,
-        entry.event.entity_version,
-        json(entry.event),
-        entry.from_version,
-        entry.to_version,
-        entry.outcome,
-        entry.reason,
-      );
+    const event = json(entry.event);
+    const result = diagnosticSync(
+      "database",
+      () =>
+        this.db
+          .query(
+            "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,?,?,?,?,?,?)",
+          )
+          .run(
+            input.actor,
+            input.profile,
+            entry.event.entity_version,
+            event,
+            entry.from_version,
+            entry.to_version,
+            entry.outcome,
+            entry.reason,
+          ),
+      { statement: "store.write" },
+    );
+    if (entry.outcome === "committed")
+      noteCommitted(this.db, {
+        seq: Number(result.lastInsertRowid),
+        event,
+        actor: input.actor,
+        profile: input.profile,
+        from_version: entry.from_version,
+        to_version: entry.to_version,
+        occurred_at: entry.event.occurred_at,
+      });
     return Schema.decodeUnknownSync(OpLogEntry)({
       ...entry,
       seq: Number(result.lastInsertRowid),
@@ -1158,7 +1236,13 @@ export class OperationStore {
           outcome: "committed",
           reason: null,
         });
-        applyEvent(this.db, event, input.profile);
+        diagnosticSync(
+          "projection",
+          () => {
+            applyEvent(this.db, event, input.profile);
+          },
+          { statement: "store.projection" },
+        );
         if (event.kind === "TaskPurged") {
           this.searchWords.clearAll();
           this.queueAttachmentCleanup(event.task_id);

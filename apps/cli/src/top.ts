@@ -53,6 +53,27 @@ const spark = (values: readonly number[]) => {
         .join("")
     : "Collecting samples…";
 };
+const wrapWords = (text: string, width = 46) => {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of text.split(" ")) {
+    let rest = [...word];
+    if (line && [...line].length + 1 + rest.length > width) {
+      lines.push(line);
+      line = "";
+    }
+    while (rest.length > width) {
+      lines.push(rest.slice(0, width).join(""));
+      rest = rest.slice(width);
+    }
+    line = line ? `${line} ${rest.join("")}` : rest.join("");
+  }
+  if (line) lines.push(line);
+  return lines;
+};
+const recordingRefusal = (code: string) =>
+  code.startsWith("Recordings refused:") ||
+  code.startsWith("Recordings retrying:");
 export type TopState = { pane: number; profile: string | null; offset: number };
 export function topPanes(
   snapshot: DiagnosticsSnapshot,
@@ -92,7 +113,7 @@ export function topPanes(
       title: "Operations",
       lines: [
         `${snapshot.operations.per_second.toFixed(2)} ops/s · 60s window · ${snapshot.operations.rejected} rejected total`,
-        spark(snapshot.operations.samples),
+        spark([...snapshot.operations.samples].reverse()),
         ...operations.map(
           (operation) =>
             `${operation.outcome === "rejected" ? "REJECT" : "ACCEPT"} #${operation.seq} ${operation.type} · ${name(operation.profile)} · ${time(operation.time)}`,
@@ -113,7 +134,7 @@ export function topPanes(
       title: "Latency",
       lines: [
         "Completed responses · last 5m · max 2048",
-        spark(snapshot.latency.samples),
+        spark([...snapshot.latency.samples].reverse()),
         ...snapshot.latency.routes
           .map((route) => `${route.route}  n=${route.count}`)
           .flatMap((route, index) => [
@@ -143,10 +164,14 @@ export function topPanes(
     {
       title: "Recent errors",
       lines: snapshot.errors.length
-        ? snapshot.errors.flatMap((error) => [
-            `${time(error.time)} · ${error.code}`,
-            error.route,
-          ])
+        ? snapshot.errors.flatMap((error) =>
+            recordingRefusal(error.code)
+              ? [
+                  ...wrapWords(`${time(error.time)} · ${error.code}`),
+                  ...wrapWords(error.route),
+                ]
+              : [`${time(error.time)} · ${error.code}`, error.route],
+          )
         : ["No errors in the last 5 minutes"],
     },
     {

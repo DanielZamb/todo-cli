@@ -7,6 +7,7 @@ import http.server
 import io
 import json
 import os
+import plistlib
 from pathlib import Path
 import re
 import shutil
@@ -27,6 +28,28 @@ import state_package  # the vault swap and the Keychain guard every runner uses
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = Path(__file__).with_name('Measurement.swift')
 BASE_ENV = {k: v for k, v in os.environ.items() if not k.startswith(('TODO_', 'MAC_PERF_'))}
+# The model keeps its stream cursor in UserDefaults under keys named by the server URL
+# (cursor.<vault>.<url>.<profile>, and restore-cursor.<url> as its fallback), and every `swift test`
+# process shares this one defaults domain, whatever HOME it gets. A cursor left there by an earlier
+# test on the same ephemeral port made a measured client resume its stream from 3 instead of the
+# fixture's 925 and replay 711 operations (INTEG-STEP2 step 7). Each cell clears exactly its own URL's
+# keys before the model connects; nothing else in the domain is touched, and no other process can be
+# using those keys then, because the URL's port is bound by this cell's proxy.
+CURSOR_DOMAIN = 'swiftpm-testing-helper'
+# A fixed proxy port, for reproducing a cell on a chosen URL; ephemeral by default.
+PROXY_PORT = int(os.environ.get('MAC_PERF_PROXY_PORT', '0'))
+
+def clear_cursor_keys(url, receipt):
+    exported = subprocess.run(['defaults', 'export', CURSOR_DOMAIN, '-'], capture_output=True)
+    keys = list(plistlib.loads(exported.stdout)) if exported.returncode == 0 and exported.stdout else []
+    own = sorted(key for key in keys if key == 'restore-cursor.' + url or (key.startswith('cursor.') and ('.' + url + '.') in key))
+    found = {}
+    for key in own:
+        found[key] = subprocess.run(['defaults', 'read', CURSOR_DOMAIN, key], capture_output=True, text=True).stdout.strip()
+        subprocess.run(['defaults', 'delete', CURSOR_DOMAIN, key], check=True, capture_output=True)
+    left = [key for key in own if subprocess.run(['defaults', 'read', CURSOR_DOMAIN, key], capture_output=True).returncode == 0]
+    receipt.write_text(json.dumps(dict(domain=CURSOR_DOMAIN, url=url, cleared=found, left=left), indent=2) + '\n')
+    assert not left, ('cursor keys still present after clearing', left)
 parser = argparse.ArgumentParser()
 parser.add_argument('evidence', type=Path)
 parser.add_argument('--runs', type=int, default=5)
@@ -528,11 +551,12 @@ for iteration in range(args.iteration_offset, args.iteration_offset + args.runs)
                     upstream.close()
             class ClimbProxy(http.server.ThreadingHTTPServer):
                 request_queue_size = 1024
-            proxy = (ClimbProxy if args.climb else http.server.ThreadingHTTPServer)(('127.0.0.1', 0), Handler)
-            (folder / 'proxy.json').write_text(json.dumps(dict(accept_backlog=proxy.request_queue_size, request_accounting='Client only; controller truth reads excluded'), indent=2))
+            proxy = (ClimbProxy if args.climb else http.server.ThreadingHTTPServer)(('127.0.0.1', PROXY_PORT), Handler)
+            (folder / 'proxy.json').write_text(json.dumps(dict(port=proxy.server_port, accept_backlog=proxy.request_queue_size, request_accounting='Client only; controller truth reads excluded'), indent=2))
             proxy.daemon_threads = True
             threading.Thread(target=proxy.serve_forever, daemon=True).start()
             url = f'http://127.0.0.1:{proxy.server_port}'
+            clear_cursor_keys(url, folder / 'cursor-keys.json')
             if args.cpu_workers: wait_for_owner_idle(folder / 'cpu-worker-admission.json')
             for _ in range(args.cpu_workers):
                 processes.append(subprocess.Popen([sys.executable, '-c', 'while True: pass'], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))

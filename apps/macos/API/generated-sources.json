@@ -1,0 +1,18 @@
+{
+  "about": "Written by apps/macos/scripts/generated-sources.py --write at the end of generate-api.sh: the Swift files in GeneratedSources and the document they were generated from. The root check refuses any difference.",
+  "document": {
+    "path": "apps/macos/API/Sources/TodoAPI/openapi.json",
+    "sha256": "6d9cd24f8db414381d5c22ea1ae5cccc03057226b144cd8d63821f26d7e66ae3"
+  },
+  "generated": {
+    "Client.swift": "5d472b87fdb054b580bef4e4e2a7296e751d633de0c3f202b613867a1056849b",
+    "Types+Components+Headers.swift": "b920e1a8ad3af618f10823dfd9ead2ac7a2833dcd9e06f84973789d7b578e1e2",
+    "Types+Components+Parameters.swift": "06b05f078460bb0cc022223f7e6bf5d8509978b81486f2c191e241c08f38664b",
+    "Types+Components+RequestBodies.swift": "3a79bacb276382b5f534e3a02a5a50297f67c53832e30b31e7afd9afbc6275bd",
+    "Types+Components+Responses.swift": "8b243eb7012a5949f3818188cd64cc40021b87061be2b9de50a611f2ab9ab776",
+    "Types+Components+Schemas.swift": "ec5c6c868920e78cda3811ecef038222254c3b223f9f701dfcd3ebdb986a4538",
+    "Types+Components.swift": "6ea69a3694541e5a67e2e3fe774048b7e0e3706ba7957ddefedd4e9e136b04e7",
+    "Types+Operations.swift": "552fa7397d7b9b5f01e80961a587ebb3b4073de2071dd4c0b292751b6468f35a",
+    "Types.swift": "1d9d3986918f593a5d66e4c0fe2a997f172f984101099cad435f780aa65eadc0"
+  }
+}

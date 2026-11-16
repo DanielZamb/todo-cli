@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { operationPositionField } from "./committed-operations.ts";
 import { Profile } from "./entities.ts";
 import { Instant } from "./time.ts";
 
@@ -8,6 +9,7 @@ export const DeleteProfile = Schema.Struct({
 });
 export type DeleteProfile = typeof DeleteProfile.Type;
 export const ProfileDeletionReport = Schema.Struct({
+  ...operationPositionField,
   generated_at: Instant,
   profile: Profile,
   dry_run: Schema.Boolean,

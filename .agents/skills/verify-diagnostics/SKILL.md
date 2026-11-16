@@ -100,6 +100,11 @@ metadata; human renderers add the (deleted) suffix without exposing Task content
 
 ## Collection cost
 
+For first-use reads, history scaling, /profiles fan-out, guarded CPU pressure
+and serial service, use the separate [cold read measurement](features/cold-path.md).
+It records ambient conditions and holds quiet/pressure cells when their gates
+are unmet. It does not change the collection-cost recipe or its ceiling below.
+
 Run only after the coordinator's quiet-host approval. The driver aborts when
 one-minute host load exceeds 4. It compares five alternating rounds per side,
 with 100 literal Tasks and zero tolerated failures. It profiles in a separate
@@ -149,3 +154,48 @@ and referenced files. attachment_store_bytes counts regular files under the
 managed attachment root, skipping symbolic links. The compiled HTTP, Electron
 and Swift drives upload a 67-byte PNG, require one additional Attachment and
 67 additional store bytes, and reject its private label from diagnostics.
+
+## Shared interaction schemas
+
+Read [the vocabulary recipe](features/vocabulary.md). After the main compiled
+proof has built same-source binaries, run:
+
+```sh
+bun .agents/skills/verify-diagnostics/scripts/verify-vocabulary.ts "$PWD/docs/evidence/ui-speed/vocabulary-new"
+pnpm --filter @todo/domain test client-diagnostics.test.ts
+```
+
+The schema commands use only scratch HOME and do not open the real database.
+Unknown event/version/content decode returns an explicit reason without keeping
+the unknown payload. Unknown capabilities map to unknown, never zero.
+
+## Joined request proof
+
+After changing snapshot collection or projection, also run the
+[payload budget drive](features/payload.md). Default snapshots and CLI JSON are
+at most 48 KiB including pretty formatting. Explicit detail=true/--detail is
+bounded separately at 64 KiB and never used by ordinary polling.
+
+Read [request and stream joins](features/joins.md). After the main recipe,
+run `bun apps/server/scripts/verify-diagnostic-joins.ts <absolute-new-evidence-directory>`.
+It uses matching cached binaries with a private temporary HOME and database.
+The recipe also documents the separately labelled busy-host overhead comparison.
+The existing quiet collection-cost recipe and its ceiling remain unchanged.
+
+For a worker prohibited from running Swift, set `TODO_DIAGNOSTICS_NO_SWIFT=1`
+on the main recipe. HTTP, JSON/NDJSON, CLI, PTY text and storage assertions still
+run. The helper writes terminal-png-hold.json and result.json explicitly marks
+terminal_pngs HOLD. The terminal PNG render is owed by a unit that holds the
+Swift slot. This option does not relax a required visual gate for a UI unit.
+
+After recorder or adapter changes run the compiled
+[failure-isolation controls](features/faults.md) as well. They prove that a
+recorder failure cannot change an HTTP response, stream delivery, scheduler
+job or CLI result. They do not invoke Swift.
+
+## Shared recording store and CLI
+
+After ingestion, run/export/import/compare or recording policy changes, run
+[verify-ui-profiler](../verify-ui-profiler/SKILL.md). It drives a real
+client-shaped producer into the compiled server and reads the run through the
+compiled CLI. Normal Diagnostics polling remains on its existing byte budget.

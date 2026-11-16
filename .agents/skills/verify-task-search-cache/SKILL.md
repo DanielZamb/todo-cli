@@ -36,6 +36,18 @@ checker requires the baseline manifest and identical protected matcher, runner
 and Tag projection hashes. It never falls back to a cached binary as its oracle.
 Follow the run's disk guard, batch floor and runtime-copy cleanup orders.
 
+## Recordings and CLI routing integration renewal
+
+Candidate: product 29927cb04cc49bb706be602127557f43602ed5b2 on integ/contract.
+Only the hygiene rows apps/server/src/server.ts and apps/cli/src/main.ts change;
+the seven protected domain files and the hygiene observer are byte-identical to
+63f9b6c8. Hygiene still receives the raw store and is forked before the
+scheduler. Before renewal check.mjs passed (no protected file changed) and
+check-hygiene.mjs ran its clean, three observer controls, restored and typecheck
+stages, then stopped only at the server.ts hash. Exits of the uncached oracle and
+the full verify.mjs are in docs/decisions/ui-speed/recordings-cli-routing-contract.md.
+Candidate until the seats accept it.
+
 ## Behavior and controls
 
 The generated drive reuses the matcher atoms and seed 0x5ea2c001. It compares
@@ -213,3 +225,101 @@ hygiene file changed from a45ddeaa: the durable refusal touches only auth.ts and
 the new rejection-history.ts, neither mapped here. The uncached oracle is rebuilt
 for this product, and the complete command's exit is in
 docs/decisions/ui-speed/c9-server-integration.md.
+
+## CLI routing integration renewal
+
+Candidate: immutable product 0733af4afcaac34774333ab019b29f05c7ebea9e (`feat/cli-through-server` with
+integ/c9-server merged). Only the hygiene row for apps/server/src/server.ts
+changes: endpoint acquisition before the store, verifyStore right after it,
+then the one StreamWake and its decorator. Hygiene still receives the raw store
+and is forked before the scheduler. main.ts equals its pin. Before renewal the
+seven cache controls and three observer controls failed at their witnesses,
+restores and typecheck passed, and hygiene stopped only at the server.ts hash.
+The full command's exit is in docs/decisions/ui-speed/cli-through-server-c9-merge.md.
+
+## Diagnostics merge candidate, 2026-11-13
+
+Candidate product 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c. No matcher, runner, admission, epoch, preparation,
+observer or erasure body changed: task-search-cache.ts, task-search.ts,
+commands.ts, store/snapshots.ts and store/search-cache-events.ts are
+byte-identical to 5f46e7b3. task-filters.ts gains an outer span on
+filterTaskRecordsEffect; store.ts gains caller-side spans; the CLI and server
+hygiene files gain the Diagnostics commands and routes. Pre-renewal, the seven
+cache controls and three observer controls failed and restored, and both
+commands stopped only on those hashes. The uncached oracle was built for the
+product, and the full `verify.mjs 34edaba72fd5f1e8a6c41a0bd6340e424da8ee3c` passed all nine stages. Candidate until
+the seat accepts it.
+
+## Catalog contract renewal, 2026-11-13
+
+Candidate: product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5). Four
+protected domain files move (task-filters.ts, commands.ts, store/store.ts,
+store/snapshots.ts) and both hygiene rows (server.ts, main.ts); no cache,
+matcher, runner, admission, accounting or erasure body changes. One new cache
+consumer: CatalogReads.read takes `searchWords.read(profile)` before its lease
+and prepares through `searchWords.words(search, text)`, the shape of the two
+list helpers. Before renewal check.mjs ran its six controls and restored run
+(PASS_BEFORE_MAPPING_GATE) and stopped only at task-filters.ts; check-hygiene.mjs
+ran clean, three observer controls (exit 1 each) and restored, then stopped
+only at server.ts. After renewal both exit 0 (generated-ufsr29, hygiene-1KQne8);
+build-baseline.mjs --uncached and the full verify.mjs on the product exit 0
+(verify-gnRcYs). Candidate until the seats accept it.
+
+## Catalog contract correction, 2026-11-13
+
+Product b110f4a8b286a737b1dc46e9093a66110b3589d5. store/store.ts and
+store/snapshots.ts move again (the operation_seq note binds its event text;
+catalogTasks becomes catalogPayloads, decoded after the lease); no cache body
+changes. Before renewal check.mjs ran its controls (PASS_BEFORE_MAPPING_GATE)
+and stopped only at store/store.ts; check-hygiene.mjs ran clean, three controls
+(exit 1 each) and restored, then stopped only at a mapped hash. After renewal
+check.mjs, check-hygiene.mjs, build-baseline.mjs --uncached and the full
+verify.mjs all exit 0 on the product. Candidate until the seats accept it.
+
+## Seat findings correction, 2026-11-13
+
+Product beae37bceef38fb46325e14ccb45e4d03ddc5e9f. store/store.ts (the note's
+kept columns, the catalogSchemaVersion read member) and store/snapshots.ts (the
+restore's note) move; no cache body changes. Before renewal check.mjs stopped
+only at store/store.ts after its controls, and check-hygiene.mjs only at a
+mapped hash after clean, three controls and restored. After renewal both exit
+0, build-baseline.mjs --uncached exits 0 and the full verify.mjs exits 0
+(verify-FKfeQq). Candidate until the seats accept it.
+
+## Seat findings and owner answers, 2026-11-14
+
+Product de766e3c20e3efbd6967763714fb99e9c1727354. task-filters.ts (TaskFilters
+refuses a blank Project or Tag name), commands.ts (filterTasks and exportScope
+take a PlanningClock), apps/server/src/server.ts (blank name refusal; the
+server's own zone for planning reads) and apps/cli/src/main.ts (todo catalog
+parses flags before the store; the machine's zone for Today and Overdue) move;
+no cache, matcher, runner, admission, accounting or erasure body changes.
+Before renewal check.mjs stopped only at task-filters.ts and check-hygiene.mjs
+only at apps/server/src/server.ts. After renewal check.mjs and
+check-hygiene.mjs exit 0, build-baseline.mjs --uncached exits 0 and the full
+verify.mjs exits 0 (verify-7CjB25). Candidate until the seats accept it;
+`coverage.json` carries the record as seatFindings2.
+
+## Seat delta, 2026-11-14
+
+Product 5da90607e8c5a19d7007174925c6b6253c0714d3 (seat F7 and F2b on top of
+de766e3c). task-filters.ts (the Project name filter is a plain string again)
+and apps/server/src/server.ts (rejectUnknownQuery refuses only a blank tag)
+move; no cache, matcher, runner, admission, accounting or erasure body changes.
+Before renewal check.mjs stopped only at task-filters.ts and check-hygiene.mjs
+only at apps/server/src/server.ts. After renewal check.mjs and
+check-hygiene.mjs exit 0, build-baseline.mjs --uncached exits 0 and the full
+verify.mjs exits 0 (verify-Qd7WS0). Candidate until the seats accept it;
+`coverage.json` carries the record as seatDelta.
+
+## Seat delta 2, 2026-11-14
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa (seat F8 on top of 5da90607).
+store/snapshots.ts (the restore's note carries the generation it starts),
+apps/server/src/server.ts and apps/cli/src/main.ts (operation_seq becomes
+operation_position) move; no cache, matcher, runner, admission, accounting or
+erasure body changes. Before renewal check.mjs stopped only at
+store/snapshots.ts and check-hygiene.mjs only at apps/server/src/server.ts.
+After renewal check.mjs and check-hygiene.mjs exit 0, build-baseline.mjs
+--uncached exits 0 and the full verify.mjs exits 0 (verify-IZ25yY). Candidate
+until the seats accept it; `coverage.json` carries the record as seatDelta2.

@@ -47,7 +47,9 @@ const fixture = Effect.gen(function* () {
         updated_at: "2026-10-27T00:00:00Z",
       }),
     );
-  const context = yield* Layer.build(serverLayer({ path, port: 0 }));
+  const context = yield* Layer.build(
+    serverLayer({ timeZone: "UTC", path, port: 0 }),
+  );
   const server = Context.get(context, HttpServer.HttpServer);
   const base = HttpServer.formatAddress(server.address);
   const request = (
@@ -609,9 +611,16 @@ describe("Todo HTTP contract", () => {
             1,
           ]);
           const path = `/profiles/work/tasks/${task.id}`;
-          expect(yield* request("GET", path, undefined, credential)).toEqual(
-            created,
-          );
+          // The write reply adds operation_position; the Task itself is what Show returns.
+          const { operation_position, ...createdTask } = created.body as Record<
+            string,
+            unknown
+          >;
+          expect(operation_position).toEqual({ generation: "initial", seq: 3 });
+          expect(yield* request("GET", path, undefined, credential)).toEqual({
+            status: 200,
+            body: createdTask,
+          });
           expect(
             yield* request(
               "GET",

@@ -2,23 +2,23 @@
 
 This inventory is generated from the compiled CLI help tree and checked against
 `schema --list`. No command or accepted flag list is transcribed from source.
-The 53 entries include the root and command groups; 52 command response schemas
+The 58 entries include the root and command groups; 57 command response schemas
 plus the help/error schemas are captured. Schema documents describe responses,
 not CLI flag registrations. Their normalized hashes remain unchanged.
 
 Every command inherits these shared and framework flags:
 
-`--completions`, `--credential-profile`, `--db`, `--format`, `--help`, `--help-human-flag`, `--log-level`, `--no-color`, `--profile`, `--version`, `--wizard`, `-h`, `-v`.
+`--completions`, `--credential-profile`, `--db`, `--direct`, `--format`, `--help`, `--help-human-flag`, `--log-level`, `--no-color`, `--profile`, `--require-server`, `--version`, `--wizard`, `-h`, `-v`.
 
 Their consumers are database selection, output/error rendering, Profile and
-credential selection, top color control, human onboarding, and Effect CLI
+credential selection, write-mode selection (`--direct`, `--require-server`), top color control, human onboarding, and Effect CLI
 help/version/wizard/completion/logging handlers. Database and authentication
 settings apply when a command uses them; pure help/schema commands stay auth-free.
 
 | Compiled command | Additional accepted flags |
 | --- | --- |
 | `todo` | None |
-| `diagnostics` | `--follow`, `--server` |
+| `diagnostics` | `--detail`, `--follow`, `--server` |
 | `top` | `--server` |
 | `schema` | `--list` |
 | `snapshot` | None |
@@ -33,6 +33,7 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | `add` | `--attach`, `--depends-on`, `--desc`, `--due`, `--energy`, `--estimate`, `--external-id`, `--label`, `--link`, `--parse`, `--priority`, `--project`, `--recurrence`, `--scheduled`, `--source`, `--tag` |
 | `parse` | None |
 | `list` | `--attachment`, `--blocked`, `--due`, `--energy`, `--estimate`, `--inbox`, `--order`, `--overdue`, `--prefix`, `--priority`, `--project`, `--ready`, `--scheduled`, `--status`, `--tag`, `--text`, `--today` |
+| `catalog` | `--attachment`, `--blocked`, `--due`, `--energy`, `--estimate`, `--known-day`, `--known-generation`, `--known-seq`, `--known-stamp`, `--now`, `--order`, `--prefix`, `--priority`, `--project`, `--project-id`, `--ready`, `--scheduled`, `--status`, `--tag`, `--tag-id`, `--tasks`, `--text`, `--time-zone`, `--view` |
 | `show` | None |
 | `batch-edit` | `--dry-run` |
 | `attach-many` | `--dry-run` |
@@ -70,15 +71,26 @@ settings apply when a command uses them; pure help/schema commands stay auth-fre
 | `config show` | None |
 | `config get` | None |
 | `config set` | None |
+| `diagnostics runs` | `--cursor`, `--ndjson`, `--server` |
+| `diagnostics show` | `--ndjson`, `--run`, `--server` |
+| `diagnostics export` | `--cursor`, `--ndjson`, `--run`, `--server` |
+| `diagnostics import` | `--dry-run`, `--file`, `--ndjson`, `--server` |
+| `diagnostics compare` | `--after`, `--before`, `--ndjson`, `--server` |
 
-The exact 802 command/flag pairs have source consumer references in
+The exact 1041 command/flag pairs have source consumer references in
 `flag-consumers.json`, produced by the verification recipe.
 `apps/cli/scripts/flag-inventory.ts` checks every collected flag against that
 reviewed mapping and refuses a flag without a consumer entry.
 The regression compares full normalized help hashes, accepted flag sets and
 response-schema hashes against `test/fixtures/cli-flag-contract.json`.
 The fixture was derived from the unchanged reviewed CLI by removing exactly
-the 64 unsupported mutation registrations, followed by only detach --label.
+the 64 unsupported mutation registrations, followed by only detach --label. The Diagnostics merge then added `diagnostics --detail` and
+the five recording subcommands, each registering only the flags its handler reads, and
+the Diagnostics response schema hash shared by `diagnostics` and `top`.
+The Catalog unit then added `catalog`
+(24 flags of its own and the 15 every command carries, 39 pairs) and the
+optional `operation_position` (`{generation, seq}`, the Catalog position's shape) to the
+response schemas of the 23 committing commands.
 Remaining flag order and all other
 help/schema content stay unchanged. The five original Go output goldens do not change.
 
@@ -89,7 +101,7 @@ help/schema content stay unchanged. The five original Go output goldens do not c
 | init | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 | login | --username | Help: `--username <name> (default unset, compatibility flag)`. Retained unchanged by coordinator ruling under the single-owner model. |
 
-The 800 other pairs have consumers, including the four Delete/Purge flags only
+The 1039 other pairs have consumers, including the four Delete/Purge flags only
 on rm and Task editing fields only on add/edit. Some modifiers apply only to
 their documented branch, such as a label on a supplied Attachment or Markdown
 export templates. This is a compiled registration inventory plus source trace,

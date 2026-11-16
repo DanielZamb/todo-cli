@@ -11,7 +11,7 @@ server stopped. Electron and macOS never open the database. They call the local
 HttpApi and subscribe to SSE. The server is a loopback gateway that runs the
 same domain package.
 
-![Runtime: the todo and todo-server processes, desktop clients, launchd, and the SQLite file](diagrams/runtime.png)
+![Runtime: the todo and todo-server processes, desktop clients, launchd, and the Task database](diagrams/runtime.png)
 
 `@todo/domain` is the only writer. Guard triggers reject direct edits to
 projection tables. That is [ADR-0001](adr/0001-port-to-effect-with-shared-domain.md)
@@ -233,6 +233,34 @@ immediate authorization transaction. Directory counts share its existing deferre
 read snapshot. Projection guards, generated Task columns, Version validation and
 atomic event/projection writes remain authoritative. Reads do not replay the log.
 
+The Catalog (`GET /profiles/:profile/catalog`, `todo catalog`, domain
+`catalog.ts`) answers a client refresh in one checked read lease: the History
+position the read reflects (`position {generation, seq}`, from the Profile
+classification the lease already runs), distinct open Tasks per view, Profiles,
+Projects and Tags in `compareNames` order, the view's groups as ordered Task ids
+with each Task once, and the Tasks (`tasks=all` every visible Task, `matching`
+only the groups'). Counts, order, membership and the Dependency graph come
+from stored columns (`store/catalog-projection.ts`); payload text is read in the
+lease and only the returned Tasks are decoded after it (search decodes the
+view's candidates; `order` decodes the whole graph, as `GET /tasks` does). With
+`known_generation`, `known_seq`, `known_day` and `known_stamp` the reply is
+`unchanged: true` when the generation, day and stamp match and nothing
+committed since; the stamp digests what History does not record (the Profiles
+the credential sees, the schema version). Today is the date of `now` in the
+`time_zone` the read sends (also on the planning views), or in the server's own
+zone when none is sent; the CLI, which reads the database directly, uses the
+machine's zone for `todo catalog` (unless `--time-zone`), `list --today` and
+`--overdue`, `review` and `export --scope today`. An instant falls on its date
+in the zone stored with it (ADR-0006). One Task order
+(`compareTasks`), one name order (`compareNames`) and one Tag-name rule
+(`tag-name.ts`) serve every read and writer. Write replies and writing CLI
+commands carry `operation_position` (`{generation, seq}`, the Catalog position's
+shape): when present, everything the request committed is at or below `seq` in
+`generation`. A client compares it with a Catalog position or a stream id only
+when the generations are equal; when they differ, or the field is absent, it
+reads (`committed-operations.ts`). The desktop clients still use the older reads
+until they move to the Catalog.
+
 Credential checks create read authorities inside the authentication module.
 Profile, scope, parsed fields and database identity live in ECMAScript private
 fields. Query ports validate the genuine instance, exact prototype, authority
@@ -306,7 +334,13 @@ SSE id. Only that Profile's committed operations appear, so gaps in ids are
 normal: rejected attempts and other Profiles are skipped.
 
 The route waits at most 250 ms before rereading `op_log` and checking the
-credential on each pass.
+credential on each pass. After every writing CLI command that opened the store,
+once the store closes, a data-free best-effort local nudge signals the server's
+one StreamWake, so each stream's next normal pass runs at once, including after
+refusal or dry run. The CLI discovers only a private record beside its selected
+canonical database, compares physical file identity and contract, and verifies a
+nonce HMAC before using the same connection. Discovery and nudge have separate
+50 ms budgets. Failure leaves the direct command's result alone.
 Each poll checks and materializes in one transaction and retains plain
 subscription selectors between polls. A never-created identifier is classified
 again on every poll, so a later CLI creation starts normal ordered delivery.
@@ -361,7 +395,7 @@ Profile-less auth row (`AuthChanged` for a new Session, or
 committed rows of their own Profile, and the next pass moves past it. The domain
 is unchanged for it.
 That is how a `todo edit` from the CLI process reaches an open desktop app.
-There is no file watcher and no IPC between the two processes. Reconnect with
+There is no file watcher. Reconnect with
 `Last-Event-ID: <seq>` to resume after that id, and save cursors per Profile.
 After a Snapshot restore the generation changes, and the stream sends `reload`
 with the generation and `restore_seq`.
@@ -370,6 +404,16 @@ The scheduler lives in the server process. It fires reminders for due instants,
 wakes snoozed Tasks, and deletes expired credentials. Each pass rereads SQLite,
 so a restart does not lose work. ReminderFired operations do not advance Task
 Version. Date-only planning values do not fire reminders.
+
+CLI `config write-mode` stores automatic, direct or server. Command flags
+`--direct` and `--require-server` override that setting and are mutually exclusive.
+In CLI routing slice 1, production commands still execute directly. Server mode
+refuses writing commands because none is production-routable until durable auth
+rejection handling is reviewed. Reads, init and reset-passphrase remain direct in
+every mode. The typed add backend operation exists in TodoApi for verification
+only. [ADR-0023](adr/0023-cli-writes-through-the-running-server.md) retains the
+owner's decisions and the original alternatives. The server-only singleton guard
+does not lock out CLI writers. Other clients retain their current HTTP contract.
 
 Creation and import accept Attachment reference arrays. Creation validates every
 reference before committing the Task. Import can adopt an existing Task by id
@@ -476,3 +520,106 @@ reads and SSE keep their ids and filters through later callbacks and yields.
 Credential secrets are private fields rather than enumerable result properties.
 Profile counts consume the checked Profile rows and their ids once; they do not
 rediscover a visible set from the credential after checking it.
+
+## Interaction Diagnostics
+
+The shared Diagnostics vocabulary and inventory live in client-diagnostics.ts
+and interaction-categories.ts. diagnostic-labels.ts supplies common display
+words. diagnostic-context.ts owns bounded scalar spans and an Effect context;
+request, command and scheduler boundaries establish roots without changing
+business-rule arguments. Server requests accept random recording ids and echo
+X-Todo-Request. Owner Session responses add numeric Server-Timing. No diagnostic
+record is written to the Task database.
+
+Owner Diagnostics adds one optional versioned profiler object with counters,
+fixed histograms, per-stage/category span summaries, a short slow/failed list
+and explicit gaps. The default whole body and CLI JSON fit 48 KiB including
+pretty formatting. Detailed active/recent spans and stream delivery records
+require owner-only detail=true or CLI --detail and fit a separate 64 KiB budget.
+Section byte admission and a whole-schema predicate enforce both caps. Metadata
+lists are bounded samples with omission counts; aggregate totals remain complete.
+Adapter recorder calls use observeDiagnostic. A thrown observation increments
+recording_failures and loss counters while the original work continues once.
+The guard and shared per-object failure counts live in diagnostic-guard.ts,
+which imports neither Node nor Effect. Browser clients use the dedicated
+@todo/domain/diagnostic-guard entry. The root package also re-exports it;
+diagnostic-context.ts uses the same guard and maps its counts to the existing
+profiler fields.
+A failed profiler snapshot omits the optional object and preserves the existing
+owner Diagnostics body. Recorder failures retain no error text.
+A stream delivery joins commit observation to encoded bytes handed to the HTTP
+adapter. It does not prove receipt. Bun dispatch before middleware, socket flush,
+body completion and the remaining internal attribution stay unobserved. The
+[ADR-0020](adr/0020-diagnostics-follow-an-action-to-its-rendered-result.md)
+accepts always-on metadata recording in each app and owner-only loopback
+ingestion. The private recording store is a sibling diagnostic-recordings
+directory beside the configured database, outside todo.db and database Snapshots.
+It has 0700 directories, 0600 database/WAL files, 32 MiB per app, seven-day
+retention, a 256 MiB total ceiling, 4096 retained batches, a 1 MiB pending queue
+and 1024 pending batches. At most 5120 runs exist independently of queue idleness.
+The explicit HttpApi profiler group accepts strict 128 KiB / 128-event batches;
+run list/show, bounded export pages and comparable-build reports back the CLI
+diagnostics runs/show/export/import/compare commands. Import has a dry run;
+NDJSON export traverses pages. Client UI/local journal integration and clock
+calibration/presentation proof remain later units. Run-local Profile ordinals
+and scalar selection/release context contain no Profile identity or Task content.
+
+Recording admission completeness is separate from event retention. Versioned
+run.admission metadata and events commit in one transaction. A whole-batch
+conflict refusal commits its content-free mark before responding. Marked
+summaries withhold all-start fractions and complete comparisons. Exports/imports
+carry the mark even without events. Mixed-run event reducers partition action,
+clock, crash and gap state by run; clients reducing raw export events preserve
+the run admission context.
+
+Recordings now use a separate recordings.db SQLite database, never attached to
+the Task database. SQL constraints own run/producer/sequence identity and content
+fingerprints. A run, its facts and admission state change atomically. WAL and a
+1 ms busy timeout serialize independent server workers; failures give explicit
+retain-and-retry results. All recording SQL, private files and reducers run in a
+worker thread. The server does bounded decoding and RPC admission only. Startup
+and Task work do not await recording recovery. Ordered WAL-snapshot range reads
+produce export pages under 128 KiB with their admission mark. Transactional SQL
+sums enforce the fixed app/total caps and oldest-first deletion. Fixed-cadence
+bounded DELETE sweeps replace file expiry/repair/index machinery. No manifest,
+checkpoint, segment file or independent event index remains. See the current
+section of [the report](decisions/ui-speed/diag-recordings-report.md).
+
+The recording client bounds all worker RPCs, including reads, to 1024 calls /
+1 MiB of encoded requests with an envelope allowance. Readiness and calls expire
+after five seconds without retiring a progressing worker. A single dispatched
+call and a rate-limited parent queue keep expired queued work off the worker.
+Replies and bounded read steps reset a ten-second inactivity watchdog; only
+inactivity retires a stalled operation. Recording
+creation and unavailable workers retry after one minute while Task service stays
+available. Owner Diagnostics includes content-free recording status and failure
+counts in its existing error list. Export captures 129 rows per read step; Show
+uses 128-row steps, and Compare does not enclose them in a long snapshot. A
+concurrent external change makes the read refuse for retry. A pinned external
+reader can delay physical expiry within the disk cap; logical retention still
+hides old facts. Capacity refusals are counted, maintenance backs off and
+recovers automatically. The main file retains its high-water size; no vacuuming
+is scheduled.
+
+Recording initialization holds native exclusion on its own file across the
+second header/size check and one rollback-journal schema/identifier transaction.
+The durable main header publishes ownership before WAL is enabled. Foreign
+headers are never opened with SQLite, avoiding changes to their auxiliaries.
+An immutable main-catalog check precedes normal validation of a claimed store.
+Application id 0x544f4452, version 1 and the exact catalog must match before mode
+changes or writes. No old-format migration, validation copy or persistent
+lockfile is needed. Exclusion and bounded retry
+remain in the recording worker; a compiled control serves Task reads/writes
+while that exclusion is held. Rate history stamps each of at most eight samples
+per method and expires each on its own 60-second lifetime.
+
+A claimed store's committed catalog, including frames committed only in its
+WAL, is read from descriptors before SQLite opens the path, and the writable
+connection is validated under a shared exclusion on the store's own descriptor
+so that a refusal cannot checkpoint or reset the WAL. That descriptor stays open
+for the connection's lifetime. When committed WAL frames exist, the catalog and integrity
+checks run on an in-memory image of main plus those frames, never on the files.
+Empty main files beside empty sidecars are
+initialized as new. Every refusal leaves all files unchanged and is reported in
+owner Diagnostics with its state, reason code and the files to remove while the
+server is stopped; recordings may be discarded.

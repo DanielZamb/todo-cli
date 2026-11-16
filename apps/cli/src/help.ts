@@ -4,6 +4,7 @@ import {
 } from "@todo/domain";
 import { Command } from "effect/cli";
 import { credentialSelectionDescription } from "./credential-profile.ts";
+import { routingDescription } from "./database-selection.ts";
 
 const exitCodes =
   "0 success\n1 runtime failure\n2 validation or usage\n3 not found or auth missing\n4 Conflict";
@@ -25,6 +26,7 @@ const globals = [
   `--credential-profile <name> (default --profile; ${credentialSelectionDescription})`,
   "--no-color (default false)",
   "--help-human-flag (default false)",
+  `--direct | --require-server (default config write-mode or automatic; ${routingDescription})`,
 ];
 const taskFlags = [
   "--desc <markdown> (default unset)",
@@ -184,13 +186,117 @@ const guides = {
     ],
     auth: "Help and local configuration require no Session. Task commands require an authenticated Session.",
   }),
+  "diagnostics runs": reference({
+    purpose:
+      "runs private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics runs [--server <loopback-url>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--cursor <value> resumes the run list",
+      "--ndjson prints one compact object",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics runs'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics show": reference({
+    purpose:
+      "show private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics show --run <uuid> [--server <loopback-url>] [--ndjson]",
+    flags: [
+      "--run <uuid> selects the run",
+      "--ndjson prints one compact object",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics show'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics export": reference({
+    purpose:
+      "export private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics export --run <uuid> [--server <loopback-url>] [--cursor <value>] [--ndjson]",
+    flags: [
+      "--run <uuid> selects the run",
+      "--cursor <value> resumes a page",
+      "--ndjson streams every export page",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics export'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics import": reference({
+    purpose:
+      "import private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics import --file <path> [--server <loopback-url>] [--dry-run] [--ndjson]",
+    flags: [
+      "--file <path> reads one batch, an export page or NDJSON pages",
+      "--dry-run validates without storing",
+      "--ndjson prints one compact object",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics import'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
+  "diagnostics compare": reference({
+    purpose:
+      "compare private metadata recordings through the local server using an owner Session.",
+    synopsis:
+      "todo diagnostics compare --before <uuid> --after <uuid> [--server <loopback-url>] [--ndjson]",
+    flags: [
+      "--before <uuid> --after <uuid> select the two runs",
+      "--ndjson prints one compact object",
+    ],
+    examples: [
+      "todo diagnostics runs --format json",
+      "todo diagnostics export --run <uuid> --ndjson",
+      "todo schema 'diagnostics compare'",
+    ],
+    auth: "Active owner Session and direct loopback only. Access Tokens are refused.",
+    output:
+      "One JSON object per command. --ndjson prints one compact object per line; export follows bounded pages. Import accepts a batch or exported JSON/NDJSON and validates all local input before applying.",
+    concurrency:
+      "Journal writes are queued separately from Task writes. Export can refuse an expired cursor. Comparison refuses incompatible scenario, environment, configuration, render stage or contract.",
+  }),
   diagnostics: reference({
     purpose:
       "Read server diagnostics using an owner Session. Polling is read only and includes metadata across all Profiles.",
-    synopsis: "todo diagnostics [--server <url>] [--follow] [--format json]",
+    synopsis:
+      "todo diagnostics [--server <url>] [--follow | --detail] [--format json]",
     flags: [
       "--server <url> (default TODO_SERVER_URL or http://127.0.0.1:4310)",
       "--follow (NDJSON, one snapshot per second)",
+      "--detail (one bounded detail sample; cannot be combined with --follow)",
     ],
     examples: [
       "todo diagnostics --format json",
@@ -198,7 +304,7 @@ const guides = {
       "todo schema diagnostics",
     ],
     output:
-      "JSON snapshots and each NDJSON line use the published diagnostics schema. Contains no Task content or credential secrets.",
+      "Default JSON and each NDJSON line are at most 48 KiB, including indentation. --detail opts into a one-shot sample of at most 64 KiB. Omitted metadata is counted in profiler.omitted. Contains no Task content or credential secrets.",
     auth: "Requires an active owner Session saved by todo login in the selected Profile. Access Tokens are denied.",
   }),
   top: reference({
@@ -211,6 +317,29 @@ const guides = {
     output:
       "TTY panes support q to quit, Tab for panes, arrow keys to scroll and p for Profile. Resize redraws. Non-TTY output falls back to diagnostics.",
     auth: "Requires an active owner Session. No database is opened by monitoring commands.",
+  }),
+  catalog: reference({
+    purpose:
+      "Show the Catalog of the selected Profile: open Tasks per view, Projects and Tags with counts, and one view's Tasks in order, as of a History position.",
+    synopsis:
+      "todo catalog [--view all|today|overdue|scheduled|inbox] [filters]",
+    flags: [
+      "--view all|today|overdue|scheduled|inbox (default all)",
+      "--tasks all|matching (default all: every visible Task; matching: only the view's)",
+      "--project-id <id> (default all)",
+      "--tag-id <id> (default all)",
+      "--project <name>, --tag <name> and every list filter (combine by AND)",
+      "--time-zone <IANA zone> (default: this machine's zone)",
+      "--now <instant> (default the current time)",
+      "--known-generation <g> --known-seq <n> --known-day YYYY-MM-DD --known-stamp <s> (all four, from an earlier reply)",
+    ],
+    examples: [
+      "todo catalog --format json",
+      "todo catalog --view today --time-zone America/Bogota --format json",
+      "todo catalog --view inbox --tag-id TAG --tasks matching --format json",
+    ],
+    output:
+      "md lists the counts, Projects, Tags and the view's groups. json is the HTTP Catalog plus generated_at: position {generation, seq}, day, counts of distinct open Tasks per view (filters and search never change them), profiles, projects and tags in name order, view.groups as ordered Task ids with each Task once, and tasks. stamp digests what History does not record (the Profiles this credential sees, the schema version). With the four known flags, nothing committed since and the same stamp, json is unchanged: true with position, day and stamp only.",
   }),
   import: reference({
     purpose:
@@ -555,11 +684,14 @@ const guides = {
       "Writes one Markdown projection note. Dependencies add stable ^task-full-id blocks, same-note Depends on wiki links and a Mermaid graph. json returns generated_at and path, plus outside_projection ids when needed; md and table print the path. Surrounding text is preserved. Empty vault paths and paths outside the vault exit 2 without writing a projection.",
   }),
   config: reference({
-    purpose:
-      "Manage local CLI configuration. Database selection uses --db, TODO_DB, config db.path, then ~/.todo-cli/todo.db.",
+    purpose: `Manage local CLI configuration. Database selection uses --db, TODO_DB, config db.path, then ~/.todo-cli/todo.db. ${routingDescription}`,
     synopsis: "todo config show|get|set",
     flags: [],
-    examples: ["todo config show", "todo config set db.path /tmp/todo.db"],
+    examples: [
+      "todo config show",
+      "todo config set db.path /tmp/todo.db",
+      "todo config set write-mode direct",
+    ],
     auth: "No Session required.",
     output:
       "json returns generated_at and config for reads, or status for writes. md and table print values or a confirmation.",
@@ -573,22 +705,26 @@ const guides = {
     examples: ["todo config show"],
     auth: "No Session required.",
     output:
-      "json returns generated_at and config.db_path, with null when unset. md and table print db.path=<path>.",
+      "json returns generated_at, config.db_path and config.write_mode. An unset path is null and an unset mode is automatic. md and table print db.path=<path> and write-mode=<mode>.",
   }),
   "config get": reference({
-    purpose: "Read the configured value for db.path.",
-    synopsis: "todo config get db.path",
+    purpose: "Read the configured value for db.path or write-mode.",
+    synopsis: "todo config get db.path|write-mode",
     flags: [],
-    examples: ["todo config get db.path"],
+    examples: ["todo config get db.path", "todo config get write-mode"],
     auth: "No Session required.",
     output:
-      "json returns generated_at and config.db_path, with null when unset. md and table print the value. Unknown keys exit 2.",
+      "json returns generated_at, config.db_path and config.write_mode. md and table print the selected value. Unknown keys exit 2.",
   }),
   "config set": reference({
-    purpose: "Save the configured value for db.path.",
-    synopsis: "todo config set db.path <path>",
+    purpose: "Save db.path or write-mode while preserving the other setting.",
+    synopsis:
+      "todo config set db.path <path> | todo config set write-mode automatic|direct|server",
     flags: [],
-    examples: ["todo config set db.path /tmp/todo.db"],
+    examples: [
+      "todo config set db.path /tmp/todo.db",
+      "todo config set write-mode direct",
+    ],
     auth: "No Session required.",
     output:
       "json returns generated_at and status. md and table print ok. Unknown keys exit 2.",

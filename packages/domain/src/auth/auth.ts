@@ -1,6 +1,11 @@
 import type { Database } from "bun:sqlite";
 import { createHash, randomBytes } from "node:crypto";
 import { Cause, Clock, Effect, Exit, Schema } from "effect";
+import { noteCommitted, noteGeneration } from "../committed-operations.ts";
+import {
+  diagnosticOwnerAuthenticated,
+  diagnosticSync,
+} from "../diagnostic-context.ts";
 import type { Profile } from "../entities.ts";
 import { type AppendResult, type AuthAction, Event } from "../events.ts";
 import { ActorId, ProfileId, Sequence, TaskId } from "../ids.ts";
@@ -14,7 +19,6 @@ import { StoreError } from "../store/error.ts";
 import { taskHistory } from "../store/history-reads.ts";
 import { changes, metadata } from "../store/projection.ts";
 import { Instant } from "../time.ts";
-
 import {
   AccessRequest,
   type AccessScope,
@@ -27,7 +31,6 @@ import {
   StartSeriesRequest,
   TokenOptions,
 } from "./model.ts";
-
 import { repeatedAuthRejection } from "./rejection-history.ts";
 
 type AuthorityKind = "read" | "profiles" | "owner" | "terminal";
@@ -39,7 +42,14 @@ type AuthorityValue<Kind extends AuthorityKind, P, Fields> = Readonly<{
   fields: Readonly<Fields>;
   profiles: readonly Profile[];
   profileInfo: Readonly<Pick<Profile, "id" | "name">> | null;
+  position: ReadPosition | null;
 }>;
+/**
+ * The History a read reflects: every committed operation with seq up to
+ * `seq` in restore generation `generation`, and none after. Taken from the
+ * Profile classification inside the same lease as the data.
+ */
+export type ReadPosition = Readonly<{ generation: string; seq: number }>;
 const authorityCreation = Symbol("credential-checked read authority");
 type ReadLease = {
   active: boolean;
@@ -233,6 +243,9 @@ class ReadAuthority<Kind extends AuthorityKind, P, Fields> {
   get credential() {
     return ReadAuthority.inspect(this).credential;
   }
+  get position() {
+    return ReadAuthority.inspect(this).position;
+  }
 }
 Object.freeze(ReadAuthority.prototype);
 Object.freeze(ReadAuthority);
@@ -270,6 +283,9 @@ export const readAuthority = <K extends AuthorityKind, P, F>(
   kind: K,
   origin: Database,
 ) => ReadAuthority.inspect(read, kind, origin);
+/** The History position of a read bound by a Profile read lease, or null. */
+export const readPosition = <F>(read: AuthorizedRead<F>, origin: Database) =>
+  ReadAuthority.inspect(read, "read", origin).position;
 export const checkedRead = <K extends AuthorityKind, P, F>(
   read: ReadAuthority<K, P, F>,
   kind: K,
@@ -289,6 +305,7 @@ const createAuthority = <K extends AuthorityKind, P, F>(
   info: CredentialInfo,
   profiles: readonly Profile[] = [],
   profileInfo: Readonly<Pick<Profile, "id" | "name">> | null = null,
+  position: ReadPosition | null = null,
 ): ReadAuthority<K, P, F> =>
   new ReadAuthority(
     authorityCreation,
@@ -301,6 +318,7 @@ const createAuthority = <K extends AuthorityKind, P, F>(
       scope: info.scope,
       profiles: freezeRead(profiles),
       profileInfo,
+      position,
     }),
     info,
   );
@@ -311,6 +329,7 @@ const bindRead = <F>(
   fields: F,
   info: CredentialInfo,
   profileInfo: Readonly<Pick<Profile, "id" | "name">>,
+  position: ReadPosition | null = null,
 ) =>
   createAuthority(
     "read",
@@ -321,6 +340,7 @@ const bindRead = <F>(
     info,
     [],
     profileInfo,
+    position,
   );
 const bindProfiles = <F>(
   db: Database,
@@ -548,17 +568,28 @@ export class Authentication<Read> {
           entity_version: 1,
           occurred_at: instant(input.time),
         };
-    this.db
+    const text = JSON.stringify(event);
+    const inserted = this.db
       .query(
         "INSERT INTO op_log(actor,profile,entity_version,event,from_version,to_version,outcome,reason) VALUES (?,?,1,?,NULL,NULL,?,?)",
       )
       .run(
         input.actor,
         input.profile ?? null,
-        JSON.stringify(event),
+        text,
         input.error ? "rejected" : "committed",
         input.error ? "auth" : null,
       );
+    if (!input.error)
+      noteCommitted(this.db, {
+        seq: Number(inserted.lastInsertRowid),
+        event: text,
+        actor: input.actor,
+        profile: input.profile ?? null,
+        from_version: null,
+        to_version: null,
+        occurred_at: event.occurred_at,
+      });
   }
 
   private perform<A>(
@@ -704,57 +735,70 @@ export class Authentication<Read> {
     access: "owner" | "read" | "write" | "profiles",
     profile: ProfileId | null = null,
   ) {
-    const { credential } = parse(OwnerRequest, input);
-    if (!/^(ses|tok)_[a-f0-9]{64}$/.test(credential))
-      throw new AuthError("invalid_credential");
-    const lease = leases.get(this.db);
-    const cached = lease?.credentials.get(credential);
-    const serial = cached ? mutationSerial(this.db) : undefined;
-    const row =
-      cached !== undefined && cached.changes === serial
-        ? cached.value
-        : this.db
-            .query(
-              "SELECT " +
-                credentialColumns +
-                ",total_changes() AS checked_changes FROM credentials WHERE secret_hash=?",
-            )
-            .get(sha256(credential));
-    if (row === null || row === undefined)
-      throw new AuthError("invalid_credential");
-    const value = freezeRead(Schema.decodeUnknownSync(CredentialInfo)(row));
-    const changes = Reflect.get(row, "checked_changes");
-    lease?.credentials.set(credential, {
-      value,
-      changes: typeof changes === "number" ? changes : (serial ?? 0),
-    });
-    if ((value.kind === "session") !== credential.startsWith("ses_"))
-      throw new AuthError("invalid_credential");
-    if (value.revoked_at !== null) throw new AuthError("revoked", value.id);
-    if (Date.parse(value.expires_at) <= time)
-      throw new AuthError("expired", value.id);
-    if (access === "owner" && value.kind !== "session")
-      throw new AuthError("owner_required", value.id);
-    if (
-      access !== "profiles" &&
-      value.profile !== null &&
-      value.profile !== profile
-    )
-      throw new AuthError("profile_scope", value.id);
-    if (access === "write" && value.scope !== "read-write")
-      throw new AuthError("write_scope", value.id);
-    const checkedSerial = typeof changes === "number" ? changes : (serial ?? 0);
-    if (lease) lease.checkedSerial = checkedSerial;
-    const classification =
-      profile === null ? undefined : this.classifyProfile(profile);
-    if (classification?.kind === "tombstoned")
-      throw new AuthError("profile_deleted", value.id);
-    try {
-      this.ports.credentialUsed?.(value.id, time);
-    } finally {
+    return diagnosticSync("authentication", () => {
+      const { credential } = parse(OwnerRequest, input);
+      if (!/^(ses|tok)_[a-f0-9]{64}$/.test(credential))
+        throw new AuthError("invalid_credential");
+      const lease = leases.get(this.db);
+      const cached = lease?.credentials.get(credential);
+      const serial = cached ? mutationSerial(this.db) : undefined;
+      const row =
+        cached !== undefined && cached.changes === serial
+          ? cached.value
+          : diagnosticSync(
+              "database",
+              () =>
+                this.db
+                  .query(
+                    "SELECT " +
+                      credentialColumns +
+                      ",total_changes() AS checked_changes FROM credentials WHERE secret_hash=?",
+                  )
+                  .get(sha256(credential)),
+              { statement: "auth.credential" },
+            );
+      if (row === null || row === undefined)
+        throw new AuthError("invalid_credential");
+      const value = freezeRead(Schema.decodeUnknownSync(CredentialInfo)(row));
+      const changes = Reflect.get(row, "checked_changes");
+      lease?.credentials.set(credential, {
+        value,
+        changes: typeof changes === "number" ? changes : (serial ?? 0),
+      });
+      if ((value.kind === "session") !== credential.startsWith("ses_"))
+        throw new AuthError("invalid_credential");
+      if (value.revoked_at !== null) throw new AuthError("revoked", value.id);
+      if (Date.parse(value.expires_at) <= time)
+        throw new AuthError("expired", value.id);
+      if (access === "owner" && value.kind !== "session")
+        throw new AuthError("owner_required", value.id);
+      if (
+        access !== "profiles" &&
+        value.profile !== null &&
+        value.profile !== profile
+      )
+        throw new AuthError("profile_scope", value.id);
+      if (access === "write" && value.scope !== "read-write")
+        throw new AuthError("write_scope", value.id);
+      const checkedSerial =
+        typeof changes === "number" ? changes : (serial ?? 0);
       if (lease) lease.checkedSerial = checkedSerial;
-    }
-    return { info: value, classification };
+      const classification =
+        profile === null ? undefined : this.classifyProfile(profile);
+      // The generation this request now holds, for its write replies'
+      // operation_position: noting it here means the write itself reads none.
+      if (classification)
+        noteGeneration(this.db, classification.snapshot.generation);
+      if (classification?.kind === "tombstoned")
+        throw new AuthError("profile_deleted", value.id);
+      if (value.kind === "session") diagnosticOwnerAuthenticated();
+      try {
+        this.ports.credentialUsed?.(value.id, time);
+      } finally {
+        if (lease) lease.checkedSerial = checkedSerial;
+      }
+      return { info: value, classification };
+    });
   }
 
   private requireCredential(
@@ -1738,6 +1782,10 @@ export class Authentication<Read> {
             classification.kind === "present"
               ? classification.profile
               : this.presentProfile(request.profile),
+            freezeRead({
+              generation: classification.snapshot.generation,
+              seq: classification.snapshot.seq,
+            }),
           ),
         );
       },

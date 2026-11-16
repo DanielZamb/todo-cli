@@ -66,7 +66,7 @@
         "lookup",
         "showTask"
       ],
-      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6",
+      "sha256": "dff5d1846b7b2b540b6c0a3ce12032f7deca237119640cec8b5bbacdd81d6951",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -651,6 +651,19 @@
       "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     },
     {
+      "product": "b4b708f5bc4a84f7034ddd0c137e2187ecbc77fd",
+      "status": "candidate for the seats",
+      "controls": "Before renewal check.ts stopped only at the task-client.ts hash (check-PRjRB1). After renewal check.ts passes on b4b708f5 with every model stage, the Electron real-code controls and the Swift step (check-izAVi8; Swift step swift-0A0kEO, reusing the completed build of swift-4H6xUA through TODO_DISCOVERY_SWIFT_REUSE because a fresh build with slot waits exceeded the step's 600 s ceiling twice; keychainLinked false, liveSourceUnchanged true).",
+      "changed": [
+        {
+          "path": "apps/electron/src/task-client.ts",
+          "from": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6",
+          "to": "dff5d1846b7b2b540b6c0a3ce12032f7deca237119640cec8b5bbacdd81d6951"
+        }
+      ],
+      "review": "INTEG-STEP2: integ/contract (with feat/catalog-contract) merged with main (Mac candidate 10), and the Swift client regenerated for contract 4c932cfc. The one mapped file that differs is apps/electron/src/task-client.ts, and it differs from its pin only in taskRequest's diagnostics branch (feat/diag-core 2c147ad9: http.diagnostics.snapshot({ query: {} }) instead of snapshot()), a drift carried since the recordings line. directory, lookup and showTask are byte-identical. Every Swift row (Discovery.swift, TodoModel.swift, AppViews.swift, DiscoveryView.swift and the others) equals main's candidate 10 bytes; the regenerated client changes only generated types and the identity. No model, invariant or bound change."
+    },
+    {
       "product": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
       "controls": "check-swift passed on 664c12a7: docs/evidence/discovery-formal/swift-wCss6Q",
       "changed": [
@@ -727,6 +740,13 @@
       "review": "Candidate 12's fix head (39421fbe the room rule, 337db345 Q13). AppViews.swift: the sidebar's state lives in @State as well as scene storage; the room rule adds the sidebar's share (now 456 pt) only while the sidebar item is collapsed; View > Hide/Show Sidebar goes through the split view controller; the inspector's closes call TodoModel.closeEditor, and the room rule asks the draft question before closing; the TaskListView sheet/alert bindings and DraftNavigationActions (target capture, explicit Cancel) are unchanged. TodoModel.swift: EditorNavigation gains close and transition; navigate is unchanged; saveAndNavigate, discardAndNavigate and cancelNavigation each mark the person acting first, saveAndNavigate passes the saved Version to a transition as it does for Move and Copy, and discardAndNavigate requires a write for a transition as for Move and Copy; applyNavigation's new cases clear the editor (close) or run the transition, and its showDiscovery case and every existing case are unchanged; dismissNavigationPrompt is unchanged. transition asks first for the open Task with unsaved changes, then runs performTransition, the previous body. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     },
     {
+      "product": "c3e9282050758cb20aeae1c5788c0c8f6408b7b5",
+      "status": "candidate for the seats",
+      "changed": [],
+      "controls": "check.ts passes on the merged head without a hash change: docs/evidence/discovery-formal/check-m8EiN5; Swift step swift-kuEIA4 standalone (keychainLinked false), reused in swift-JGlGIA.",
+      "review": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12) into integ/step2 (8d901d96), plus server seat N3 (docs) and N6 (generated-sources check, apps/macos/scripts and package.json). Every mapped Swift row is main's candidate 12 renewal; apps/electron/src/task-client.ts is this line's renewal. The regenerated Swift client is unchanged (contract 4c932cfc). No model, invariant or bound change."
+    },
+    {
       "product": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
       "controls": "check-swift passed on 5a5349aa: docs/evidence/discovery-formal/swift-EXEfh9",
       "changed": [
@@ -737,6 +757,13 @@
         }
       ],
       "review": "Candidate 13 (84dddaf6 the S1-39 transport fix, ddbd687b MAC-C11-S1-12). Of the mapped files only TodoModel.swift changed since b968f31a. followChanges: before it awaits an operation's refresh it records streamLoopWaitingSince and clears it when the refresh returns; streamFollowsCurrentProfile additionally requires that the loop is not waiting on a refresh for more than streamLoopReadBound (10 s). No event handling, reconnect, cursor, hand-over or exit path changed. replaceCredential: when the credential changes it also ends the editor and the draft question (editor, conflict, writeIntent, recurrenceDraft, series, pendingNavigation); the epoch advance, the Discovery and dependency resets and the message end are unchanged and come first. pendingNavigation records the credential epoch it is asked under (questionEpoch); saveAndNavigate and discardAndNavigate refuse an answer under another epoch, otherwise unchanged. expireSession captures the unsaved draft's title before the reset and appends one sentence to its sessionEnded message; its epoch guard and order are unchanged. No discovery publication, Show or Close guard, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "7b85a5d0bc8fa308b5f49a58722ce02f3822f572",
+      "status": "candidate for the seats",
+      "changed": [],
+      "controls": "check.ts passes on the merged head without a hash change: docs/evidence/discovery-formal/check-dE4B60, Swift step swift-1OEM56 (keychain false, live source unchanged).",
+      "review": "INTEG-STEP2 merge of Mac candidate 13 cfe01e85 into integ/step2 (7b85a5d0). Every mapped Swift row is candidate 13's renewal (cfe01e85); apps/electron/src/task-client.ts is this line's. The regenerated Swift client is unchanged (contract 4c932cfc). No model, invariant or bound change."
     },
     {
       "product": "f3c290fa52b6c458c0c893ea582c952b36fc4776",
