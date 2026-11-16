@@ -1,5 +1,5 @@
 {
-  "commit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
+  "commit": "7fb9e005c24b650c995095bb6e7d830bc0186898",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -192,6 +192,18 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
     "scope": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone 6d0407c6. commands.ts changes parseTime (a typed time is stored with the typing machine's zone), prepareFlags (passes the process's zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first); main.ts changes taskInput (resolves typed times), one import and the exportScope call. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, encodeResponse, renderError, dependencyCommand, batchDepend command and the other main.ts items) is byte-identical (declaration text compared with 6d0407c6); every production row is unchanged. Three public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
+    "changes": []
+  },
+  "seatF1F2": {
+    "product": "98deaaacc0b6e5390e62b9fc730d7934ffe616ed",
+    "pinCommit": "7fb9e005c24b650c995095bb6e7d830bc0186898",
+    "previous": [
+      "bc50a5659944eba1bfa8a3a975c3f43064b9276a"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
+    "scope": "Server seat F1 and F2 on fix/cli-typed-time-zone 8434a7e1: commands.ts changes parseTime (offset-true daylight-saving messages, a refused 60th second in the bracketed form, a shortened echo) and resolveTypedTime (refuses instead of passing raw text on), and adds resolveTaskFlagTimes; main.ts changes taskInput and adds resolvedTimes, used by add and by the edit line in mutation. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, dependencyCommand, batchDepend command, the deletion Prompt.Confirm in mutation, the false filter guard, the malformed Version boundary) is byte-identical; every production row is unchanged. Two public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
     "changes": []
   }
 }

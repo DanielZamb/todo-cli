@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
+  "confirmedCommit": "7fb9e005c24b650c995095bb6e7d830bc0186898",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -65,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+      "sha256": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65"
+      "sha256": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -1308,6 +1308,29 @@
         "path": "apps/cli/src/main.ts",
         "before": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af",
         "after": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65"
+      }
+    ]
+  },
+  "seatF1F2": {
+    "product": "98deaaacc0b6e5390e62b9fc730d7934ffe616ed",
+    "pinCommit": "7fb9e005c24b650c995095bb6e7d830bc0186898",
+    "previous": [
+      "bc50a5659944eba1bfa8a3a975c3f43064b9276a"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
+    "scope": "Server seat F1 and F2 on fix/cli-typed-time-zone 8434a7e1: commands.ts changes parseTime (offset-true daylight-saving messages, a refused 60th second in the bracketed form, a shortened echo) and resolveTypedTime (refuses instead of passing raw text on), and adds resolveTaskFlagTimes; main.ts changes taskInput and adds resolvedTimes, used by add and by the edit line in mutation. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, dependencyCommand, batchDepend command, the deletion Prompt.Confirm in mutation, the false filter guard, the malformed Version boundary) is byte-identical; every production row is unchanged. Two public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/commands.ts",
+        "before": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d",
+        "after": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65",
+        "after": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
       }
     ]
   }
