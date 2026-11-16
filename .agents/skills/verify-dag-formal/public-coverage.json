@@ -199,14 +199,14 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
+      "sha256": "5ee253a1637e66706b8baf3480bb61ea5de10ffbba531f2ffa69919c61d25647"
     },
     {
       "path": "apps/cli/src/schema.ts",
       "functions": [
         "registerCommandSchema"
       ],
-      "sha256": "c2c5e7843dabd85df81ab43adb5a1c4f64eb8a81a94d8af6ae3c694915ccea77"
+      "sha256": "1040f1e12d2065379fdc942482f021ecab1cc659a5861b93ba321d833af9b0cf"
     },
     {
       "path": "apps/cli/src/input.ts",
@@ -433,7 +433,7 @@
       "functions": [
         "rm confirmation Version wording"
       ],
-      "sha256": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83"
+      "sha256": "e381816f49ad53f086d0d35b208ee65a97eed0c51761b08d5526f7a08c9ae6d9"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
@@ -1381,5 +1381,31 @@
     "status": "candidate for the seats",
     "scope": "Candidate 15 at 7535dcfd: candidate 14 (f8cad9ef, Mac line) merged with fix/cli-typed-time-zone (dea19a71, Q10 and follow-ups 86 and 88, Dependency pins 7fb9e005) and mac-test-summary-line (b0df5817, follow-up 90, verification scripts only). Every production and public row is byte-identical to its row on the parent that last renewed it: the Mac rows to candidate 14's (Dependencies.swift at 9ea0c66a), commands.ts, presentation.ts and main.ts to 7fb9e005. No row hash moves; both pins move together to the merged head. No model, invariant or bound change.",
     "changes": []
+  },
+  "q14Repair": {
+    "product": "a016b7e311a2b02aa536707bf60c3c29cd53b8be",
+    "pinCommit": null,
+    "previous": [
+      "7535dcfd3b9b0fcb77a3ddce4a6f18cd1ce1e311"
+    ],
+    "status": "candidate for the seats",
+    "scope": "Q14 (the owner, 2026-11-16: repair them once) on feat/repair-typed-zones: todo repair time-zones. main.ts adds the repair command group and its handler and imports; help.ts adds its two help entries; schema.ts registers its JSON Schema and adds repair to the text-response group. No existing declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
+    "changes": [
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc",
+        "after": "5ee253a1637e66706b8baf3480bb61ea5de10ffbba531f2ffa69919c61d25647"
+      },
+      {
+        "path": "apps/cli/src/schema.ts",
+        "before": "c2c5e7843dabd85df81ab43adb5a1c4f64eb8a81a94d8af6ae3c694915ccea77",
+        "after": "1040f1e12d2065379fdc942482f021ecab1cc659a5861b93ba321d833af9b0cf"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "before": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83",
+        "after": "e381816f49ad53f086d0d35b208ee65a97eed0c51761b08d5526f7a08c9ae6d9"
+      }
+    ]
   }
 }
