@@ -34,13 +34,13 @@ import TodoAPI
         #expect(await server.dependsOn("root") == (action == "add" ? ["a"] : []))
         #expect(picker.checked("a") == (action == "add"), "the row shows what the server has")
         #expect(picker.root.row_version == (await server.version("root")))
-        #expect(picker.feedback == "The server's reply about \u{201C}Task a\u{201D} couldn't be read. The list has been read again and shows what the server has.")
+        #expect(picker.feedback == "The change to \u{201C}Task a\u{201D} was saved, but the server's reply couldn't be read. The list has been reloaded.")
         #expect(picker.failure == nil, "no \u{201C}Couldn't add\u{201D}: \(String(describing: picker.failure.map(DependencyNoticeContent.headline)))")
         #expect(!picker.requiresReload)
         #expect(!picker.owedRead && picker.pending.isEmpty)
     }
 
-    @Test func whenTheReadBackFailsItsOwnNoticeStands() async throws {
+    @Test func whenTheReadBackFailsTooTheNoticeSaysSavedAndOffersReload() async throws {
         let server = OwedReadServer()
         let model = model(server)
         await model.openDependencyPicker(task("root"))
@@ -52,6 +52,7 @@ import TodoAPI
         #expect(picker.feedback == nil, "the list was not read again")
         let failure = try #require(picker.failure)
         #expect(!DependencyNoticeContent.headline(failure).hasPrefix("Couldn't add"))
-        #expect(DependencyNoticeContent.headline(failure) == "Couldn't update Dependencies. Try again.")
+        #expect(DependencyNoticeContent.headline(failure) == "The change to \u{201C}Task a\u{201D} was saved, but the list couldn't be reloaded. Reload to see it.")
+        #expect(picker.requiresReload, "Reload is offered")
     }
 }
