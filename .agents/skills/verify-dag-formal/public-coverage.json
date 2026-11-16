@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "c65e8cad58849d60656cba9aface695224114575",
+  "confirmedCommit": "8d32f8109943c4038d760fbbe1786ed54a882b62",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -104,7 +104,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      "sha256": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -1264,5 +1264,23 @@
     "review": "docs/decisions/ui-speed/step2-one-installable-line.md",
     "scope": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12, tree of b968f31a) into integ/step2 (8d901d96), then server seat N3 (docs) and N6 (apps/macos/scripts/generated-sources.py, its record, package.json's check and the Makefile). Every production row and every TypeScript public row equals ba633f60's accepted bytes (no file under packages, apps/server, apps/cli, apps/electron or scripts changed). The Dependency client Swift rows are main's candidate 12 renewal (0f643c52), kept by the merge; the generated Swift rows are this line's regeneration, unchanged. No row hash moves; both pins move together to the pin commit, which carries the product plus the Discovery and Task search records. No model, invariant or bound change.",
     "changes": []
+  },
+  "q10DueZone": {
+    "product": "2f70298f667f54fca100ee7f85d694a3991d8696",
+    "pinCommit": "8d32f8109943c4038d760fbbe1786ed54a882b62",
+    "previous": [
+      "c65e8cad58849d60656cba9aface695224114575"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/step2-one-installable-line.md",
+    "scope": "feat/cli-due-zone (Q10, the owner's answer A) on integ/step2 e01c1554: the Markdown due: label shows the date in the zone stored with the instant. presentation.ts changes outside every mapped item: encodeResponse and renderError are byte-identical (renderTask, which renderError calls, too); taskView gains a symbol-keyed DueDay that no JSON carries, and taskLine prints it. The public row's hash moves; every production row is unchanged. Both pins move together to the pin commit, which carries the product plus the Task search renewal. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "before": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5",
+        "after": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
+      }
+    ]
   }
 }
