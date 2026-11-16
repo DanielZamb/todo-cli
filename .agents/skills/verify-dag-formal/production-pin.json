@@ -1,5 +1,5 @@
 {
-  "commit": "8d32f8109943c4038d760fbbe1786ed54a882b62",
+  "commit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -180,6 +180,18 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/step2-one-installable-line.md",
     "scope": "feat/cli-due-zone (Q10, the owner's answer A) on integ/step2 e01c1554: the Markdown due: label shows the date in the zone stored with the instant. presentation.ts changes outside every mapped item: encodeResponse and renderError are byte-identical (renderTask, which renderError calls, too); taskView gains a symbol-keyed DueDay that no JSON carries, and taskLine prints it. The public row's hash moves; every production row is unchanged. Both pins move together to the pin commit, which carries the product plus the Task search renewal. No model, invariant or bound change.",
+    "changes": []
+  },
+  "fu86fu88": {
+    "product": "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45",
+    "pinCommit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
+    "previous": [
+      "8d32f8109943c4038d760fbbe1786ed54a882b62"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
+    "scope": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone 6d0407c6. commands.ts changes parseTime (a typed time is stored with the typing machine's zone), prepareFlags (passes the process's zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first); main.ts changes taskInput (resolves typed times), one import and the exportScope call. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, encodeResponse, renderError, dependencyCommand, batchDepend command and the other main.ts items) is byte-identical (declaration text compared with 6d0407c6); every production row is unchanged. Three public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
     "changes": []
   }
 }

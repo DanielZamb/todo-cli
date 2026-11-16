@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "8d32f8109943c4038d760fbbe1786ed54a882b62",
+  "confirmedCommit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -65,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      "sha256": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -104,7 +104,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
+      "sha256": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      "sha256": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -1280,6 +1280,34 @@
         "path": "packages/domain/src/presentation.ts",
         "before": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5",
         "after": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
+      }
+    ]
+  },
+  "fu86fu88": {
+    "product": "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45",
+    "pinCommit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
+    "previous": [
+      "8d32f8109943c4038d760fbbe1786ed54a882b62"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
+    "scope": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone 6d0407c6. commands.ts changes parseTime (a typed time is stored with the typing machine's zone), prepareFlags (passes the process's zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first); main.ts changes taskInput (resolves typed times), one import and the exportScope call. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, encodeResponse, renderError, dependencyCommand, batchDepend command and the other main.ts items) is byte-identical (declaration text compared with 6d0407c6); every production row is unchanged. Three public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/commands.ts",
+        "before": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc",
+        "after": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+      },
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "before": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7",
+        "after": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af",
+        "after": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65"
       }
     ]
   }
