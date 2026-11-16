@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
+  "productionSyncCommit": "f3c290fa52b6c458c0c893ea582c952b36fc4776",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "1b2d051924739a267a2d3225feee6dd738581ad006230cd7063a50825959a8a3",
+      "sha256": "c42ee755d3beb57f01e52a9101e103cc153bd5366de7c0643e947709b8d6a663",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "ccbf2ac0b72fed520a79c69f7052240b9c784eace5b4b4349b56250c62a3d1cb",
+      "sha256": "3a3b6f097a694019fad20519508406f0b5dfa0bbfaf735a7193c8bc0fa6b310e",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -175,7 +175,7 @@
       "functions": [
         "DiscoveryView alert binding, submit, Close and Show dispatch"
       ],
-      "sha256": "00c2d0bdf06e0785200e53a1b22d3f6f61bf8de631c8e302c68525951cba083f",
+      "sha256": "236aef1222fb6ff998d4e7cb2a729352c2e439272b3911442771cafcc562e14f",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -238,7 +238,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "16228a45d70ee2cc3dcde3406cec27169915a8ea",
+  "previousProductionSyncCommit": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -737,6 +737,28 @@
         }
       ],
       "review": "Candidate 13 (84dddaf6 the S1-39 transport fix, ddbd687b MAC-C11-S1-12). Of the mapped files only TodoModel.swift changed since b968f31a. followChanges: before it awaits an operation's refresh it records streamLoopWaitingSince and clears it when the refresh returns; streamFollowsCurrentProfile additionally requires that the loop is not waiting on a refresh for more than streamLoopReadBound (10 s). No event handling, reconnect, cursor, hand-over or exit path changed. replaceCredential: when the credential changes it also ends the editor and the draft question (editor, conflict, writeIntent, recurrenceDraft, series, pendingNavigation); the epoch advance, the Discovery and dependency resets and the message end are unchanged and come first. pendingNavigation records the credential epoch it is asked under (questionEpoch); saveAndNavigate and discardAndNavigate refuse an answer under another epoch, otherwise unchanged. expireSession captures the unsaved draft's title before the reset and appends one sentence to its sessionEnded message; its epoch guard and order are unchanged. No discovery publication, Show or Close guard, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "f3c290fa52b6c458c0c893ea582c952b36fc4776",
+      "controls": "check-swift passed on f3c290fa: docs/evidence/discovery-formal/swift-YSN6Np",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "1b2d051924739a267a2d3225feee6dd738581ad006230cd7063a50825959a8a3",
+          "to": "c42ee755d3beb57f01e52a9101e103cc153bd5366de7c0643e947709b8d6a663"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "ccbf2ac0b72fed520a79c69f7052240b9c784eace5b4b4349b56250c62a3d1cb",
+          "to": "3a3b6f097a694019fad20519508406f0b5dfa0bbfaf735a7193c8bc0fa6b310e"
+        },
+        {
+          "path": "apps/macos/Sources/DiscoveryView.swift",
+          "from": "00c2d0bdf06e0785200e53a1b22d3f6f61bf8de631c8e302c68525951cba083f",
+          "to": "236aef1222fb6ff998d4e7cb2a729352c2e439272b3911442771cafcc562e14f"
+        }
+      ],
+      "review": "Candidate 14 (0afd56a1, e2d24cdd, aa09f495, cd5c7709, 043209b8, b24f671c, 3e6b534e, 2210229f). AppViews.swift: the full row's metadata line is FullRowMetadata (whole items, \"+N\"); TaskRow's inputs and the row's identity are unchanged. The room rule grows the window to the left. The draft question's title and message come from DraftNavigationPrompt.title and DraftNavigationMessage.text with the pending target (the Task's name; status change, room rule and sign-out wording); the TaskListView sheet/alert bindings, their isPresented conditions and DraftNavigationActions (target capture, explicit Cancel) are unchanged. SignInView announces its message once through TodoModel.announceMessageOnce. DiscoveryView.swift: its draft-question alert uses the same title and message functions; its binding is unchanged. TodoModel.swift: EditorNavigation gains signOut; signOut asks the draft question when the editor has unsaved changes and otherwise calls performSignOut, which holds the previous body unchanged (start, failure and commit); discardAndNavigate skips re-opening the editor before a sign-out; applyNavigation's transition case sends the newest Version the model holds; asksBefore publishes a notice when a question is already up; leaveDeletedProfile ends the question with the editor and names a lost draft in its notice; followChanges' Snapshot reload names a lost draft in a notice after its reset (no event handling, cursor, reconnect or exit path changed); expireSession's message comes from sessionEndedMessage. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
