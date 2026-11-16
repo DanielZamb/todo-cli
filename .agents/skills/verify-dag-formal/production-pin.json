@@ -1,5 +1,5 @@
 {
-  "commit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
+  "commit": "06ad957d6fac84e18597a35445c38ffa4d75584e",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -247,6 +247,17 @@
     ],
     "status": "candidate for the seats",
     "scope": "Q17 (the owner, 2026-11-16: always the same moment) on feat/repair-typed-zones: main.ts removes --keep from the repair time-zones handler and shows each value before and after with the plain sentence; help.ts rewrites the repair time-zones entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
+    "changes": []
+  },
+  "q17TestTyping": {
+    "product": "06ad957d6fac84e18597a35445c38ffa4d75584e",
+    "pinCommit": "06ad957d6fac84e18597a35445c38ffa4d75584e",
+    "previous": [
+      "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "scope": "Q17 test typing: packages/domain/test/repair-time-zones.test.ts (in the pin's scope) types its plan edits as plain objects; no source, row or test outcome changes.",
     "changes": []
   }
 }

@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
+  "confirmedCommit": "06ad957d6fac84e18597a35445c38ffa4d75584e",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -1449,5 +1449,16 @@
         "after": "25453fd24211c228c20c78745c73654d140b9bcfd40fd323fdbac23cc0816cde"
       }
     ]
+  },
+  "q17TestTyping": {
+    "product": "06ad957d6fac84e18597a35445c38ffa4d75584e",
+    "pinCommit": "06ad957d6fac84e18597a35445c38ffa4d75584e",
+    "previous": [
+      "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "scope": "Q17 test typing: packages/domain/test/repair-time-zones.test.ts (in the pin's scope) types its plan edits as plain objects; no source, row or test outcome changes.",
+    "changes": []
   }
 }
