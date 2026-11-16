@@ -116,6 +116,7 @@ try:
             # --idle-ms shortens the window for the clock-change control only (MAC-C1-S1-29).
             environment['TODO_IDLE_LONG_MS'] = sys.argv[sys.argv.index('--idle-ms') + 1] if '--idle-ms' in sys.argv else '300000'
             if '--clock-control' in sys.argv[2:]: environment['TODO_IDLE_CLOCK_CONTROL'] = '1'
+            if '--day-control' in sys.argv[2:]: environment['TODO_IDLE_CLOCK_CONTROL'] = 'day'  # follow-up 84
         class DelayedHealth(http.server.BaseHTTPRequestHandler):
             def log_message(self, *_): pass
             def do_GET(self):
@@ -265,7 +266,7 @@ try:
             # saw one was restarted and is recorded (MAC-C1-S1-29). The control must restart exactly once.
             idle = json.loads((EVIDENCE / 'stream-five-minutes.json').read_text())
             assert idle['refreshes'] == 0 and idle['requests'] == 0 and idle['reconnects'] == 0 and idle['can_write'], idle
-            assert len(idle['windows_restarted_for_clock_change']) == (1 if '--clock-control' in sys.argv[2:] else len(idle['windows_restarted_for_clock_change'])) < 3, idle
+            assert len(idle['windows_restarted_for_clock_change']) == (1 if ('--clock-control' in sys.argv[2:] or '--day-control' in sys.argv[2:]) else len(idle['windows_restarted_for_clock_change'])) < 3, idle
             native['long_idle'] = idle
         result = dict(result='PASS', errors=0, native=native, keychain_called=keychain_linked, keychain_guard='keychain-guard.json', app_launched=False, signed=False, pushed=False)
     else:

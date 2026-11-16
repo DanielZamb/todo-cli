@@ -83,7 +83,9 @@ private func makeTodoSession(diagnostics: ClientDiagnosticsRecorder, requestTime
 private func makeTodoClient(server: URL, credential: String, diagnostics: ClientDiagnosticsRecorder, session: URLSession) -> (client: Client, scope: ScopedTransport) {
     let base = StreamTransport(ordinary: URLSessionTransport(configuration: .init(session: session)), diagnostics: diagnostics)
     let transport: any ClientTransport = diagnostics.isEnabled ? DiagnosticTransport(transport: base, recorder: diagnostics) : base
-    let scope = ScopedTransport(session: session, base: transport)
+    var scopeToken: (@Sendable () -> Int)?
+    if diagnostics.isEnabled { scopeToken = { diagnostics.scopeToken } }
+    let scope = ScopedTransport(session: session, base: transport, scopeToken: scopeToken)
     return (Client(serverURL: server, transport: scope, middlewares: [BearerMiddleware(credential: credential), ClientRequestCorrelation()]), scope)
 }
 

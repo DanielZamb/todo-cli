@@ -26,11 +26,13 @@ private struct NoNetwork: ClientTransport {
     let window: NSWindow
     let probe = SidebarControlProbe()
     var compact = false
-    static func fixtureModel(transport: any ClientTransport = NoNetwork()) -> TodoModel {
+    static func fixtureModel(transport: any ClientTransport = NoNetwork(), clientDiagnostics: ClientDiagnosticsRecorder = .disabled) -> TodoModel {
         let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-sidebar-room"),
-                              clientFactory: { url, credential in Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)]) }, clientDiagnostics: .disabled,
+                              clientFactory: { url, credential in Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)]) }, clientDiagnostics: clientDiagnostics,
                               catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
         model.clientDiagnosticsUI.stop()
+        // With a recorder, an owner Session's credential, so signedIn authorizes Diagnostics.
+        if clientDiagnostics !== ClientDiagnosticsRecorder.disabled { model.replaceCredential("ses_fixture") }
         model.signedIn = true; model.connection = .live; model.selectedView = "all"
         model.profiles = [.init(id: "work", name: "Work", open_task_count: 40, inbox_task_count: 3)]
         model.projects = [.init(id: "launch", name: "Launch", open_task_count: 20, inbox_task_count: nil)]
@@ -155,6 +157,23 @@ extension MainThreadExclusive { @MainActor @Suite(.serialized) struct SidebarRoo
     /// (a) The rule runs from the toolbar and from the menu command. With the inspector widened to
     /// 480 pt, a 900 pt window needs 532 pt with the sidebar hidden and 988 pt shown: the window grows
     /// by exactly the 88 pt that are missing, and keeps the inspector at its width.
+    /// At the screen's left edge there is no room to the left: the window grows to the right.
+    @Test func atTheScreensLeftEdgeTheWindowGrowsToTheRight() async throws {
+        let visible = try #require(NSScreen.main?.visibleFrame)
+        let room = await SidebarRoomHarness(model: SidebarRoomHarness.fixtureModel(), at: NSPoint(x: visible.minX, y: visible.minY + 10))
+        defer { room.close() }
+        try #require(room.window.screen != nil && visible.width >= 988)
+        room.model.beginEditing(room.model.tasks[3]); await room.settle()
+        try await room.widenInspector(to: 480)
+        await room.toolbarToggle()
+        await room.resize(900)
+        try await room.widenInspector(to: 480)
+        try #require(!room.sidebarShown && room.window.frame.minX == visible.minX)
+        await room.toolbarToggle()
+        #expect(room.window.frame.width == 988)
+        #expect(room.window.frame.minX == visible.minX)
+    }
+
     @Test(arguments: ["toolbar", "menu"])
     func aWidenedInspectorGrowsTheWindowByWhatIsMissing(path: String) async throws {
         let origin = try #require(SidebarRoomHarness.onScreen)
@@ -168,9 +187,12 @@ extension MainThreadExclusive { @MainActor @Suite(.serialized) struct SidebarRoo
         try await room.widenInspector(to: 480)
         try #require(!room.sidebarShown && room.window.frame.width == 900 && room.inspectorWidth == 480)
         #expect(SidebarRoom.enforcedMinimum(in: room.window) == 532)
+        let before = room.window.frame
         await room.toggle(path)
         #expect(room.sidebarShown)
         #expect(room.window.frame.width == 988)
+        // It grows to the left, so the list moves as little as it can under the pointer (UI seat).
+        #expect(room.window.frame.maxX == before.maxX)
         #expect(room.model.editor?.id == "t003")
         #expect(room.inspectorWidth == 480)
         #expect(room.outside.isEmpty)

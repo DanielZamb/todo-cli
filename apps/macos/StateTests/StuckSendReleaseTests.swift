@@ -62,19 +62,27 @@ private final class InvalidationProbe: NSObject, URLSessionDelegate, @unchecked 
         #expect(finished.value == "cancelled", "the late reply never reached the caller")
     }
 
-    /// A retired transport whose send never ends still invalidates its session (the drain counts a
-    /// released send as finished).
-    @Test func aRetiredTransportWithANeverEndingSendInvalidatesItsSession() async throws {
+    /// A retired transport whose inner send never ends: the awaiter returns at once (S1-39), the
+    /// session waits for the running send (S1-19) and is never invalidated under it; the grace counts
+    /// the send (and cancels the session's tasks); the session is invalidated when the send ends.
+    @Test func aRetiredTransportWithANeverEndingSendKeepsItsSessionUntilTheSendEnds() async throws {
         let inner = NeverEndingInner()
         let probe = InvalidationProbe()
-        let transport = ScopedTransport(session: URLSession(configuration: .ephemeral, delegate: probe, delegateQueue: nil), base: inner)
+        let transport = ScopedTransport(session: URLSession(configuration: .ephemeral, delegate: probe, delegateQueue: nil), base: inner, stuckGrace: 0.4)
         let call = Task { _ = try? await transport.send(request(.get), body: nil, baseURL: URL(string: "http://127.0.0.1:1")!, operationID: "tasks.list") }
         #expect(await waitUntil(2) { await inner.started == 1 })
+        let retired = ProcessInfo.processInfo.systemUptime
         transport.retire()
         await call.value
-        #expect(await waitUntil(2) { probe.invalidated }, "the session is invalidated although the inner send never ended")
-        #expect(transport.releaseCounts.notEnded == 1)
+        #expect(ProcessInfo.processInfo.systemUptime - retired < 0.3, "the awaiter returned at once")
+        #expect(!transport.sessionInvalidated, "not while the inner send runs")
+        #expect(await waitUntil(3) { transport.releaseCounts.runningAtGrace == 1 }, "the grace counted the running send")
+        #expect(ProcessInfo.processInfo.systemUptime - retired >= 0.4)
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(!transport.sessionInvalidated && !probe.invalidated, "still valid: the send has not ended")
         await inner.endLate()
+        #expect(await waitUntil(2) { probe.invalidated }, "invalidated once the send ended")
+        #expect(transport.releaseCounts == .init(releasedEarly: 1, notEnded: 0, lateEnded: 1, runningAtGrace: 1))
     }
 }
 
@@ -161,5 +169,224 @@ private actor HitShapeInner: ClientTransport {
         await inner.push(HitShapeInner.Frames.frame5, id: "5")
         await inner.push(HitShapeInner.Frames.frame6, id: "6")
         #expect(await until(5) { model.profile == "work" }, "the model left the deleted Profile: \(model.profile)")
+    }
+}
+
+/// MAC-C11-S1-19 (follow-up 94): an admitted inner send can be past its last cancellation check
+/// and on its way to `dataTask` when the transport retires; the session must not be invalidated
+/// before it ends, or URLSession throws an uncaught NSGenericException ("Task created in a session
+/// that has been invalidated") and the process aborts. The gate stands where URLSessionTransport's
+/// bufferedRequest stands after its last check (the correctness seat's probe), and the three
+/// orders are forced: retire before the inner send starts, between its start and `dataTask`, and
+/// after `dataTask`. In each the awaiter returns at once (S1-39) and the session is invalidated
+/// only after the inner send has ended.
+private final class CreationGate: ClientTransport, @unchecked Sendable {
+    let session: URLSession, createFirst: Bool, keepTask: Bool
+    var url = URL(string: "http://127.0.0.1:9/health")!
+    private(set) var task: URLSessionTask?
+    let entered = DispatchSemaphore(value: 0), proceed = DispatchSemaphore(value: 0)
+    private let lock = NSLock(); private var calls = 0, created = 0
+    var entries: Int { lock.withLock { calls } }
+    var tasksCreated: Int { lock.withLock { created } }
+    init(_ session: URLSession, createFirst: Bool, keepTask: Bool = false) { self.session = session; self.createFirst = createFirst; self.keepTask = keepTask }
+    /// Blocks this pool thread (synchronous, so it can be called from the async send).
+    private func holdHere() { proceed.wait() }
+    private func create() {
+        let task = session.dataTask(with: url)
+        if keepTask { lock.withLock { self.task = task } } else { task.cancel() }
+        lock.withLock { created += 1 }
+    }
+    func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        lock.withLock { calls += 1 }
+        if createFirst { create() }
+        entered.signal()
+        holdHere() // a pool thread past its last check, as the library's send
+        if !createFirst { create() }
+        throw CancellationError()
+    }
+}
+
+@Suite(.serialized) struct RetireWhileASendCreatesItsTaskTests {
+    private func waitUntil(_ seconds: Double, _ condition: () -> Bool) async -> Bool {
+        let deadline = ProcessInfo.processInfo.systemUptime + seconds
+        while ProcessInfo.processInfo.systemUptime < deadline { if condition() { return true }; try? await Task.sleep(for: .milliseconds(5)) }
+        return condition()
+    }
+    private func wait(_ semaphore: DispatchSemaphore) async {
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in DispatchQueue.global().async { semaphore.wait(); done.resume() } }
+    }
+    private func start(_ transport: ScopedTransport) -> (Task<Void, Never>, Finished) {
+        let finished = Finished()
+        let call = Task {
+            do { _ = try await transport.send(HTTPRequest(method: .get, scheme: "http", authority: "127.0.0.1:9", path: "/health"), body: nil, baseURL: URL(string: "http://127.0.0.1:9")!, operationID: "system.health"); finished.set("returned") }
+            catch is CancellationError { finished.set("cancelled") }
+            catch { finished.set("other: \(error)") }
+        }
+        return (call, finished)
+    }
+
+    /// The seat's order: the inner send is between its start and `dataTask` when the transport
+    /// retires. Red without the fix: the process aborts creating the task.
+    @Test func retireBetweenTheInnerSendsStartAndItsDataTask() async throws {
+        let probe = InvalidationProbe()
+        let session = URLSession(configuration: .ephemeral, delegate: probe, delegateQueue: nil)
+        let gate = CreationGate(session, createFirst: false)
+        let transport = ScopedTransport(session: session, base: gate)
+        let (call, finished) = start(transport)
+        await wait(gate.entered)
+        transport.retire()
+        #expect(await waitUntil(1) { finished.value != nil } && finished.value == "cancelled", "the awaiter returns at once")
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(!transport.sessionInvalidated && !probe.invalidated, "the session waits for the running send")
+        gate.proceed.signal()
+        // The inner send's end (its late reply dropped) comes first, then the invalidation; without
+        // the fix the session is already invalid here and creating the data task aborts the process.
+        #expect(await waitUntil(2) { transport.releaseCounts.lateEnded == 1 }, "the inner send ended")
+        #expect(await waitUntil(2) { probe.invalidated }, "invalidated once the inner send ended")
+        #expect(gate.tasksCreated == 1, "the data task was created on a live session")
+        #expect(transport.releaseCounts == .init(releasedEarly: 1, notEnded: 0, lateEnded: 1, runningAtGrace: 0))
+        await call.value
+    }
+
+    /// The transport retires before the inner send has started: it finds the cancellation, never
+    /// reaches the base, and the session is invalidated as soon as it has ended.
+    @Test func retireBeforeTheInnerSendStarts() async throws {
+        let probe = InvalidationProbe()
+        let session = URLSession(configuration: .ephemeral, delegate: probe, delegateQueue: nil)
+        let gate = CreationGate(session, createFirst: false)
+        let transport = ScopedTransport(session: session, base: gate)
+        let started = DispatchSemaphore(value: 0), go = DispatchSemaphore(value: 0)
+        transport.innerStartHook = { started.signal(); go.wait() }
+        let (call, finished) = start(transport)
+        await wait(started)
+        transport.retire()
+        #expect(await waitUntil(1) { finished.value != nil } && finished.value == "cancelled", "the awaiter returns at once")
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(!transport.sessionInvalidated && !probe.invalidated, "the session waits for the admitted send")
+        go.signal()
+        #expect(await waitUntil(2) { probe.invalidated }, "invalidated once the inner send ended")
+        #expect(gate.entries == 0, "the inner send stopped at its cancellation check")
+        await call.value
+    }
+
+    /// The coordinator's case: a send admitted before `retire()` whose inner send reaches the transport
+    /// and creates its task only after the grace has fired (a starved executor, a suspended
+    /// process). The session is still valid, so nothing throws; the awaiter was released long
+    /// before; the send was counted at the grace; the session is invalidated when it ends.
+    @Test func aSendThatCreatesItsTaskAfterTheGraceDoesNotAbort() async throws {
+        let probe = InvalidationProbe()
+        let session = URLSession(configuration: .ephemeral, delegate: probe, delegateQueue: nil)
+        let gate = CreationGate(session, createFirst: false)
+        let transport = ScopedTransport(session: session, base: gate, stuckGrace: 0.3)
+        let (call, finished) = start(transport)
+        await wait(gate.entered)
+        transport.retire()
+        #expect(await waitUntil(1) { finished.value != nil } && finished.value == "cancelled", "the awaiter returns at once")
+        #expect(await waitUntil(2) { transport.releaseCounts.runningAtGrace == 1 }, "the grace fired with the send running")
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(!transport.sessionInvalidated && !probe.invalidated, "the grace does not invalidate under a running send")
+        gate.proceed.signal() // the task is created now, after the grace
+        #expect(await waitUntil(2) { transport.releaseCounts.lateEnded == 1 }, "the inner send ended")
+        #expect(await waitUntil(2) { probe.invalidated }, "invalidated once it ended")
+        #expect(gate.tasksCreated == 1, "created on a live session: no abort")
+        await call.value
+    }
+
+    /// A loopback listener that accepts connections (the kernel's backlog) and never answers, so a
+    /// request to it stays running until something cancels it.
+    private func silentListener() throws -> (port: UInt16, close: () -> Void) {
+        let fd = socket(AF_INET, SOCK_STREAM, 0)
+        try #require(fd >= 0)
+        var address = sockaddr_in(); address.sin_family = sa_family_t(AF_INET); address.sin_port = 0; address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        var size = socklen_t(MemoryLayout<sockaddr_in>.size)
+        try #require(withUnsafePointer(to: &address) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, size) } } == 0)
+        try #require(listen(fd, 8) == 0)
+        try #require(withUnsafeMutablePointer(to: &address) { $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(fd, $0, &size) } } == 0)
+        return (UInt16(bigEndian: address.sin_port), { close(fd) })
+    }
+
+    /// At the grace the session's tasks are cancelled, so a stuck send does not keep its connection.
+    @Test func theGraceCancelsTheTasksOfAStuckSend() async throws {
+        let listener = try silentListener()
+        defer { listener.close() }
+        let session = URLSession(configuration: .ephemeral)
+        let gate = CreationGate(session, createFirst: true, keepTask: true)
+        gate.url = URL(string: "http://127.0.0.1:\(listener.port)/health")!
+        let transport = ScopedTransport(session: session, base: gate, stuckGrace: 0.3)
+        let (call, _) = start(transport)
+        await wait(gate.entered)
+        let task = try #require(gate.task)
+        task.resume()
+        try? await Task.sleep(for: .milliseconds(200))
+        try #require(task.state == .running, "the request waits on the silent listener: \(task.state.rawValue)")
+        transport.retire()
+        #expect(await waitUntil(2) { transport.releaseCounts.runningAtGrace == 1 })
+        #expect(await waitUntil(2) { task.state == .canceling || task.state == .completed }, "the stuck send's task was cancelled: \(task.state.rawValue)")
+        #expect(!transport.sessionInvalidated)
+        gate.proceed.signal()
+        await call.value
+        #expect(await waitUntil(2) { transport.sessionInvalidated })
+    }
+
+    /// The inner send has created its task and is waiting for the reply when the transport retires.
+    @Test func retireAfterTheDataTask() async throws {
+        let probe = InvalidationProbe()
+        let session = URLSession(configuration: .ephemeral, delegate: probe, delegateQueue: nil)
+        let gate = CreationGate(session, createFirst: true)
+        let transport = ScopedTransport(session: session, base: gate)
+        let (call, finished) = start(transport)
+        await wait(gate.entered)
+        transport.retire()
+        #expect(await waitUntil(1) { finished.value != nil } && finished.value == "cancelled", "the awaiter returns at once")
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(!transport.sessionInvalidated && !probe.invalidated, "the session waits for the running send")
+        gate.proceed.signal()
+        // The inner send's end (its late reply dropped) comes first, then the invalidation; without
+        // the fix the session is already invalid here and creating the data task aborts the process.
+        #expect(await waitUntil(2) { transport.releaseCounts.lateEnded == 1 }, "the inner send ended")
+        #expect(await waitUntil(2) { probe.invalidated }, "invalidated once the inner send ended")
+        #expect(gate.tasksCreated == 1)
+        await call.value
+    }
+}
+
+/// The stress's scope check that failed once in 3,000 with S1-19's fix (correctness seat, ASan run
+/// 3, iteration 2314): a send admitted under the old credential whose inner send started after the
+/// credential change, and so after the recorder's next scope began, was recorded in that scope
+/// (`reads.profiles`, started and finished there under the old refresh's id). Before the fix that
+/// same window aborted the process (S1-19). The scope is now read at admission and carried to the
+/// inner send; the recorder records a request only in the scope it was admitted in.
+private struct ReplyOK: ClientTransport {
+    func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        (HTTPResponse(status: .ok, headerFields: [.contentType: "application/json"]), HTTPBody("[]"))
+    }
+}
+private final class GateInFront: ClientTransport, @unchecked Sendable {
+    let base: any ClientTransport
+    let entered = DispatchSemaphore(value: 0), proceed = DispatchSemaphore(value: 0)
+    init(_ base: any ClientTransport) { self.base = base }
+    private func holdHere() { proceed.wait() }
+    func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        entered.signal(); holdHere()
+        return try await base.send(request, body: body, baseURL: baseURL, operationID: operationID)
+    }
+}
+
+@Suite(.serialized) struct AdmittedScopeTests {
+    @Test(arguments: [false, true])
+    func aSendIsRecordedOnlyInTheScopeItWasAdmittedIn(nextScopeBegins: Bool) async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("admitted-scope-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let recorder = ClientDiagnosticsRecorder(journalDirectory: directory); recorder.authorizeOwnerSession(true)
+        let gate = GateInFront(DiagnosticTransport(transport: ReplyOK(), recorder: recorder))
+        let transport = ScopedTransport(session: URLSession(configuration: .ephemeral), base: gate, scopeToken: { recorder.scopeToken })
+        let call = Task { try await transport.send(HTTPRequest(method: .get, scheme: "http", authority: "127.0.0.1:1", path: "/profiles"), body: nil, baseURL: URL(string: "http://127.0.0.1:1")!, operationID: "reads.profiles") }
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in DispatchQueue.global().async { gate.entered.wait(); done.resume() } }
+        if nextScopeBegins { recorder.clear(); recorder.authorizeOwnerSession(true) } // the next credential's scope
+        gate.proceed.signal()
+        _ = try await call.value
+        let requests = (await recorder.snapshot()).requests
+        #expect(requests == (nextScopeBegins ? 0 : 1), "requests recorded: \(requests)")
+        await recorder.flush()
     }
 }

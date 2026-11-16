@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "c65e8cad58849d60656cba9aface695224114575",
+  "confirmedCommit": "7535dcfd3b9b0fcb77a3ddce4a6f18cd1ce1e311",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -65,7 +65,7 @@
         "cliResult",
         "mutateTask"
       ],
-      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      "sha256": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
     },
     {
       "path": "packages/domain/src/auth/auth.ts",
@@ -104,7 +104,7 @@
         "encodeResponse",
         "renderError"
       ],
-      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      "sha256": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
     },
     {
       "path": "packages/domain/src/store/store.ts",
@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      "sha256": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "3776c223dd90e0a2955cc7dd4a84e2602ced44d3ebe837f7970fa556bb2abef5"
+      "sha256": "9921f84909cea203e764ea1e415403452b0e7d9ba1c79d3c6078a4987a11c6d2"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -1215,6 +1215,41 @@
       "checkEvidence": [
         "docs/evidence/dag-formal/public-Y0uBDt"
       ]
+    },
+    {
+      "product": "cd62ad3b8f37ac5b68dee5dbb3ea972434ee86ad",
+      "previousConfirmedCommit": "0f643c52af563a6e4100dcb8836944e1e938f790",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "3776c223dd90e0a2955cc7dd4a84e2602ced44d3ebe837f7970fa556bb2abef5",
+          "to": "7111f696c3a6283230f39c73028a5bdb9cb1ad0b382b2b261039af0fd7101ea9"
+        }
+      ],
+      "review": {
+        "summary": "Candidate 14 (e2d24cdd, MAC-C12-S1-8; b24f671c fixes only its test). Of the DAG public scope only Dependencies.swift changed: in performToggleDependency's catch, after authorize and the credential/Profile guard, a reply that committed (committed or committedBeforeFailure, as before) now takes the committed path: when the picker is still the one showing it reads itself back (readDependencyPicker(.background)) and, if that read applied, succeeds the link ticket with a feedback line saying the reply could not be read; it then clears the main window's link hand-off for that dependent as a success does, reads the catalog back and returns. A failed read-back leaves the read's own failure notice. Writes still send the drawn Version and are decided by the server's OCC; message ownership, per-target supersession, authorization order and pendingDependents release are unchanged. A new static helper, unreadableCommitFeedback, holds the text. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, 2026-11-14 23:20 (S1-8, option A)",
+        "pendingSeat": true
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-D6OGYS"
+      ]
+    },
+    {
+      "product": "9ea0c66a3befb6c94d31f3164783b12efd9bfe18",
+      "previousConfirmedCommit": "c65e8cad58849d60656cba9aface695224114575",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "7111f696c3a6283230f39c73028a5bdb9cb1ad0b382b2b261039af0fd7101ea9",
+          "to": "9921f84909cea203e764ea1e415403452b0e7d9ba1c79d3c6078a4987a11c6d2"
+        }
+      ],
+      "review": "Candidate 14 merge head (9ea0c66a: origin/main a6cdd0f3 merged into mac-c13). Of the pinned Mac files only apps/macos/Sources/Dependencies.swift differs from the last Mac-line renewal (f3c290fa), by 06d552b8 (UI seat on 370f6485): in the picker's toggle, after a committed link whose 2xx reply could not be read, the feedback text is the UI seat's final words, and when the picker's own read-back fails too (and no read is owed) the picker publishes a notice that the change was saved and sets requiresReload, instead of the generic “Couldn't update Dependencies. Try again.” No edge validation, request, commit or graph rule changed. Every other pinned row, Swift or TypeScript, is the side of the merge that changed it: main's rows are main's renewal (c65e8cad), byte-identical in the merge; the generated client is main's (make generate-api changed no file).",
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-oZCpui"
+      ]
     }
   ],
   "macLineClientReviewsNote": "Append-only, oldest first (MAC-C1-S1-38): a renewal adds its record and never replaces an earlier one.",
@@ -1263,6 +1298,88 @@
     "status": "candidate for the seats",
     "review": "docs/decisions/ui-speed/step2-one-installable-line.md",
     "scope": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12, tree of b968f31a) into integ/step2 (8d901d96), then server seat N3 (docs) and N6 (apps/macos/scripts/generated-sources.py, its record, package.json's check and the Makefile). Every production row and every TypeScript public row equals ba633f60's accepted bytes (no file under packages, apps/server, apps/cli, apps/electron or scripts changed). The Dependency client Swift rows are main's candidate 12 renewal (0f643c52), kept by the merge; the generated Swift rows are this line's regeneration, unchanged. No row hash moves; both pins move together to the pin commit, which carries the product plus the Discovery and Task search records. No model, invariant or bound change.",
+    "changes": []
+  },
+  "q10DueZone": {
+    "product": "2f70298f667f54fca100ee7f85d694a3991d8696",
+    "pinCommit": "8d32f8109943c4038d760fbbe1786ed54a882b62",
+    "previous": [
+      "c65e8cad58849d60656cba9aface695224114575"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/step2-one-installable-line.md",
+    "scope": "feat/cli-due-zone (Q10, the owner's answer A) on integ/step2 e01c1554: the Markdown due: label shows the date in the zone stored with the instant. presentation.ts changes outside every mapped item: encodeResponse and renderError are byte-identical (renderTask, which renderError calls, too); taskView gains a symbol-keyed DueDay that no JSON carries, and taskLine prints it. The public row's hash moves; every production row is unchanged. Both pins move together to the pin commit, which carries the product plus the Task search renewal. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "before": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5",
+        "after": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
+      }
+    ]
+  },
+  "fu86fu88": {
+    "product": "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45",
+    "pinCommit": "bc50a5659944eba1bfa8a3a975c3f43064b9276a",
+    "previous": [
+      "8d32f8109943c4038d760fbbe1786ed54a882b62"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
+    "scope": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone 6d0407c6. commands.ts changes parseTime (a typed time is stored with the typing machine's zone), prepareFlags (passes the process's zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first); main.ts changes taskInput (resolves typed times), one import and the exportScope call. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, encodeResponse, renderError, dependencyCommand, batchDepend command and the other main.ts items) is byte-identical (declaration text compared with 6d0407c6); every production row is unchanged. Three public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/commands.ts",
+        "before": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc",
+        "after": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+      },
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "before": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7",
+        "after": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af",
+        "after": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65"
+      }
+    ]
+  },
+  "seatF1F2": {
+    "product": "98deaaacc0b6e5390e62b9fc730d7934ffe616ed",
+    "pinCommit": "7fb9e005c24b650c995095bb6e7d830bc0186898",
+    "previous": [
+      "bc50a5659944eba1bfa8a3a975c3f43064b9276a"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "review": "docs/decisions/ui-speed/fu86-typed-time-zone.md",
+    "scope": "Server seat F1 and F2 on fix/cli-typed-time-zone 8434a7e1: commands.ts changes parseTime (offset-true daylight-saving messages, a refused 60th second in the bracketed form, a shortened echo) and resolveTypedTime (refuses instead of passing raw text on), and adds resolveTaskFlagTimes; main.ts changes taskInput and adds resolvedTimes, used by add and by the edit line in mutation. Every mapped public item (TaskCommands.result, TaskCommands.change, cliResult, mutateTask, dependencyCommand, batchDepend command, the deletion Prompt.Confirm in mutation, the false filter guard, the malformed Version boundary) is byte-identical; every production row is unchanged. Two public rows' hashes move; both pins move together to the pin commit, which carries the product plus the Task search and cache renewals. No model, invariant or bound change.",
+    "changes": [
+      {
+        "path": "packages/domain/src/commands.ts",
+        "before": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d",
+        "after": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65",
+        "after": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
+      }
+    ]
+  },
+  "candidate15": {
+    "product": "7535dcfd3b9b0fcb77a3ddce4a6f18cd1ce1e311",
+    "pinCommit": "7535dcfd3b9b0fcb77a3ddce4a6f18cd1ce1e311",
+    "previous": [
+      "9ea0c66a3befb6c94d31f3164783b12efd9bfe18",
+      "c65e8cad58849d60656cba9aface695224114575",
+      "7fb9e005c24b650c995095bb6e7d830bc0186898"
+    ],
+    "contract": "4c932cfc8b3dea7c53565e421b9f0c583c3b43e064d69b6034b76cfdde5cc0bc",
+    "status": "candidate for the seats",
+    "scope": "Candidate 15 at 7535dcfd: candidate 14 (f8cad9ef, Mac line) merged with fix/cli-typed-time-zone (dea19a71, Q10 and follow-ups 86 and 88, Dependency pins 7fb9e005) and mac-test-summary-line (b0df5817, follow-up 90, verification scripts only). Every production and public row is byte-identical to its row on the parent that last renewed it: the Mac rows to candidate 14's (Dependencies.swift at 9ea0c66a), commands.ts, presentation.ts and main.ts to 7fb9e005. No row hash moves; both pins move together to the merged head. No model, invariant or bound change.",
     "changes": []
   }
 }

@@ -49,9 +49,9 @@ struct DiscoveryView: View {
             }
         }.padding(16).frame(width: compact ? 393 : 560, height: compact ? 426 + model.compactExtraHeight : 600)
             .onAppear { prefixFocused = true }
-            .alert(DraftNavigationPrompt.title(hasConflict: model.conflict != nil), isPresented: Binding(get: { model.pendingNavigation != nil }, set: { if !$0 { model.dismissNavigationPrompt() } }), presenting: model.pendingNavigation) { target in
+            .alert(DraftNavigationPrompt.title(model), isPresented: Binding(get: { model.pendingNavigation != nil }, set: { if !$0 { model.dismissNavigationPrompt() } }), presenting: model.pendingNavigation) { target in
                 DraftNavigationActions(model: model, target: target)
-            } message: { _ in DraftNavigationMessage(hasConflict: model.conflict != nil) }
+            } message: { target in DraftNavigationMessage(hasConflict: model.conflict != nil, target: target) }
     }
     private func submit() { Task { await model.requestDiscovery() } }
     @ViewBuilder private var content: some View {

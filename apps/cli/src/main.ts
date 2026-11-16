@@ -85,6 +85,7 @@ import {
   nowInstant,
   profileId,
   readTasks,
+  resolveTaskFlagTimes,
   revertTarget,
   revertTask,
   type TaskFlags,
@@ -449,6 +450,19 @@ function taskInput(options: ParsedTaskOptions): TaskFlags {
   };
   return Schema.decodeUnknownSync(taskFlags)(fields);
 }
+/**
+ * A command's typed --due and --scheduled resolved in the zone of the machine they were typed on
+ * (ADR-0006, follow-up 86), so a server that parses a routed command never falls back to its own
+ * zone. A time the parser refuses fails here, before any write or routing, with its invalid_args.
+ */
+const resolvedTimes = (flags: TaskFlags) =>
+  Effect.try({
+    try: () => resolveTaskFlagTimes(flags, processTimeZone()),
+    catch: (error) =>
+      error instanceof CommandError
+        ? error
+        : new CommandError(2, "invalid_args", String(error)),
+  });
 const init = Command.make(
   "init",
   {
@@ -727,7 +741,9 @@ const add = Command.make(
       const draft = Option.isSome(input.parse)
         ? yield* quickDraft(input.parse.value)
         : undefined;
-      const flags = taskInput({ ...input, title: Option.none() });
+      const flags = yield* resolvedTimes(
+        taskInput({ ...input, title: Option.none() }),
+      );
       const dependencies = yield* decodeInput(
         () =>
           Schema.decodeUnknownSync(
@@ -1589,7 +1605,9 @@ const mutation = (name: Mutation) => {
     });
   if (name === "edit")
     return Command.make(name, { ...taskOptions, ...commonOptions }, (input) =>
-      handle(input, taskInput(input)),
+      resolvedTimes(taskInput(input)).pipe(
+        Effect.flatMap((flags) => handle(input, flags)),
+      ),
     ).pipe(withGuide(name));
   if (name === "rm")
     return Command.make(
@@ -1899,12 +1917,7 @@ const exportCommand = Command.make(
           );
           const tasks = yield* Effect.try({
             try: () =>
-              exportScope(
-                data.views,
-                input.scope,
-                nowInstant(),
-                machineClock(data.tasks),
-              ),
+              exportScope(data.views, input.scope, machineClock(data.tasks)),
             catch: (error) => error,
           });
           const text = renderExport(

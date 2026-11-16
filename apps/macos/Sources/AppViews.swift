@@ -176,7 +176,11 @@ struct SignInView: View {
                 .accessibilityIdentifier("passphrase")
                 .onSubmit { signIn() }
             if let error = model.message {
+                // Spoken once per message, as MessageBanner does (UI seat on cfe01e85): a plain Text
+                // was never read, and focus goes to the passphrase field.
                 Text(error).foregroundStyle(TodoColors.color("destructive")).accessibilityIdentifier("sign-in-error")
+                    .onAppear { model.announceMessageOnce() }
+                    .onChange(of: model.messageSequence) { _, _ in model.announceMessageOnce() }
             }
             Button(model.busy ? "Connecting…" : "Sign in", action: signIn)
                 .buttonStyle(.borderedProminent).controlSize(.large).disabled(passphrase.isEmpty || model.busy)
@@ -392,13 +396,13 @@ struct TaskListView: View {
         }
         .sheet(item: $model.transferRequest) { request in TaskTransferPicker(model: model, request: request) }
         .alert(
-            DraftNavigationPrompt.title(hasConflict: model.conflict != nil),
+            DraftNavigationPrompt.title(model),
             isPresented: Binding(get: { model.pendingNavigation != nil && model.discovery.dialog == nil }, set: { if !$0 { model.dismissNavigationPrompt() } }),
             presenting: model.pendingNavigation
         ) { target in
             DraftNavigationActions(model: model, target: target)
-        } message: { _ in
-            DraftNavigationMessage(hasConflict: model.conflict != nil)
+        } message: { target in
+            DraftNavigationMessage(hasConflict: model.conflict != nil, target: target)
         }
         .onChange(of: model.editor?.id) { _, id in if let id { selection = id } }
         .onChange(of: model.profile) { _, _ in showingTaskFilters = false; selection = nil }
@@ -776,8 +780,13 @@ struct TaskListView: View {
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
                     .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
-                        if let id { model.clientDiagnosticsUI.selected(id); model.notePersonActed() }
-                        if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
+                        let selected = visibleTasks.first(where: { $0.id == id })
+                        if let id { model.clientDiagnosticsUI.selected(id, content: selected.map { .init($0, inspectorOpen: model.editor != nil) }); model.notePersonActed() }
+                        if let task = selected, model.editor?.id != id {
+                            // Follow-up 80, change 1: a clean editor opens the selected Task in this
+                            // transaction, so the selection and the inspector render once together.
+                            // Unsaved changes, busy or an open question go through navigate as before.
+                            if model.openForEditingNow(task) { return }
                             Task {
                                 await ClientDiagnosticContext.$actionID.withValue(model.clientDiagnosticsUI.selectionAction) {
                                     if !(await model.navigate(.edit(task))) { selection = model.editor?.id ?? old }
@@ -817,7 +826,7 @@ struct TaskListView: View {
                     Text(notice)
                     // A restored Profile the person has moved on from: offered, never forced (ruling on
                     // the candidate 9 restore finding).
-                    if let offer = model.restoredProfileOffer, notice == TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) {
+                    if let offer = model.restoredProfileOffer, notice.hasPrefix(TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false)) {
                         Button("Switch to \(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name)") { model.goToRestoredProfile() }
                             .buttonStyle(.borderless).disabled(model.editor != nil || model.busy).focused($noticeButtonFocused)
                             .accessibilityIdentifier("restored-profile-switch").compactBounds("restored-profile-switch")
@@ -944,24 +953,8 @@ struct TaskRow: View {
                     HStack(spacing: 6) { dependencyState; CompactRowMetadata(items: compactMetadata) }.compactBounds("metadata-\(task.id)")
                 } else { HStack(spacing: 4) {
                     dependencyState
-                    if let projectName { Label(projectName, systemImage: "folder").help(projectName) }
-                    if projectName != nil && !tagNames.isEmpty { Text("·") }
-                    ForEach(compact ? Array(presentation.tags.prefix(1)) : presentation.tags, id: \.self) { name in
-                        Text("#\(name)").padding(.horizontal, 4).padding(.vertical, 1).background(.quaternary.opacity(0.5), in: Capsule()).help(name)
-                    }
-                    if compact && presentation.tags.count > 1 {
-                        Text("+\(presentation.tags.count - 1)").help(presentation.tags.joined(separator: ", "))
-                    }
-                    if let due = presentation.due {
-                        if projectName != nil || !tagNames.isEmpty { Text("·") }
-                        Label(due, systemImage: "calendar").foregroundStyle(overdue ? TodoColors.color("destructive") : .secondary).help(
-                            "Due \(due)")
-                    }
-                    if let externalID = task.external_id { Text(externalID).font(.caption2).foregroundStyle(.tertiary).lineLimit(1).frame(maxWidth: compact ? 100 : 180, alignment: .leading).help(externalID) }
-                    if let scheduled = presentation.scheduled {
-                        if projectName != nil || !tagNames.isEmpty || presentation.due != nil { Text("·") }
-                        Label(scheduled, systemImage: "calendar").help("Scheduled \(scheduled)")
-                    }
+                    FullRowMetadata(items: FullRowMetadata.items(project: projectName, tags: presentation.tags, due: presentation.due, overdue: overdue,
+                                                                 external: task.external_id, scheduled: presentation.scheduled))
                 }.font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 }.compactBounds("metadata-\(task.id)")
                     .compactBounds("metadata-text-\(task.id)", when: hasMetadataText && metadataOverride == nil)
@@ -1026,6 +1019,69 @@ struct CompactRowMetadata: View {
         }.font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
             .help(items.map(\.text).joined(separator: " · "))
             .accessibilityLabel(items.map(\.text).joined(separator: " · "))
+    }
+}
+
+/// The full row's metadata line (UI seat on candidate 12). When it does not fit, whole items are
+/// left out from the end and counted as "+N", as Compact's `CompactRowMetadata` does: each item keeps
+/// its whole text or is left out. The "+N" names what it stands for on hover, and VoiceOver reads every
+/// item. Before, the line was clipped mid-item.
+struct FullRowMetadata: View {
+    enum Item: Hashable {
+        case project(String), tag(String), due(String, overdue: Bool), external(String), scheduled(String)
+        var text: String {
+            switch self {
+            case .project(let name): name
+            case .tag(let name): "#" + name
+            case .due(let date, _): "Due " + date
+            case .external(let id): id
+            case .scheduled(let date): "Scheduled " + date
+            }
+        }
+    }
+    let items: [Item]
+    /// In the row's order: the Project, the Tags, the due date, the external id, the scheduled date.
+    /// In Compact's order (UI seat on 370f6485): the dates first, then the Project, the Tags and the
+    /// external id, so "+N" leaves out the Tags before it would leave out a date.
+    nonisolated static func items(project: String?, tags: [String], due: String?, overdue: Bool, external: String?, scheduled: String?) -> [Item] {
+        (due.map { [Item.due($0, overdue: overdue)] } ?? []) + (scheduled.map { [Item.scheduled($0)] } ?? [])
+            + (project.map { [Item.project($0)] } ?? []) + tags.map(Item.tag) + (external.map { [Item.external($0)] } ?? [])
+    }
+    /// Whether a "·" comes before item `index`: between every two kinds of item, never between Tags and
+    /// never before the external id (which is set apart by its smaller type, as before).
+    nonisolated static func separated(_ items: [Item], before index: Int) -> Bool {
+        guard index > 0 else { return false }
+        switch (items[index - 1], items[index]) {
+        case (_, .external): return false
+        case (.tag, .tag): return false
+        default: return true
+        }
+    }
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            ForEach((0...items.count).reversed(), id: \.self) { count in
+                HStack(spacing: 4) {
+                    ForEach(0..<count, id: \.self) { index in
+                        if Self.separated(items, before: index) { Text("·") }
+                        view(items[index]).fixedSize()
+                    }
+                    if count < items.count {
+                        Text("+\(items.count - count)").fixedSize().help(items[count...].map(\.text).joined(separator: " · "))
+                    }
+                }.fixedSize()
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(items.map(\.text).joined(separator: " · "))
+    }
+    @ViewBuilder private func view(_ item: Item) -> some View {
+        switch item {
+        case .project(let name): Label(name, systemImage: "folder").help(name)
+        case .tag(let name): Text("#\(name)").padding(.horizontal, 4).padding(.vertical, 1).background(.quaternary.opacity(0.5), in: Capsule()).help(name)
+        case .due(let date, let overdue): Label(date, systemImage: "calendar").foregroundStyle(overdue ? TodoColors.color("destructive") : .secondary).help("Due \(date)")
+        case .external(let id): Text(id).font(.caption2).foregroundStyle(.tertiary).help(id)
+        case .scheduled(let date): Label(date, systemImage: "calendar").help("Scheduled \(date)")
+        }
     }
 }
 
@@ -1463,22 +1519,40 @@ struct DraftNavigationActions: View {
 
 struct DraftNavigationMessage: View {
     let hasConflict: Bool
-    var body: some View {
-        Text(
-            hasConflict
-                ? "Resolve the Conflict in the inspector before saving. Discard changes to continue without them, or cancel to keep editing."
-                : "Save your changes, discard them, or cancel to keep editing this task.")
+    var target: TodoModel.EditorNavigation? = nil
+    var body: some View { Text(Self.text(hasConflict: hasConflict, target: target)) }
+    /// The room rule says why the Task would close (UI seat on b968f31a).
+    nonisolated static func text(hasConflict: Bool, target: TodoModel.EditorNavigation?) -> String {
+        if hasConflict { return "Resolve the Conflict in the inspector before saving. Discard changes to continue without them, or cancel to keep editing." }
+        if case .close(.sidebar)? = target { return "It closes to make room for the sidebar. Save your changes, discard them, or cancel to keep editing this task." }
+        if case .signOut? = target { return "Save your changes, discard them, or cancel to stay signed in." }
+        return "Save your changes, discard them, or cancel to keep editing this task."
     }
 }
 
 struct DraftNavigationPrompt: View {
-    static func title(hasConflict: Bool) -> String { hasConflict ? "Resolve the Conflict first" : "Save changes before continuing?" }
+    /// The question names the Task, and for a status change what waits on the answer (UI seat on
+    /// b968f31a). The name is the Task's saved title, the one the list shows.
+    nonisolated static func title(hasConflict: Bool, target: TodoModel.EditorNavigation?, task: String?) -> String {
+        if hasConflict { return "Resolve the Conflict first" }
+        guard let task, !task.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "Save changes before continuing?" }
+        let name = "\u{201C}\(task)\u{201D}"
+        if case .signOut? = target { return "Save changes to \(name) before signing out?" }
+        if case .transition(_, let action)? = target {
+            let doing = ["complete": "completing", "cancel": "cancelling", "reopen": "reopening"][action] ?? "changing"
+            return "Save changes to \(name) before \(doing) it?"
+        }
+        return "Save changes to \(name)?"
+    }
+    static func title(_ model: TodoModel) -> String {
+        title(hasConflict: model.conflict != nil, target: model.pendingNavigation, task: model.editor?.base.title)
+    }
     @Bindable var model: TodoModel
     let target: TodoModel.EditorNavigation
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(Self.title(hasConflict: model.conflict != nil)).font(.headline)
-            DraftNavigationMessage(hasConflict: model.conflict != nil).foregroundStyle(.secondary)
+            Text(Self.title(hasConflict: model.conflict != nil, target: target, task: model.editor?.base.title)).font(.headline)
+            DraftNavigationMessage(hasConflict: model.conflict != nil, target: target).foregroundStyle(.secondary)
             HStack {
                 Spacer()
                 DraftNavigationActions(model: model, target: target, saveFirst: false)
@@ -1573,7 +1647,11 @@ struct OutdatedServerView: View {
         let width = window.frame.width
         guard need > width + 0.5 else { return .fits }
         if let screen = window.screen?.visibleFrame, screen.width >= need {
+            // Grows to the left, keeping the right edge where it was, so the list moves as little as it
+            // can under the pointer; to the right only by what the screen's left edge leaves out (UI
+            // seat on candidate 12).
             var frame = window.frame
+            frame.origin.x = max(screen.minX, frame.maxX - need)
             frame.size.width = need
             if frame.maxX > screen.maxX { frame.origin.x = max(screen.minX, screen.maxX - frame.width) }
             window.setFrame(frame, display: true)

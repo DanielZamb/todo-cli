@@ -52,8 +52,16 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
         result = subprocess.CompletedProcess(command, code, stdout, None)
         if capture_stdout:
             output.write(result.stdout)
+    # Follow-up 90: a test run that exits 0 without Swift Testing's passing summary line ended early.
+    summary = None
+    if command[:2] == ['swift', 'test'] and result.returncode == 0:
+        summary = bool(state_package.PASSING_SUMMARY.search((evidence / log).read_text(errors='replace')))
+        if not summary:
+            result = subprocess.CompletedProcess(command, state_package.NO_SUMMARY_EXIT, stdout, None)
     packages = package_state(log, 'after') if swift else None
     entry = {'argv': command, 'exit': result.returncode, 'log': log, 'packageResolvedDiffExit': packages}
+    if summary is not None:
+        entry['passingSummaryLine'] = summary
     if capture_stdout:
         entry['stdout'] = result.stdout
     commands.append(entry)
@@ -64,6 +72,8 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
+# Follow-up 91: never build in a folder that has seen another source tree.
+(evidence / 'build-stamp.json').write_text(json.dumps(state_package.fresh_build_folder(build_path, package), indent=2) + '\n')
 run(['swift', 'build', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
 keychain = state_package.checked(build_path, evidence / 'keychain-guard.json')  # stops if a Keychain call is linked
 run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')

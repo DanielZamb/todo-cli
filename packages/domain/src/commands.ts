@@ -1,4 +1,5 @@
 import { Clock, Effect, Schema } from "effect";
+import { Temporal } from "temporal-polyfill";
 import { resolveAttachments } from "./attachment-input.ts";
 import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
@@ -25,7 +26,11 @@ import { Event, type TaskMutationKind } from "./events.ts";
 import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
-import type { PlanningClock } from "./planning-day.ts";
+import {
+  lastDayOfWeek,
+  type PlanningClock,
+  processTimeZone,
+} from "./planning-day.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -65,7 +70,7 @@ import {
 import type { TaskLookupDetails } from "./task-lookup-error.ts";
 import type { TaskRead } from "./task-read.ts";
 import { type SearchTooBroad, taskSearchExecution } from "./task-search.ts";
-import { CalendarDate, Instant, TaskTime } from "./time.ts";
+import { CalendarDate, Instant, TaskTime, TimeZoneId } from "./time.ts";
 
 export class CommandError extends Error {
   readonly _tag = "CommandError";
@@ -107,7 +112,51 @@ export const taskFlags = Schema.Struct({
   tag: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 export type TaskFlags = typeof taskFlags.Type;
-export function parseTime(input: string): TaskTime | null {
+/** A refused value as a message shows it: the first 64 characters (server seat, follow-up 86). */
+const echo = (value: string) =>
+  value.length > 64 ? `${value.slice(0, 64)}…` : value;
+const wallTime = (zoned: Temporal.ZonedDateTime) =>
+  zoned.toString({ timeZoneName: "never", smallestUnit: "second" });
+/**
+ * A local time a daylight-saving change skips or repeats in `zone`, refused with the zone's own
+ * offsets at that wall time (server seat F2): for a repeated time both readings, each a complete
+ * value to paste; for a skipped one the nearest times that exist on both sides of the gap.
+ */
+const ambiguousLocalTime = (
+  value: string,
+  local: Temporal.PlainDateTime,
+  zone: string,
+) => {
+  const earlier = local.toZonedDateTime(zone, { disambiguation: "earlier" });
+  const later = local.toZonedDateTime(zone, { disambiguation: "later" });
+  const day = local.toPlainDate().toString();
+  if (!earlier.toPlainDateTime().equals(local)) {
+    const transition = earlier.getTimeZoneTransition("next");
+    const after = transition?.withTimeZone(zone);
+    return invalid(
+      after
+        ? `${echo(value)} does not exist in ${zone}: a daylight-saving change skips it on ${day}. The nearest times that exist are ${wallTime(after.subtract({ minutes: 1 }))} and ${wallTime(after)}.`
+        : `${echo(value)} does not exist in ${zone} on ${day}.`,
+    );
+  }
+  return invalid(
+    `${echo(value)} occurs twice in ${zone}: a daylight-saving change repeats it on ${day}. Type the one you mean: ${wallTime(earlier)} (the first) or ${wallTime(later)} (the second).`,
+  );
+};
+/**
+ * A time typed as text, resolved as ADR-0006 stores instants: in UTC together with the IANA zone
+ * the person meant (follow-up 86). `zone` is the zone of the machine where the text was typed.
+ * - A date (`YYYY-MM-DD`, `MM/DD/YYYY`) is a calendar date.
+ * - A local time (`YYYY-MM-DD HH[:MM]`, `MM/DD/YYYY HH[:MM]`) is that wall-clock time in `zone`.
+ *   One that does not exist there or exists twice (a daylight-saving change) is refused, as
+ *   quick-add refuses it, naming the zone's own offsets for it.
+ * - A time with `Z` or an offset keeps its instant.
+ * - Both are stored with `zone`: never UTC by default, never a zone made up from an offset.
+ * - RFC 9557 text with a bracketed zone (`2026-11-16T21:00:00-05:00[America/Bogota]`, what the
+ *   CLI sends after resolveTypedTime) keeps its instant and that zone, so whichever process parses
+ *   it, the zone is the typing machine's.
+ */
+export function parseTime(input: string, zone: string): TaskTime | null {
   const value = input.trim();
   if (!value) return null;
   if (Schema.is(CalendarDate)(value))
@@ -122,24 +171,93 @@ export function parseTime(input: string): TaskTime | null {
       kind: "date",
       date: Schema.decodeUnknownSync(CalendarDate)(normalized),
     };
+  const instant = (utc: string, timeZone: string) =>
+    Schema.decodeUnknownSync(TaskTime)({
+      kind: "instant",
+      utc,
+      time_zone: timeZone,
+    });
+  const bracketed = /^\d{4}-\d{2}-\d{2}T[^[\]]+\[([^[\]]+)\]$/.exec(normalized);
+  if (bracketed) {
+    if (!Schema.is(TimeZoneId)(bracketed[1]))
+      throw invalid(`unknown time zone: ${echo(bracketed[1] ?? "")}`);
+    // A 60th second is refused here as in the offset form (Temporal would read it as :59).
+    if (/T\d{2}:\d{2}:60/.test(normalized))
+      throw invalid(`invalid datetime format: ${echo(value)}`);
+    let zoned: Temporal.ZonedDateTime;
+    try {
+      zoned = Temporal.ZonedDateTime.from(normalized, {
+        offset: "reject",
+        disambiguation: "reject",
+        overflow: "reject",
+      });
+    } catch {
+      throw invalid(`invalid datetime format: ${echo(value)}`);
+    }
+    return instant(
+      new Date(zoned.epochMilliseconds).toISOString(),
+      zoned.timeZoneId,
+    );
+  }
+  if (!Schema.is(TimeZoneId)(zone))
+    throw invalid(`unknown time zone: ${echo(zone)}`);
   const human = /^(\d{4}-\d{2}-\d{2}) (\d{2})(?::(\d{2}))?$/.exec(normalized);
-  const rfc = human
-    ? `${human[1]}T${human[2]}:${human[3] ?? "00"}:00Z`
-    : normalized;
+  if (human) {
+    let local: Temporal.PlainDateTime;
+    try {
+      local = Temporal.PlainDateTime.from(
+        `${human[1]}T${human[2]}:${human[3] ?? "00"}:00`,
+        { overflow: "reject" },
+      );
+    } catch {
+      throw invalid(`invalid datetime format: ${echo(value)}`);
+    }
+    let zoned: Temporal.ZonedDateTime;
+    try {
+      zoned = local.toZonedDateTime(zone, { disambiguation: "reject" });
+    } catch {
+      throw ambiguousLocalTime(value, local, zone);
+    }
+    return instant(new Date(zoned.epochMilliseconds).toISOString(), zone);
+  }
   if (
     !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(
-      rfc,
+      normalized,
     ) ||
-    !Schema.is(CalendarDate)(rfc.slice(0, 10)) ||
-    !Number.isFinite(Date.parse(rfc))
+    !Schema.is(CalendarDate)(normalized.slice(0, 10)) ||
+    !Number.isFinite(Date.parse(normalized))
   )
-    throw invalid(`invalid datetime format: ${value}`);
-  return Schema.decodeUnknownSync(TaskTime)({
-    kind: "instant",
-    utc: new Date(rfc).toISOString(),
-    time_zone: "UTC",
-  });
+    throw invalid(`invalid datetime format: ${echo(value)}`);
+  return instant(new Date(normalized).toISOString(), zone);
 }
+/**
+ * The text the CLI passes on for a typed time: a time becomes RFC 9557 text carrying the zone it
+ * resolved in, so a server that parses a routed command never falls back to its own zone. A date
+ * and an empty value pass on unchanged. Anything parseTime refuses is refused here, in the typing
+ * process, before any write or routing (server seat F1): passed on raw, another process's zone
+ * could accept it.
+ */
+export function resolveTypedTime(input: string, zone: string): string {
+  const time = parseTime(input, zone);
+  return time?.kind === "instant"
+    ? Temporal.Instant.from(time.utc)
+        .toZonedDateTimeISO(time.time_zone)
+        .toString()
+    : input;
+}
+/** The typed --due and --scheduled of a command's flags, resolved by resolveTypedTime. */
+export const resolveTaskFlagTimes = (
+  flags: TaskFlags,
+  zone: string,
+): TaskFlags => ({
+  ...flags,
+  ...(flags.due === undefined
+    ? {}
+    : { due: resolveTypedTime(flags.due, zone) }),
+  ...(flags.scheduled === undefined
+    ? {}
+    : { scheduled: resolveTypedTime(flags.scheduled, zone) }),
+});
 const numberValue = (value: string) => {
   if (value === "") return null;
   if (!/^-?\d+$/.test(value)) throw invalid(`invalid integer: ${value}`);
@@ -1121,10 +1239,12 @@ const prepareFlags = (
         : { tags: tags.map((tag) => tag.id) }),
       ...(flags.priority === undefined ? {} : { priority: flags.priority }),
       ...(flags.source === undefined ? {} : { source: flags.source }),
-      ...(flags.due === undefined ? {} : { due_at: parseTime(flags.due) }),
+      ...(flags.due === undefined
+        ? {}
+        : { due_at: parseTime(flags.due, processTimeZone()) }),
       ...(flags.scheduled === undefined
         ? {}
-        : { scheduled_at: parseTime(flags.scheduled) }),
+        : { scheduled_at: parseTime(flags.scheduled, processTimeZone()) }),
       ...(flags.energy === undefined
         ? {}
         : { energy: numberValue(flags.energy) }),
@@ -1379,15 +1499,18 @@ export function filterTasks(
 export function exportScope(
   tasks: readonly TaskView[],
   scope: string,
-  now: string,
   clock: PlanningClock,
 ) {
   if (scope === "all") return tasks;
   if (scope === "today") return filterTasks(tasks, { today: true }, clock);
-  if (scope === "weekly")
-    return tasks.filter(
-      (t) => t.due_at && Date.parse(t.due_at) < Date.parse(now) + 7 * 86400000,
-    );
+  if (scope === "weekly") {
+    // Due by the end of the week ahead, by calendar day (follow-up 88), past due dates included.
+    const lastDay = lastDayOfWeek(clock.day);
+    return tasks.filter((t) => {
+      const due = clock.days.get(t.id)?.due ?? null;
+      return due !== null && due <= lastDay;
+    });
+  }
   if (scope.startsWith("project:"))
     return filterTasks(tasks, { project: scope.slice(8) }, clock);
   if (scope.startsWith("id:") && scope.slice(3)) {

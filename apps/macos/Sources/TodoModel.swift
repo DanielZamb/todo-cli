@@ -300,6 +300,14 @@ final class TodoModel {
         return true
     }
     @ObservationIgnored private var lastAnnouncedMessage = 0
+    /// The sign-in screen's message, spoken once per message (UI seat on cfe01e85).
+    func announceMessageOnce() {
+        guard let text = message, takeAnnouncement(messageSequence) else { return }
+        lastSpokenMessage = text
+        announce(text)
+    }
+    /// What `announceMessageOnce` last spoke, for tests.
+    @ObservationIgnored private(set) var lastSpokenMessage: String?
     /// The person dismissed the message numbered `sequence` (the one the banner showed). Like the
     /// other ends, it ends that message and nothing newer.
     func dismissMessage(_ sequence: Int) { if message != nil, messageSequence == sequence { message = nil } }
@@ -336,6 +344,9 @@ final class TodoModel {
         /// (Delete needs no question: its review is the question, and only a validated delete
         /// discards the draft.)
         case transition(TaskSnapshot, action: String)
+        /// The person's Sign Out with unsaved changes (candidate 13): Save signs out only after the
+        /// save succeeds, Discard signs out, Cancel stays signed in with the editor as it was.
+        case signOut
     }
     enum EditorClose: Equatable { case person, sidebar }
     var pendingNavigation: EditorNavigation? { didSet {
@@ -365,11 +376,13 @@ final class TodoModel {
             // An ordinary confirmation lasts 3 s; a Profile notice sets its own time after this.
             noticeSeconds = 3
             // MAC-C1-S1-34: an offer lives exactly as long as its notice; any other notice ends it.
-            if let offer = restoredProfileOffer, newValue != Self.restoredProfileNotice(profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) { restoredProfileOffer = nil }
+            if let offer = restoredProfileOffer, newValue?.hasPrefix(Self.restoredProfileNotice(profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false)) != true { restoredProfileOffer = nil }
             if let newValue { noticeMessages.publish(newValue, kind: .notice) } else { noticeMessages.end() }
             restartNoticeTimer()
         }
     }
+    /// While a Snapshot reload is handled, its lost-draft sentence (see publishNotice).
+    @ObservationIgnored private var reloadLostDraft: String?
     /// The pointer is over the notice or its button has keyboard focus: its timer waits, and starts
     /// its full time again when both have left (UI check, c10). Set by the view.
     var noticeHeld = false { didSet { if noticeHeld != oldValue { restartNoticeTimer() } } }
@@ -386,6 +399,10 @@ final class TodoModel {
     /// Publishes a notice that lasts `seconds` (paused while the pointer is over it or its button has
     /// focus): 6 s for a forced Profile switch, 10 s for a restored Profile's offer (UI check, c10).
     func publishNotice(_ text: String, seconds: Double) {
+        // A notice published while a Snapshot reload is handled (a forced leave's, a restored Profile's
+        // offer) carries the reload's lost-draft sentence, so one does not replace the other in the
+        // same slot (UI seat on 370f6485).
+        let text = reloadLostDraft.map { text.contains($0) ? text : text + " " + $0 } ?? text
         deletionNotice = text
         noticeSeconds = seconds
         restartNoticeTimer()
@@ -491,10 +508,10 @@ final class TodoModel {
     @ObservationIgnored private(set) var streamLoopWaitingSince: TimeInterval?
     /// How long the stream loop may wait on one operation's refresh before it counts as not reading.
     static let streamLoopReadBound: TimeInterval = 10
-    /// The invariant: whenever `connection` reads live, a stream for the current Profile, credential
-    /// epoch and generation is running, and its loop reads the next frame within
-    /// `streamLoopReadBound` after a refresh it waits on (S1-39: following alone did not catch a loop
-    /// that had stopped reading).
+    /// A check for tests and the liveness gate, read by nothing in the app (it is not what the
+    /// connection indicator shows): a stream for the current Profile, credential epoch and generation
+    /// is running, and its loop reads the next frame within `streamLoopReadBound` after a refresh it
+    /// waits on (S1-39: following alone did not catch a loop that had stopped reading).
     var streamFollowsCurrentProfile: Bool {
         guard followingStream == StreamIdentity(profile: profile, credentialEpoch: discovery.credentialEpoch, generation: generation) else { return false }
         guard let since = streamLoopWaitingSince else { return true }
@@ -713,7 +730,23 @@ final class TodoModel {
         }
     }
 
+    /// The person's Sign Out. With unsaved changes it asks the draft question first (candidate 13);
+    /// a Session the server ends cannot ask (expireSession).
     func signOut() async {
+        notePersonActed() // a write the person started (MAC-C1-S1-32)
+        guard !busy else { return }
+        if hasUnsavedEditor {
+            if pendingNavigation == nil { pendingNavigation = .signOut }
+            else if case .signOut? = pendingNavigation {} // its own question is already up
+            // Another question is up (MAC-C11-S1-18, follow-up 95): it stays, nothing is sent, and the
+            // person is told, in the words used for a status change in the same state.
+            else { let text = Self.answerTheQuestionFirst(editor?.base.title ?? ""); publishNotice(text, seconds: 6); announce(text) }
+            return
+        }
+        await performSignOut()
+    }
+
+    private func performSignOut() async {
         notePersonActed() // a write the person started (MAC-C1-S1-32)
         guard !busy else { return }
         // Sign-out keeps the credential epoch until the server has revoked the
@@ -836,11 +869,16 @@ final class TodoModel {
         guard let next = latest.first else { return .nowhereToGo }
         let left = ProfileViewState(self)
         let carried = forcedLeaveToCarry(leaving: deleted)
+        // This close cannot ask: the Profile is gone. A draft it loses is named where the person
+        // lands (UI seat on b968f31a).
+        let lostDraft = hasUnsavedEditor ? editor?.base.title : nil
         editor = nil
         conflict = nil
         history = []
+        // The question ends with the editor it was about (MAC-C11-S1-14).
+        pendingNavigation = nil
         activateProfile(next.id)
-        let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)."
+        let notice = "\u{201C}\(deletedName)\u{201D} was deleted. Switched to \(next.name)." + (lostDraft.map { " " + Self.lostDraftSentence($0) } ?? "")
         recordForcedLeave(profile: deleted, name: deletedName, view: left, switchedTo: next.id, notice: notice, carrying: carried)
         publishNotice(notice, seconds: 6)
         return .switched
@@ -1163,6 +1201,8 @@ final class TodoModel {
                             openingAction = nil
                             attempt = 0
                         } else if event.name == "reload" {
+                            // The lost-draft sentence travels with any notice this reload publishes.
+                            defer { reloadLostDraft = nil }
                             let reload = try JSONDecoder().decode(SnapshotReload.self, from: Data(event.data.utf8))
                             // Whether the person has acted since a forced Profile switch is read before the
                             // reload resets the view (ruling on the candidate 9 restore finding).
@@ -1188,6 +1228,9 @@ final class TodoModel {
                             searchError = nil
                             taskFilters = .init(); matchingTaskIDs = nil
                             requestedTaskFilters = .init()
+                            // This close cannot ask: the restore replaced the whole scope. A draft it loses
+                            // is named once the window shows the restored scope (UI seat on b968f31a).
+                            let lostDraft = hasUnsavedEditor ? editor?.base.title : nil
                             editor = nil; conflict = nil; history = []; series = nil
                             pendingNavigation = nil; recurrenceDraft = nil; writeIntent = nil
                             transferRequest = nil; transferResult = nil
@@ -1196,6 +1239,12 @@ final class TodoModel {
                             showingSeries = false; showingHistory = false; seriesLoading = false
                             editorError = nil; historyError = nil; snapshotRestore = nil; snapshotRestoreTarget = nil
                             refreshGeneration += 1; historyGeneration += 1; seriesGeneration += 1
+                            if let lostDraft {
+                                let sentence = Self.lostDraftSentence(lostDraft, when: "the Snapshot was restored")
+                                reloadLostDraft = sentence
+                                publishNotice(sentence, seconds: 6)
+                                announce(sentence)
+                            }
                             let previousProfile = profile
                             try await discoverProfiles(afterRestore: true)
                             if let (leave, acted) = leaveBeforeReload, resolveForcedLeave(leave, acted: acted) {
@@ -1478,11 +1527,30 @@ final class TodoModel {
         publishNotice(notice, seconds: 6)
         announce(notice)
     }
+    /// A draft a close that cannot ask has lost (UI seat on b968f31a).
+    static func lostDraftSentence(_ title: String, when: String? = nil) -> String {
+        "Unsaved changes to \u{201C}\(title)\u{201D} were lost" + (when.map { " when \($0)." } ?? ".")
+    }
     static func closedForSidebarNotice(_ title: String) -> String { "Closed \u{201C}\(title)\u{201D} to make room for the sidebar." }
     /// Whether an action on `task` would close an editor with unsaved changes, so it asks first (Q13).
     private func asksBefore(_ task: TaskSnapshot, _ target: EditorNavigation) -> Bool {
         guard editor?.id == task.id, hasUnsavedEditor else { return false }
         if pendingNavigation == nil { pendingNavigation = target }
+        // A status change while another question is up does not replace it, and is not dropped
+        // without a word: the person answers the open question first (correctness seat's P3 note).
+        else { let text = Self.answerTheQuestionFirst(editor?.base.title ?? task.title); publishNotice(text, seconds: 6); announce(text) }
+        return true
+    }
+    /// A status change asked while another question is up (UI seat's final text on 370f6485).
+    static func answerTheQuestionFirst(_ title: String) -> String { "Answer the question about \u{201C}\(title)\u{201D} first." }
+
+    /// Follow-up 80, change 1: `navigate(.edit(task))` without the await, for the case that needs
+    /// none: no unsaved changes, not busy and no question up. It opens the Task the same way
+    /// (`applyNavigation(.edit)`: `beginEditing`, a new opening) and returns true; otherwise it does
+    /// nothing and returns false, and the caller goes through `navigate`.
+    func openForEditingNow(_ task: TaskSnapshot) -> Bool {
+        guard !busy, pendingNavigation == nil, !hasUnsavedEditor else { return false }
+        if editor?.id != task.id { beginEditing(task) }
         return true
     }
 
@@ -1511,7 +1579,9 @@ final class TodoModel {
         if case .copy = target, !canWrite { return false }
         if case .transition = target, !canWrite { return false }
         pendingNavigation = nil
-        if let base = editor?.base { beginEditing(base) }
+        // Sign-out needs no fresh editor: re-opening one would start its reads under the credential
+        // that is about to end (candidate 13).
+        if case .signOut = target {} else if let base = editor?.base { beginEditing(base) }
         return await applyNavigation(target)
     }
 
@@ -1564,8 +1634,14 @@ final class TodoModel {
             endEditing()
             if reason == .sidebar { sidebarRequest += 1 }
         case .transition(let task, let action):
-            await performTransition(task, action: action)
+            // The Version the model holds now, not the one from the click: the stream may have brought
+            // a newer one while the question was up (MAC-C11-S1-13). After Save, the saved Version.
+            let held = (tasks + (appliedSearchSnapshot?.rows ?? [])).filter { $0.id == task.id }.max { $0.row_version < $1.row_version }
+            await performTransition(held.map { $0.row_version > task.row_version ? $0 : task } ?? task, action: action)
             return editor?.id != task.id
+        case .signOut:
+            await performSignOut()
+            return !signedIn
         case .openTransfer(let result):
             editor = nil
             conflict = nil
@@ -2296,6 +2372,10 @@ final class TodoModel {
 
     /// A 401 under the still-current credential ends the Session even if the task that received it
     /// was cancelled meanwhile (a reply already on its way); retiring a credential changes the epoch.
+    /// What the sign-in screen says when the server ended the Session (UI seat's final text).
+    static func sessionEndedMessage(lostDraft: String?) -> String {
+        lostDraft.map { "Your Session ended. Unsaved changes to \u{201C}\($0)\u{201D} were lost. Sign in again." } ?? "Your Session ended. Sign in again."
+    }
     private func expireSession(credentialEpoch: Int) {
         guard isCurrentEpoch(credentialEpoch) else { return }
         // This close cannot ask: the Session is gone, and the draft cannot be saved under another
@@ -2312,7 +2392,7 @@ final class TodoModel {
         catalogStale = true
         searchError = nil
         searchPhase = .idle
-        publishMessage("Your Session ended. Sign in again." + (lostDraft.map { " Unsaved changes to \u{201C}\($0)\u{201D} were lost when the Session ended." } ?? ""), kind: .sessionEnded)
+        publishMessage(Self.sessionEndedMessage(lostDraft: lostDraft), kind: .sessionEnded)
     }
 
     func checkServerContract() async throws -> Bool {
@@ -2369,7 +2449,10 @@ final class TodoModel {
         if error is StreamError { return "The live connection ended. Reconnecting…" }
         return "Couldn't reach the server or read its response. Your draft is preserved."
     }
+    /// What `announce` has spoken, newest last (the last 16), for tests.
+    @ObservationIgnored private(set) var announcements: [String] = []
     func announce(_ text: String) {
+        announcements.append(text); if announcements.count > 16 { announcements.removeFirst() }
         guard let application = NSApp else { return }
         NSAccessibility.post(element: application.mainWindow as Any, notification: .announcementRequested, userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
     }

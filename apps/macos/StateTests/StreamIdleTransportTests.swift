@@ -184,17 +184,21 @@ private actor IdleStreamObservation {
             try await Task.sleep(for: .milliseconds(10))
         }
         try #require(model.canWrite && model.tasks.count == 178 && (model.lastSequence.flatMap(Int64.init) ?? 0) > 0 && !model.searchPending)
-        // The window's precondition (MAC-C1-S1-29): no system clock or time zone change during it. Such
-        // a change rightly makes the model refresh (TodoModel's clockChange trigger), so a window that
-        // sees one is not an idle window: it is recorded and the window starts again, at most three
-        // times. The expectations below are unchanged and apply to a window without one.
+        // The window's precondition (MAC-C1-S1-29): no system clock or time zone change during it, and no
+        // local midnight (follow-up 84: a gate cycle's idle window ran across midnight and counted the
+        // model's dayChange refresh). Each rightly makes the model refresh (TodoModel's clockChange and
+        // dayChange triggers), so a window that sees one is not an idle window: it is recorded and the
+        // window starts again, at most three times. The expectations below are unchanged and apply to a
+        // window without one.
         let clock = ClockChanges()
-        let observers = [Notification.Name.NSSystemClockDidChange, .NSSystemTimeZoneDidChange].map { name in
+        let observers = [Notification.Name.NSSystemClockDidChange, .NSSystemTimeZoneDidChange, .NSCalendarDayChanged].map { name in
             NotificationCenter.default.addObserver(forName: name, object: nil, queue: nil) { _ in clock.record(name.rawValue) }
         }
         defer { observers.forEach(NotificationCenter.default.removeObserver) }
-        // A control posts a clock change into the first window (TODO_IDLE_CLOCK_CONTROL=1).
-        let control = environment["TODO_IDLE_CLOCK_CONTROL"] == "1"
+        // A control posts a clock change into the first window (TODO_IDLE_CLOCK_CONTROL=1), or a day
+        // change (TODO_IDLE_CLOCK_CONTROL=day, follow-up 84).
+        let controlKind = environment["TODO_IDLE_CLOCK_CONTROL"]
+        let control = controlKind == "1" || controlKind == "day"
         var restarted: [[String: Any]] = []
         var baseline = await recorder.snapshot(), reconnects = model.reconnectCount, cursor = model.lastSequence
         var start = ProcessInfo.processInfo.systemUptime
@@ -206,7 +210,7 @@ private actor IdleStreamObservation {
             if control && attempt == 0 {
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(idleMS / 4))
-                    NotificationCenter.default.post(name: .NSSystemClockDidChange, object: nil)
+                    NotificationCenter.default.post(name: controlKind == "day" ? .NSCalendarDayChanged : .NSSystemClockDidChange, object: nil)
                 }
             }
             try await Task.sleep(for: .milliseconds(idleMS))
@@ -216,7 +220,7 @@ private actor IdleStreamObservation {
             for _ in 0..<1000 where model.loading || model.searchPending { try await Task.sleep(for: .milliseconds(10)) }
             try await Task.sleep(for: .milliseconds(500))
         }
-        try #require(restarted.count < 3, "three idle windows in a row saw a system clock change: \(restarted)")
+        try #require(restarted.count < 3, "three idle windows in a row saw a system clock, time zone or day change: \(restarted)")
         #expect(model.canWrite)
         #expect(!model.loading)
         #expect(model.lastSequence == cursor)

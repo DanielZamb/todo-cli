@@ -68,10 +68,15 @@ private actor SeatMessageGate: ClientTransport {
     func olderWriteReadbackMustNotEraseANewerFollowUpError() async throws {
         let owner=try await todoClient(server:server,credential:"").signIn_period_signIn(body:.json(.init(passphrase:"scratch verification passphrase"))).ok.body.json.credential
         let gate=SeatMessageGate(),model=make(gate)
+        // The probe completes a Task it creates, never "the first open Task" of the scratch Profile,
+        // which the server may refuse (follow-up 82, the correctness seat's S1-15: a 422 there
+        // failed the gate as if the stream had).
+        let mine="Seat interleaving "+UUID().uuidString
+        let created=try await todoClient(server:server,credential:owner).tasks_period_create(path:.init(profile:"work"),body:.json(.init(title:mine))).ok.body.json
         model.replaceCredential(owner);model.signedIn=true;model.selectedView="all";model.clientDiagnosticsUI.stop();model.connect()
         defer {model.signedIn=false;model.replaceCredential("")}
-        try await wait {model.canWrite && !model.loading && model.searchPhase == .showing && !model.tasks.isEmpty}
-        let row=try #require(model.tasks.first(where:{$0.status == "open"}))
+        try await wait {model.canWrite && !model.loading && model.searchPhase == .showing && model.tasks.contains {$0.id == created.id}}
+        let row=try #require(model.tasks.first(where:{$0.id == created.id && $0.status == "open"}))
         await gate.arm()
         let followUp=Task {await model.createDependencyFollowUp(UUID().uuidString)}
         try await wait {await gate.showHeld}

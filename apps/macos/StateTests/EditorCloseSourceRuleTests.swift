@@ -39,7 +39,7 @@ import Testing
         #expect(try sites(#"\beditor\s*=\s*nil"#) == [
             "Discovery.swift applyDiscoveryShow", // asks first: navigate(.showDiscovery)
             "TodoModel.swift replaceCredential", // cannot ask: the credential changed; nothing typed under one is saved under another (MAC-C11-S1-12); a Session end names the draft
-            "TodoModel.swift signOut", // cannot ask: sign-out
+            "TodoModel.swift performSignOut", // asks first: signOut asks with unsaved changes, then signs out here
             "TodoModel.swift leaveDeletedProfile", // cannot ask: the Profile is gone; the notice names it and where the window went
             "TodoModel.swift followChanges", // cannot ask: a Snapshot reload replaces the whole scope
             "TodoModel.swift save", // closes after the person's Save succeeded
@@ -57,6 +57,7 @@ import Testing
         #expect(try sites(#"(?<!func )\bbeginEditing\("#) == [
             "Discovery.swift applyDiscoveryShow", // asks first: navigate(.showDiscovery)
             "TodoModel.swift create", // asks first when unsaved (pendingNavigation = .edit)
+            "TodoModel.swift openForEditingNow", // only a clean editor, not busy, no question up; anything else goes through navigate (follow-up 80, change 1)
             "TodoModel.swift discardAndNavigate", // the answer Discard
             "TodoModel.swift applyNavigation", // edit, move, copy, openTransfer: each asked first
             "TodoModel.swift applyNavigation",
@@ -85,5 +86,21 @@ import Testing
         #expect(views.contains("if model.quickAdd { model.quickAdd = false } else { closeInspector() }"))
         // The editor's Close button (Escape's cancel shortcut).
         #expect(editor.contains("model.clientDiagnosticsUI.performSync(.closeInspector) { _ = model.closeEditor() }"))
+    }
+
+    /// Sign Out lives in Settings, its question in the main window: with unsaved changes the button
+    /// brings the main window forward (reopened if closed, restored if minimised) before it asks
+    /// (UI seat on 370f6485). A hosted test has no SwiftUI scenes to open, so this is checked in source.
+    @Test func signOutBringsTheMainWindowForwardBeforeItAsks() throws {
+        let settings = try code("SettingsView.swift")
+        let button = try #require(settings.range(of: #"Button\("Sign out"\) \{[^}]*\}[^}]*\}"#, options: .regularExpression))
+        let action = String(settings[button])
+        let show = try #require(action.range(of: "if model.hasUnsavedEditor { showMainWindow() }"))
+        let signOut = try #require(action.range(of: "await model.signOut()"))
+        #expect(show.lowerBound < signOut.lowerBound)
+        let helper = try #require(settings.range(of: #"private func showMainWindow\(\) \{[\s\S]*?\n    \}"#, options: .regularExpression))
+        #expect(settings[helper].contains(#"openWindow(id: "tasks")"#))
+        #expect(settings[helper].contains("deminiaturize"))
+        #expect(settings[helper].contains("makeKeyAndOrderFront"))
     }
 }
