@@ -86,6 +86,59 @@ private final class InvalidationProbe: NSObject, URLSessionDelegate, @unchecked 
     }
 }
 
+/// Candidate 15's deadlock (correctness seat, exactly-once stress under the thread sanitizer, 400
+/// rounds, 0 % CPU): a canceller holds the caller's task status record lock while the caller's
+/// cancellation handler (`release`) waits for the transport's lock, and the caller, holding that
+/// lock in its admission, pushed a task-local, which waits for the same status lock. Forced here:
+/// the admission is parked inside the lock, another thread cancels the caller and is inside the
+/// handler (so it holds the caller's status lock), then the admission goes on. With nothing under
+/// the lock that takes a status lock the caller completes. Red on c95cb5dd's admission: the caller
+/// never completes; the test reports a deadlock after 5 s and leaves the two threads parked.
+@Suite(.serialized) struct AdmissionCancellationOrderTests {
+    private func signalled(_ semaphore: DispatchSemaphore, within seconds: Double) async -> Bool {
+        await withCheckedContinuation { (done: CheckedContinuation<Bool, Never>) in
+            DispatchQueue.global().async { done.resume(returning: semaphore.wait(timeout: .now() + seconds) == .success) }
+        }
+    }
+    private func waitUntil(_ seconds: Double, _ condition: () -> Bool) async -> Bool {
+        let deadline = ProcessInfo.processInfo.systemUptime + seconds
+        while ProcessInfo.processInfo.systemUptime < deadline { if condition() { return true }; try? await Task.sleep(for: .milliseconds(5)) }
+        return condition()
+    }
+
+    @Test(arguments: [nil, 7] as [Int?])
+    func aCallerCancelledDuringItsAdmissionCompletes(scope: Int?) async throws {
+        let inner = NeverEndingInner()
+        var token: (@Sendable () -> Int)?
+        if let scope { token = { scope } }
+        let transport = ScopedTransport(session: URLSession(configuration: .ephemeral), base: inner, scopeToken: token)
+        let parked = DispatchSemaphore(value: 0), proceed = DispatchSemaphore(value: 0), cancelling = DispatchSemaphore(value: 0)
+        transport.admissionHook = { parked.signal(); proceed.wait() }
+        transport.releaseHook = { cancelling.signal() }
+        let finished = Finished()
+        let call = Task.detached {
+            do { _ = try await transport.send(HTTPRequest(method: .get, scheme: "http", authority: "127.0.0.1:1", path: "/profiles/work/tasks"), body: nil, baseURL: URL(string: "http://127.0.0.1:1")!, operationID: "tasks.list"); finished.set("returned") }
+            catch is CancellationError { finished.set("cancelled") }
+            catch { finished.set("other: \(error)") }
+        }
+        try #require(await signalled(parked, within: 5), "the admission did not reach its lock")
+        Thread { call.cancel() }.start()
+        // The canceller is in the caller's cancellation handler: it holds the caller's status lock
+        // and waits for the transport's lock, which the parked admission holds.
+        let inHandler = await signalled(cancelling, within: 5)
+        proceed.signal()
+        try #require(inHandler, "the canceller never reached the cancellation handler")
+        let completed = await waitUntil(5) { finished.value != nil }
+        #expect(completed, "DEADLOCK: the caller cancelled during its admission did not complete within 5 s (the admission waits for the caller's status lock, the canceller for the transport's lock)")
+        guard completed else { return }
+        #expect(finished.value == "cancelled")
+        #expect(await waitUntil(2) { transport.releaseCounts.releasedEarly == 1 })
+        // The inner task, created after the release, was cancelled; if it started its send anyway,
+        // that send ends late and is dropped.
+        await inner.endLate()
+    }
+}
+
 private final class Finished: @unchecked Sendable {
     private let lock = NSLock(); private var outcome: String?
     func set(_ value: String) { lock.withLock { if outcome == nil { outcome = value } } }
