@@ -1521,10 +1521,11 @@ final class TodoModel {
         if pendingNavigation == nil { pendingNavigation = target }
         // A status change while another question is up does not replace it, and is not dropped
         // without a word: the person answers the open question first (correctness seat's P3 note).
-        else { publishNotice(Self.answerTheOpenQuestionFirst, seconds: 6); announce(Self.answerTheOpenQuestionFirst) }
+        else { let text = Self.answerTheQuestionFirst(editor?.base.title ?? task.title); publishNotice(text, seconds: 6); announce(text) }
         return true
     }
-    static let answerTheOpenQuestionFirst = "Answer the open question about your unsaved changes first."
+    /// A status change asked while another question is up (UI seat's final text on 370f6485).
+    static func answerTheQuestionFirst(_ title: String) -> String { "Answer the question about \u{201C}\(title)\u{201D} first." }
 
     /// Follow-up 80, change 1: `navigate(.edit(task))` without the await, for the case that needs
     /// none: no unsaved changes, not busy and no question up. It opens the Task the same way

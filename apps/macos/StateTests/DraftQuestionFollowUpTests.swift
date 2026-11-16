@@ -142,7 +142,7 @@ private actor Server: ClientTransport {
         #expect(model.closeEditor() == false)
         await model.transition(task(), action: "complete")
         guard case .close? = model.pendingNavigation else { Issue.record("the open question was replaced: \(String(describing: model.pendingNavigation))"); return }
-        #expect(model.deletionNotice == "Answer the open question about your unsaved changes first.")
+        #expect(model.deletionNotice == "Answer the question about \u{201C}Ship the launch notes\u{201D} first.")
         #expect(await server.writes.isEmpty)
     }
 }
