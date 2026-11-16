@@ -418,6 +418,20 @@ BUILD SUCCEEDED (load 5.5 → 4.5).
 - Pin audit at c101ac0b: **filesScanned 535, occurrences 883, match 138,
   drift 0, unknown 0**.
 
+**N8 (server seat, follow-up 81).** The generated-sources check read
+`GeneratedSources` with `glob`, so a Swift file added in a subfolder passed,
+though SwiftPM compiles subfolders. It now reads `rglob`, keyed by the path
+under `GeneratedSources` (the bare name for every file `generate-api.sh`
+writes today, so the committed record still matches). Red on a scratch copy:
+a file added in `GeneratedSources/Nested/` exits 1, where the previous check
+exits 0 on the same copy; removed, 0. It touches no product file: only
+`apps/macos/scripts/generated-sources.py`.
+
+The server seat's delta passed 88861589 (server, CLI and contract side;
+install, server side: safe) and accepted the renewals c65e8cad and 87c7cd61;
+`packages`, `apps/server`, `apps/cli` and `apps/electron` are byte-identical
+between 88861589 and this head.
+
 **Next, on the coordinator's word that MAC-PERF's cycle on cfe01e85 has
 ended:** the whole Mac gate cycle once on the head, then steps 7 and 8. With
 the fix merged, a stuck deletion is a finding, not a rerun.
