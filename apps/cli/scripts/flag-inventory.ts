@@ -250,8 +250,6 @@ export function flagConsumer(command: string, flag: string) {
     "snapshot prune": { "--dry-run": "snapshots.prune options.dryRun" },
     "repair time-zones": {
       "--dry-run": "read path only -> planTimeZoneRepair; writes nothing",
-      "--keep":
-        "planTimeZoneRepair options.keep (moment or clock), recorded in the plan",
       "--task": "planTimeZoneRepair options.tasks, recorded in the plan",
       "--plan":
         "TimeZoneRepairPlan decode -> checkPlan against a fresh dry run -> writableRepairs -> snapshots.create -> applyTimeZoneRepair",

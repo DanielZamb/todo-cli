@@ -1,15 +1,15 @@
-// Q14 (the owner, 2026-11-16): `todo repair time-zones` on scratch data with the compiled CLI and
-// server. Tasks typed on a machine set to UTC are stored with the zone UTC, as every time typed
-// bare was before follow-up 86; the repair runs in Bogotá.
-// - The dry run requires a reading (--keep moment|clock), shows both, and writes nothing, with and
-//   without a running server.
+// Q14 and Q17 (the owner, 2026-11-16: repair once, always the same moment): `todo repair
+// time-zones` on scratch data with the compiled CLI and server. Tasks typed on a machine set to UTC
+// are stored with the zone UTC, as every time typed bare was before follow-up 86; the repair runs in
+// Bogotá.
+// - The dry run says it keeps the moment, shows each value as it shows today and after, and writes
+//   nothing, with and without a running server.
 // - A run applies exactly a dry run made with the same options (server seat F1): an edited,
 //   reordered, truncated or foreign plan is refused before any Snapshot or write.
-// - --all-profiles covers every Profile (F2); --task limits a run to named Tasks (F3).
+// - --all-profiles covers every Profile (F2); --task limits a run to named Tasks.
 // - The run takes a Snapshot, edits each Task once with the dry run's Version, skips a Task changed
-//   meanwhile as a Conflict; Revert undoes one change; the Snapshot restores the state before.
-// - Under "clock" the instant moves, and a reminder that fired for the old instant fires again
-//   for the new one; under "moment" it does not.
+//   meanwhile as a Conflict; a reminder that fired does not fire again; Revert undoes one change;
+//   the Snapshot restores the state before.
 import { Database } from "bun:sqlite";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -133,19 +133,17 @@ type Item = {
   task_id: string;
   title: string;
   field: string;
-  stored_utc: string;
+  utc: string;
   shown_before: string;
-  as_moment: string;
-  as_clock: string;
-  keep: string;
-  new_utc: string;
+  shown_after: string;
   to_zone: string;
   day_before: string;
   day_after: string;
   from_version: number;
+  outcome?: string;
 };
 const line = (item: Item) =>
-  `${item.title} ${item.field}: shown ${item.shown_before} | moment ${item.as_moment} | clock ${item.as_clock} | ${item.keep} -> ${item.new_utc}, day ${item.day_before}->${item.day_after} v${item.from_version}`;
+  `${item.title} ${item.field}: ${item.shown_before} UTC -> ${item.shown_after} ${item.to_zone}, day ${item.day_before}->${item.day_after} v${item.from_version}`;
 /** Starts the server, waits for two quiet seconds (its scheduler fires reminders for past due Tasks), runs `during`, stops it. */
 const withServer = async (during: () => void) => {
   const server: ChildProcess = spawn(serverBinary, [], { env: env(BOGOTA) });
@@ -208,53 +206,53 @@ beforeAll(async () => {
 }, 240000);
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
-it("a dry run needs a reading, shows both, and writes nothing", () => {
-  const none = repair(["--dry-run"]);
-  expect([none.status, none.body.code]).toEqual([2, "invalid_args"]);
+it("the dry run says it keeps the moment, shows each value today and after, and writes nothing", () => {
   const before = unchanged();
-  const moment = repair(["--dry-run", "--keep", "moment"]);
-  const clock = repair(["--dry-run", "--keep", "clock"]);
-  expect([moment.status, clock.status]).toEqual([0, 0]);
+  const dry = repair(["--dry-run"]);
+  const markdown = run(BOGOTA, ["repair", "time-zones", "--dry-run"]);
+  expect([dry.status, markdown.status]).toEqual([0, 0]);
   expect(unchanged()).toEqual(before);
-  expect(moment.body.profiles).toEqual(["default"]);
-  expect(moment.body.items.map(line)).toEqual([
-    "Past due_at: shown 2026-11-16 05:00 | moment 2026-11-16 00:00 | clock 2026-11-16 05:00 | moment -> 2026-11-16T05:00:00.000Z, day 2026-11-16->2026-11-16 v1",
-    "Evening due_at: shown 2026-11-16 21:00 | moment 2026-11-16 16:00 | clock 2026-11-16 21:00 | moment -> 2026-11-16T21:00:00.000Z, day 2026-11-16->2026-11-16 v1",
-    "Both scheduled_at: shown 2026-11-17 01:30 | moment 2026-11-16 20:30 | clock 2026-11-17 01:30 | moment -> 2026-11-17T01:30:00.000Z, day 2026-11-17->2026-11-16 v1",
-    "Night due_at: shown 2026-11-17 03:00 | moment 2026-11-16 22:00 | clock 2026-11-17 03:00 | moment -> 2026-11-17T03:00:00.000Z, day 2026-11-17->2026-11-16 v1",
-    "Both due_at: shown 2026-11-18 02:00 | moment 2026-11-17 21:00 | clock 2026-11-18 02:00 | moment -> 2026-11-18T02:00:00.000Z, day 2026-11-18->2026-11-17 v1",
-    "Meanwhile due_at: shown 2026-11-19 03:00 | moment 2026-11-18 22:00 | clock 2026-11-19 03:00 | moment -> 2026-11-19T03:00:00.000Z, day 2026-11-19->2026-11-18 v1",
+  expect(dry.body.profiles).toEqual(["default"]);
+  expect(dry.body.note).toBe(
+    "This repair keeps the moment each reminder has always fired at, not the clock time that was typed: a time typed as 21:00 in Bogotá before the fix shows 16:00 after it, and one typed between 00:00 and 04:59 shows on the day before.",
+  );
+  expect(markdown.stdout.split("\n").slice(0, 3)).toEqual([
+    "# Dry run: repair time zones",
+    "",
+    dry.body.note,
   ]);
-  expect(
-    clock.body.items.map(
-      (item: Item) => `${item.title} ${item.field} -> ${item.new_utc}`,
-    ),
-  ).toEqual([
-    "Past due_at -> 2026-11-16T10:00:00.000Z",
-    "Evening due_at -> 2026-11-17T02:00:00.000Z",
-    "Both scheduled_at -> 2026-11-17T06:30:00.000Z",
-    "Night due_at -> 2026-11-17T08:00:00.000Z",
-    "Both due_at -> 2026-11-18T07:00:00.000Z",
-    "Meanwhile due_at -> 2026-11-19T08:00:00.000Z",
+  expect(dry.body.items.map(line)).toEqual([
+    "Past due_at: 2026-11-16 05:00 UTC -> 2026-11-16 00:00 America/Bogota, day 2026-11-16->2026-11-16 v1",
+    "Evening due_at: 2026-11-16 21:00 UTC -> 2026-11-16 16:00 America/Bogota, day 2026-11-16->2026-11-16 v1",
+    "Both scheduled_at: 2026-11-17 01:30 UTC -> 2026-11-16 20:30 America/Bogota, day 2026-11-17->2026-11-16 v1",
+    "Night due_at: 2026-11-17 03:00 UTC -> 2026-11-16 22:00 America/Bogota, day 2026-11-17->2026-11-16 v1",
+    "Both due_at: 2026-11-18 02:00 UTC -> 2026-11-17 21:00 America/Bogota, day 2026-11-18->2026-11-17 v1",
+    "Meanwhile due_at: 2026-11-19 03:00 UTC -> 2026-11-18 22:00 America/Bogota, day 2026-11-19->2026-11-18 v1",
   ]);
+  expect(markdown.stdout).toContain(
+    `- Evening (${ids.Evening}) due_at: shows 2026-11-16 21:00 (UTC) today, 2026-11-16 16:00 (America/Bogota) after the repair.`,
+  );
+  expect(markdown.stdout).toContain(
+    `- Night (${ids.Night}) due_at: shows 2026-11-17 03:00 (UTC) today, 2026-11-16 22:00 (America/Bogota) after the repair, on 2026-11-16 instead of 2026-11-17.`,
+  );
 });
 
 it("with the server running, the dry run also leaves the database file byte-identical", async () => {
   await withServer(() => {
     const before = fileHashes();
-    expect(repair(["--dry-run", "--keep", "clock"]).status).toBe(0);
+    expect(repair(["--dry-run"]).status).toBe(0);
     expect(fileHashes()).toEqual(before);
   });
 }, 90000);
 
 it("--all-profiles covers every Profile the owner may read (server seat F2)", () => {
-  const all = repair(["--dry-run", "--keep", "clock", "--all-profiles"]);
+  const all = repair(["--dry-run", "--all-profiles"]);
   expect(all.body.profiles).toEqual(["default", "work"]);
   expect(all.body.items.map((item: Item) => item.title)).toContain("Elsewhere");
 });
 
 it("refuses an edited, reordered, truncated or foreign plan before any Snapshot or write (server seat F1)", () => {
-  const plan = repair(["--dry-run", "--keep", "clock"]).body;
+  const plan = repair(["--dry-run"]).body;
   const edited = (edit: (p: typeof plan) => void) => {
     const copy = JSON.parse(JSON.stringify(plan));
     edit(copy);
@@ -266,8 +264,7 @@ it("refuses an edited, reordered, truncated or foreign plan before any Snapshot 
   const before = unchanged();
   const results = [
     edited((p) => {
-      p.items[evening].stored_utc = "2026-11-16T22:00:00.000Z";
-      p.items[evening].new_utc = "2026-11-17T03:00:00.000Z";
+      p.items[evening].utc = "2026-11-16T22:00:00.000Z";
     }),
     edited((p) => {
       p.items[evening].to_zone = "Asia/Tokyo";
@@ -277,8 +274,7 @@ it("refuses an edited, reordered, truncated or foreign plan before any Snapshot 
         ...p.items[evening],
         task_id: ids.Already,
         title: "Already",
-        stored_utc: "2026-11-17T02:00:00.000Z",
-        new_utc: "2030-01-01T00:00:00.000Z",
+        utc: "2030-01-01T00:00:00.000Z",
       });
     }),
     edited((p) => {
@@ -287,7 +283,6 @@ it("refuses an edited, reordered, truncated or foreign plan before any Snapshot 
         task_id: ids.Dated,
         title: "Dated",
         field: "scheduled_at",
-        new_utc: "2026-11-20T12:00:00.000Z",
       });
     }),
     edited((p) => {
@@ -306,25 +301,23 @@ it("refuses an edited, reordered, truncated or foreign plan before any Snapshot 
   });
   expect(results).toEqual(Array(7).fill([2, "plan_mismatch"]));
   expect(unchanged()).toEqual(before);
-  const first = repair([
+  const zone = repair([
     "--plan",
     planFile(
-      "first",
+      "zone",
       edited((p) => {
         p.items[evening].to_zone = "Asia/Tokyo";
       }),
     ),
   ]);
-  expect(first.body.message).toBe(
-    `The plan does not match what is stored, so nothing was written and no Snapshot was taken: item ${evening + 1} (Task ${ids.Evening}, due_at) names the zone Asia/Tokyo or the reading clock, not the plan's America/Bogota and clock. Make a new dry run.`,
+  expect(zone.body.message).toBe(
+    `The plan does not match what is stored, so nothing was written and no Snapshot was taken: item ${evening + 1} (Task ${ids.Evening}, due_at) names the zone Asia/Tokyo, not the plan's America/Bogota. Make a new dry run.`,
   );
 });
 
-it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflict; the same plan twice writes nothing", () => {
+it("--task repairs only named Tasks; a Task changed meanwhile is a Conflict; the same plan twice writes nothing", () => {
   const plan = repair([
     "--dry-run",
-    "--keep",
-    "clock",
     "--task",
     ids.Evening as string,
     "--task",
@@ -338,7 +331,7 @@ it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflic
     "Evening",
     "Meanwhile",
   ]);
-  const file = planFile("clock", plan);
+  const file = planFile("some", plan);
   expect(
     json(BOGOTA, [
       "edit",
@@ -352,9 +345,7 @@ it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflic
   const applied = repair(["--plan", file]);
   expect(applied.status).toBe(4);
   expect(
-    applied.body.items.map(
-      (item: Item & { outcome: string }) => `${item.title} ${item.outcome}`,
-    ),
+    applied.body.items.map((item: Item) => `${item.title} ${item.outcome}`),
   ).toEqual(["Past changed", "Evening changed", "Meanwhile conflict"]);
   expect(typeof applied.body.snapshot_id).toBe("string");
   expect([
@@ -362,8 +353,8 @@ it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflic
     stored("Past")?.due,
     stored("Meanwhile")?.due,
   ]).toEqual([
-    bogota("2026-11-17T02:00:00.000Z"),
-    bogota("2026-11-16T10:00:00.000Z"),
+    bogota("2026-11-16T21:00:00.000Z"),
+    bogota("2026-11-16T05:00:00.000Z"),
     utc("2026-11-19T03:00:00.000Z"),
   ]);
   // The same plan again: Past and Evening already repaired, Meanwhile still a Conflict, found
@@ -379,8 +370,7 @@ it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflic
   // A new dry run for it, applied; then that plan again: already repaired, no Snapshot.
   const again = planFile(
     "again",
-    repair(["--dry-run", "--keep", "clock", "--task", ids.Meanwhile as string])
-      .body,
+    repair(["--dry-run", "--task", ids.Meanwhile as string]).body,
   );
   expect(repair(["--plan", again]).body.totals.changed).toBe(1);
   const settled = unchanged();
@@ -393,16 +383,12 @@ it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflic
   expect(unchanged()).toEqual(settled);
 });
 
-it("same moment on the rest; under clock a fired reminder fires again at the new instant, under moment it does not", async () => {
-  const rest = planFile(
-    "moment",
-    repair(["--dry-run", "--keep", "moment"]).body,
-  );
+it("the rest is repaired; a reminder that already fired does not fire again", async () => {
+  const rest = planFile("rest", repair(["--dry-run"]).body);
   const applied = repair(["--plan", rest]);
   expect(
     applied.body.items.map(
-      (item: Item & { outcome: string }) =>
-        `${item.title} ${item.field} ${item.outcome}`,
+      (item: Item) => `${item.title} ${item.field} ${item.outcome}`,
     ),
   ).toEqual([
     "Both scheduled_at changed",
@@ -414,12 +400,9 @@ it("same moment on the rest; under clock a fired reminder fires again at the new
     scheduled: null,
     version: 2,
   });
+  expect(repair(["--dry-run"]).body.items).toEqual([]);
   await withServer(() => {});
-  // Past (clock): its reminder fired for 05:00Z; its new instant 10:00Z is past too, so it fires once more.
-  expect(reminders("Past")).toEqual([
-    "2026-11-16T05:00:00.000Z",
-    "2026-11-16T10:00:00.000Z",
-  ]);
+  expect(reminders("Past")).toEqual(["2026-11-16T05:00:00.000Z"]);
 }, 90000);
 
 it("Revert undoes one repaired Task while it is its latest change; the Snapshot restores the state before", () => {
@@ -458,13 +441,14 @@ it("Revert undoes one repaired Task while it is its latest change; the Snapshot 
   ]);
 });
 
-it("refuses a plan from another machine zone, a run with options of its own, and a call with neither --dry-run nor --plan", () => {
-  const plan = planFile("zone", repair(["--dry-run", "--keep", "moment"]).body);
+it("refuses a plan from another machine zone, a run with options of its own, --keep, and a call with neither --dry-run nor --plan", () => {
+  const plan = planFile("other-zone", repair(["--dry-run"]).body);
   const tokyo = repair(["--plan", plan], "Asia/Tokyo");
   expect([tokyo.status, tokyo.body.message]).toEqual([
     2,
     "The plan was made for the time zone America/Bogota; this machine's is Asia/Tokyo. Make a new dry run here.",
   ]);
-  expect(repair(["--plan", plan, "--keep", "clock"]).status).toBe(2);
+  expect(repair(["--plan", plan, "--include-closed"]).status).toBe(2);
+  expect(repair(["--dry-run", "--keep", "clock"]).status).toBe(2);
   expect(repair([]).status).toBe(2);
 });

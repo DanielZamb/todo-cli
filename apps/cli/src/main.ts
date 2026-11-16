@@ -2581,7 +2581,6 @@ const repairTimeZones = Command.make(
   {
     dryRun: bool("dry-run"),
     plan: stringFlag("plan").pipe(Flag.optional),
-    keep: Flag.Literals("keep", ["moment", "clock"]).pipe(Flag.optional),
     task: stringFlag("task").pipe(Flag.atLeast(0)),
     includeClosed: bool("include-closed"),
     allProfiles: bool("all-profiles"),
@@ -2594,7 +2593,7 @@ const repairTimeZones = Command.make(
         Effect.fail(new CommandError(2, "invalid_args", message));
       if (input.dryRun === Option.isSome(input.plan))
         return yield* usage(
-          "Pass --dry-run --keep moment|clock to see what would change, or --plan <file> with the dry run's JSON to apply it. Read the dry run before the run.",
+          "Pass --dry-run to see what would change, or --plan <file> with the dry run's JSON to apply it. Read the dry run before the run.",
         );
       const taskIds = yield* Effect.try({
         try: () => input.task.map((id) => Schema.decodeUnknownSync(TaskId)(id)),
@@ -2605,16 +2604,9 @@ const repairTimeZones = Command.make(
             "--task needs a full Task id; repeat it for more Tasks.",
           ),
       });
-      if (input.dryRun && Option.isNone(input.keep))
-        return yield* usage(
-          "Choose the reading: --keep moment keeps the stored instant (right for a time typed with an offset or Z); --keep clock keeps the clock time as typed, in this machine's time zone (right for a time typed without one). The dry run shows both for every value.",
-        );
       if (
         !input.dryRun &&
-        (Option.isSome(input.keep) ||
-          input.task.length ||
-          input.includeClosed ||
-          input.allProfiles)
+        (input.task.length || input.includeClosed || input.allProfiles)
       )
         return yield* usage(
           "A run takes its options from the plan. Pass only --plan <file>.",
@@ -2654,7 +2646,6 @@ const repairTimeZones = Command.make(
               yield* store.auth.requireOwner({ credential });
               const profiles = yield* profilesFor(store, credential);
               const data = yield* read(store, credential, profiles);
-              const keep = Option.getOrThrow(input.keep);
               const plan = yield* io(() => ({
                 generated_at: iso(nowInstant()),
                 dry_run: true as const,
@@ -2663,7 +2654,6 @@ const repairTimeZones = Command.make(
                   ...data,
                   options: {
                     zone,
-                    keep,
                     includeClosed: input.includeClosed,
                     tasks: taskIds.length ? taskIds : null,
                   },
@@ -2673,7 +2663,7 @@ const repairTimeZones = Command.make(
                 cfg.format,
                 TimeZoneRepairPlan,
                 plan,
-                `# Dry run: repair time zones (--keep ${keep})\n\nThis machine's time zone: ${plan.time_zone}. Profiles: ${profiles.join(", ")}. Nothing was written.\n\n${plan.items.map((item) => `- ${item.title} (${item.task_id}) ${item.field}: shown now ${item.shown_before} UTC. Same moment: ${item.as_moment}. Same clock time: ${item.as_clock}. This run: ${keep === "moment" ? item.as_moment : item.as_clock} ${item.to_zone}, day ${item.day_before} -> ${item.day_after}.`).join("\n")}${plan.items.length ? "\n\n" : ""}${plan.not_changed.map((row) => `- not changed: ${row.reason} ${row.task_id ?? row.series_id} ${row.field} ${row.stored_utc}${row.message ? ` (${row.message})` : ""}`).join("\n")}${plan.not_changed.length ? "\n\n" : ""}Would change ${plan.totals.values} value(s) on ${plan.totals.tasks} Task(s). Not changed: ${plan.totals.not_changed}, of them ${plan.totals.series_templates} Series template(s): their next Occurrences come back with the zone UTC. Save this dry run with --format json and pass it to --plan to apply it.\n`,
+                `# Dry run: repair time zones\n\n${plan.note}\n\nThis machine's time zone: ${plan.time_zone}. Profiles: ${profiles.join(", ")}. Nothing was written.\n\n${plan.items.map((item) => `- ${item.title} (${item.task_id}) ${item.field}: shows ${item.shown_before} (UTC) today, ${item.shown_after} (${item.to_zone}) after the repair${item.day_after === item.day_before ? "" : `, on ${item.day_after} instead of ${item.day_before}`}.`).join("\n")}${plan.items.length ? "\n\n" : ""}${plan.not_changed.map((row) => `- not changed: ${row.reason} ${row.task_id ?? row.series_id} ${row.field} ${row.utc}`).join("\n")}${plan.not_changed.length ? "\n\n" : ""}Would change ${plan.totals.values} value(s) on ${plan.totals.tasks} Task(s). Not changed: ${plan.totals.not_changed}, of them ${plan.totals.series_templates} Series template(s): their next Occurrences come back with the zone UTC. Save this dry run with --format json and pass it to --plan to apply it.\n`,
               );
             }),
           { writing: false },
@@ -2688,7 +2678,7 @@ const repairTimeZones = Command.make(
           new CommandError(
             2,
             "invalid_args",
-            `Cannot read the plan. Pass the JSON of todo repair time-zones --dry-run --keep moment|clock --format json. ${String(error)}`,
+            `Cannot read the plan. Pass the JSON of todo repair time-zones --dry-run --format json. ${String(error)}`,
           ),
       });
       if (plan.time_zone !== zone)
@@ -2708,7 +2698,6 @@ const repairTimeZones = Command.make(
             ...data,
             options: {
               zone,
-              keep: plan.keep,
               includeClosed: plan.include_closed,
               tasks: plan.tasks,
             },
@@ -2737,7 +2726,6 @@ const repairTimeZones = Command.make(
             generated_at: iso(nowInstant()),
             dry_run: false as const,
             time_zone: plan.time_zone,
-            keep: plan.keep,
             snapshot_id: snapshot?.id ?? null,
             ...applied,
           };
@@ -2745,7 +2733,7 @@ const repairTimeZones = Command.make(
             cfg.format,
             TimeZoneRepairReport,
             report,
-            `# Repair time zones (--keep ${plan.keep})\n\n${snapshot ? `Snapshot taken first: ${snapshot.id}` : "Nothing left to change; no Snapshot taken."}\n\n${report.items.map((item) => `- ${item.title} (${item.task_id}) ${item.field}: ${item.outcome}${item.outcome === "conflict" ? ` (the Task changed since the dry run; current Version ${item.current_version})` : ""}`).join("\n")}${report.items.length ? "\n\n" : ""}Changed ${report.totals.changed}, already repaired ${report.totals.already_repaired}, Conflict ${report.totals.conflict}, not found ${report.totals.not_found}, rejected ${report.totals.rejected}. Each change is one History entry; undo one with todo revert while it is the Task's latest change, or all of it with todo snapshot restore.\n`,
+            `# Repair time zones\n\n${snapshot ? `Snapshot taken first: ${snapshot.id}` : "Nothing left to change; no Snapshot taken."}\n\n${report.items.map((item) => `- ${item.title} (${item.task_id}) ${item.field}: ${item.outcome}${item.outcome === "conflict" ? ` (the Task changed since the dry run; current Version ${item.current_version})` : ""}`).join("\n")}${report.items.length ? "\n\n" : ""}Changed ${report.totals.changed}, already repaired ${report.totals.already_repaired}, Conflict ${report.totals.conflict}, not found ${report.totals.not_found}, rejected ${report.totals.rejected}. Each change is one History entry; undo one with todo revert while it is the Task's latest change, or all of it with todo snapshot restore.\n`,
           );
           if (report.totals.conflict) process.exitCode = 4;
           else if (report.totals.not_found) process.exitCode = 3;
