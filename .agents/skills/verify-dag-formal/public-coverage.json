@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "0f643c52af563a6e4100dcb8836944e1e938f790",
+  "confirmedCommit": "cd62ad3b8f37ac5b68dee5dbb3ea972434ee86ad",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "3776c223dd90e0a2955cc7dd4a84e2602ced44d3ebe837f7970fa556bb2abef5"
+      "sha256": "7111f696c3a6283230f39c73028a5bdb9cb1ad0b382b2b261039af0fd7101ea9"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -770,6 +770,26 @@
       },
       "checkEvidence": [
         "docs/evidence/dag-formal/public-Y0uBDt"
+      ]
+    },
+    {
+      "product": "cd62ad3b8f37ac5b68dee5dbb3ea972434ee86ad",
+      "previousConfirmedCommit": "0f643c52af563a6e4100dcb8836944e1e938f790",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "3776c223dd90e0a2955cc7dd4a84e2602ced44d3ebe837f7970fa556bb2abef5",
+          "to": "7111f696c3a6283230f39c73028a5bdb9cb1ad0b382b2b261039af0fd7101ea9"
+        }
+      ],
+      "review": {
+        "summary": "Candidate 14 (e2d24cdd, MAC-C12-S1-8; b24f671c fixes only its test). Of the DAG public scope only Dependencies.swift changed: in performToggleDependency's catch, after authorize and the credential/Profile guard, a reply that committed (committed or committedBeforeFailure, as before) now takes the committed path: when the picker is still the one showing it reads itself back (readDependencyPicker(.background)) and, if that read applied, succeeds the link ticket with a feedback line saying the reply could not be read; it then clears the main window's link hand-off for that dependent as a success does, reads the catalog back and returns. A failed read-back leaves the read's own failure notice. Writes still send the drawn Version and are decided by the server's OCC; message ownership, per-target supersession, authorization order and pendingDependents release are unchanged. A new static helper, unreadableCommitFeedback, holds the text. No change in a class the model does not allow.",
+        "reviewer": "MAC-PERF (Claude Opus 5.5)",
+        "rulingBy": "coordinator, 2026-11-14 23:20 (S1-8, option A)",
+        "pendingSeat": true
+      },
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-D6OGYS"
       ]
     }
   ],
