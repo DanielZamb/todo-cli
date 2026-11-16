@@ -37,6 +37,7 @@ os.chdir(root)
 sys.path.insert(0, str(root / '.agents/skills/verify-macos-lifecycle/scripts'))
 from owned_process import OwnedCommands
 sys.path.insert(0, str(root / 'apps/macos/scripts'))
+import owner_guard
 import state_package
 head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
 # MAC-C1-S1-31: anything that would change the tested sources or binaries under the head's name is
@@ -56,6 +57,10 @@ evidence.mkdir(parents=True, exist_ok=False)
 owned = OwnedCommands(evidence / 'command-unsafe')
 (evidence / 'overrides.json').write_text(json.dumps(overrides, indent=2) + '\n')
 env = {k: v for k, v in os.environ.items() if not k.startswith(('TODO_', 'MAC_PERF_'))}
+# Q15 (the owner, 2026-11-16): GATES_OWNER_ACTIVE_OK=<today's local date> skips the idle wait for that
+# day only; the wait while a Todo app is frontmost stays (owner_guard.py, verify-owner-guard.py).
+OWNER = owner_guard.override()
+class OwnerActiveRerunOwed(Exception): pass
 # The merged head's own server, CLI and seed (integ/server 2a840b55 merged): the server the owner gets.
 build = json.loads((root / '.scratch/bin/build.json').read_text())
 # Reused, not rebuilt: valid only if the server, CLI and packages are unchanged since the build's head.
@@ -84,13 +89,12 @@ def quarantine_leftovers(name):
     assert moved.returncode == 0, ('a Bun leftover is still held by a process', name, moved.stdout)
 def wait_for_quiet(name):
     # The owner may be at the Mac: a gate loads the CPU (and a few show offscreen work), so it starts
-    # only when neither Todo app is frontmost and there has been no input for a minute.
+    # only when neither Todo app is frontmost and there has been no input for a minute; with the
+    # dated override (Q15) only the Todo app wait stays.
     said = False
     while True:
-        front = subprocess.run(['lsappinfo', 'front'], capture_output=True, text=True).stdout.strip()
-        bundle = subprocess.run(['lsappinfo', 'info', '-only', 'bundleid', front], capture_output=True, text=True).stdout.split('=')[-1].strip().strip('"')
-        idle = next((int(line.split('=')[-1]) / 1e9 for line in subprocess.run(['ioreg', '-c', 'IOHIDSystem'], capture_output=True, text=True).stdout.splitlines() if 'HIDIdleTime' in line), 0)
-        if bundle not in ('local.todo.Todo', 'dev.todo.electron') and idle >= 60: return
+        bundle, idle = owner_guard.front_bundle(), owner_guard.idle_seconds()
+        if not owner_guard.should_wait(bundle, idle, OWNER['honoured']): return
         if not said: print(f'WAITING-OWNER before {name}: {bundle} in front, idle {idle:.0f} s', flush=True); said = True
         time.sleep(30)
 def run(name, args, timeout=7200, extra=None):
@@ -102,12 +106,18 @@ def run(name, args, timeout=7200, extra=None):
     assert dirty <= allowed_dirty, ('Gate head is dirty', sorted(dirty - allowed_dirty))
     stat = os.statvfs(root)
     assert stat.f_bavail * stat.f_frsize >= 25_000_000_000, 'Disk below 25 GB floor'
-    start = time.time(); load = os.getloadavg()
+    start = time.time(); load = os.getloadavg(); idle_start = owner_guard.idle_seconds()
     result = owned.run([str(a) for a in args], dict(env, **(extra or {})), timeout=timeout)
     (evidence / (name + '.log')).write_text(result.stdout + result.stderr)
-    commands.append(dict(name=name, command=[str(a) for a in args], exit=result.returncode, started=start, finished=time.time(), load_at_start=load, load_at_finish=os.getloadavg(), head=head))
+    idle_end = owner_guard.idle_seconds()
+    active = owner_guard.owner_active(idle_start, idle_end)
+    commands.append(dict(name=name, command=[str(a) for a in args], exit=result.returncode, started=start, finished=time.time(), load_at_start=load, load_at_finish=os.getloadavg(),
+                         idle_at_start_s=round(idle_start, 1), idle_at_end_s=round(idle_end, 1), owner_active=active, head=head))
     (evidence / 'commands.json').write_text(json.dumps(commands, indent=2))
     print(name, result.returncode, flush=True)
+    # Q15: under the override, a gate that fails while the owner was active is not a finding and not a
+    # pass: the cycle stops and the rerun is started by hand.
+    if result.returncode != 0 and OWNER['honoured'] and active: raise OwnerActiveRerunOwed(name)
     assert result.returncode == 0, name
 # The guard receipt each gate that builds Swift must write (the discovery audit is added when it runs).
 expected_guards = {'hold': 'hold/keychain-guard.json', 'sign-out-stream': 'sign-out-stream/keychain-guard.json',
@@ -236,9 +246,13 @@ try:
     (evidence / 'summary-lines.json').write_text(json.dumps(summaries, indent=2) + '\n')
     assert summaries['filesWithSwiftTestRuns'] > 0 and not summaries['unfinished'], ('a Swift test run ended without a summary line', summaries['unfinished'])
     result = dict(result='PASS', errors=0, head=head, gates=len(commands), carried=carried, excluded_uncommitted=sorted(allowed_dirty), signed=False, app_launched=False, keychain_linked=keychain, isolation=isolated,
-                  summary_lines={k: v for k, v in summaries.items() if k != 'files'}, pushed=False)
+                  summary_lines={k: v for k, v in summaries.items() if k != 'files'}, owner_override=OWNER,
+                  gates_with_owner_active=[c['name'] for c in commands if c.get('owner_active')], pushed=False)
+except OwnerActiveRerunOwed as owed:
+    result = dict(result='OWNER-ACTIVE-RERUN-OWED', gate=str(owed), errors=0, head=head, gates_finished=len(commands), owner_override=OWNER, carried=carried, isolation=isolation_summary())
+    raise
 except BaseException as error:
-    result = dict(result='FAIL', errors=1, head=head, gates_finished=len(commands), reason=repr(error), carried=carried, isolation=isolation_summary())
+    result = dict(result='FAIL', errors=1, head=head, gates_finished=len(commands), reason=repr(error), owner_override=OWNER, carried=carried, isolation=isolation_summary())
     raise
 finally:
     (evidence / 'result.json').write_text(json.dumps(result, indent=2))
