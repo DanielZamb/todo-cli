@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "c65e8cad58849d60656cba9aface695224114575",
+  "confirmedCommit": "9ea0c66a3befb6c94d31f3164783b12efd9bfe18",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -370,7 +370,7 @@
       "functions": [
         "Dependency picker generation, direction and search ownership"
       ],
-      "sha256": "7111f696c3a6283230f39c73028a5bdb9cb1ad0b382b2b261039af0fd7101ea9"
+      "sha256": "9921f84909cea203e764ea1e415403452b0e7d9ba1c79d3c6078a4987a11c6d2"
     },
     {
       "path": "apps/macos/Sources/DependencyDelete.swift",
@@ -1234,6 +1234,21 @@
       },
       "checkEvidence": [
         "docs/evidence/dag-formal/public-D6OGYS"
+      ]
+    },
+    {
+      "product": "9ea0c66a3befb6c94d31f3164783b12efd9bfe18",
+      "previousConfirmedCommit": "c65e8cad58849d60656cba9aface695224114575",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/Dependencies.swift",
+          "from": "7111f696c3a6283230f39c73028a5bdb9cb1ad0b382b2b261039af0fd7101ea9",
+          "to": "9921f84909cea203e764ea1e415403452b0e7d9ba1c79d3c6078a4987a11c6d2"
+        }
+      ],
+      "review": "Candidate 14 merge head (9ea0c66a: origin/main a6cdd0f3 merged into mac-c13). Of the pinned Mac files only apps/macos/Sources/Dependencies.swift differs from the last Mac-line renewal (f3c290fa), by 06d552b8 (UI seat on 370f6485): in the picker's toggle, after a committed link whose 2xx reply could not be read, the feedback text is the UI seat's final words, and when the picker's own read-back fails too (and no read is owed) the picker publishes a notice that the change was saved and sets requiresReload, instead of the generic “Couldn't update Dependencies. Try again.” No edge validation, request, commit or graph rule changed. Every other pinned row, Swift or TypeScript, is the side of the merge that changed it: main's rows are main's renewal (c65e8cad), byte-identical in the merge; the generated client is main's (make generate-api changed no file).",
+      "checkEvidence": [
+        "docs/evidence/dag-formal/public-oZCpui"
       ]
     }
   ],
