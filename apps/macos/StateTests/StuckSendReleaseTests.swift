@@ -233,6 +233,9 @@ private final class CreationGate: ClientTransport, @unchecked Sendable {
         try? await Task.sleep(for: .milliseconds(150))
         #expect(!transport.sessionInvalidated && !probe.invalidated, "the session waits for the running send")
         gate.proceed.signal()
+        // The inner send's end (its late reply dropped) comes first, then the invalidation; without
+        // the fix the session is already invalid here and creating the data task aborts the process.
+        #expect(await waitUntil(2) { transport.releaseCounts.lateEnded == 1 }, "the inner send ended")
         #expect(await waitUntil(2) { probe.invalidated }, "invalidated once the inner send ended")
         #expect(gate.tasksCreated == 1, "the data task was created on a live session")
         #expect(transport.releaseCounts == .init(releasedEarly: 1, notEnded: 0, lateEnded: 1, invalidatedWithRunning: 0))
@@ -273,6 +276,9 @@ private final class CreationGate: ClientTransport, @unchecked Sendable {
         try? await Task.sleep(for: .milliseconds(150))
         #expect(!transport.sessionInvalidated && !probe.invalidated, "the session waits for the running send")
         gate.proceed.signal()
+        // The inner send's end (its late reply dropped) comes first, then the invalidation; without
+        // the fix the session is already invalid here and creating the data task aborts the process.
+        #expect(await waitUntil(2) { transport.releaseCounts.lateEnded == 1 }, "the inner send ended")
         #expect(await waitUntil(2) { probe.invalidated }, "invalidated once the inner send ended")
         #expect(gate.tasksCreated == 1)
         await call.value
