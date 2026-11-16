@@ -523,6 +523,72 @@ alternating cells each, load 10 → 4, 0 HTTP errors;
   identifier, or clear them; and in the app, a stored cursor far below the
   server's History makes the client replay it one full read per operation.
 
+### Step 7 closed: the stale cursor shown on purpose, the cell rerun, the harness made immune
+
+The coordinator asked for the cause shown, not inferred. Port and keys were
+read from the shared `swiftpm-testing-helper` domain before and after each
+cell, read-only (`defaults read`), under the load rule. The two shown cells
+ran a scratch copy of the harness that differs from `run.py` only in taking
+the root from the environment, binding the proxy to a chosen port and
+recording it; it clears nothing.
+
+| Cell | Port | Keys before | Stream opened at | cli-operation-0 ops / requests / reads | Load |
+| --- | --- | --- | --- | --- | --- |
+| head, stale port | 49756 | `restore-cursor` = 3; no measurement cursor | **3** | **705 / 5,640 / 705** (and 6 in stream-ready) | 3.7 → 3.4 |
+| head, clean port | 55000 | none | 925 | 1 / 8 / 1 | 4.2 → 5.0 |
+
+So the model, with no cursor of its own for that URL, falls back to the
+stale `restore-cursor` and replays the History from 3, one full read per
+operation: the same 711 operations as the outlier cell.
+
+**Run 0 rerun** on recorded clean ports (no key before): candidate 13's
+cell on 55001 (load 3.2 → 2.8) and the head's on 55002 (load 2.5 → 3.0) are
+identical step for step and match the other nine cells: stream at 925; first
+load 8 requests and 1 read; a CLI operation 1 op, 8, 1; backlogs 0, 50 and
+300 replayed with 10/1, 410/51 and 2,410/301; own Complete 17/2; burst 160/20;
+quiet reconnect 2/0; 372 operations; 0 HTTP errors. Evidence
+`docs/evidence/mac-perf/c4/step2-cause-{stale,clean}` and
+`step2-rerun0-{c13,head}`.
+
+**The harness made immune (39d4c859).** `apps/macos/PerfMeasurement/run.py`
+(verify-mac-refresh's harness) clears exactly its own URL's cursor keys
+(`restore-cursor.<url>` and every `cursor.<vault>.<url>.<profile>`) right
+after binding its proxy, before the model connects, records what it cleared
+in `cursor-keys.json`, records the port in `proxy.json`, and takes an
+optional `MAC_PERF_PROXY_PORT`. It touches nothing else in the shared
+domain; no other process can be using those keys then, because the port is
+bound by the cell's own proxy. Shown: on stale port 51780 (`restore-cursor`
+= 3) the committed harness cleared it (and another vault's cursor for the
+same URL, = 4), the stream opened at 925 and cli-operation-0 used 1 op and 8
+requests; the summary passes (load 2.5 → 5.2). The commit touches no product
+file and no gated test (no gate runs `run.py`; no pin covers it). Pin audit
+at 39d4c859: **filesScanned 535, occurrences 883, match 138, drift 0,
+unknown 0**.
+
+**For the list, not this line** (follow-up 83; follow-up 39's mechanism at
+connect, for the refresh scheduler's unit): a stored cursor far below the
+server's History is replayed with one full catalog read per operation (711
+operations, 5,640 requests here).
+
+### The six Quick Add captures (Mac UI seat, item 1)
+
+The seat found six light Quick Add captures (`dag-full-initial*-light`,
+`dag-full-follow-up-light`) whose field text sat about 1 px to the side in my
+cycle (2e98cd5a) and nowhere else. I re-rendered the Dependency set once in
+this worktree (`TODO_SNAPSHOT_DAG_ONLY=1`, one slot hold, load 3.2 → 2.5,
+394 PNGs, `docs/evidence/step2/design-dag-rerender`) and compared by bytes:
+- the six now equal candidate 13's cycle byte for byte (and differ from my
+  cycle's);
+- 389 of the 394 equal candidate 13's; the five that differ are the **dark**
+  variants of the same field (`dag-full-initial{,-none,-many,-invalid,-many-invalid}-dark`),
+  which in my cycle had equalled candidate 13's.
+
+So it is capture noise, not a stable difference of this build: the Quick
+Add field's text takes one of two placements from run to run, in either
+appearance, in the same worktree and build folder. No build setting,
+resource or toolchain cache differs between the renders. The Mac sources are
+byte-identical to candidate 13.
+
 ## What the installed build does differently on the owner's machine
 
 Nothing is migrated in the Task database: no schema change since candidate 10.
@@ -545,10 +611,14 @@ Today counts a Task once, Electron's All badge counts open Tasks only, the name
 order, undated Tasks last inside a priority; the CLI's `due:` label stays an
 instant's UTC date.
 
-Reinstalling candidate 10 undoes the behaviour but not the files: candidate 10
-never reads `.todo-routing/` or `diagnostic-recordings/`, so they stay beside
-the database, harmless, until removed by hand. The Task database itself is
-unchanged in schema and readable by candidate 10.
+To undo, reinstall the previous build of all four (the server, the CLI and
+both apps): today that is candidate 13 (cfe01e85, contract 78a2be44), the set
+installed now. That undoes the behaviour but not the files: candidate 13 never
+reads `.todo-routing/` or `diagnostic-recordings/`, so they stay beside the
+database, harmless, until removed by hand once the server is stopped. The Task
+database itself is unchanged in schema and opens as before. The owner's
+notice is the Mac UI seat's nine points (its section 5), with this
+correction.
 
 ## What stays owed
 
