@@ -376,11 +376,13 @@ final class TodoModel {
             // An ordinary confirmation lasts 3 s; a Profile notice sets its own time after this.
             noticeSeconds = 3
             // MAC-C1-S1-34: an offer lives exactly as long as its notice; any other notice ends it.
-            if let offer = restoredProfileOffer, newValue != Self.restoredProfileNotice(profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) { restoredProfileOffer = nil }
+            if let offer = restoredProfileOffer, newValue?.hasPrefix(Self.restoredProfileNotice(profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false)) != true { restoredProfileOffer = nil }
             if let newValue { noticeMessages.publish(newValue, kind: .notice) } else { noticeMessages.end() }
             restartNoticeTimer()
         }
     }
+    /// While a Snapshot reload is handled, its lost-draft sentence (see publishNotice).
+    @ObservationIgnored private var reloadLostDraft: String?
     /// The pointer is over the notice or its button has keyboard focus: its timer waits, and starts
     /// its full time again when both have left (UI check, c10). Set by the view.
     var noticeHeld = false { didSet { if noticeHeld != oldValue { restartNoticeTimer() } } }
@@ -397,6 +399,10 @@ final class TodoModel {
     /// Publishes a notice that lasts `seconds` (paused while the pointer is over it or its button has
     /// focus): 6 s for a forced Profile switch, 10 s for a restored Profile's offer (UI check, c10).
     func publishNotice(_ text: String, seconds: Double) {
+        // A notice published while a Snapshot reload is handled (a forced leave's, a restored Profile's
+        // offer) carries the reload's lost-draft sentence, so one does not replace the other in the
+        // same slot (UI seat on 370f6485).
+        let text = reloadLostDraft.map { text.contains($0) ? text : text + " " + $0 } ?? text
         deletionNotice = text
         noticeSeconds = seconds
         restartNoticeTimer()
@@ -1191,6 +1197,8 @@ final class TodoModel {
                             openingAction = nil
                             attempt = 0
                         } else if event.name == "reload" {
+                            // The lost-draft sentence travels with any notice this reload publishes.
+                            defer { reloadLostDraft = nil }
                             let reload = try JSONDecoder().decode(SnapshotReload.self, from: Data(event.data.utf8))
                             // Whether the person has acted since a forced Profile switch is read before the
                             // reload resets the view (ruling on the candidate 9 restore finding).
@@ -1227,7 +1235,12 @@ final class TodoModel {
                             showingSeries = false; showingHistory = false; seriesLoading = false
                             editorError = nil; historyError = nil; snapshotRestore = nil; snapshotRestoreTarget = nil
                             refreshGeneration += 1; historyGeneration += 1; seriesGeneration += 1
-                            if let lostDraft { publishNotice(Self.lostDraftSentence(lostDraft, when: "the Snapshot was restored"), seconds: 6) }
+                            if let lostDraft {
+                                let sentence = Self.lostDraftSentence(lostDraft, when: "the Snapshot was restored")
+                                reloadLostDraft = sentence
+                                publishNotice(sentence, seconds: 6)
+                                announce(sentence)
+                            }
                             let previousProfile = profile
                             try await discoverProfiles(afterRestore: true)
                             if let (leave, acted) = leaveBeforeReload, resolveForcedLeave(leave, acted: acted) {
@@ -2432,7 +2445,10 @@ final class TodoModel {
         if error is StreamError { return "The live connection ended. Reconnecting…" }
         return "Couldn't reach the server or read its response. Your draft is preserved."
     }
+    /// What `announce` has spoken, newest last (the last 16), for tests.
+    @ObservationIgnored private(set) var announcements: [String] = []
     func announce(_ text: String) {
+        announcements.append(text); if announcements.count > 16 { announcements.removeFirst() }
         guard let application = NSApp else { return }
         NSAccessibility.post(element: application.mainWindow as Any, notification: .announcementRequested, userInfo: [.announcement: text, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
     }

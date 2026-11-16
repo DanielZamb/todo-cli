@@ -825,7 +825,7 @@ struct TaskListView: View {
                     Text(notice)
                     // A restored Profile the person has moved on from: offered, never forced (ruling on
                     // the candidate 9 restore finding).
-                    if let offer = model.restoredProfileOffer, notice == TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false) {
+                    if let offer = model.restoredProfileOffer, notice.hasPrefix(TodoModel.restoredProfileNotice(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name, returned: false)) {
                         Button("Switch to \(model.profiles.first { $0.id == offer.profile }?.name ?? offer.name)") { model.goToRestoredProfile() }
                             .buttonStyle(.borderless).disabled(model.editor != nil || model.busy).focused($noticeButtonFocused)
                             .accessibilityIdentifier("restored-profile-switch").compactBounds("restored-profile-switch")

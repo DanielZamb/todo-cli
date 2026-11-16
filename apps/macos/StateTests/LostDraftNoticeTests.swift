@@ -60,6 +60,33 @@ private actor CatalogTransport: ClientTransport {
         #expect(model.deletionNotice == "\u{201C}Work\u{201D} was deleted. Switched to Personal." + (unsaved ? " Unsaved changes to \u{201C}Ship the launch notes\u{201D} were lost." : ""))
     }
 
+    /// A reload that also offers the client's way back to a restored Profile (the draft counts as the
+    /// person having acted, so it offers rather than switches): the offer's notice carries the
+    /// lost-draft sentence instead of replacing it, the offer stays, and the sentence is announced
+    /// (UI seat on 370f6485).
+    @Test func aReloadThatOffersARestoredProfileKeepsTheLostDraftSentence() async throws {
+        let transport = CatalogTransport()
+        await transport.setProfiles(#"[{"id":"work","name":"Work","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":1,"inbox_task_count":1,"visible_task_count":1,"projects":[]},{"id":"launch","name":"Launch","created_at":"2026-10-27T00:00:00Z","updated_at":"2026-10-27T00:00:00Z","open_task_count":0,"inbox_task_count":0,"visible_task_count":0,"projects":[]}]"#)
+        let model = model(transport)
+        defer { model.signedIn = false; model.connect(); Task { await transport.stop() } }
+        model.connect()
+        try await until("the stream opens") { await transport.streamCount == 1 }
+        await transport.event("ready", "{}")
+        try await until("live") { model.connection == .live && !model.loading }
+        model.recordForcedLeave(profile: "launch", name: "Launch", view: ProfileViewState(model), switchedTo: model.profile,
+                                notice: "\u{201C}Launch\u{201D} was deleted. Switched to Work.", carrying: nil)
+        model.beginEditing(task)
+        model.editor?.title = "Ship the launch notes today"
+        let reloads = model.restoreReloadCount
+        await transport.event("reload", #"{"generation":"lost-draft-return","seq":9}"#)
+        try await until("the reload") { model.restoreReloadCount > reloads }
+        try await until("the offer of the restored Profile") { model.restoredProfileOffer != nil }
+        let sentence = "Unsaved changes to \u{201C}Ship the launch notes\u{201D} were lost when the Snapshot was restored."
+        #expect(model.deletionNotice == TodoModel.restoredProfileNotice("Launch", returned: false) + " " + sentence)
+        #expect(model.restoredProfileOffer?.profile == "launch", "the offer survives the appended sentence")
+        #expect(model.announcements.contains(sentence))
+    }
+
     @Test(arguments: [false, true])
     func aSnapshotReloadNamesTheLostDraft(unsaved: Bool) async throws {
         let transport = CatalogTransport()
