@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "041ce361f3b341fc4aea94cbd005dafa534dba45d9dc11b06c8eeb1c7d44712c"
+      "sha256": "ba82727bab307502ea47e88d5c4a6c700074e49a2ac07dca3f0849a7563aa47a"
     }
   ],
   "integrationReview": {
@@ -493,5 +493,20 @@
       }
     ],
     "review": "Server seat F1, F2 and F3 on d5af970d (Q14): main.ts rewrites the repair time-zones handler (--keep, --task, --all-profiles from the Profile directory, the plan binding before any Snapshot) and its imports; help.ts rewrites the repair time-zones help entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it."
+  },
+  "q17Moment": {
+    "product": "5436c37a7987b90e57ea0704bcfa7f2c2ba068ff",
+    "previous": [
+      "e989d62b7638dc14cce66716634ef092a9c57695"
+    ],
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "041ce361f3b341fc4aea94cbd005dafa534dba45d9dc11b06c8eeb1c7d44712c",
+        "to": "ba82727bab307502ea47e88d5c4a6c700074e49a2ac07dca3f0849a7563aa47a"
+      }
+    ],
+    "review": "Q17 (the owner, 2026-11-16: always the same moment) on feat/repair-typed-zones: main.ts removes --keep from the repair time-zones handler and shows each value before and after with the plain sentence; help.ts rewrites the repair time-zones entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it."
   }
 }
