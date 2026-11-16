@@ -77,6 +77,10 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
         var holdMS: Double?
         var releaseSource: ClientDiagnosticReleaseSource?
         var listRows: Int?
+        var realizedRows: Int?
+        var windowWidth: Double?
+        var listWidth: Double?
+        var content: ClientDiagnosticSelectionContent?
         var refreshInFlight = false
         /// Pending and failed ages follow the duration: from the release when it started the interaction.
         var interactionStart: Double { released ?? started }
@@ -273,10 +277,19 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             if action.handler == nil { actions[id]?.released = released }
         }
     }
-    /// The number of rows in the list a selection was made in, for its layout record.
-    public func annotateSelection(_ id: UUID?, listRows: Int?) {
+    /// The list a selection was made in, for its layout record: its rows, the rows realized in its
+    /// visible area, and the window's and the list's widths.
+    public func annotateSelection(_ id: UUID?, listRows: Int?, realizedRows: Int? = nil, windowWidth: Double? = nil, listWidth: Double? = nil) {
         guard let id else { return }
-        lock.withLock { if actions[id] != nil { actions[id]?.listRows = listRows } }
+        lock.withLock {
+            guard actions[id] != nil else { return }
+            actions[id]?.listRows = listRows; actions[id]?.realizedRows = realizedRows; actions[id]?.windowWidth = windowWidth; actions[id]?.listWidth = listWidth
+        }
+    }
+    /// What a selection opened, as counts, for its layout record.
+    public func annotateSelection(_ id: UUID?, content: ClientDiagnosticSelectionContent?) {
+        guard let id, let content else { return }
+        lock.withLock { if actions[id] != nil { actions[id]?.content = content } }
     }
     /// Milliseconds since this process started, from the kernel's process start time.
     static let processStartEpochMS: Double? = {
@@ -326,7 +339,8 @@ public final class ClientDiagnosticsRecorder: @unchecked Sendable {
             record.actionPhases = .init(inputQueueMS: action.observedInput ? handler - start : nil, handlerWallMS: publication - handler, requestUnionMS: requests.values.contains(where: { $0.action == id }) ? nil : Self.union(action.requests), publicationToLayoutMS: now - publication, holdMS: action.holdMS)
             if action.key.category == .taskSelection || action.key.category == .keyboardSelection {
                 record.selectionContext = .init(releaseSource: action.releaseSource, listRows: action.listRows, refreshInFlight: action.refreshInFlight || !refreshCounts.isEmpty,
-                                                processUptimeMS: Self.processUptimeMS(), journalFileBytes: journalFileBytes, journalBytesWritten: journalBytesWritten)
+                                                processUptimeMS: Self.processUptimeMS(), journalFileBytes: journalFileBytes, journalBytesWritten: journalBytesWritten,
+                                                realizedRows: action.realizedRows, windowWidth: action.windowWidth, listWidth: action.listWidth, content: action.content)
             }
             appendLocked(record)
         }

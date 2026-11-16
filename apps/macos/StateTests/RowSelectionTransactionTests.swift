@@ -193,4 +193,45 @@ extension MainThreadExclusive { @MainActor @Suite(.serialized) struct RowSelecti
         #expect(model.personInput.count > before)
         #expect(between == 0, "run-loop turns between the handler's start and the editor's publication: \(between)")
     }
+
+    /// The journal's selection context (follow-up 80, what the owner's journal lacked to compare with
+    /// the harness): the list's realized rows and the window's and the list's widths at the input, and
+    /// the opened Task as counts with whether the inspector was open. Metadata only: the record names
+    /// no Task, title, Tag or description text.
+    @Test func aSelectionsLayoutRecordCarriesTheListAndTheTaskAsCounts() async throws {
+        let (room, outline, recorder, journal) = try await recordedRoom { model in
+            // t003 follows t000 in the P1 group: three Tags, two Dependencies each way, one Attachment.
+            var rich = model.tasks[3]
+            rich = TaskSnapshot(id: rich.id, profile_id: rich.profile_id, row_version: 1, title: rich.title, description: "Agreed on Monday; the copy is left.", priority: "P1", source: "manual",
+                                status: "open", project_id: nil, tags: ["focus", "review", "ops"], due_at: nil, scheduled_at: nil, energy: 2, estimate_min: 30, occurrence: nil, legacy_series_detached: nil, deleted_at: nil)
+            rich.depends_on = ["t006", "t009"]; rich.blocks = ["t012", "t015"]
+            rich.attachments = [AttachmentSnapshot(id: "a1", location: .file("spec.pdf"), name: "spec.pdf", byte_size: 10, label: nil, added_at: "2026-11-16T00:00:00Z")]
+            model.tasks[3] = rich
+        }
+        let model = room.model
+        defer { model.clientDiagnosticsUI.stop(); room.close(); try? FileManager.default.removeItem(at: journal) }
+        model.beginEditing(model.tasks[0]); await room.settle()
+        room.window.makeFirstResponder(outline); await room.settle()
+        let arrow = String(UnicodeScalar(0xF701)!), now = ProcessInfo.processInfo.systemUptime
+        let down = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.numericPad, .function], timestamp: now, windowNumber: room.window.windowNumber, context: nil, characters: arrow, charactersIgnoringModifiers: arrow, isARepeat: false, keyCode: 125)!
+        model.personInput.observe(down)
+        room.window.sendEvent(down)
+        await room.settle()
+        try #require(model.editor?.id == "t003")
+        // The window is off screen, so no layout commit is observed: commit the selection's by hand,
+        // as ClientDiagnosticsTests does; its fields come from the monitor and the list's handler.
+        let action = try #require(model.clientDiagnosticsUI.selectionAction)
+        recorder.layoutCommitted(action)
+        let record = try #require((await recorder.snapshot()).recent.last { $0.name == .layoutCommitted && $0.actionID == action }, "no layout record for the selection")
+        let context = try #require(record.selectionContext)
+        #expect(context.content == ClientDiagnosticSelectionContent(inspectorOpen: true, tagCount: 3, dependsOnCount: 2, blocksCount: 2, attachmentCount: 1, descriptionLength: 35))
+        #expect((context.realizedRows ?? 0) > 0 && (context.realizedRows ?? 0) <= (context.listRows ?? 0), "realized \(String(describing: context.realizedRows)) of \(String(describing: context.listRows))")
+        #expect(context.windowWidth == Double(room.window.frame.width))
+        // The list's column: the window less the sidebar and the inspector (its scroll view's insets).
+        let insets = try #require(outline.enclosingScrollView?.contentInsets)
+        #expect(context.listWidth == Double(room.window.frame.width - insets.left - insets.right), "list \(String(describing: context.listWidth)) in a window of \(room.window.frame.width)")
+        #expect((context.listWidth ?? .infinity) < Double(room.window.frame.width))
+        let text = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
+        for secret in ["t003", "Review the long", "focus", "Agreed on Monday", "spec.pdf"] { #expect(!text.contains(secret), "the record names \(secret)") }
+    }
 } }

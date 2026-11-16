@@ -378,6 +378,29 @@ public struct ClientDiagnosticSelectionContext: Codable, Sendable {
     /// Size of the current journal file as last written, and bytes this process has written.
     public var journalFileBytes: Int
     public var journalBytesWritten: Int
+    /// The list's geometry at the input (follow-up 80): rows realized in its visible area, and the
+    /// window's width and the list's own width in points (its scroll view runs under the sidebar and
+    /// the inspector, so the list's frame, not its visible rect). Absent in journals written before them.
+    public var realizedRows: Int?
+    public var windowWidth: Double?
+    public var listWidth: Double?
+    /// What the selection opened, as metadata only (never a title, an id or any text).
+    public var content: ClientDiagnosticSelectionContent?
+}
+/// The selected Task as counts, and whether the inspector was open when the selection was handled.
+public struct ClientDiagnosticSelectionContent: Codable, Sendable, Equatable {
+    public var inspectorOpen: Bool
+    public var tagCount: Int
+    /// The Tasks it depends on, and the Tasks that depend on it.
+    public var dependsOnCount: Int
+    public var blocksCount: Int
+    public var attachmentCount: Int
+    /// The description's length in characters; 0 without one.
+    public var descriptionLength: Int
+    public init(inspectorOpen: Bool, tagCount: Int, dependsOnCount: Int, blocksCount: Int, attachmentCount: Int, descriptionLength: Int) {
+        self.inspectorOpen = inspectorOpen; self.tagCount = tagCount; self.dependsOnCount = dependsOnCount; self.blocksCount = blocksCount
+        self.attachmentCount = attachmentCount; self.descriptionLength = descriptionLength
+    }
 }
 /// What happened on screen without being an action, counted passively and coalesced: at most one
 /// record a second, none while nothing happens. Hover is not observed: it would need mouse-moved

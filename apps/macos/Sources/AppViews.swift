@@ -780,8 +780,9 @@ struct TaskListView: View {
                     .environment(\.defaultMinListRowHeight, compactMode ? 4 : minimumRowHeight)
                     .modifier(WholeTaskRows(enabled: compactMode && model.selectedView == "all"))
                     .onChange(of: selection) { old, id in
-                        if let id { model.clientDiagnosticsUI.selected(id); model.notePersonActed() }
-                        if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
+                        let selected = visibleTasks.first(where: { $0.id == id })
+                        if let id { model.clientDiagnosticsUI.selected(id, content: selected.map { .init($0, inspectorOpen: model.editor != nil) }); model.notePersonActed() }
+                        if let task = selected, model.editor?.id != id {
                             // Follow-up 80, change 1: a clean editor opens the selected Task in this
                             // transaction, so the selection and the inspector render once together.
                             // Unsaved changes, busy or an open question go through navigate as before.

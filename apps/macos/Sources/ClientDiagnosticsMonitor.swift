@@ -251,6 +251,12 @@ struct ClientDiagnosticInputReceipt {
         while let candidate = current { if let table = candidate as? NSTableView { return table }; current = candidate.superview }
         return nil
     }
+    /// The list's rows, its realized rows and the window's and the list's widths, for a selection's record.
+    private func annotate(_ id: UUID, _ table: NSTableView?) {
+        let realized = table.map { $0.rows(in: $0.visibleRect).length }
+        recorder.annotateSelection(id, listRows: table?.numberOfRows, realizedRows: realized, windowWidth: (table?.window?.frame.width).map(Double.init),
+                                   listWidth: (table?.frame.width).map(Double.init))
+    }
     func input(_ event: NSEvent) {
         guard recorder.isOwnerSession else { return }
         if event.type == .leftMouseUp {
@@ -292,7 +298,7 @@ struct ClientDiagnosticInputReceipt {
                 if let id = begin(.taskSelection, surface: .inspector, identity: task, startHandler: false) {
                     selection = (id, task)
                     nativeSelection = NativeSelectionTrace(action: id, scope: recorder.scopeToken, kind: .pointer, table: table(view))
-                    recorder.annotateSelection(id, listRows: table(view)?.numberOfRows)
+                    annotate(id, table(view))
                 }
                 if hasSurface(.inspector, identity: task) { selected(task) }
                 return
@@ -312,7 +318,7 @@ struct ClientDiagnosticInputReceipt {
             if let id = begin(.keyboardSelection, surface: .inspector, startHandler: false) {
                 selection = (id, nil)
                 nativeSelection = NativeSelectionTrace(action: id, scope: recorder.scopeToken, kind: .keyboard, table: table)
-                recorder.annotateSelection(id, listRows: table.numberOfRows)
+                annotate(id, table)
             }
         }
     }
@@ -360,10 +366,12 @@ struct ClientDiagnosticInputReceipt {
         if startHandler { recorder.handlerStarted(id) }
         return id
     }
-    func selected(_ task: String) {
+    /// `content`: the selected Task as counts (see ClientDiagnosticSelectionContent).
+    func selected(_ task: String, content: ClientDiagnosticSelectionContent? = nil) {
         if selection == nil, lastInputScope == recorder.scopeToken, let input = lastInput, input.kind == .keyboard, input.isRecent(at: ProcessInfo.processInfo.systemUptime * 1000), let id = begin(.keyboardSelection, surface: .inspector, identity: task, startHandler: false) { selection = (id, task) }
         guard let selected = selection, pending[selected.id]?.scope == recorder.scopeToken, selected.task == nil || selected.task == task else { return }
         pending[selected.id]?.identity = task; selection?.task = task
+        recorder.annotateSelection(selected.id, content: content)
         recorder.handlerStarted(selected.id)
         var event = ClientDiagnosticEvent(name: .selectionCommitted, run: recorder.run); event.actionID = selected.id; recorder.record(event, ifScope: pending[selected.id]?.scope)
         if hasSurface(.inspector, identity: task) { publish(selected.id) }
@@ -483,4 +491,12 @@ private struct ClientDiagnosticNativeMarker: NSViewRepresentable {
 /// The watchdog's live generation, confined to the monitor's `watchdogQueue` (MAC-C1-S1-21).
 final class WatchdogGate: @unchecked Sendable {
     var generation = 0
+}
+
+extension ClientDiagnosticSelectionContent {
+    /// Counts only: the Task's title, id, Tags' names and text never leave it.
+    init(_ task: TaskSnapshot, inspectorOpen: Bool) {
+        self.init(inspectorOpen: inspectorOpen, tagCount: task.tags.count, dependsOnCount: task.depends_on?.count ?? 0, blocksCount: task.blocks?.count ?? 0,
+                  attachmentCount: task.attachments?.count ?? 0, descriptionLength: task.description?.count ?? 0)
+    }
 }
