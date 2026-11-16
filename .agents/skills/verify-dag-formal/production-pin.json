@@ -1,5 +1,5 @@
 {
-  "commit": "c55f736208636d1193b9930f794eea65c73cfa99",
+  "commit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -237,6 +237,16 @@
     ],
     "status": "candidate for the seats",
     "scope": "Server seat F1, F2 and F3 on d5af970d (Q14): main.ts rewrites the repair time-zones handler (--keep, --task, --all-profiles from the Profile directory, the plan binding before any Snapshot) and its imports; help.ts rewrites the repair time-zones help entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
+    "changes": []
+  },
+  "q17Moment": {
+    "product": "5436c37a7987b90e57ea0704bcfa7f2c2ba068ff",
+    "pinCommit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
+    "previous": [
+      "c55f736208636d1193b9930f794eea65c73cfa99"
+    ],
+    "status": "candidate for the seats",
+    "scope": "Q17 (the owner, 2026-11-16: always the same moment) on feat/repair-typed-zones: main.ts removes --keep from the repair time-zones handler and shows each value before and after with the plain sentence; help.ts rewrites the repair time-zones entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
     "changes": []
   }
 }

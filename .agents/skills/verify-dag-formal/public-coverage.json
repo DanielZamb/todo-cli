@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "c55f736208636d1193b9930f794eea65c73cfa99",
+  "confirmedCommit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -1431,7 +1431,7 @@
   },
   "q17Moment": {
     "product": "5436c37a7987b90e57ea0704bcfa7f2c2ba068ff",
-    "pinCommit": null,
+    "pinCommit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
     "previous": [
       "c55f736208636d1193b9930f794eea65c73cfa99"
     ],

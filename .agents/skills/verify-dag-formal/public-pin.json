@@ -1,5 +1,5 @@
 {
-  "commit": "c55f736208636d1193b9930f794eea65c73cfa99",
+  "commit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
   "scope": "Integrated clients, two-part public contract amendment and PR12 main. Finite graph bounds and native holds unchanged.",
   "scopes": [
     "packages/domain",
@@ -416,6 +416,27 @@
         "path": "apps/cli/src/help.ts",
         "before": "e381816f49ad53f086d0d35b208ee65a97eed0c51761b08d5526f7a08c9ae6d9",
         "after": "d4a5074055cd3e6a9d20a3cad6ce8df24e025e0f113e8fe076f07b5a673741c7"
+      }
+    ]
+  },
+  "q17Moment": {
+    "product": "5436c37a7987b90e57ea0704bcfa7f2c2ba068ff",
+    "pinCommit": "7ca4da9d1a2a390543a565f84fa515f6c26c9d0c",
+    "previous": [
+      "c55f736208636d1193b9930f794eea65c73cfa99"
+    ],
+    "status": "candidate for the seats",
+    "scope": "Q17 (the owner, 2026-11-16: always the same moment) on feat/repair-typed-zones: main.ts removes --keep from the repair time-zones handler and shows each value before and after with the plain sentence; help.ts rewrites the repair time-zones entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
+    "changes": [
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "041ce361f3b341fc4aea94cbd005dafa534dba45d9dc11b06c8eeb1c7d44712c",
+        "after": "ba82727bab307502ea47e88d5c4a6c700074e49a2ac07dca3f0849a7563aa47a"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "before": "d4a5074055cd3e6a9d20a3cad6ce8df24e025e0f113e8fe076f07b5a673741c7",
+        "after": "25453fd24211c228c20c78745c73654d140b9bcfd40fd323fdbac23cc0816cde"
       }
     ]
   }
