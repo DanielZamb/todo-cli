@@ -176,7 +176,11 @@ struct SignInView: View {
                 .accessibilityIdentifier("passphrase")
                 .onSubmit { signIn() }
             if let error = model.message {
+                // Spoken once per message, as MessageBanner does (UI seat on cfe01e85): a plain Text
+                // was never read, and focus goes to the passphrase field.
                 Text(error).foregroundStyle(TodoColors.color("destructive")).accessibilityIdentifier("sign-in-error")
+                    .onAppear { announceMessage() }
+                    .onChange(of: model.messageSequence) { _, _ in announceMessage() }
             }
             Button(model.busy ? "Connecting…" : "Sign in", action: signIn)
                 .buttonStyle(.borderedProminent).controlSize(.large).disabled(passphrase.isEmpty || model.busy)
@@ -191,6 +195,9 @@ struct SignInView: View {
             .task { focused = true }
     }
 
+    private func announceMessage() {
+        if let text = model.message, model.takeAnnouncement(model.messageSequence) { AccessibilityNotification.Announcement(text).post() }
+    }
     private func signIn() {
         guard !passphrase.isEmpty, !model.busy else { return }
         let secret = passphrase

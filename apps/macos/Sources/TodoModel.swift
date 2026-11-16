@@ -494,10 +494,10 @@ final class TodoModel {
     @ObservationIgnored private(set) var streamLoopWaitingSince: TimeInterval?
     /// How long the stream loop may wait on one operation's refresh before it counts as not reading.
     static let streamLoopReadBound: TimeInterval = 10
-    /// The invariant: whenever `connection` reads live, a stream for the current Profile, credential
-    /// epoch and generation is running, and its loop reads the next frame within
-    /// `streamLoopReadBound` after a refresh it waits on (S1-39: following alone did not catch a loop
-    /// that had stopped reading).
+    /// A check for tests and the liveness gate, read by nothing in the app (it is not what the
+    /// connection indicator shows): a stream for the current Profile, credential epoch and generation
+    /// is running, and its loop reads the next frame within `streamLoopReadBound` after a refresh it
+    /// waits on (S1-39: following alone did not catch a loop that had stopped reading).
     var streamFollowsCurrentProfile: Bool {
         guard followingStream == StreamIdentity(profile: profile, credentialEpoch: discovery.credentialEpoch, generation: generation) else { return false }
         guard let since = streamLoopWaitingSince else { return true }
@@ -2336,6 +2336,10 @@ final class TodoModel {
 
     /// A 401 under the still-current credential ends the Session even if the task that received it
     /// was cancelled meanwhile (a reply already on its way); retiring a credential changes the epoch.
+    /// What the sign-in screen says when the server ended the Session (UI seat's final text).
+    static func sessionEndedMessage(lostDraft: String?) -> String {
+        lostDraft.map { "Your Session ended. Unsaved changes to \u{201C}\($0)\u{201D} were lost. Sign in again." } ?? "Your Session ended. Sign in again."
+    }
     private func expireSession(credentialEpoch: Int) {
         guard isCurrentEpoch(credentialEpoch) else { return }
         // This close cannot ask: the Session is gone, and the draft cannot be saved under another
@@ -2352,7 +2356,7 @@ final class TodoModel {
         catalogStale = true
         searchError = nil
         searchPhase = .idle
-        publishMessage("Your Session ended. Sign in again." + (lostDraft.map { " Unsaved changes to \u{201C}\($0)\u{201D} were lost when the Session ended." } ?? ""), kind: .sessionEnded)
+        publishMessage(Self.sessionEndedMessage(lostDraft: lostDraft), kind: .sessionEnded)
     }
 
     func checkServerContract() async throws -> Bool {

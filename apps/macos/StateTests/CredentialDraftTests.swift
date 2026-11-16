@@ -46,7 +46,7 @@ private actor Recorder: ClientTransport {
         #expect(!model.signedIn)
         #expect(model.editor == nil)
         #expect(model.pendingNavigation == nil)
-        #expect(model.message == "Your Session ended. Sign in again. Unsaved changes to \u{201C}Ship the launch notes\u{201D} were lost when the Session ended.")
+        #expect(model.message == "Your Session ended. Unsaved changes to \u{201C}Ship the launch notes\u{201D} were lost. Sign in again.")
         signInAgain(model)
         #expect(model.editor == nil)
         #expect(await model.saveAndNavigate(.close(.person)) == false)
