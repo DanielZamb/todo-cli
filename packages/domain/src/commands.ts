@@ -112,13 +112,44 @@ export const taskFlags = Schema.Struct({
   tag: Schema.optionalKey(Schema.Array(Schema.String)),
 });
 export type TaskFlags = typeof taskFlags.Type;
+/** A refused value as a message shows it: the first 64 characters (server seat, follow-up 86). */
+const echo = (value: string) =>
+  value.length > 64 ? `${value.slice(0, 64)}…` : value;
+const wallTime = (zoned: Temporal.ZonedDateTime) =>
+  zoned.toString({ timeZoneName: "never", smallestUnit: "second" });
+/**
+ * A local time a daylight-saving change skips or repeats in `zone`, refused with the zone's own
+ * offsets at that wall time (server seat F2): for a repeated time both readings, each a complete
+ * value to paste; for a skipped one the nearest times that exist on both sides of the gap.
+ */
+const ambiguousLocalTime = (
+  value: string,
+  local: Temporal.PlainDateTime,
+  zone: string,
+) => {
+  const earlier = local.toZonedDateTime(zone, { disambiguation: "earlier" });
+  const later = local.toZonedDateTime(zone, { disambiguation: "later" });
+  const day = local.toPlainDate().toString();
+  if (!earlier.toPlainDateTime().equals(local)) {
+    const transition = earlier.getTimeZoneTransition("next");
+    const after = transition?.withTimeZone(zone);
+    return invalid(
+      after
+        ? `${echo(value)} does not exist in ${zone}: a daylight-saving change skips it on ${day}. The nearest times that exist are ${wallTime(after.subtract({ minutes: 1 }))} and ${wallTime(after)}.`
+        : `${echo(value)} does not exist in ${zone} on ${day}.`,
+    );
+  }
+  return invalid(
+    `${echo(value)} occurs twice in ${zone}: a daylight-saving change repeats it on ${day}. Type the one you mean: ${wallTime(earlier)} (the first) or ${wallTime(later)} (the second).`,
+  );
+};
 /**
  * A time typed as text, resolved as ADR-0006 stores instants: in UTC together with the IANA zone
  * the person meant (follow-up 86). `zone` is the zone of the machine where the text was typed.
  * - A date (`YYYY-MM-DD`, `MM/DD/YYYY`) is a calendar date.
  * - A local time (`YYYY-MM-DD HH[:MM]`, `MM/DD/YYYY HH[:MM]`) is that wall-clock time in `zone`.
  *   One that does not exist there or exists twice (a daylight-saving change) is refused, as
- *   quick-add refuses it; an offset says which is meant.
+ *   quick-add refuses it, naming the zone's own offsets for it.
  * - A time with `Z` or an offset keeps its instant.
  * - Both are stored with `zone`: never UTC by default, never a zone made up from an offset.
  * - RFC 9557 text with a bracketed zone (`2026-11-16T21:00:00-05:00[America/Bogota]`, what the
@@ -149,7 +180,10 @@ export function parseTime(input: string, zone: string): TaskTime | null {
   const bracketed = /^\d{4}-\d{2}-\d{2}T[^[\]]+\[([^[\]]+)\]$/.exec(normalized);
   if (bracketed) {
     if (!Schema.is(TimeZoneId)(bracketed[1]))
-      throw invalid(`unknown time zone: ${bracketed[1]}`);
+      throw invalid(`unknown time zone: ${echo(bracketed[1] ?? "")}`);
+    // A 60th second is refused here as in the offset form (Temporal would read it as :59).
+    if (/T\d{2}:\d{2}:60/.test(normalized))
+      throw invalid(`invalid datetime format: ${echo(value)}`);
     let zoned: Temporal.ZonedDateTime;
     try {
       zoned = Temporal.ZonedDateTime.from(normalized, {
@@ -158,14 +192,15 @@ export function parseTime(input: string, zone: string): TaskTime | null {
         overflow: "reject",
       });
     } catch {
-      throw invalid(`invalid datetime format: ${value}`);
+      throw invalid(`invalid datetime format: ${echo(value)}`);
     }
     return instant(
       new Date(zoned.epochMilliseconds).toISOString(),
       zoned.timeZoneId,
     );
   }
-  if (!Schema.is(TimeZoneId)(zone)) throw invalid(`unknown time zone: ${zone}`);
+  if (!Schema.is(TimeZoneId)(zone))
+    throw invalid(`unknown time zone: ${echo(zone)}`);
   const human = /^(\d{4}-\d{2}-\d{2}) (\d{2})(?::(\d{2}))?$/.exec(normalized);
   if (human) {
     let local: Temporal.PlainDateTime;
@@ -175,15 +210,13 @@ export function parseTime(input: string, zone: string): TaskTime | null {
         { overflow: "reject" },
       );
     } catch {
-      throw invalid(`invalid datetime format: ${value}`);
+      throw invalid(`invalid datetime format: ${echo(value)}`);
     }
     let zoned: Temporal.ZonedDateTime;
     try {
       zoned = local.toZonedDateTime(zone, { disambiguation: "reject" });
     } catch {
-      throw invalid(
-        `${value} does not exist or occurs twice in ${zone} (a daylight-saving change); add the offset you mean, for example ${human[1]}T${human[2]}:${human[3] ?? "00"}:00-05:00`,
-      );
+      throw ambiguousLocalTime(value, local, zone);
     }
     return instant(new Date(zoned.epochMilliseconds).toISOString(), zone);
   }
@@ -194,28 +227,37 @@ export function parseTime(input: string, zone: string): TaskTime | null {
     !Schema.is(CalendarDate)(normalized.slice(0, 10)) ||
     !Number.isFinite(Date.parse(normalized))
   )
-    throw invalid(`invalid datetime format: ${value}`);
+    throw invalid(`invalid datetime format: ${echo(value)}`);
   return instant(new Date(normalized).toISOString(), zone);
 }
 /**
  * The text the CLI passes on for a typed time: a time becomes RFC 9557 text carrying the zone it
- * resolved in, so a server that parses a routed command never falls back to its own zone. A date,
- * an empty value or text parseTime refuses is passed on unchanged (parseTime refuses it again,
- * with the same error, where it is applied).
+ * resolved in, so a server that parses a routed command never falls back to its own zone. A date
+ * and an empty value pass on unchanged. Anything parseTime refuses is refused here, in the typing
+ * process, before any write or routing (server seat F1): passed on raw, another process's zone
+ * could accept it.
  */
 export function resolveTypedTime(input: string, zone: string): string {
-  let time: TaskTime | null;
-  try {
-    time = parseTime(input, zone);
-  } catch {
-    return input;
-  }
+  const time = parseTime(input, zone);
   return time?.kind === "instant"
     ? Temporal.Instant.from(time.utc)
         .toZonedDateTimeISO(time.time_zone)
         .toString()
     : input;
 }
+/** The typed --due and --scheduled of a command's flags, resolved by resolveTypedTime. */
+export const resolveTaskFlagTimes = (
+  flags: TaskFlags,
+  zone: string,
+): TaskFlags => ({
+  ...flags,
+  ...(flags.due === undefined
+    ? {}
+    : { due: resolveTypedTime(flags.due, zone) }),
+  ...(flags.scheduled === undefined
+    ? {}
+    : { scheduled: resolveTypedTime(flags.scheduled, zone) }),
+});
 const numberValue = (value: string) => {
   if (value === "") return null;
   if (!/^-?\d+$/.test(value)) throw invalid(`invalid integer: ${value}`);

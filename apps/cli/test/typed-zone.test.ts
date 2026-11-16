@@ -179,8 +179,8 @@ it("edit reads a typed time in the machine's zone; a skipped or repeated local t
       }
     ).message;
   expect([refused("2026-03-08 02:30"), refused("2026-11-01 01:30")]).toEqual([
-    "2026-03-08 02:30 does not exist or occurs twice in America/New_York (a daylight-saving change); add the offset you mean, for example 2026-03-08T02:30:00-05:00",
-    "2026-11-01 01:30 does not exist or occurs twice in America/New_York (a daylight-saving change); add the offset you mean, for example 2026-11-01T01:30:00-05:00",
+    "2026-03-08 02:30 does not exist in America/New_York: a daylight-saving change skips it on 2026-03-08. The nearest times that exist are 2026-03-08T01:59:00-05:00 and 2026-03-08T03:00:00-04:00.",
+    "2026-11-01 01:30 occurs twice in America/New_York: a daylight-saving change repeats it on 2026-11-01. Type the one you mean: 2026-11-01T01:30:00-04:00 (the first) or 2026-11-01T01:30:00-05:00 (the second).",
   ]);
 });
 
