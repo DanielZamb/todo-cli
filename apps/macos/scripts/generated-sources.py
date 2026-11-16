@@ -34,7 +34,9 @@ def sha(path: Path) -> str:
 def observed() -> dict:
     return {
         'document': {'path': str(document.relative_to(root)), 'sha256': sha(document)},
-        'generated': {path.name: sha(path) for path in sorted(generated.glob('*.swift'))},
+        # Recursive: SwiftPM compiles subfolders too (server seat N8). The key is the path under
+        # GeneratedSources, which is the bare name for the files generate-api.sh writes today.
+        'generated': {str(path.relative_to(generated)): sha(path) for path in sorted(generated.rglob('*.swift'))},
     }
 
 
