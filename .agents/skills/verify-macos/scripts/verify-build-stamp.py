@@ -37,13 +37,20 @@ if sequence and os.environ.get('BUILD_STAMP_CONTROL_COPY') != '1':
     os.execve(sys.executable, [sys.executable, str(copy), *sys.argv[1:]], dict(os.environ, BUILD_STAMP_CONTROL_COPY='1'))
 
 evidence.mkdir(parents=True, exist_ok=False)
-sys.path.insert(0, str(ROOT / 'apps/macos/scripts'))
-import state_package
+
+
+def load_state_package():
+    """The checkout's state_package.py as it is now (the sequence switches commits first)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('state_package_now', ROOT / 'apps/macos/scripts/state_package.py')
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
 
 steps, result = [], dict(passed=False)
 
 
 def mechanics():
+    state_package = load_state_package()
     scratch = Path(tempfile.mkdtemp(prefix='build-stamp-control-'))
     try:
         package = scratch / 'package'
@@ -122,6 +129,7 @@ def run_sequence(before, after):
         a = stress('A-before-the-rule')
         assert a['exit'] == 0 and a['passed'], a
         git('switch', '-q', '--detach', after)
+        mechanics()
         b1 = stress('B1-after-unstamped-folder')
         assert b1['exit'] == 0 and b1['passed'] and b1['removedFolder'], b1
         b2 = stress('B2-after-same-head')
@@ -131,9 +139,10 @@ def run_sequence(before, after):
 
 
 try:
-    mechanics()
     if sequence:
         run_sequence(sequence[1], sequence[2])
+    else:
+        mechanics()
     result = dict(passed=True)
 finally:
     result.update(steps=steps, appLaunched=False, keychain='no Keychain: state_package.py guards every build')
