@@ -20,7 +20,7 @@ import {
 } from "node:path";
 import { BunServices } from "@effect/platform-bun";
 import { BUILD_ID, CONTRACT_ID } from "@todo/api";
-import type { AuthorizedOwnerRead } from "@todo/domain";
+import type { AuthorizedOwnerRead, Series, Task } from "@todo/domain";
 import {
   type AccessRequest,
   AttachManyItem,
@@ -107,6 +107,14 @@ import {
   TaskResponse,
   taskView,
 } from "@todo/domain/presentation";
+import {
+  applyTimeZoneRepair,
+  pendingRepairs,
+  planTimeZoneRepair,
+  readRepairInput,
+  TimeZoneRepairPlan,
+  TimeZoneRepairReport,
+} from "@todo/domain/repair-time-zones";
 import { type OperationStore, openStore, StoreError } from "@todo/domain/store";
 import { Console, Effect, Option, Redacted, Schema, Struct } from "effect";
 import { Argument, CliError, Command, Flag, Prompt } from "effect/cli";
@@ -2561,12 +2569,156 @@ function snapshotUse<S extends Schema.ConstraintEncoder<unknown>>(
     );
   });
 }
+// Q14 (the owner, 2026-11-16): a one-time maintenance repair, not a capability (ADR-0009's
+// amendment of the same day). Due and scheduled times the CLI stored with the zone UTC before
+// follow-up 86 get this machine's zone; each instant stays the same. The dry run writes nothing
+// and its JSON is the plan; the run applies exactly that plan, after a Snapshot, one ordinary
+// edit per Task with the Version the dry run read.
+const repairTimeZones = Command.make(
+  "time-zones",
+  {
+    dryRun: bool("dry-run"),
+    plan: stringFlag("plan").pipe(Flag.optional),
+    includeClosed: bool("include-closed"),
+    allProfiles: bool("all-profiles"),
+  },
+  (input) =>
+    Effect.gen(function* () {
+      const cfg = yield* root;
+      const zone = processTimeZone();
+      if (input.dryRun === Option.isSome(input.plan))
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            "Pass --dry-run to see what would change, or --plan <file> with the dry run's JSON to apply it. Read the dry run before the run.",
+          ),
+        );
+      if (input.dryRun) {
+        if (Option.isSome(input.plan)) return;
+        return yield* withStore(
+          cfg,
+          "read",
+          (store) =>
+            Effect.gen(function* () {
+              const credential = yield* io(() => loadCredential(cfg));
+              yield* store.auth.requireOwner({ credential });
+              const request = yield* selectProfile(store, cfg, "read");
+              const first = yield* readRepairInput(store, request);
+              const profiles = input.allProfiles
+                ? first.profiles.map((profile) => profile.id)
+                : [request.profile];
+              const tasks: Task[] = [];
+              const series: Series[] = [];
+              for (const profile of profiles) {
+                const data =
+                  profile === request.profile
+                    ? first
+                    : yield* readRepairInput(store, { credential, profile });
+                tasks.push(...data.tasks);
+                series.push(...data.series);
+              }
+              const planned = yield* io(() =>
+                planTimeZoneRepair({
+                  tasks,
+                  series,
+                  zone,
+                  includeClosed: input.includeClosed,
+                }),
+              );
+              const plan = {
+                generated_at: iso(nowInstant()),
+                dry_run: true as const,
+                profiles,
+                include_closed: input.includeClosed,
+                ...planned,
+              };
+              yield* response(
+                cfg.format,
+                TimeZoneRepairPlan,
+                plan,
+                `# Dry run: repair time zones\n\nThis machine's time zone: ${plan.time_zone}. Nothing was written.\n\n${plan.items.map((item) => `- ${item.task_id} ${item.field} ${item.utc}: UTC -> ${item.to_zone}, day ${item.day_before} -> ${item.day_after} (${item.title})`).join("\n")}${plan.items.length ? "\n\n" : ""}Would change ${plan.totals.values} value(s) on ${plan.totals.tasks} Task(s). Not changed: ${plan.totals.not_changed} (closed Tasks without --include-closed, Series templates). Save this dry run with --format json and pass it to --plan to apply it.\n`,
+              );
+            }),
+          { writing: false },
+        );
+      }
+      const file = Option.getOrElse(input.plan, () => "");
+      const plan = yield* Effect.try({
+        try: () =>
+          Schema.decodeUnknownSync(TimeZoneRepairPlan, {
+            onExcessProperty: "error",
+          })(JSON.parse(readFileSync(file === "-" ? 0 : file, "utf8"))),
+        catch: (error) =>
+          new CommandError(
+            2,
+            "invalid_args",
+            `Cannot read the plan. Pass the JSON of todo repair time-zones --dry-run --format json. ${String(error)}`,
+          ),
+      });
+      if (plan.time_zone !== zone)
+        return yield* Effect.fail(
+          new CommandError(
+            2,
+            "invalid_args",
+            `The plan was made for the time zone ${plan.time_zone}; this machine's is ${zone}. Make a new dry run here.`,
+          ),
+        );
+      yield* withStore(cfg, "mutate", (store) =>
+        Effect.gen(function* () {
+          const credential = yield* io(() => loadCredential(cfg));
+          yield* store.auth.requireOwner({ credential });
+          const current = new Map<string, Task>();
+          for (const profile of new Set(
+            plan.items.map((item) => item.profile_id),
+          ))
+            for (const task of (yield* readRepairInput(store, {
+              credential,
+              profile,
+            })).tasks)
+              current.set(`${task.profile_id}/${task.id}`, task);
+          // A Snapshot first (ADR-0012), and only when something is left to write: a plan already
+          // applied writes nothing at all.
+          const snapshot = pendingRepairs(plan, current).length
+            ? yield* store.snapshots.create("repair time-zones")
+            : null;
+          const applied = yield* applyTimeZoneRepair(
+            store,
+            credential,
+            plan,
+            current,
+          );
+          const report = {
+            generated_at: iso(nowInstant()),
+            dry_run: false as const,
+            time_zone: plan.time_zone,
+            snapshot_id: snapshot?.id ?? null,
+            ...applied,
+          };
+          yield* response(
+            cfg.format,
+            TimeZoneRepairReport,
+            report,
+            `# Repair time zones\n\n${snapshot ? `Snapshot taken first: ${snapshot.id}` : "Nothing left to change; no Snapshot taken."}\n\n${report.items.map((item) => `- ${item.task_id} ${item.field}: ${item.outcome}${item.outcome === "conflict" ? ` (the Task changed since the dry run; current Version ${item.current_version})` : ""}`).join("\n")}${report.items.length ? "\n\n" : ""}Changed ${report.totals.changed}, already repaired ${report.totals.already_repaired}, Conflict ${report.totals.conflict}, not found ${report.totals.not_found}, rejected ${report.totals.rejected}. Each change is one History entry; undo one with todo revert.\n`,
+          );
+          if (report.totals.conflict) process.exitCode = 4;
+          else if (report.totals.not_found) process.exitCode = 3;
+          else if (report.totals.rejected) process.exitCode = 2;
+        }),
+      );
+    }),
+).pipe(withGuide("repair time-zones"));
+const repairCommand = Command.make("repair").pipe(
+  Command.withSubcommands([repairTimeZones]),
+  withGuide("repair"),
+);
 const app = root.pipe(
   Command.withSubcommands([
     diagnostics,
     top,
     schema,
     snapshotCommand,
+    repairCommand,
     init,
     login,
     logout,

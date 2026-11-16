@@ -750,6 +750,36 @@ const guides = {
       "json returns generated_at with the subcommand's report. md prints the same report.",
     concurrency: "Snapshots do not change Task Versions.",
   }),
+  repair: reference({
+    purpose:
+      "One-time maintenance repairs of stored data. Each change is an ordinary Task edit with its own History entry.",
+    synopsis: "todo repair <time-zones>",
+    flags: [],
+    examples: ["todo repair time-zones --dry-run"],
+    auth: "Requires the owner Session.",
+    output: "json returns generated_at with the subcommand's report.",
+  }),
+  "repair time-zones": reference({
+    purpose:
+      "Give each due date and scheduled time stored with the time zone UTC this machine's time zone. The instant stays the same; the calendar day it falls on follows the new zone. Before follow-up 86 the CLI stored a typed time with the zone UTC. First run --dry-run --format json and read it; it writes nothing. Then pass that file to --plan: the run takes a Snapshot, then edits each Task once with the Version the dry run read. A Task changed since the dry run is a Conflict and is skipped, never forced. Each change can be undone with todo revert. Running the same plan again changes nothing.",
+    synopsis:
+      "todo repair time-zones (--dry-run | --plan <file>) [--include-closed] [--all-profiles]",
+    flags: [
+      "--dry-run (write nothing; print the plan)",
+      "--plan <file> (the dry run's JSON; - reads stdin)",
+      "--include-closed (also done and cancelled Tasks; default open and snoozed only)",
+      "--all-profiles (every Profile; default the selected Profile)",
+    ],
+    examples: [
+      "todo repair time-zones --dry-run --format json > plan.json",
+      "todo repair time-zones --plan plan.json --format json",
+    ],
+    auth: "Requires the owner Session. Each edit is authorized as todo edit is.",
+    output:
+      "json returns, per value, the Task id, the field, the instant, the old and new time zone and the day before and after, then totals. The run adds the Snapshot id and each value's outcome: changed, already_repaired, conflict, not_found or rejected. Exit 4 when a Conflict skipped a Task.",
+    concurrency:
+      "The dry run writes nothing. The run edits each Task with the Version the dry run read and changes its Version as an edit does.",
+  }),
   "snapshot create": reference({
     purpose: "Create a Snapshot of the whole Todo database now.",
     synopsis: "todo snapshot create [--reason <text>]",
