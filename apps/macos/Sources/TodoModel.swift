@@ -737,6 +737,10 @@ final class TodoModel {
         guard !busy else { return }
         if hasUnsavedEditor {
             if pendingNavigation == nil { pendingNavigation = .signOut }
+            else if case .signOut? = pendingNavigation {} // its own question is already up
+            // Another question is up (MAC-C11-S1-18, follow-up 95): it stays, nothing is sent, and the
+            // person is told, in the words used for a status change in the same state.
+            else { let text = Self.answerTheQuestionFirst(editor?.base.title ?? ""); publishNotice(text, seconds: 6); announce(text) }
             return
         }
         await performSignOut()
