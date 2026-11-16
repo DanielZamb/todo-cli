@@ -17,7 +17,7 @@ extension MainThreadExclusive { @MainActor @Suite(.serialized) struct SignInAnno
         await room.settle()
         #expect(!model.signedIn)
         #expect(model.message == "Your Session ended. Unsaved changes to \u{201C}Review the long launch checklist with the whole team 3\u{201D} were lost. Sign in again.")
-        // The view took this message's announcement; a second take is refused.
-        #expect(model.takeAnnouncement(model.messageSequence) == false, "the sign-in screen did not announce its message")
+        // The sign-in screen spoke this message.
+        #expect(model.lastSpokenMessage == model.message, "the sign-in screen did not announce its message")
     }
 } }

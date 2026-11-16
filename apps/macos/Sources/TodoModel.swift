@@ -300,6 +300,14 @@ final class TodoModel {
         return true
     }
     @ObservationIgnored private var lastAnnouncedMessage = 0
+    /// The sign-in screen's message, spoken once per message (UI seat on cfe01e85).
+    func announceMessageOnce() {
+        guard let text = message, takeAnnouncement(messageSequence) else { return }
+        lastSpokenMessage = text
+        announce(text)
+    }
+    /// What `announceMessageOnce` last spoke, for tests.
+    @ObservationIgnored private(set) var lastSpokenMessage: String?
     /// The person dismissed the message numbered `sequence` (the one the banner showed). Like the
     /// other ends, it ends that message and nothing newer.
     func dismissMessage(_ sequence: Int) { if message != nil, messageSequence == sequence { message = nil } }
