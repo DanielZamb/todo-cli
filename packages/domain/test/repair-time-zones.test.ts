@@ -188,7 +188,10 @@ const plan = () =>
     ),
   );
 const current = new Map(tasks.map((t) => [`${t.profile_id}/${t.id}`, t]));
-const check = (edit: (p: ReturnType<typeof plan>) => unknown) => {
+type Editable = { items: Record<string, unknown>[] };
+const at = (p: Editable, index: number) =>
+  p.items[index] as Record<string, unknown>;
+const check = (edit: (p: Editable) => unknown) => {
   const edited = JSON.parse(JSON.stringify(plan()));
   edit(edited);
   return checkPlan(
@@ -204,20 +207,20 @@ it("accepts the plan a dry run made, and refuses every edited one, naming the fi
     check(() => {}),
     // The seat's four edited plans.
     check((p) => {
-      p.items[0].utc = "2026-11-16T22:00:00.000Z";
+      at(p, 0).utc = "2026-11-16T22:00:00.000Z";
     }),
     check((p) => {
-      p.items[0].to_zone = "Asia/Tokyo";
+      at(p, 0).to_zone = "Asia/Tokyo";
     }),
     check((p) => {
       p.items.push({
-        ...p.items[0],
+        ...at(p, 0),
         task_id: "already",
         utc: "2030-01-01T00:00:00.000Z",
       });
     }),
     check((p) => {
-      p.items.push({ ...p.items[0], task_id: "dated", field: "scheduled_at" });
+      p.items.push({ ...at(p, 0), task_id: "dated", field: "scheduled_at" });
     }),
     // Reordered, truncated, from another database, a shown time edited.
     check((p) => {
@@ -227,10 +230,10 @@ it("accepts the plan a dry run made, and refuses every edited one, naming the fi
       p.items.pop();
     }),
     check((p) => {
-      for (const item of p.items) item.task_id = `other-${item.task_id}`;
+      for (const entry of p.items) entry.task_id = `other-${entry.task_id}`;
     }),
     check((p) => {
-      p.items[1].shown_after = "2026-11-17 01:30";
+      at(p, 1).shown_after = "2026-11-17 01:30";
     }),
   ]).toEqual([
     null,
