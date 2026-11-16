@@ -192,6 +192,8 @@ with scratch_directory() as temporary:
         # No test run links or calls the Keychain: build the mirrored package (in-memory vault),
         # check its products, then run them (coordinator ruling, 2026-11-13).
         package = state_package.prepare()
+        # Follow-up 91: never build in a folder that has seen another source tree.
+        (evidence / 'build-stamp.json').write_text(json.dumps(state_package.fresh_build_folder(build_path, package), indent=2) + '\n')
         run(['swift', 'build', '--build-tests', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution'], 'state-build.log')
         keychain = state_package.checked(build_path, evidence / 'keychain-guard.json')
         run(['swift', 'test', '--no-parallel', '--jobs', '2', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution'] + (['--filter', 'snapshotListCreateConfirmationRestoreAndReloadAgainstScratchServer|generatedSnapshotRestoreCodingKeepsLiteralReportAndDryRun|snapshotHumanReasonsAndTaskPluralization|snapshotReloadResetsAndScopesReminderReceipts|snapshotHistoryIncludesEveryEventKindWithoutAnyOfRecursion'] if snapshots_only else []), 'state-tests.log', test_env)

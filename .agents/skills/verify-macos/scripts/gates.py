@@ -41,7 +41,7 @@ import state_package
 head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
 # MAC-C1-S1-31: anything that would change the tested sources or binaries under the head's name is
 # refused before the evidence folder exists (see the header).
-REFUSED = ('STATE_PACKAGE_OVERRIDE_DIR', 'SIGN_OUT_STREAM_TEST_OVERRIDE', 'SIGN_OUT_STREAM_ONLY', 'SEC_SEARCH_RECOVERY_SEED')
+REFUSED = ('STATE_PACKAGE_OVERRIDE_DIR', 'SIGN_OUT_STREAM_TEST_OVERRIDE', 'SIGN_OUT_STREAM_ONLY', 'SEC_SEARCH_RECOVERY_SEED', 'STATE_PACKAGE_INCREMENTAL')
 REFUSED_PREFIXES = ('DAG_F_', 'PROBE_')
 overrides = {'refusedIfSet': list(REFUSED), 'refusedPrefixes': list(REFUSED_PREFIXES),
              'set': {k: v for k, v in sorted(os.environ.items()) if k in REFUSED or k.startswith(REFUSED_PREFIXES)}}
@@ -179,6 +179,8 @@ try:
     run('design', ['scripts/swift-slot.sh', 'apps/macos/scripts/verify-design.py', evidence / 'design'])
     run('state', ['scripts/swift-slot.sh', 'python3', 'apps/macos/scripts/state_package.py', 'swift', 'test', '--package-path', 'apps/macos', '--scratch-path', 'apps/macos/DerivedData/StateProof', '--disable-automatic-resolution', '--jobs', '2', '--no-parallel'], extra=dict(STATE_PACKAGE_RECEIPT=str(evidence / 'state-keychain-guard.json')))
     run('diagnostics', [helper, evidence / 'diagnostics'])
+    # Follow-up 91: xcodebuild's derived data is cleared when it was built from another source tree.
+    (evidence / 'unsigned-build-stamp.json').write_text(json.dumps(state_package.fresh_build_folder(root / 'apps/macos/DerivedData/MacCandidate1', root / 'apps/macos'), indent=2) + '\n')
     run('unsigned', ['scripts/swift-slot.sh', 'xcodebuild', '-project', 'apps/macos/Todo.xcodeproj', '-scheme', 'Todo', '-configuration', 'Release', '-destination', 'platform=macOS', '-derivedDataPath', 'apps/macos/DerivedData/MacCandidate1', '-disableAutomaticPackageResolution', '-onlyUsePackageVersionsFromResolvedFile', 'CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO', 'ONLY_ACTIVE_ARCH=YES', 'ARCHS=arm64', 'build'])
     run('idle', [helper, evidence / 'idle', '--stream-only', '--long-idle'])
     run('subscribers', [helper, evidence / 'subscribers', '--subscribers-only'])
