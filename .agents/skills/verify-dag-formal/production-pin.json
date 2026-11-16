@@ -1,5 +1,5 @@
 {
-  "commit": "96e0cc2e6b1900bd58fa8b6a78d2b62f7eb2df57",
+  "commit": "c55f736208636d1193b9930f794eea65c73cfa99",
   "seed": 260911,
   "randomDags": 256,
   "maxRandomNodes": 40,
@@ -227,6 +227,16 @@
     ],
     "status": "candidate for the seats",
     "scope": "Q14 (the owner, 2026-11-16: repair them once) on feat/repair-typed-zones: todo repair time-zones. main.ts adds the repair command group and its handler and imports; help.ts adds its two help entries; schema.ts registers its JSON Schema and adds repair to the text-response group. No existing declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
+    "changes": []
+  },
+  "q14SeatF1F2F3": {
+    "product": "e989d62b7638dc14cce66716634ef092a9c57695",
+    "pinCommit": "c55f736208636d1193b9930f794eea65c73cfa99",
+    "previous": [
+      "96e0cc2e6b1900bd58fa8b6a78d2b62f7eb2df57"
+    ],
+    "status": "candidate for the seats",
+    "scope": "Server seat F1, F2 and F3 on d5af970d (Q14): main.ts rewrites the repair time-zones handler (--keep, --task, --all-profiles from the Profile directory, the plan binding before any Snapshot) and its imports; help.ts rewrites the repair time-zones help entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
     "changes": []
   }
 }

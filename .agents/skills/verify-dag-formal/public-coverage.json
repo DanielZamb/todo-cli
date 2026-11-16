@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "96e0cc2e6b1900bd58fa8b6a78d2b62f7eb2df57",
+  "confirmedCommit": "c55f736208636d1193b9930f794eea65c73cfa99",
   "status": "Reviewed integrated public contract and offscreen client-state mapping; current full source controls and final client commands remain separate receipts.",
   "gateCommit": "ca142014",
   "scope": "Reviewed functions and actual pre-renewal controls. Complete integrated commands follow; no old result is relabelled.",
@@ -1410,7 +1410,7 @@
   },
   "q14SeatF1F2F3": {
     "product": "e989d62b7638dc14cce66716634ef092a9c57695",
-    "pinCommit": null,
+    "pinCommit": "c55f736208636d1193b9930f794eea65c73cfa99",
     "previous": [
       "96e0cc2e6b1900bd58fa8b6a78d2b62f7eb2df57"
     ],
