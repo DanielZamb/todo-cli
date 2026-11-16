@@ -174,3 +174,33 @@ recorded separately. The Phase0 visible control failed that sensitivity gate.
 `prepare_rows.py --ref e69230f9 --variant no-drag|item-provider` changes only the
 archived verification copy and emits source and binary hashes. Restore
 `--variant production` before returning to other cached measurements.
+
+## Row-selection harness (follow-up 80)
+
+`row_harness.py` measures keyboard row selection as the owner's client
+Diagnostics journal does, so its numbers compare with the journal's:
+
+```sh
+python3 apps/macos/PerfMeasurement/row_harness.py "$PWD/docs/evidence/mac-perf/row-harness/new" --rich --rounds 120
+python3 apps/macos/PerfMeasurement/row_harness.py "$PWD/docs/evidence/mac-perf/row-harness/new-base" --rich --commit <base>
+```
+
+- `StateTests/RowSelectionHarnessTests.swift` runs only when `ROW_HARNESS_OUT`
+  is set. It hosts the production RootView with 150 Tasks (`--rich`: the
+  owner's kind, with Dependencies, due dates, up to four Tags and long
+  descriptions). It hands real arrow keyDowns to PersonInput and then to
+  `NSApp.sendEvent`, about 200 ms apart. Steps come from the journal's own
+  events, never from a stopwatch.
+- The window is on screen and key; the coordinator authorized this for
+  follow-up 80. The runner waits until neither Todo app is frontmost, there
+  has been no input for a minute and the 1-minute load is under 30, all held
+  for two minutes.
+- The model has a refusing transport and a synthetic `ses_` credential, so
+  Diagnostics record as for the owner. No server, no Todo.app, no Keychain.
+- Calibration on 370f6485, 800 pt, `--rich`: total median 110.8 ms against
+  the journal's 107 ms; publication to layout 58.5 ms against 56.8 ms. The
+  plain fixture measures less.
+- Pair runs: base and change alternately, same rounds, the owner away for
+  each. Report which of the three steps moved.
+- A test process that ends without its summary line is a failure, even when
+  `swift test` exits 0.
