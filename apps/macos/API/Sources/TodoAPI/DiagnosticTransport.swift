@@ -39,7 +39,7 @@ struct DiagnosticTransport: ClientTransport {
     let transport: any ClientTransport
     let recorder: ClientDiagnosticsRecorder
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
-        let id = recorder.requestStarted(operation: operationID)
+        let id = recorder.requestStarted(operation: operationID, ifScope: ClientDiagnosticContext.admittedScope)
         do {
             let response = try await ClientDiagnosticContext.$requestID.withValue(id) {
                 try await transport.send(request, body: body, baseURL: baseURL, operationID: operationID)

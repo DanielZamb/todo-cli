@@ -145,4 +145,28 @@ private actor Server: ClientTransport {
         #expect(model.deletionNotice == "Answer the question about \u{201C}Ship the launch notes\u{201D} first.")
         #expect(await server.writes.isEmpty)
     }
+
+    /// MAC-C11-S1-18 (follow-up 95): Sign Out while another draft question is up keeps that
+    /// question, sends nothing, and says so, as a status change does; and pressed again while its
+    /// own question is up, it adds nothing.
+    @Test func signOutWhileAnotherQuestionIsUpSaysSo() async throws {
+        let server = Server()
+        let model = model(server)
+        #expect(model.closeEditor() == false)
+        await model.signOut()
+        guard case .close? = model.pendingNavigation else { Issue.record("the open question was replaced: \(String(describing: model.pendingNavigation))"); return }
+        let text = "Answer the question about \u{201C}Ship the launch notes\u{201D} first."
+        #expect(model.deletionNotice == text)
+        #expect(model.announcements.last == text)
+        #expect(await server.writes.isEmpty)
+        #expect(model.signedIn)
+        model.cancelNavigation()
+        model.deletionNotice = nil
+        let spoken = model.announcements.count
+        await model.signOut()
+        guard case .signOut? = model.pendingNavigation else { Issue.record("Sign Out did not ask: \(String(describing: model.pendingNavigation))"); return }
+        await model.signOut()
+        #expect(model.deletionNotice == nil, "its own question again: nothing more to say")
+        #expect(model.announcements.count == spoken)
+    }
 }
