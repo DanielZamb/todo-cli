@@ -18,14 +18,23 @@ import { OpLogEntry } from "./events.ts";
 import { type ExitCode, ExitStatus, exitStatus } from "./exit-status.ts";
 import { graphMermaid } from "./graph-mermaid.ts";
 import { ProfileId, TaskId } from "./ids.ts";
-import type { PlanningClock } from "./planning-day.ts";
+import { type PlanningClock, taskDay } from "./planning-day.ts";
 import { TaskLookupDetails } from "./task-lookup-error.ts";
 import { DependencyReadFields, type TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
 import type { TaskTime } from "./time.ts";
 
 export type Format = "md" | "json" | "table";
-export type TaskView = typeof TaskViewSchema.Type;
+/**
+ * The calendar day a view's due time falls on, in the zone stored with it: taskDay, the rule
+ * Today and Overdue use (ADR-0006; the owner's answer to Q10, 2026-11-14). Display only, for
+ * the Markdown `due:` label. A symbol key, so no JSON output carries it, and a spread copy of a
+ * view keeps it.
+ */
+export const DueDay: unique symbol = Symbol("todo.due-day");
+export type TaskView = typeof TaskViewSchema.Type & {
+  readonly [DueDay]?: string | null;
+};
 export const dateText = (time: TaskTime | null) =>
   time === null ? "" : time.kind === "date" ? time.date : time.utc.slice(0, 10);
 const timestamp = (time: TaskTime) =>
@@ -80,6 +89,7 @@ export function taskView(
       ? { scheduled_at: timestamp(task.scheduled_at) }
       : {}),
     ...(task.due_at ? { due_at: timestamp(task.due_at) } : {}),
+    ...(task.due_at ? { [DueDay]: taskDay(task.due_at) } : {}),
     ...(task.energy !== null ? { energy: task.energy } : {}),
     ...(task.estimate_min !== null ? { estimate_min: task.estimate_min } : {}),
     source: task.source,
@@ -213,7 +223,7 @@ export function taskLine(task: TaskView) {
     `- [${task.status === "done" ? "x" : " "}] [${task.priority}] ${task.title} (id: ${task.id}, v:${task.row_version})`,
     ...(task.tags ?? []).map((tag) => `#${tag}`),
     ...(task.project ? [`@${task.project}`] : []),
-    ...(task.due_at ? [`due:${task.due_at.slice(0, 10)}`] : []),
+    ...(task.due_at ? [`due:${task[DueDay] ?? task.due_at.slice(0, 10)}`] : []),
     ...(task.energy !== undefined ? [`energy:${task.energy}`] : []),
     ...(task.estimate_min !== undefined ? [`est:${task.estimate_min}m`] : []),
   ].join(" ");
