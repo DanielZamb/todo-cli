@@ -199,7 +199,7 @@
         "false filter guard",
         "malformed Version boundary finding"
       ],
-      "sha256": "5ee253a1637e66706b8baf3480bb61ea5de10ffbba531f2ffa69919c61d25647"
+      "sha256": "041ce361f3b341fc4aea94cbd005dafa534dba45d9dc11b06c8eeb1c7d44712c"
     },
     {
       "path": "apps/cli/src/schema.ts",
@@ -433,7 +433,7 @@
       "functions": [
         "rm confirmation Version wording"
       ],
-      "sha256": "e381816f49ad53f086d0d35b208ee65a97eed0c51761b08d5526f7a08c9ae6d9"
+      "sha256": "d4a5074055cd3e6a9d20a3cad6ce8df24e025e0f113e8fe076f07b5a673741c7"
     },
     {
       "path": "apps/macos/API/Sources/TodoAPI/GeneratedSources/Types+Components+Schemas.swift",
@@ -1405,6 +1405,27 @@
         "path": "apps/cli/src/help.ts",
         "before": "a573440480f0e91a617cd991131cc3a0751dc38fcb7fad9167b1b7b8c9f23b83",
         "after": "e381816f49ad53f086d0d35b208ee65a97eed0c51761b08d5526f7a08c9ae6d9"
+      }
+    ]
+  },
+  "q14SeatF1F2F3": {
+    "product": "e989d62b7638dc14cce66716634ef092a9c57695",
+    "pinCommit": null,
+    "previous": [
+      "96e0cc2e6b1900bd58fa8b6a78d2b62f7eb2df57"
+    ],
+    "status": "candidate for the seats",
+    "scope": "Server seat F1, F2 and F3 on d5af970d (Q14): main.ts rewrites the repair time-zones handler (--keep, --task, --all-profiles from the Profile directory, the plan binding before any Snapshot) and its imports; help.ts rewrites the repair time-zones help entry. No other declaration of these files changes; every mapped function, schema and command is byte-identical to f8d0cb4a. A candidate until a seat accepts it.",
+    "changes": [
+      {
+        "path": "apps/cli/src/main.ts",
+        "before": "5ee253a1637e66706b8baf3480bb61ea5de10ffbba531f2ffa69919c61d25647",
+        "after": "041ce361f3b341fc4aea94cbd005dafa534dba45d9dc11b06c8eeb1c7d44712c"
+      },
+      {
+        "path": "apps/cli/src/help.ts",
+        "before": "e381816f49ad53f086d0d35b208ee65a97eed0c51761b08d5526f7a08c9ae6d9",
+        "after": "d4a5074055cd3e6a9d20a3cad6ce8df24e025e0f113e8fe076f07b5a673741c7"
       }
     ]
   }
