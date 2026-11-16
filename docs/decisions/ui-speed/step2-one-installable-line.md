@@ -436,6 +436,93 @@ between 88861589 and this head.
 ended:** the whole Mac gate cycle once on the head, then steps 7 and 8. With
 the fix merged, a stuck deletion is a finding, not a rerun.
 
+## The gate cycle and steps 7 and 8 on the head with candidate 13 (2026-11-15 to 16)
+
+Started on the coordinator's word that MAC-PERF's cycle on cfe01e85 had
+ended (PASS, 20 gates).
+
+**The Mac gate cycle at 2e98cd5a: PASS, 20 of 20** (evidence
+`docs/evidence/mac-perf/c4/controls-final-2e98cd5a`; one run, inside the two
+hours, no resume; Keychain linked: no; every runner's binaries under the
+profile). Exit and 1-minute load at start and end:
+
+| Gate | Exit | Load | Minutes |
+| --- | --- | --- | --- |
+| hold | 0 | 2.7 → 2.0 | 10.6 |
+| sign-out-stream | 0 | 2.0 → 3.0 | 24.0 |
+| stress | 0 | 3.0 → 5.2 | 9.6 |
+| race | 0 | 5.2 → 4.9 | 7.9 |
+| connections | 0 | 4.9 → 4.4 | 0.1 |
+| sockets | 0 | 4.4 → 4.1 | 0.2 |
+| restart | 0 | 4.1 → 3.8 | 0.2 |
+| design | 0 | 3.8 → 2.8 | 15.4 |
+| state | 0 | 3.1 → 2.3 | 5.3 |
+| diagnostics | 0 | 2.3 → 3.5 | 2.5 |
+| unsigned | 0 | 3.5 → 3.1 | 3.6 |
+| idle | 0 | 3.2 → 3.5 | 11.0 |
+| subscribers | 0 | 3.4 → 3.2 | 0.6 |
+| discovery-prepare | 0 | 3.2 → 4.3 | 0.6 |
+| discovery-quarantine-temporaries | 0 | 4.3 → 4.3 | 0.0 |
+| discovery-formal | 0 | 4.2 → 3.8 | 4.9 |
+| task-search-formal | 0 | 3.8 → 4.6 | 2.3 |
+| dag-public | 0 | 4.9 → 8.1 | 6.4 |
+| root | 0 | 8.1 → 64.3 | 8.6 |
+| doc-links | 0 | 59.6 → 59.6 | 0.0 |
+
+Discovery reused the Swift build of swift-1OEM56 (its Swift sources equal the
+head's; the runner checks the hashes). Root passed as the machine's load rose
+from other work; a pass under load stands. In sign-out-stream, with the stuck
+deletion fix merged: the delete-then-restore schedule leaves **0 of 80**
+clients not following (gaps 0, 5, 20 and 60 ms); 200 plain deletions, 200
+left, 0 stuck, 0 untold, leave time median 95 ms, p99 233 ms.
+
+**Step 8, the time-zone rule (tz-c13):** the head's compiled server in
+America/Bogota under the profile, the Mac model (probe overlay; Keychain not
+linked) and Electron's own client sending no zone and no `now`:
+
+| Server zone | Local time | Mac Today / Overdue | Electron Today / Overdue | Load |
+| --- | --- | --- | --- | --- |
+| America/Bogota | 18:59 | 2 / 1 | 2 / 1 | 2.4 → 3.0 |
+| America/Bogota | 19:01 | 2 / 1 | 2 / 1 | 3.0 → 2.6 |
+| UTC (control) | 19:01 | 3 / 2 | 3 / 2 | 2.6 → 2.8 |
+
+The Today view is "Overdue: Due 2026-11-13; Due today: Due 2026-11-14;
+Scheduled today: none" in both clients; neither sent `time_zone` or `now`.
+
+**Step 7, the refresh pair against candidate 13** (`verify-mac-refresh`,
+baseline cfe01e85 against the head, both on the head's server, five
+alternating cells each, load 10 → 4, 0 HTTP errors;
+`docs/evidence/mac-perf/c4/step2-refresh-c13`):
+- Nine of ten cells are identical per step: first load 8 requests and 1 full
+  catalog read; a CLI operation 8 and 1; a burst of 20 CLI edits 160 and 20;
+  a Profile switch over 50 replayed operations 410 and 51, over 300, 2,410 and
+  301; own Complete with its echo 17 and 2; a quiet reconnect 2 and 0. (One
+  candidate 13 cell's stream-ready took two reads, 20 requests, instead of
+  one.)
+- **One head cell (run 0) is not:** its stream opened with
+  `Last-Event-ID: 3`, sent by the client itself, where every other cell
+  opened at 925 (the end of the 925-operation warm-up History). It replayed
+  711 operations with a full catalog read each (5,624 requests in
+  cli-operation-0). The summary script's 372-operation assertion stopped on
+  that cell (1,082 = 372 + 710), so it wrote no `climb-summary.json`; the
+  counts above are computed from each cell's `measurement.json` without it.
+- **Why, as far as the receipts show:** the model reads its stream cursor at
+  connect from `UserDefaults` (`cursor.<vault>.<server URL>.<profile>`, falling
+  back to `restore-cursor.<server URL>`), and every SwiftPM test process
+  shares the `swiftpm-testing-helper` defaults domain. That domain holds
+  39,283 persisted cursors, among them 20 `restore-cursor.http://127.0.0.1:<port>`
+  entries equal to 3, on ephemeral ports that are reused. The measurement's
+  proxy port is not recorded, so I cannot name the colliding entry. The
+  server binary and the Mac sources are the same on both sides of the pair;
+  only the generated client differs, and it plays no part in where the
+  cursor comes from. I read it as a test-environment collision, not a
+  difference between the head and candidate 13. A rerun of the pair would
+  draw new ports; I did not delete the shared defaults (other worktrees' tests
+  use them).
+- Worth a follow-up in the harness or the model: key test cursors by a run
+  identifier, or clear them; and in the app, a stored cursor far below the
+  server's History makes the client replay it one full read per operation.
+
 ## What the installed build does differently on the owner's machine
 
 Nothing is migrated in the Task database: no schema change since candidate 10.
