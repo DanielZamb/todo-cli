@@ -248,6 +248,15 @@ export function flagConsumer(command: string, flag: string) {
     "snapshot create": { "--reason": "snapshots.create(reason)" },
     "snapshot restore": { "--dry-run": "snapshots.restore options.dryRun" },
     "snapshot prune": { "--dry-run": "snapshots.prune options.dryRun" },
+    "repair time-zones": {
+      "--dry-run": "read path only -> planTimeZoneRepair; writes nothing",
+      "--plan":
+        "TimeZoneRepairPlan decode -> pendingRepairs -> snapshots.create -> applyTimeZoneRepair",
+      "--include-closed":
+        "planTimeZoneRepair includeClosed (done and cancelled Tasks)",
+      "--all-profiles":
+        "readRepairInput for every Profile the owner read returns",
+    },
     schema: {
       "--list":
         "commandNames/inputNames response versus requested command schema",

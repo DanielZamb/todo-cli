@@ -18,7 +18,7 @@
         "-h",
         "-v"
       ],
-      "help_sha256": "1b830ca2572b730b5961a8f766195c616bb2818839e2ecb8e589a914c10ecb3c",
+      "help_sha256": "fd2595e1ec6a609bf410acecb90c6699db48f4d7db19907632177c2226ca3b5d",
       "schema_sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
     },
     "diagnostics": {
@@ -108,6 +108,27 @@
         "-v"
       ],
       "help_sha256": "9bb5e2118cd3514904605dd4c3c3e7889d13c61125a641a25ffe877a801e54cc",
+      "schema_sha256": "adceb3ccf3f6110a95efef520aa697a57ed666be95e2d96b292395f04880bc51"
+    },
+    "repair": {
+      "flags": [
+        "--completions",
+        "--credential-profile",
+        "--db",
+        "--direct",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--log-level",
+        "--no-color",
+        "--profile",
+        "--require-server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "dc0607e2634dc707aff645d895e54af2d8b1817fb47e898af15807f95eb0c418",
       "schema_sha256": "adceb3ccf3f6110a95efef520aa697a57ed666be95e2d96b292395f04880bc51"
     },
     "init": {
@@ -1221,6 +1242,31 @@
       ],
       "help_sha256": "60756398126941dec9df3c6e69929adc854485edb18b6d4f37370786e93d3f54",
       "schema_sha256": "a31d0e66e8cbff6764849e83c2e25485cb78ba9fc7f655668ba1f48139cab3f0"
+    },
+    "repair time-zones": {
+      "flags": [
+        "--all-profiles",
+        "--completions",
+        "--credential-profile",
+        "--db",
+        "--direct",
+        "--dry-run",
+        "--format",
+        "--help",
+        "--help-human-flag",
+        "--include-closed",
+        "--log-level",
+        "--no-color",
+        "--plan",
+        "--profile",
+        "--require-server",
+        "--version",
+        "--wizard",
+        "-h",
+        "-v"
+      ],
+      "help_sha256": "835310499a4610d52823bb7c3e779d768db1bb99d6192e26d14a0c19e1967bd7",
+      "schema_sha256": "94cb341a8e16add4c494ef08f42b90b014070a62eb7c7d52aeb2cf72e7626150"
     },
     "profile list": {
       "flags": [
