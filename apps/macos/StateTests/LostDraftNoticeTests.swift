@@ -22,6 +22,7 @@ private actor CatalogTransport: ClientTransport {
             let pair = AsyncThrowingStream<HTTPBody.ByteChunk, any Error>.makeStream()
             streams.append(pair.continuation)
             return (HTTPResponse(status: .ok, headerFields: [.contentType: "text/event-stream", .cacheControl: "no-store"]), HTTPBody(pair.stream, length: .unknown))
+        case "system.health": return json(#"{"service":"todo-server","build":"lost-draft","contract":"\#(TodoContract.id)"}"#)
         case "reads.profiles": return json(profiles)
         case "reads.view": return json(#"{"name":"today","now":"2026-11-14T12:00:00Z","groups":[]}"#)
         case "reads.projects", "reads.tags", "tasks.list", "snapshots.list": return json("[]")

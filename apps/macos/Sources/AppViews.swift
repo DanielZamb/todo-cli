@@ -1032,14 +1032,14 @@ struct FullRowMetadata: View {
     }
     let items: [Item]
     /// In the row's order: the Project, the Tags, the due date, the external id, the scheduled date.
-    static func items(project: String?, tags: [String], due: String?, overdue: Bool, external: String?, scheduled: String?) -> [Item] {
+    nonisolated static func items(project: String?, tags: [String], due: String?, overdue: Bool, external: String?, scheduled: String?) -> [Item] {
         (project.map { [Item.project($0)] } ?? []) + tags.map(Item.tag) + (due.map { [Item.due($0, overdue: overdue)] } ?? [])
             + (external.map { [Item.external($0)] } ?? []) + (scheduled.map { [Item.scheduled($0)] } ?? [])
     }
     /// Whether a "·" comes before item `index`, as the row drew them before: between the Project and
     /// the first Tag, before the due date, and before the scheduled date when a Project, a Tag or a due
     /// date comes before it. Never before the external id or between Tags.
-    static func separated(_ items: [Item], before index: Int) -> Bool {
+    nonisolated static func separated(_ items: [Item], before index: Int) -> Bool {
         guard index > 0 else { return false }
         switch items[index] {
         case .tag: if case .project = items[index - 1] { return true } else { return false }
@@ -1513,7 +1513,7 @@ struct DraftNavigationMessage: View {
     var target: TodoModel.EditorNavigation? = nil
     var body: some View { Text(Self.text(hasConflict: hasConflict, target: target)) }
     /// The room rule says why the Task would close (UI seat on b968f31a).
-    static func text(hasConflict: Bool, target: TodoModel.EditorNavigation?) -> String {
+    nonisolated static func text(hasConflict: Bool, target: TodoModel.EditorNavigation?) -> String {
         if hasConflict { return "Resolve the Conflict in the inspector before saving. Discard changes to continue without them, or cancel to keep editing." }
         if case .close(.sidebar)? = target { return "It closes to make room for the sidebar. Save your changes, discard them, or cancel to keep editing this task." }
         if case .signOut? = target { return "Save your changes, discard them, or cancel to stay signed in." }
@@ -1524,7 +1524,7 @@ struct DraftNavigationMessage: View {
 struct DraftNavigationPrompt: View {
     /// The question names the Task, and for a status change what waits on the answer (UI seat on
     /// b968f31a). The name is the Task's saved title, the one the list shows.
-    static func title(hasConflict: Bool, target: TodoModel.EditorNavigation?, task: String?) -> String {
+    nonisolated static func title(hasConflict: Bool, target: TodoModel.EditorNavigation?, task: String?) -> String {
         if hasConflict { return "Resolve the Conflict first" }
         guard let task, !task.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "Save changes before continuing?" }
         let name = "\u{201C}\(task)\u{201D}"

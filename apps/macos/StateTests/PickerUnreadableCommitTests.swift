@@ -52,6 +52,6 @@ import TodoAPI
         #expect(picker.feedback == nil, "the list was not read again")
         let failure = try #require(picker.failure)
         #expect(!DependencyNoticeContent.headline(failure).hasPrefix("Couldn't add"))
-        #expect(DependencyNoticeContent.headline(failure) == "The server couldn't be reached. Try again.")
+        #expect(DependencyNoticeContent.headline(failure) == "Couldn't update Dependencies. Try again.")
     }
 }

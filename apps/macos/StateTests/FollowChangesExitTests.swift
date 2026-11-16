@@ -89,9 +89,10 @@ import Testing
         let advances = lines.indices.filter { code(lines[$0]).range(of: #"^\s*generation \+= 1"#, options: .regularExpression) != nil }.map(enclosing)
         #expect(advances == ["disconnect"], "\(advances)")
         // Each caller of disconnect(): connect starts the stream itself; activateProfile ends with
-        // connect(); replaceCredential's callers sign in (connect) or out; signOut and expireSession stop.
+        // connect(); replaceCredential's callers sign in (connect) or out; performSignOut (the sign-out
+        // itself, after signOut's draft question) and expireSession stop.
         let callers = Set(lines.indices.filter { code(lines[$0]).contains("disconnect()") && !lines[$0].contains("func disconnect()") }.map(enclosing))
-        #expect(callers == ["connect", "activateProfile", "replaceCredential", "signOut", "expireSession"], "\(callers.sorted())")
+        #expect(callers == ["connect", "activateProfile", "replaceCredential", "performSignOut", "expireSession"], "\(callers.sorted())")
         let activate = try function("activateProfile", in: text)
         #expect(activate.dropLast().last?.contains("if signedIn { connect() }") == true, "activateProfile ends by starting the next stream")
     }
