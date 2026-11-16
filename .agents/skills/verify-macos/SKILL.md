@@ -61,6 +61,24 @@ and verify-discovery-formal's `check-swift.ts` run `swift test` themselves and a
 with a summary, passed or failed (`summary-lines.json`). `scripts/verify-test-summary.py <evidence>`
 is the control: a scratch package whose test calls `exit(0)` exits 0 under plain `swift test` and 7
 under the runner, and a passing test still exits 0.
+## A gate builds only in a folder made from the same source tree
+
+An incremental build across the candidate 14 merge kept objects and modules compiled for the old
+types (the test module and `TodoState.swiftmodule`), and the stress test crashed destroying a
+generated type it disagreed about; rebuilding the test object alone did not cure it. So a build
+folder carries `todo-build-stamp.json`: the `apps/macos` tree at HEAD (`git rev-parse
+HEAD:apps/macos`, or a hash of the files for a package unpacked from another commit), the sha256
+of `apps/macos/API/generated-sources.json`, the contract id and `swift --version`. Before a build,
+`state_package.py` (and `verify-design.py`, `verify-write-state.py` and the unsigned gate's
+xcodebuild folder, through `state_package.fresh_build_folder`) removes a folder whose stamp is
+missing or differs and says why in the receipt; `swift test --skip-build` refuses such a folder
+(exit 8). Gates of one head keep sharing folders, in any configuration. `make sign-desktop`
+removes `dist/signed.noindex/DerivedData` before it builds.
+
+A worker's own edit-build-test loop may stay incremental: uncommitted edits do not change the tree
+at HEAD, and `STATE_PACKAGE_INCREMENTAL=1` keeps a folder across commits (`gates.py` refuses to
+start with it set). There, a crash or an odd pass means "rebuild clean" before it means anything
+else. `scripts/verify-build-stamp.py <evidence> [--sequence <before> <after>]` is the control.
 
 ## Native verification is on HOLD
 

@@ -72,6 +72,8 @@ def run(command, log, env=None, capture_stdout=False, allow_failure=False):
 
 run(['sh', 'scripts/disk-guard.sh'], 'disk-guard.log')
 run(['python3', 'apps/macos/scripts/check-design-identifiers.py', str(evidence / 'accessibility.json')], 'accessibility.log')
+# Follow-up 91: never build in a folder that has seen another source tree.
+(evidence / 'build-stamp.json').write_text(json.dumps(state_package.fresh_build_folder(build_path, package), indent=2) + '\n')
 run(['swift', 'build', '--package-path', str(package), '--scratch-path', str(build_path), '--disable-automatic-resolution', '--build-tests', '--jobs', '2'], 'build.log')
 keychain = state_package.checked(build_path, evidence / 'keychain-guard.json')  # stops if a Keychain call is linked
 run(['swift', 'test', '--package-path', str(package), '--scratch-path', str(build_path), '--skip-build', '--disable-automatic-resolution', '--filter', 'PresentationTests|CompactFormattingTests|WindowLayoutTests|TaskFilterTests'], 'presentation.log')

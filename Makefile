@@ -46,6 +46,8 @@ sign-desktop: check-signing-config
 	python3 apps/macos/scripts/generated-sources.py
 	"$(CURDIR)/scripts/disk-guard.sh"
 	rm -f dist/signed.noindex/signing-receipt.json
+	# Follow-up 91: an install never builds on derived data from another source tree.
+	rm -rf "$(CURDIR)/dist/signed.noindex/DerivedData"
 	mkdir -p dist/signed.noindex/macos dist/signed.noindex/electron
 	xcodebuild -project apps/macos/Todo.xcodeproj -scheme Todo -configuration Release -destination platform=macOS -derivedDataPath "$(CURDIR)/dist/signed.noindex/DerivedData" CONFIGURATION_BUILD_DIR="$(CURDIR)/dist/signed.noindex/macos" DEVELOPMENT_TEAM="$(TODO_SIGNING_TEAM)" CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" CODE_SIGNING_ALLOWED=YES CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS="--timestamp=none" build
 	"$(CURDIR)/scripts/disk-guard.sh"

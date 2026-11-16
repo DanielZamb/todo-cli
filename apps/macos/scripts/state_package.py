@@ -21,6 +21,10 @@ CLI:
                                             found, 2 if the path is empty or not a build product
   state_package.py prepare [--production-vault <dir>]   the mirror path; the production vault is
                                             only for the guard's own control
+  state_package.py fresh <build folder> [package]   follow-up 91: clear a build folder built for
+                                            another generated client, contract or toolchain (for
+                                            xcodebuild's derived data and runners that build
+                                            directly); exit 0, and the receipt on stdout
 
 Control (the guard can fail): `prepare --production-vault <scratch dir>`, `swift build --build-tests`
 that package into a scratch path, then `guard <scratch path>` exits 3 and names _SecItemAdd,
@@ -316,6 +320,83 @@ def summarized_test_run(argv, timeout=None) -> int:
     return code
 
 
+# Follow-up 91: an incremental build across the candidate 14 merge kept objects and modules compiled
+# for the old types (the test module, TodoState.swiftmodule), and a test crashed destroying a
+# generated type it disagreed about; rebuilding only the test object did not cure it. So a gate
+# never builds in a folder that has seen another source tree: the folder carries a stamp of the
+# tree it was built from (and of the generated client, the contract and the toolchain); a build
+# into a folder with another stamp, or none, starts from an empty folder, and a run with
+# --skip-build refuses such a folder. Gates of one head share folders as before. A worker's own
+# edit-build-test loop stays incremental (uncommitted edits do not change the tree at HEAD); there,
+# a crash or an odd pass means "rebuild clean" before it means anything else.
+BUILD_STAMP = 'todo-build-stamp.json'
+STALE_FOLDER_EXIT = 8
+
+
+def _source_tree(package: Path) -> str:
+    """The checkout's `git rev-parse HEAD:apps/macos` for apps/macos and its mirror; for another
+    package (a git archive of some commit, an overlay), a hash of its files outside build folders."""
+    import hashlib
+    package = Path(package).resolve()
+    if package in ((ROOT / 'apps/macos').resolve(), MIRROR.resolve()):
+        return 'git:' + subprocess.run(['git', '-C', str(ROOT), 'rev-parse', 'HEAD:apps/macos'], capture_output=True, text=True, check=True).stdout.strip()
+    digest = hashlib.sha256()
+    skip = {'.build', 'DerivedData', '.swiftpm'}
+    for path in sorted(package.rglob('*')):
+        if any(part in skip for part in path.relative_to(package).parts) or not path.is_file(): continue
+        digest.update(str(path.relative_to(package)).encode() + b'\0' + path.read_bytes() + b'\0')
+    return 'files:' + digest.hexdigest()
+
+
+def build_stamp(package: Path) -> dict:
+    """What a build folder was built for: the source tree, the generated client's record
+    (generated-sources.json: the document and every generated file), the contract id and the
+    toolchain."""
+    api = Path(package) / 'API'
+    record = api / 'generated-sources.json'
+    identity = api / 'Sources/TodoAPI/ContractIdentity.swift'
+    contract = re.search(r'id = "([0-9a-f]{64})"', identity.read_text()) if identity.exists() else None
+    toolchain = subprocess.run(['swift', '--version'], capture_output=True, text=True).stdout.strip()
+    import hashlib
+    return dict(sourceTree=_source_tree(Path(package)), generatedSources=hashlib.sha256(record.read_bytes()).hexdigest() if record.exists() else None,
+                contract=contract[1] if contract else None, toolchain=toolchain)
+
+
+def _looks_like_build_folder(folder: Path) -> bool:
+    """Only a folder a Swift or Xcode build made is ever removed."""
+    markers = ('arm64-apple-macosx', 'x86_64-apple-macosx', 'debug.yaml', 'release.yaml', 'Build', 'Logs', 'ModuleCache.noindex', 'info.plist', BUILD_STAMP)
+    return folder.is_dir() and any((folder / marker).exists() for marker in markers)
+
+
+def fresh_build_folder(folder, package) -> dict:
+    """Before a build: a folder built for another stamp (or with none, from before this rule) is
+    removed, so the build starts empty; the new stamp is written. Returns a receipt.
+    STATE_PACKAGE_INCREMENTAL=1 keeps the folder (a worker's own edit-build-test loop; gates.py
+    refuses to start with it set) and says so in the receipt."""
+    folder, stamp = Path(folder), build_stamp(package)
+    if os.environ.get('STATE_PACKAGE_INCREMENTAL') == '1':
+        folder.mkdir(parents=True, exist_ok=True)
+        return dict(folder=str(folder), cleared=None, kept='STATE_PACKAGE_INCREMENTAL=1: a worker\'s own loop; not for a gate', stamp=stamp)
+    path = folder / BUILD_STAMP
+    previous = json.loads(path.read_text()) if path.exists() else None
+    occupied = folder.is_dir() and any(child.name != BUILD_STAMP for child in folder.iterdir())
+    cleared = None
+    if occupied and previous != stamp:
+        if not _looks_like_build_folder(folder):
+            raise SystemExit(f'state_package: {folder} holds files but is not a build folder; not removing it')
+        cleared = 'no stamp (built before follow-up 91)' if previous is None else 'changed: ' + ', '.join(k for k in stamp if previous.get(k) != stamp[k])
+        print(f'state_package: removing build folder {folder}: {cleared} (follow-up 91)', file=sys.stderr, flush=True)
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(stamp, indent=2) + '\n')
+    return dict(folder=str(folder), cleared=cleared, stamp=stamp)
+
+
+def stamped_for(folder, package) -> bool:
+    path = Path(folder) / BUILD_STAMP
+    return path.exists() and json.loads(path.read_text()) == build_stamp(package)
+
+
 def _option(args, *names):
     for index, arg in enumerate(args):
         if arg in names and index + 1 < len(args): return args[index + 1]
@@ -339,6 +420,12 @@ def swift(args: list) -> int:
     package = Path(_option(args, '--package-path'))
     scratch = Path(_option(args, '--scratch-path') or package / '.build')
     receipt = os.environ.get('STATE_PACKAGE_RECEIPT')
+    if args[0] in ('build', 'test') and '--skip-build' not in args and '--show-bin-path' not in args:
+        fresh_build_folder(scratch, package)
+    elif args[0] == 'test' and os.environ.get('STATE_PACKAGE_INCREMENTAL') != '1' and not stamped_for(scratch, package):
+        print(f'state_package: {scratch} was not built for this generated client, contract and toolchain;'
+              f' build it first (follow-up 91). Exit {STALE_FOLDER_EXIT}.', file=sys.stderr, flush=True)
+        return STALE_FOLDER_EXIT
     if args[0] == 'test':
         if '--skip-build' not in args:
             keep = ('--package-path', '--scratch-path', '--configuration', '-c', '--jobs', '-j', '--sanitize')
@@ -376,6 +463,10 @@ if __name__ == '__main__':
         print(json.dumps(result, sort_keys=True))
         # 3: a Keychain call is linked; 4: nothing built to check, so nothing is known.
         sys.exit(3 if result['keychainLinked'] else 4 if result['products'] == 0 else 0)
+    if command == 'fresh':
+        result = fresh_build_folder(Path(rest[0]), Path(rest[1]) if len(rest) > 1 else ROOT / 'apps/macos')
+        print(json.dumps(result, sort_keys=True))
+        sys.exit(0)
     if command == 'prepare':
         production = '--production-vault' in rest
         mirror = Path(rest[rest.index('--production-vault') + 1]) if production else MIRROR
