@@ -34,3 +34,7 @@ context and the approved recovery paths.
 ## Amendment, 2026-11-13: undated Tasks last
 
 On 2026-11-13 the owner changed the one Task order so that undated Tasks come last within a priority; the `todo list` and export goldens were checked against it and needed no renewal, because none holds two Tasks of one priority.
+
+## Amendment, 2026-11-16: one-time data repairs are maintenance, not capabilities
+
+The owner accepted a note on one-time repairs on 2026-11-16 (Q16); the conditions below are the server seat's wording of it. A data repair may be CLI-only when (1) a recorded owner decision orders it, (2) it re-applies values the stored data already implies and makes no new kind of change, (3) its run applies exactly a dry run the owner read and refuses anything else, and (4) it is meant to run once per database. A repair that fails any of these is a capability. Such a repair lives under `todo repair`, is owner-only, writes only ordinary Task edits through the one write path, each with its own History entry, so both apps already show it (History) and undo it (Revert) with their existing primitives. The first one is `todo repair time-zones` (Q14).

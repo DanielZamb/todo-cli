@@ -750,6 +750,38 @@ const guides = {
       "json returns generated_at with the subcommand's report. md prints the same report.",
     concurrency: "Snapshots do not change Task Versions.",
   }),
+  repair: reference({
+    purpose:
+      "One-time maintenance repairs of stored data. Each change is an ordinary Task edit with its own History entry.",
+    synopsis: "todo repair <time-zones>",
+    flags: [],
+    examples: ["todo repair time-zones --dry-run"],
+    auth: "Requires the owner Session.",
+    output: "json returns generated_at with the subcommand's report.",
+  }),
+  "repair time-zones": reference({
+    purpose:
+      "Give each due date and scheduled time stored with the time zone UTC this machine's time zone, once, keeping its instant. This repair keeps the moment each reminder has always fired at, not the clock time that was typed: a time typed as 21:00 in Bogotá before the fix shows 16:00 after it, and one typed between 00:00 and 04:59 shows on the day before. The dry run shows every value as it shows today and as it will show after, and writes nothing. Run it with --format json and read it; then pass that file to --plan. The run applies exactly that dry run: if anything stored differs from a dry run made now with the same options, it refuses the whole plan before writing anything. It takes a Snapshot, then edits each Task once with the Version the dry run read; a Task changed since is a Conflict and is skipped, never forced. Use --task to repair only the Tasks you name. Series templates are listed, not changed: an Occurrence made from one later comes back with the zone UTC. Undo one Task with todo revert while the repair is its latest change, or all of it with todo snapshot restore.",
+    synopsis:
+      "todo repair time-zones --dry-run [--task <id>]... [--include-closed] [--all-profiles] | --plan <file>",
+    flags: [
+      "--dry-run (write nothing; print the plan)",
+      "--task <id> (repeatable; only these Tasks)",
+      "--include-closed (also done and cancelled Tasks; default open and snoozed only)",
+      "--all-profiles (every Profile you may read; default the selected Profile)",
+      "--plan <file> (the dry run's JSON, - reads stdin; the run takes every option from it)",
+    ],
+    examples: [
+      "todo repair time-zones --dry-run",
+      "todo repair time-zones --dry-run --format json > plan.json",
+      "todo repair time-zones --plan plan.json --format json",
+    ],
+    auth: "Requires the owner Session. Each edit is authorized as todo edit is.",
+    output:
+      "json returns the note above, then per value the Task id and title, the field, the stored instant, the local date and time it shows today and after the repair, the day before and after and the Version read; values not changed with the reason; totals. The run adds the Snapshot id and each value's outcome: changed, already_repaired, conflict, not_found or rejected. Exit 4 when a Conflict skipped a Task; exit 2, code plan_mismatch, when the plan does not match what is stored.",
+    concurrency:
+      "The dry run writes nothing. The run edits each Task with the Version the dry run read and changes its Version as an edit does.",
+  }),
   "snapshot create": reference({
     purpose: "Create a Snapshot of the whole Todo database now.",
     synopsis: "todo snapshot create [--reason <text>]",
