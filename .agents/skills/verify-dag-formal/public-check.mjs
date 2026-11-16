@@ -48,12 +48,21 @@ const record = (name, value) =>
   );
 let manifest;
 class AwaitMergedSource extends Error {}
+// A step runs in its own process group, and its time limit stops the whole group: a step that
+// starts a scratch server (the clean driver) leaves none behind (follow-up 68; one ran for more
+// than four hours after a timeout on 2026-11-14). No step here uses the Swift slot, so the limit
+// has no slot wait to leave out.
+function stopGroup(pid) {
+  if (pid === undefined) return;
+  try { process.kill(-pid, "SIGKILL"); } catch { /* already gone */ }
+}
 async function run(label, executable, args, timeout = 180000) {
   if (args.some((arg) => arg.includes("typescript/bin/tsc")))
     beforeCompile({ evidence, label });
   const child = spawn(executable, args, {
     cwd: candidate,
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
   });
   record(label + "-started", { pid: child.pid, executable, args });
   let stdout = "",
@@ -63,7 +72,7 @@ async function run(label, executable, args, timeout = 180000) {
   child.stderr.on("data", (d) => (stderr += d));
   const timer = setTimeout(() => {
     timedOut = true;
-    child.kill("SIGKILL");
+    stopGroup(child.pid);
   }, timeout);
   const outcome = await new Promise((done, reject) => {
     child.on("error", reject);

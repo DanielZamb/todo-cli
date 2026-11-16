@@ -18,7 +18,7 @@ private struct NoNetwork: ClientTransport {
     func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) { throw URLError(.notConnectedToInternet) }
 }
 
-@MainActor @Suite(.serialized) struct SidebarLayoutTests {
+extension MainThreadExclusive { @MainActor @Suite(.serialized) struct SidebarLayoutTests {
     private func model() -> TodoModel {
         let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-sidebar-layout"),
                               clientFactory: { url, _ in Client(serverURL: url, transport: NoNetwork()) }, clientDiagnostics: .disabled,
@@ -102,4 +102,4 @@ private struct NoNetwork: ClientTransport {
         }
         #expect(failures.isEmpty, "inspector \(inspectorOpen ? "open" : "closed"): \(failures)")
     }
-}
+} }

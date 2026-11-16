@@ -38,6 +38,7 @@ import Testing
     @Test func everyPlaceTheEditorIsClearedIsKnown() throws {
         #expect(try sites(#"\beditor\s*=\s*nil"#) == [
             "Discovery.swift applyDiscoveryShow", // asks first: navigate(.showDiscovery)
+            "TodoModel.swift replaceCredential", // cannot ask: the credential changed; nothing typed under one is saved under another (MAC-C11-S1-12); a Session end names the draft
             "TodoModel.swift signOut", // cannot ask: sign-out
             "TodoModel.swift leaveDeletedProfile", // cannot ask: the Profile is gone; the notice names it and where the window went
             "TodoModel.swift followChanges", // cannot ask: a Snapshot reload replaces the whole scope
