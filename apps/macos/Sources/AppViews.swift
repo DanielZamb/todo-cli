@@ -782,6 +782,10 @@ struct TaskListView: View {
                     .onChange(of: selection) { old, id in
                         if let id { model.clientDiagnosticsUI.selected(id); model.notePersonActed() }
                         if let task = visibleTasks.first(where: { $0.id == id }), model.editor?.id != id {
+                            // Follow-up 80, change 1: a clean editor opens the selected Task in this
+                            // transaction, so the selection and the inspector render once together.
+                            // Unsaved changes, busy or an open question go through navigate as before.
+                            if model.openForEditingNow(task) { return }
                             Task {
                                 await ClientDiagnosticContext.$actionID.withValue(model.clientDiagnosticsUI.selectionAction) {
                                     if !(await model.navigate(.edit(task))) { selection = model.editor?.id ?? old }

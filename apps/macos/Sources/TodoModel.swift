@@ -1526,6 +1526,16 @@ final class TodoModel {
     }
     static let answerTheOpenQuestionFirst = "Answer the open question about your unsaved changes first."
 
+    /// Follow-up 80, change 1: `navigate(.edit(task))` without the await, for the case that needs
+    /// none: no unsaved changes, not busy and no question up. It opens the Task the same way
+    /// (`applyNavigation(.edit)`: `beginEditing`, a new opening) and returns true; otherwise it does
+    /// nothing and returns false, and the caller goes through `navigate`.
+    func openForEditingNow(_ task: TaskSnapshot) -> Bool {
+        guard !busy, pendingNavigation == nil, !hasUnsavedEditor else { return false }
+        if editor?.id != task.id { beginEditing(task) }
+        return true
+    }
+
     @discardableResult
     func navigate(_ target: EditorNavigation) async -> Bool {
         guard !busy else { return false }

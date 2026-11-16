@@ -26,11 +26,13 @@ private struct NoNetwork: ClientTransport {
     let window: NSWindow
     let probe = SidebarControlProbe()
     var compact = false
-    static func fixtureModel(transport: any ClientTransport = NoNetwork()) -> TodoModel {
+    static func fixtureModel(transport: any ClientTransport = NoNetwork(), clientDiagnostics: ClientDiagnosticsRecorder = .disabled) -> TodoModel {
         let model = TodoModel(configuration: .init(server: URL(string: "http://127.0.0.1:1")!, initialProfile: "work", vaultService: "unused-sidebar-room"),
-                              clientFactory: { url, credential in Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)]) }, clientDiagnostics: .disabled,
+                              clientFactory: { url, credential in Client(serverURL: url, transport: transport, middlewares: [BearerMiddleware(credential: credential)]) }, clientDiagnostics: clientDiagnostics,
                               catalogNotifications: NotificationCenter(), wakeNotifications: NotificationCenter())
         model.clientDiagnosticsUI.stop()
+        // With a recorder, an owner Session's credential, so signedIn authorizes Diagnostics.
+        if clientDiagnostics !== ClientDiagnosticsRecorder.disabled { model.replaceCredential("ses_fixture") }
         model.signedIn = true; model.connection = .live; model.selectedView = "all"
         model.profiles = [.init(id: "work", name: "Work", open_task_count: 40, inbox_task_count: 3)]
         model.projects = [.init(id: "launch", name: "Launch", open_task_count: 20, inbox_task_count: nil)]

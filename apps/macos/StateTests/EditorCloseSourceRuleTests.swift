@@ -57,6 +57,7 @@ import Testing
         #expect(try sites(#"(?<!func )\bbeginEditing\("#) == [
             "Discovery.swift applyDiscoveryShow", // asks first: navigate(.showDiscovery)
             "TodoModel.swift create", // asks first when unsaved (pendingNavigation = .edit)
+            "TodoModel.swift openForEditingNow", // only a clean editor, not busy, no question up; anything else goes through navigate (follow-up 80, change 1)
             "TodoModel.swift discardAndNavigate", // the answer Discard
             "TodoModel.swift applyNavigation", // edit, move, copy, openTransfer: each asked first
             "TodoModel.swift applyNavigation",
