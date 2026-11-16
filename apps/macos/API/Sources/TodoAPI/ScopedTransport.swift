@@ -14,10 +14,13 @@ import OpenAPIRuntime
 /// admission until it ends, whether or not its awaiter was released. Creating a task on an
 /// invalidated session throws an uncaught NSGenericException and aborts the process, and an inner
 /// send can be past its last cancellation check, on its way to `dataTask`, when the transport
-/// retires. An inner send that never ends (S1-39's lost send) does not keep the session for ever:
-/// `stuckGrace` after the retirement the session is invalidated anyway, which cancels its tasks and
-/// closes its sockets, and the sends still running then are counted. By then a send admitted before
-/// the retirement is long past the creation of its task (microseconds after admission).
+/// retires. The session is never invalidated while an admitted inner send has not ended: an inner
+/// task that has not run yet (a starved executor, a suspended process) can still create its task.
+/// An inner send that never ends (S1-39's lost send) does not keep its connection open for ever:
+/// `stuckGrace` after the retirement every task of the session is cancelled (`getAllTasks`), which
+/// closes its connections, and the sends still running are counted; the session itself stays valid
+/// and is invalidated when they end. A send that creates its task after that runs into its own
+/// cancellation (the inner task was cancelled at the retirement), and nothing throws.
 final class ScopedTransport: ClientTransport, @unchecked Sendable {
     private typealias Response = (HTTPResponse, HTTPBody?)
     private enum State { case active, retiring, invalidated }
@@ -27,8 +30,9 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
     }
     /// Sends released before their inner send ended, those of them still not ended, and the replies
     /// that arrived after their release and were dropped (S1-39, for tests and Diagnostics).
-    /// `invalidatedWithRunning`: inner sends still running when the grace invalidated the session.
-    struct ReleaseCounts: Equatable, Sendable { var releasedEarly = 0, notEnded = 0, lateEnded = 0, invalidatedWithRunning = 0 }
+    /// `runningAtGrace`: inner sends still running when the grace cancelled the session's tasks (the
+    /// session waits for them; one that never ends keeps it, without a connection).
+    struct ReleaseCounts: Equatable, Sendable { var releasedEarly = 0, notEnded = 0, lateEnded = 0, runningAtGrace = 0 }
     private let lock = NSLock()
     private let session: URLSession
     private let base: any ClientTransport
@@ -109,21 +113,24 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
             pending.continuation.resume(throwing: CancellationError())
             pending.task.cancel()
         }
-        // Inner sends may still be running: the session waits for them, at most stuckGrace.
+        // Inner sends may still be running: the session waits for them; after stuckGrace their
+        // tasks are cancelled so a stuck one does not keep its connection.
         if !sessionInvalidated {
-            DispatchQueue.global().asyncAfter(deadline: .now() + stuckGrace) { [self] in invalidateAfterGrace() }
+            DispatchQueue.global().asyncAfter(deadline: .now() + stuckGrace) { [self] in cancelAfterGrace() }
         }
     }
 
-    /// The grace after the retirement is over: an inner send still running is stuck past the
-    /// creation of its task, so invalidating now cancels it and closes the session's sockets.
-    private func invalidateAfterGrace() {
-        lock.withLock {
-            guard case .retiring = state else { return }
-            counts.invalidatedWithRunning += running.count
-            state = .invalidated
-            session.invalidateAndCancel()
+    /// The grace after the retirement is over and inner sends are still running: cancel every task
+    /// the session has (closing their connections), count them, and keep the session valid, so a
+    /// send whose task is created later cannot make URLSession throw.
+    private func cancelAfterGrace() {
+        let stuck: Bool = lock.withLock {
+            guard case .retiring = state, !running.isEmpty else { return false }
+            counts.runningAtGrace += running.count
+            return true
         }
+        guard stuck else { return }
+        session.getAllTasks { tasks in tasks.forEach { $0.cancel() } }
     }
 
     /// The caller was cancelled: its awaiter returns now; the inner send is cancelled and may end
