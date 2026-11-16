@@ -653,6 +653,13 @@
         }
       ],
       "review": "Candidate 13 (84dddaf6 the S1-39 transport fix, ddbd687b MAC-C11-S1-12). Of the mapped files only TodoModel.swift changed since b968f31a. followChanges: before it awaits an operation's refresh it records streamLoopWaitingSince and clears it when the refresh returns; streamFollowsCurrentProfile additionally requires that the loop is not waiting on a refresh for more than streamLoopReadBound (10 s). No event handling, reconnect, cursor, hand-over or exit path changed. replaceCredential: when the credential changes it also ends the editor and the draft question (editor, conflict, writeIntent, recurrenceDraft, series, pendingNavigation); the epoch advance, the Discovery and dependency resets and the message end are unchanged and come first. pendingNavigation records the credential epoch it is asked under (questionEpoch); saveAndNavigate and discardAndNavigate refuse an answer under another epoch, otherwise unchanged. expireSession captures the unsaved draft's title before the reset and appends one sentence to its sessionEnded message; its epoch guard and order are unchanged. No discovery publication, Show or Close guard, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "7b85a5d0bc8fa308b5f49a58722ce02f3822f572",
+      "status": "candidate for the seats",
+      "changed": [],
+      "controls": "check.ts passes on the merged head without a hash change (under the reference profile).",
+      "review": "INTEG-STEP2 merge of Mac candidate 13 cfe01e85: candidate 13's renewed TodoModel.swift row and this line's server rows each equal the merged product's bytes. The matcher, models and bounds are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
