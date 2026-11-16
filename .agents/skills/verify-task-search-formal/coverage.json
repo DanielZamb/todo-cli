@@ -163,7 +163,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      "sha256": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -171,7 +171,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      "sha256": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -694,6 +694,50 @@
         }
       ],
       "review": "Candidate 14 merge head (9ea0c66a: origin/main a6cdd0f3 merged into mac-c13), with the DAG renewal after it. Since the last renewal (370f6485) the mapped Swift files TodoModel.swift and AppViews.swift changed on the Mac line only; the merge changes none of them. TodoModel.swift: openForEditingNow is new (follow-up 80, change 1): a clean selection opens the Task through beginEditing in the selection's turn, and it refuses (returns false) while busy, with a question up or with unsaved changes, which still go through navigate unchanged. followChanges' reload branch keeps its lost-draft sentence in reloadLostDraft while the reload is handled, so publishNotice appends it to a notice the same reload publishes, and announces it; the deletionNotice setter keeps a restored Profile's offer while the notice starts with the offer's text; the status-change notice under an open question names the Task; announce keeps its last 16 texts for tests. AppViews.swift: the list's onChange(of: selection) calls openForEditingNow before the navigate path and hands Diagnostics the selected Task as counts; the restored-Profile offer button compares by prefix; FullRowMetadata orders dates first. navigate, applyNavigation, discardAndNavigate, signOut, visibleTasks, taskGroups, row and searchField are unchanged. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "2f70298f667f54fca100ee7f85d694a3991d8696",
+      "status": "candidate for the seats",
+      "changed": [
+        {
+          "path": "packages/domain/src/presentation.ts",
+          "from": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5",
+          "to": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
+        }
+      ],
+      "controls": "Before renewal check.ts passed every model stage and stopped only at the presentation.ts hash; after renewal the one command passes (under the reference profile).",
+      "review": "feat/cli-due-zone (Q10, the owner's answer A): TaskViewSchema is byte-identical; taskView gains one line, a symbol-keyed DueDay = taskDay(due_at) that no JSON output carries; taskLine prints it as the Markdown due: label. No search, matcher, filter, order or publication code changes; both clients are byte-identical."
+    },
+    {
+      "product": "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45",
+      "status": "candidate for the seats",
+      "changed": [
+        {
+          "path": "packages/domain/src/presentation.ts",
+          "from": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7",
+          "to": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
+        },
+        {
+          "path": "packages/domain/src/commands.ts",
+          "from": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc",
+          "to": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+        }
+      ],
+      "controls": "Before renewal check.ts passed every model stage and stopped only at the mapping (commands.ts); after renewal the one command passes (under the reference profile).",
+      "review": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone: TaskViewSchema, taskView, readTasks and TaskCommands are byte-identical to 6d0407c6 (declaration text compared). commands.ts changes parseTime (zone-aware), prepareFlags (passes the process zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first). No search, matcher, filter, order or publication code changes; both clients are byte-identical."
+    },
+    {
+      "product": "98deaaacc0b6e5390e62b9fc730d7934ffe616ed",
+      "status": "candidate for the seats",
+      "changed": [
+        {
+          "path": "packages/domain/src/commands.ts",
+          "from": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d",
+          "to": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
+        }
+      ],
+      "controls": "Before renewal check.ts passed every model stage and stopped only at the mapping; after renewal the one command passes (under the reference profile).",
+      "review": "Server seat F1 and F2 on follow-up 86: commands.ts changes parseTime (offset-true daylight-saving messages, a refused 60th second in the bracketed form, a 64-character echo), resolveTypedTime (refuses instead of passing raw text on) and adds resolveTaskFlagTimes; main.ts changes taskInput (decode only) and adds resolvedTimes, called by add and by the edit line inside mutation. Every mapped declaration (readTasks, TaskCommands, cliResult, mutateTask, the main.ts Dependency items including the deletion Prompt.Confirm in mutation) is byte-identical to 8434a7e1."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."

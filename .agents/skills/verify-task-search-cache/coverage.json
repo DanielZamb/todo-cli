@@ -17,7 +17,7 @@
     },
     {
       "path": "commands.ts",
-      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      "sha256": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
     },
     {
       "path": "store/store.ts",
@@ -57,7 +57,7 @@
     },
     {
       "path": "apps/cli/src/main.ts",
-      "sha256": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af"
+      "sha256": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
     }
   ],
   "integrationReview": {
@@ -421,5 +421,47 @@
     "changed": [],
     "review": "INTEG-STEP2: the Catalog line and main (Mac candidate 10) merged, Swift client regenerated. No protected or hygiene file differs from the Catalog line's accepted rows (main changed no server, CLI or domain file). build-baseline.mjs <product> --uncached and the full verify.mjs on b4b708f5 exit 0 (verify-S3cJlU) without renewing a hash. No cache, matcher, runner, admission, accounting or erasure body change.",
     "evidence": "docs/decisions/ui-speed/step2-one-installable-line.md"
+  },
+  "fu86fu88": {
+    "product": "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45",
+    "previous": [
+      "b4b708f5bc4a84f7034ddd0c137e2187ecbc77fd"
+    ],
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc",
+        "to": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "f3e42b0f3851e53f48a464d034da5bbe5bfca14c8e9f6747bb6317e1f31a75af",
+        "to": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65"
+      }
+    ],
+    "review": "fix/cli-typed-time-zone (follow-ups 86 and 88): commands.ts changes parseTime (zone-aware), prepareFlags (passes the process zone) and exportScope (weekly by calendar day); main.ts changes taskInput (resolves typed times in the machine's zone), one import and the exportScope call. readTasks, TaskCommands and every cache, matcher, runner, admission, accounting and erasure body are byte-identical (declaration text compared with 6d0407c6). Before renewal check.mjs ran its controls and stopped only at commands.ts; check-hygiene.mjs passed.",
+    "evidence": "docs/decisions/ui-speed/fu86-typed-time-zone.md"
+  },
+  "seatF1F2": {
+    "product": "98deaaacc0b6e5390e62b9fc730d7934ffe616ed",
+    "previous": [
+      "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45"
+    ],
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d",
+        "to": "1b3f26fb1ed1704839f8155e2ee7e38d78c8baa34541beabd2e52d30ac295096"
+      },
+      {
+        "path": "apps/cli/src/main.ts",
+        "from": "348132615aa5b9ba996e0987592351ec03d446841817b80eea4686b6885b0e65",
+        "to": "6d6c1fdb435edc5fe00877908108198b85d2aa26eb1ddb7d94755603ed86aabc"
+      }
+    ],
+    "review": "Server seat F1 and F2 on follow-up 86: commands.ts changes parseTime (offset-true daylight-saving messages, a refused 60th second in the bracketed form, a 64-character echo), resolveTypedTime (refuses instead of passing raw text on) and adds resolveTaskFlagTimes; main.ts changes taskInput (decode only) and adds resolvedTimes, called by add and by the edit line inside mutation. Every mapped declaration (readTasks, TaskCommands, cliResult, mutateTask, the main.ts Dependency items including the deletion Prompt.Confirm in mutation) is byte-identical to 8434a7e1. Before renewal check.mjs ran its controls and stopped only at commands.ts; check-hygiene.mjs passed.",
+    "evidence": "docs/decisions/ui-speed/fu86-typed-time-zone.md"
   }
 }

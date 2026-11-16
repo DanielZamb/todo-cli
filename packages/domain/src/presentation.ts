@@ -18,14 +18,23 @@ import { OpLogEntry } from "./events.ts";
 import { type ExitCode, ExitStatus, exitStatus } from "./exit-status.ts";
 import { graphMermaid } from "./graph-mermaid.ts";
 import { ProfileId, TaskId } from "./ids.ts";
-import type { PlanningClock } from "./planning-day.ts";
+import { lastDayOfWeek, type PlanningClock, taskDay } from "./planning-day.ts";
 import { TaskLookupDetails } from "./task-lookup-error.ts";
 import { DependencyReadFields, type TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
 import type { TaskTime } from "./time.ts";
 
 export type Format = "md" | "json" | "table";
-export type TaskView = typeof TaskViewSchema.Type;
+/**
+ * The calendar day a view's due time falls on, in the zone stored with it: taskDay, the rule
+ * Today and Overdue use (ADR-0006; the owner's answer to Q10, 2026-11-14). Display only, for
+ * the Markdown `due:` label. A symbol key, so no JSON output carries it, and a spread copy of a
+ * view keeps it.
+ */
+export const DueDay: unique symbol = Symbol("todo.due-day");
+export type TaskView = typeof TaskViewSchema.Type & {
+  readonly [DueDay]?: string | null;
+};
 export const dateText = (time: TaskTime | null) =>
   time === null ? "" : time.kind === "date" ? time.date : time.utc.slice(0, 10);
 const timestamp = (time: TaskTime) =>
@@ -80,6 +89,7 @@ export function taskView(
       ? { scheduled_at: timestamp(task.scheduled_at) }
       : {}),
     ...(task.due_at ? { due_at: timestamp(task.due_at) } : {}),
+    ...(task.due_at ? { [DueDay]: taskDay(task.due_at) } : {}),
     ...(task.energy !== null ? { energy: task.energy } : {}),
     ...(task.estimate_min !== null ? { estimate_min: task.estimate_min } : {}),
     source: task.source,
@@ -213,7 +223,7 @@ export function taskLine(task: TaskView) {
     `- [${task.status === "done" ? "x" : " "}] [${task.priority}] ${task.title} (id: ${task.id}, v:${task.row_version})`,
     ...(task.tags ?? []).map((tag) => `#${tag}`),
     ...(task.project ? [`@${task.project}`] : []),
-    ...(task.due_at ? [`due:${task.due_at.slice(0, 10)}`] : []),
+    ...(task.due_at ? [`due:${task[DueDay] ?? task.due_at.slice(0, 10)}`] : []),
     ...(task.energy !== undefined ? [`energy:${task.energy}`] : []),
     ...(task.estimate_min !== undefined ? [`est:${task.estimate_min}m`] : []),
   ].join(" ");
@@ -316,21 +326,23 @@ export function renderReview(
   const millis = Date.parse(now);
   const dueDay = (t: TaskView) => clock.days.get(t.id)?.due ?? null;
   const scheduledDay = (t: TaskView) => clock.days.get(t.id)?.scheduled ?? null;
-  const overdue = open.filter((t) => {
+  // Every open Task is in at most one of Overdue and Scheduled, by its due day in its stored zone
+  // and today in the reader's zone (follow-up 88), as the Today view groups it: Overdue is a due
+  // day before today; daily Scheduled is due or scheduled today; weekly Scheduled is due from today
+  // through the sixth day after it. A timed Task due earlier today is due today, not Overdue.
+  const isOverdue = (t: TaskView) => {
     const due = dueDay(t);
-    if (!t.due_at || due === null) return false;
-    // Weekly compares an instant with now; a date is overdue after its day.
-    return period === "daily" || t.due_at.length === 10
-      ? due < today
-      : Date.parse(t.due_at) < millis;
+    return due !== null && due < today;
+  };
+  const lastDay = lastDayOfWeek(clock.day);
+  const overdue = open.filter(isOverdue);
+  const scheduled = open.filter((t) => {
+    if (isOverdue(t)) return false;
+    const due = dueDay(t);
+    return period === "daily"
+      ? scheduledDay(t) === today || due === today
+      : due !== null && due <= lastDay;
   });
-  const scheduled = open.filter((t) =>
-    period === "daily"
-      ? scheduledDay(t) === today || dueDay(t) === today
-      : t.due_at &&
-        Date.parse(t.due_at) >= millis &&
-        Date.parse(t.due_at) < millis + 7 * 86400000,
-  );
   const inbox = open.filter(
     (t) =>
       isInboxTask(t) &&
