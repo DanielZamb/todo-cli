@@ -5,7 +5,7 @@
     "path": "docs/decisions/agent-discovery-phase-0.md",
     "sha256": "a54f08b22da8617d6e6f17e63520787ae382d989ade66ec75ee1fe6823adc93e"
   },
-  "productionSyncCommit": "f3c290fa52b6c458c0c893ea582c952b36fc4776",
+  "productionSyncCommit": "b2c275e04e97841f36c78dfdc497b44820dc2f7f",
   "productionFiles": [
     {
       "path": "apps/electron/src/discovery-state.ts",
@@ -157,7 +157,7 @@
         "signOut start, failure and commit",
         "followChanges reconnect retry from Offline and sign-out notice"
       ],
-      "sha256": "c42ee755d3beb57f01e52a9101e103cc153bd5366de7c0643e947709b8d6a663",
+      "sha256": "6f4f6be6142c8152268505c26577e7437e7a011c0d4d1342d78f905fae7f43ec",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -167,7 +167,7 @@
         "TaskListView sheet/alert binding",
         "DraftNavigationActions target capture and explicit Cancel"
       ],
-      "sha256": "3a3b6f097a694019fad20519508406f0b5dfa0bbfaf735a7193c8bc0fa6b310e",
+      "sha256": "377db625fefe73af33eb4cf70f5af4bb7c704192ea38296b8486e19f7fdc66a2",
       "claim": "manual source mapping plus named regression/control receipts, not mechanical refinement"
     },
     {
@@ -238,7 +238,7 @@
     "source": "whole-file hashes with function-limited discovery mapping; separate TaskSearch semantic mapping renewed on the same final merged candidate",
     "assumptions": "authorized response membership, correct exact-id server route, synchronous publication and MainActor execution; native UI/Keychain/persistence/clipboard unproven"
   },
-  "previousProductionSyncCommit": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
+  "previousProductionSyncCommit": "f3c290fa52b6c458c0c893ea582c952b36fc4776",
   "integrationReview": {
     "main": "cabf4866835a49f23dc0fe44694740f122855e33",
     "source": "ecee73d77b2d58e185d098fa3d836c78825f8325",
@@ -786,6 +786,23 @@
         }
       ],
       "review": "Candidate 14 (0afd56a1, e2d24cdd, aa09f495, cd5c7709, 043209b8, b24f671c, 3e6b534e, 2210229f). AppViews.swift: the full row's metadata line is FullRowMetadata (whole items, \"+N\"); TaskRow's inputs and the row's identity are unchanged. The room rule grows the window to the left. The draft question's title and message come from DraftNavigationPrompt.title and DraftNavigationMessage.text with the pending target (the Task's name; status change, room rule and sign-out wording); the TaskListView sheet/alert bindings, their isPresented conditions and DraftNavigationActions (target capture, explicit Cancel) are unchanged. SignInView announces its message once through TodoModel.announceMessageOnce. DiscoveryView.swift: its draft-question alert uses the same title and message functions; its binding is unchanged. TodoModel.swift: EditorNavigation gains signOut; signOut asks the draft question when the editor has unsaved changes and otherwise calls performSignOut, which holds the previous body unchanged (start, failure and commit); discardAndNavigate skips re-opening the editor before a sign-out; applyNavigation's transition case sends the newest Version the model holds; asksBefore publishes a notice when a question is already up; leaveDeletedProfile ends the question with the editor and names a lost draft in its notice; followChanges' Snapshot reload names a lost draft in a notice after its reset (no event handling, cursor, reconnect or exit path changed); expireSession's message comes from sessionEndedMessage. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
+    },
+    {
+      "product": "b2c275e04e97841f36c78dfdc497b44820dc2f7f",
+      "controls": "check-swift passed on b2c275e0: docs/evidence/discovery-formal/swift-ZnE9vy",
+      "changed": [
+        {
+          "path": "apps/macos/Sources/TodoModel.swift",
+          "from": "c42ee755d3beb57f01e52a9101e103cc153bd5366de7c0643e947709b8d6a663",
+          "to": "6f4f6be6142c8152268505c26577e7437e7a011c0d4d1342d78f905fae7f43ec"
+        },
+        {
+          "path": "apps/macos/Sources/AppViews.swift",
+          "from": "3a3b6f097a694019fad20519508406f0b5dfa0bbfaf735a7193c8bc0fa6b310e",
+          "to": "377db625fefe73af33eb4cf70f5af4bb7c704192ea38296b8486e19f7fdc66a2"
+        }
+      ],
+      "review": "Candidate 14 merge head (9ea0c66a: origin/main a6cdd0f3 merged into mac-c13), with the DAG renewal after it. Since the last renewal (370f6485) the mapped Swift files TodoModel.swift and AppViews.swift changed on the Mac line only; the merge changes none of them. TodoModel.swift: openForEditingNow is new (follow-up 80, change 1): a clean selection opens the Task through beginEditing in the selection's turn, and it refuses (returns false) while busy, with a question up or with unsaved changes, which still go through navigate unchanged. followChanges' reload branch keeps its lost-draft sentence in reloadLostDraft while the reload is handled, so publishNotice appends it to a notice the same reload publishes, and announces it; the deletionNotice setter keeps a restored Profile's offer while the notice starts with the offer's text; the status-change notice under an open question names the Task; announce keeps its last 16 texts for tests. AppViews.swift: the list's onChange(of: selection) calls openForEditingNow before the navigate path and hands Diagnostics the selected Task as counts; the restored-Profile offer button compares by prefix; FullRowMetadata orders dates first. navigate, applyNavigation, discardAndNavigate, signOut, visibleTasks, taskGroups, row and searchField are unchanged. No discovery publication, Show or Close guard, credential epoch comparison or authorization order changed."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
