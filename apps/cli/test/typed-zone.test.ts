@@ -183,3 +183,67 @@ it("edit reads a typed time in the machine's zone; a skipped or repeated local t
     "2026-11-01 01:30 does not exist or occurs twice in America/New_York (a daylight-saving change); add the offset you mean, for example 2026-11-01T01:30:00-05:00",
   ]);
 });
+
+it("S1-16: west of UTC, an evening typed in the CLI is in Today on its local day", () => {
+  // Los Angeles is UTC-8 in November: 18:00 and 23:30 on the 16th are already the 17th in UTC.
+  const zone = "America/Los_Angeles";
+  const home = join(scratch, "s1-16-los-angeles");
+  run(zone, home, ["init", "--password-stdin"]);
+  run(zone, home, ["login", "--password-stdin"]);
+  run(zone, home, ["add", "Evening", "--due", "2026-11-16 18:00"]);
+  run(zone, home, ["add", "Late", "--due", "2026-11-16 23:30"]);
+  // The same evening typed with its offset, as an agent might: the parent stored these with the zone
+  // UTC on the 17th, a day late in Today.
+  run(zone, home, [
+    "add",
+    "Evening offset",
+    "--due",
+    "2026-11-16T18:00:00-08:00",
+  ]);
+  run(zone, home, ["add", "Late offset", "--due", "2026-11-16T23:30:00-08:00"]);
+  // 19:00 on the 16th in Los Angeles.
+  const catalog = JSON.parse(
+    run(zone, home, [
+      "--format",
+      "json",
+      "catalog",
+      "--view",
+      "today",
+      "--now",
+      "2026-11-17T03:00:00Z",
+    ]),
+  ) as {
+    day: string;
+    tasks: CatalogTask[];
+    view: { groups: { name: string; task_ids: string[] }[] };
+  };
+  const title = (id: string) =>
+    catalog.tasks.find((task) => task.id === id)?.title;
+  expect({
+    day: catalog.day,
+    stored: catalog.tasks
+      .map(
+        (task) => `${task.title} ${task.due_at?.utc} ${task.due_at?.time_zone}`,
+      )
+      .sort(),
+    groups: Object.fromEntries(
+      catalog.view.groups.map((group) => [
+        group.name,
+        group.task_ids.map(title).sort(),
+      ]),
+    ),
+  }).toEqual({
+    day: "2026-11-16",
+    stored: [
+      "Evening 2026-11-17T02:00:00.000Z America/Los_Angeles",
+      "Evening offset 2026-11-17T02:00:00.000Z America/Los_Angeles",
+      "Late 2026-11-17T07:30:00.000Z America/Los_Angeles",
+      "Late offset 2026-11-17T07:30:00.000Z America/Los_Angeles",
+    ],
+    groups: {
+      Overdue: [],
+      "Due today": ["Evening", "Evening offset", "Late", "Late offset"],
+      "Scheduled today": [],
+    },
+  });
+});
