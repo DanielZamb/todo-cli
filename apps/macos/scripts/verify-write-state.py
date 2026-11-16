@@ -111,6 +111,9 @@ with scratch_directory() as temporary:
             finally:
                 if process is not None:
                     stop(process)
+        # Follow-up 90: a test run that exits 0 without Swift Testing's passing summary line ended early.
+        if command[:2] == ['swift', 'test'] and code == 0 and not state_package.PASSING_SUMMARY.search((evidence / name).read_text(errors='replace')):
+            code = state_package.NO_SUMMARY_EXIT
         packages = package_state(name, 'after') if swift else None
         actions.append(dict(command=[str(value) for value in command], exit=code, packageResolvedDiffExit=packages))
         (evidence / 'commands.json').write_text(json.dumps(actions, indent=2) + '\n')

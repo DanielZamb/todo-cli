@@ -460,12 +460,19 @@ try {
           ),
         );
       }
+      // Follow-up 90: a test process that ends mid-test lets `swift test` exit 0 without Swift
+      // Testing's passing summary line; such a run did not pass.
+      const summarized = /Test run with \d+ tests?(?: in \d+ suites?)? passed/.test(
+        result.out + result.err,
+      );
       record(`${label}-swift-invocation`, {
         argv,
         stdout: result.out,
         stderr: result.err,
         actualExit: result.exit,
+        passingSummaryLine: summarized,
       });
+      if (result.exit === 0 && !summarized) return { ...result, exit: 7 };
       return result;
     } finally {
       process.removeListener("SIGINT", stop);
