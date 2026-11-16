@@ -128,7 +128,7 @@
         "-h",
         "-v"
       ],
-      "help_sha256": "dc0607e2634dc707aff645d895e54af2d8b1817fb47e898af15807f95eb0c418",
+      "help_sha256": "800b2ac498e2fdb6d4b14bf6d074e1be09a5fc664341509ffc35aa82aa62d805",
       "schema_sha256": "adceb3ccf3f6110a95efef520aa697a57ed666be95e2d96b292395f04880bc51"
     },
     "init": {
@@ -1255,18 +1255,20 @@
         "--help",
         "--help-human-flag",
         "--include-closed",
+        "--keep",
         "--log-level",
         "--no-color",
         "--plan",
         "--profile",
         "--require-server",
+        "--task",
         "--version",
         "--wizard",
         "-h",
         "-v"
       ],
-      "help_sha256": "835310499a4610d52823bb7c3e779d768db1bb99d6192e26d14a0c19e1967bd7",
-      "schema_sha256": "94cb341a8e16add4c494ef08f42b90b014070a62eb7c7d52aeb2cf72e7626150"
+      "help_sha256": "aaf6edf5d9bffd9b97690877c5938d9f02ec50f8229bf1ed6d011da1856f20b0",
+      "schema_sha256": "6dde1dec0ec376ed6cd43c84fa8657a9ae3b64cf1bf1ae5bb71c9d827cbb5ddf"
     },
     "profile list": {
       "flags": [

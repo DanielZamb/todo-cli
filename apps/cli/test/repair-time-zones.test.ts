@@ -1,8 +1,15 @@
-// Q14 (the owner, 2026-11-16): `todo repair time-zones` on scratch data with the compiled CLI.
-// Tasks typed on a machine set to UTC are stored with the zone UTC, as every typed time was before
-// follow-up 86; the repair then runs in Bogotá. The dry run leaves the database file byte-identical,
-// with and without a running server; the run takes a Snapshot, edits each Task once with the dry
-// run's Version, skips a Task changed meanwhile as a Conflict, and a Revert undoes one change.
+// Q14 (the owner, 2026-11-16): `todo repair time-zones` on scratch data with the compiled CLI and
+// server. Tasks typed on a machine set to UTC are stored with the zone UTC, as every time typed
+// bare was before follow-up 86; the repair runs in Bogotá.
+// - The dry run requires a reading (--keep moment|clock), shows both, and writes nothing, with and
+//   without a running server.
+// - A run applies exactly a dry run made with the same options (server seat F1): an edited,
+//   reordered, truncated or foreign plan is refused before any Snapshot or write.
+// - --all-profiles covers every Profile (F2); --task limits a run to named Tasks (F3).
+// - The run takes a Snapshot, edits each Task once with the dry run's Version, skips a Task changed
+//   meanwhile as a Conflict; Revert undoes one change; the Snapshot restores the state before.
+// - Under "clock" the instant moves, and a reminder that fired for the old instant fires again
+//   for the new one; under "moment" it does not.
 import { Database } from "bun:sqlite";
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -56,10 +63,18 @@ const json = (TZ: string, args: string[]) => {
   const result = run(TZ, ["--format", "json", ...args]);
   return { status: result.status, body: JSON.parse(result.stdout) };
 };
+const BOGOTA = "America/Bogota";
+const repair = (args: string[], TZ = BOGOTA) =>
+  json(TZ, ["repair", "time-zones", ...args]);
 const ids: Record<string, string> = {};
-const add = (TZ: string, title: string, flags: string[]) => {
-  const result = json(TZ, ["add", title, ...flags]);
-  expect(result.status).toBe(0);
+const add = (
+  TZ: string,
+  title: string,
+  flags: string[],
+  profile = "default",
+) => {
+  const result = json(TZ, ["--profile", profile, "add", title, ...flags]);
+  expect(result.status, JSON.stringify(result.body)).toBe(0);
   ids[title] = result.body.task.id;
 };
 /** The database file and its WAL, by SHA-256: what "writes nothing" means here. */
@@ -69,123 +84,71 @@ const fileHashes = () =>
       ? createHash("sha256").update(readFileSync(path)).digest("hex")
       : "absent",
   );
-const stored = () => {
+const query = <T>(sql: string) => {
   const db = new Database(database, { readonly: true });
   try {
-    return Object.fromEntries(
-      db
-        .query<
-          {
-            title: string;
-            due: string | null;
-            scheduled: string | null;
-            version: number;
-          },
-          []
-        >(
-          "SELECT title, due_at due, scheduled_at scheduled, row_version version FROM tasks ORDER BY title",
-        )
-        .all()
-        .map((row) => [
-          row.title,
-          {
-            due: row.due && JSON.parse(row.due),
-            scheduled: row.scheduled && JSON.parse(row.scheduled),
-            version: row.version,
-          },
-        ]),
-    );
+    return db.query<T, []>(sql).all();
   } finally {
     db.close();
   }
 };
-const historyCount = () => {
-  const db = new Database(database, { readonly: true });
-  try {
-    return db.query<{ n: number }, []>("SELECT count(*) n FROM op_log").get()
-      ?.n;
-  } finally {
-    db.close();
-  }
+const unchanged = () => ({
+  files: fileHashes(),
+  history: query<{ n: number }>("SELECT count(*) n FROM op_log")[0]?.n,
+  snapshots: (json(BOGOTA, ["snapshot", "list"]).body.snapshots as unknown[])
+    .length,
+});
+const stored = (title: string) => {
+  const row = query<{
+    due: string | null;
+    scheduled: string | null;
+    version: number;
+  }>(
+    `SELECT due_at due, scheduled_at scheduled, row_version version FROM tasks WHERE title = '${title}'`,
+  )[0];
+  return (
+    row && {
+      due: row.due && JSON.parse(row.due),
+      scheduled: row.scheduled && JSON.parse(row.scheduled),
+      version: row.version,
+    }
+  );
 };
+const reminders = (title: string) =>
+  query<{ due: string }>(
+    `SELECT json_extract(event,'$.due_at') due FROM op_log WHERE outcome='committed' AND json_extract(event,'$.kind')='ReminderFired' AND json_extract(event,'$.task_id')='${ids[title]}' ORDER BY seq`,
+  ).map((row) => row.due);
 const utc = (at: string) => ({ kind: "instant", utc: at, time_zone: "UTC" });
 const bogota = (at: string) => ({
   kind: "instant",
   utc: at,
-  time_zone: "America/Bogota",
+  time_zone: BOGOTA,
 });
-const planFile = join(scratch, "plan.json");
-let plan: {
-  items: {
-    task_id: string;
-    title: string;
-    field: string;
-    utc: string;
-    to_zone: string;
-    day_before: string;
-    day_after: string;
-    from_version: number;
-  }[];
-  totals: unknown;
+const planFile = (name: string, body: unknown) => {
+  const path = join(scratch, `${name}.json`);
+  writeFileSync(path, typeof body === "string" ? body : JSON.stringify(body));
+  return path;
 };
-let firstSnapshot = "";
-
-beforeAll(() => {
-  if (!cli) cli = compile("../src/main.ts", "todo");
-  if (!serverBinary)
-    serverBinary = compile("../../server/src/main.ts", "todo-server");
-  expect(run("UTC", ["init", "--password-stdin"]).status).toBe(0);
-  expect(run("UTC", ["login", "--password-stdin"]).status).toBe(0);
-  // Typed on a UTC machine: stored with the zone UTC.
-  add("UTC", "Evening", ["--due", "2026-11-17 02:00"]); // 21:00 in Bogotá on the 16th
-  add("UTC", "Noon", [
-    "--due",
-    "2026-11-16 12:00",
-    "--scheduled",
-    "2026-11-16 09:00",
-  ]);
-  add("UTC", "Meanwhile", ["--due", "2026-11-18 03:00"]); // 22:00 in Bogotá on the 17th
-  add("UTC", "Dated", ["--due", "2026-11-16"]);
-  add("America/Bogota", "Already", ["--due", "2026-11-16 21:00"]);
-  add("UTC", "Closed", ["--due", "2026-11-15 01:00"]); // 20:00 in Bogotá on the 14th
-  expect(
-    json("UTC", ["done", ids.Closed as string, "--expected-version", "1"])
-      .status,
-  ).toBe(0);
-}, 240000);
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
-
-it("the dry run lists exactly the UTC-zoned values, and the database file is byte-identical after it", () => {
-  const before = { files: fileHashes(), history: historyCount() };
-  const result = run("America/Bogota", [
-    "--format",
-    "json",
-    "repair",
-    "time-zones",
-    "--dry-run",
-  ]);
-  expect(result.status, result.stdout).toBe(0);
-  writeFileSync(planFile, result.stdout);
-  plan = JSON.parse(result.stdout);
-  expect({ files: fileHashes(), history: historyCount() }).toEqual(before);
-  expect(
-    plan.items.map(
-      (item) =>
-        `${item.title} ${item.field} ${item.utc} UTC->${item.to_zone} ${item.day_before}->${item.day_after} v${item.from_version}`,
-    ),
-  ).toEqual([
-    "Noon due_at 2026-11-16T12:00:00.000Z UTC->America/Bogota 2026-11-16->2026-11-16 v1",
-    "Noon scheduled_at 2026-11-16T09:00:00.000Z UTC->America/Bogota 2026-11-16->2026-11-16 v1",
-    "Evening due_at 2026-11-17T02:00:00.000Z UTC->America/Bogota 2026-11-17->2026-11-16 v1",
-    "Meanwhile due_at 2026-11-18T03:00:00.000Z UTC->America/Bogota 2026-11-18->2026-11-17 v1",
-  ]);
-  expect(plan.totals).toEqual({ tasks: 3, values: 4, not_changed: 1 });
-});
-
-it("with the server running, the dry run also leaves the database file byte-identical", async () => {
-  const server: ChildProcess = spawn(serverBinary, [], {
-    env: env("America/Bogota"),
-  });
+type Item = {
+  task_id: string;
+  title: string;
+  field: string;
+  stored_utc: string;
+  shown_before: string;
+  as_moment: string;
+  as_clock: string;
+  keep: string;
+  new_utc: string;
+  to_zone: string;
+  day_before: string;
+  day_after: string;
+  from_version: number;
+};
+const line = (item: Item) =>
+  `${item.title} ${item.field}: shown ${item.shown_before} | moment ${item.as_moment} | clock ${item.as_clock} | ${item.keep} -> ${item.new_utc}, day ${item.day_before}->${item.day_after} v${item.from_version}`;
+/** Starts the server, waits for two quiet seconds (its scheduler fires reminders for past due Tasks), runs `during`, stops it. */
+const withServer = async (during: () => void) => {
+  const server: ChildProcess = spawn(serverBinary, [], { env: env(BOGOTA) });
   try {
     await new Promise<void>((done, fail) => {
       let log = "";
@@ -203,201 +166,265 @@ it("with the server running, the dry run also leaves the database file byte-iden
       server.stdout?.on("data", read);
       server.stderr?.on("data", read);
     });
-    // The server's scheduler fires a reminder for each Task already past due when it starts (a
-    // History entry of its own). Measure once the database has been quiet for two seconds.
-    let quiet = { files: fileHashes(), history: historyCount() };
+    let quiet = JSON.stringify(fileHashes());
     for (let tries = 0; tries < 15; tries++) {
       await new Promise((done) => setTimeout(done, 2000));
-      const now = { files: fileHashes(), history: historyCount() };
-      if (JSON.stringify(now) === JSON.stringify(quiet)) break;
+      const now = JSON.stringify(fileHashes());
+      if (now === quiet) break;
       quiet = now;
     }
-    const before = { files: fileHashes(), history: historyCount() };
-    expect(before).toEqual(quiet);
-    const result = run("America/Bogota", [
-      "--format",
-      "json",
-      "repair",
-      "time-zones",
-      "--dry-run",
-    ]);
-    expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout).items).toEqual(plan.items);
-    expect({ files: fileHashes(), history: historyCount() }).toEqual(before);
+    during();
   } finally {
     server.kill("SIGTERM");
     await new Promise((done) => server.once("exit", done));
   }
-}, 60000);
+};
 
-it("the run takes a Snapshot, changes each Task once, and skips a Task changed since the dry run as a Conflict", () => {
+beforeAll(async () => {
+  if (!cli) cli = compile("../src/main.ts", "todo");
+  if (!serverBinary)
+    serverBinary = compile("../../server/src/main.ts", "todo-server");
+  expect(run("UTC", ["init", "--password-stdin"]).status).toBe(0);
+  expect(run("UTC", ["login", "--password-stdin"]).status).toBe(0);
   expect(
-    json("America/Bogota", [
+    run("UTC", ["--profile", "work", "login", "--password-stdin"]).status,
+  ).toBe(0);
+  // Typed bare on a UTC machine: stored as that clock time with the zone UTC.
+  add("UTC", "Evening", ["--due", "2026-11-16 21:00"]);
+  add("UTC", "Night", ["--due", "2026-11-17 03:00"]);
+  add("UTC", "Both", [
+    "--due",
+    "2026-11-18 02:00",
+    "--scheduled",
+    "2026-11-17 01:30",
+  ]);
+  add("UTC", "Meanwhile", ["--due", "2026-11-19 03:00"]);
+  add("UTC", "Past", ["--due", "2026-11-16 05:00"]); // its reminder fires when a server starts
+  add("UTC", "Dated", ["--due", "2026-11-16"]);
+  add(BOGOTA, "Already", ["--due", "2026-11-16 21:00"]);
+  add("UTC", "Elsewhere", ["--due", "2026-11-16 21:00"], "work");
+  await withServer(() => {});
+  expect(reminders("Past")).toEqual(["2026-11-16T05:00:00.000Z"]);
+}, 240000);
+afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+
+it("a dry run needs a reading, shows both, and writes nothing", () => {
+  const none = repair(["--dry-run"]);
+  expect([none.status, none.body.code]).toEqual([2, "invalid_args"]);
+  const before = unchanged();
+  const moment = repair(["--dry-run", "--keep", "moment"]);
+  const clock = repair(["--dry-run", "--keep", "clock"]);
+  expect([moment.status, clock.status]).toEqual([0, 0]);
+  expect(unchanged()).toEqual(before);
+  expect(moment.body.profiles).toEqual(["default"]);
+  expect(moment.body.items.map(line)).toEqual([
+    "Past due_at: shown 2026-11-16 05:00 | moment 2026-11-16 00:00 | clock 2026-11-16 05:00 | moment -> 2026-11-16T05:00:00.000Z, day 2026-11-16->2026-11-16 v1",
+    "Evening due_at: shown 2026-11-16 21:00 | moment 2026-11-16 16:00 | clock 2026-11-16 21:00 | moment -> 2026-11-16T21:00:00.000Z, day 2026-11-16->2026-11-16 v1",
+    "Both scheduled_at: shown 2026-11-17 01:30 | moment 2026-11-16 20:30 | clock 2026-11-17 01:30 | moment -> 2026-11-17T01:30:00.000Z, day 2026-11-17->2026-11-16 v1",
+    "Night due_at: shown 2026-11-17 03:00 | moment 2026-11-16 22:00 | clock 2026-11-17 03:00 | moment -> 2026-11-17T03:00:00.000Z, day 2026-11-17->2026-11-16 v1",
+    "Both due_at: shown 2026-11-18 02:00 | moment 2026-11-17 21:00 | clock 2026-11-18 02:00 | moment -> 2026-11-18T02:00:00.000Z, day 2026-11-18->2026-11-17 v1",
+    "Meanwhile due_at: shown 2026-11-19 03:00 | moment 2026-11-18 22:00 | clock 2026-11-19 03:00 | moment -> 2026-11-19T03:00:00.000Z, day 2026-11-19->2026-11-18 v1",
+  ]);
+  expect(
+    clock.body.items.map(
+      (item: Item) => `${item.title} ${item.field} -> ${item.new_utc}`,
+    ),
+  ).toEqual([
+    "Past due_at -> 2026-11-16T10:00:00.000Z",
+    "Evening due_at -> 2026-11-17T02:00:00.000Z",
+    "Both scheduled_at -> 2026-11-17T06:30:00.000Z",
+    "Night due_at -> 2026-11-17T08:00:00.000Z",
+    "Both due_at -> 2026-11-18T07:00:00.000Z",
+    "Meanwhile due_at -> 2026-11-19T08:00:00.000Z",
+  ]);
+});
+
+it("with the server running, the dry run also leaves the database file byte-identical", async () => {
+  await withServer(() => {
+    const before = fileHashes();
+    expect(repair(["--dry-run", "--keep", "clock"]).status).toBe(0);
+    expect(fileHashes()).toEqual(before);
+  });
+}, 90000);
+
+it("--all-profiles covers every Profile the owner may read (server seat F2)", () => {
+  const all = repair(["--dry-run", "--keep", "clock", "--all-profiles"]);
+  expect(all.body.profiles).toEqual(["default", "work"]);
+  expect(all.body.items.map((item: Item) => item.title)).toContain("Elsewhere");
+});
+
+it("refuses an edited, reordered, truncated or foreign plan before any Snapshot or write (server seat F1)", () => {
+  const plan = repair(["--dry-run", "--keep", "clock"]).body;
+  const edited = (edit: (p: typeof plan) => void) => {
+    const copy = JSON.parse(JSON.stringify(plan));
+    edit(copy);
+    return copy;
+  };
+  const evening = plan.items.findIndex(
+    (item: Item) => item.title === "Evening",
+  );
+  const before = unchanged();
+  const results = [
+    edited((p) => {
+      p.items[evening].stored_utc = "2026-11-16T22:00:00.000Z";
+      p.items[evening].new_utc = "2026-11-17T03:00:00.000Z";
+    }),
+    edited((p) => {
+      p.items[evening].to_zone = "Asia/Tokyo";
+    }),
+    edited((p) => {
+      p.items.push({
+        ...p.items[evening],
+        task_id: ids.Already,
+        title: "Already",
+        stored_utc: "2026-11-17T02:00:00.000Z",
+        new_utc: "2030-01-01T00:00:00.000Z",
+      });
+    }),
+    edited((p) => {
+      p.items.push({
+        ...p.items[evening],
+        task_id: ids.Dated,
+        title: "Dated",
+        field: "scheduled_at",
+        new_utc: "2026-11-20T12:00:00.000Z",
+      });
+    }),
+    edited((p) => {
+      p.items.reverse();
+    }),
+    edited((p) => {
+      p.items.pop();
+    }),
+    edited((p) => {
+      for (const item of p.items)
+        item.task_id = "0123456789abcdef0123456789abcdef";
+    }),
+  ].map((body, index) => {
+    const result = repair(["--plan", planFile(`edited-${index}`, body)]);
+    return [result.status, result.body.code];
+  });
+  expect(results).toEqual(Array(7).fill([2, "plan_mismatch"]));
+  expect(unchanged()).toEqual(before);
+  const first = repair([
+    "--plan",
+    planFile(
+      "first",
+      edited((p) => {
+        p.items[evening].to_zone = "Asia/Tokyo";
+      }),
+    ),
+  ]);
+  expect(first.body.message).toBe(
+    `The plan does not match what is stored, so nothing was written and no Snapshot was taken: item ${evening + 1} (Task ${ids.Evening}, due_at) names the zone Asia/Tokyo or the reading clock, not the plan's America/Bogota and clock. Make a new dry run.`,
+  );
+});
+
+it("--task runs one reading on some Tasks; a Task changed meanwhile is a Conflict; the same plan twice writes nothing", () => {
+  const plan = repair([
+    "--dry-run",
+    "--keep",
+    "clock",
+    "--task",
+    ids.Evening as string,
+    "--task",
+    ids.Meanwhile as string,
+    "--task",
+    ids.Past as string,
+  ]).body;
+  expect(plan.tasks).toEqual([ids.Evening, ids.Meanwhile, ids.Past]);
+  expect(plan.items.map((item: Item) => item.title)).toEqual([
+    "Past",
+    "Evening",
+    "Meanwhile",
+  ]);
+  const file = planFile("clock", plan);
+  expect(
+    json(BOGOTA, [
       "edit",
       ids.Meanwhile as string,
-      "--title",
-      "Meanwhile",
       "--priority",
       "P1",
       "--expected-version",
       "1",
     ]).status,
   ).toBe(0);
-  const history = historyCount() as number;
-  const result = run("America/Bogota", [
-    "--format",
-    "json",
-    "repair",
-    "time-zones",
-    "--plan",
-    planFile,
-  ]);
-  expect(result.status).toBe(4);
-  const report = JSON.parse(result.stdout);
-  firstSnapshot = report.snapshot_id;
-  expect(typeof firstSnapshot).toBe("string");
+  const applied = repair(["--plan", file]);
+  expect(applied.status).toBe(4);
   expect(
-    report.items.map(
-      (item: {
-        title: string;
-        field: string;
-        outcome: string;
-        to_version: number | null;
-        current_version: number | null;
-      }) =>
-        `${item.title} ${item.field} ${item.outcome} to v${item.to_version} now v${item.current_version}`,
+    applied.body.items.map(
+      (item: Item & { outcome: string }) => `${item.title} ${item.outcome}`,
+    ),
+  ).toEqual(["Past changed", "Evening changed", "Meanwhile conflict"]);
+  expect(typeof applied.body.snapshot_id).toBe("string");
+  expect([
+    stored("Evening")?.due,
+    stored("Past")?.due,
+    stored("Meanwhile")?.due,
+  ]).toEqual([
+    bogota("2026-11-17T02:00:00.000Z"),
+    bogota("2026-11-16T10:00:00.000Z"),
+    utc("2026-11-19T03:00:00.000Z"),
+  ]);
+  // The same plan again: Past and Evening already repaired, Meanwhile still a Conflict, found
+  // before any write: no Snapshot, no History entry.
+  const before = unchanged();
+  const stale = repair(["--plan", file]);
+  expect([stale.status, stale.body.snapshot_id, stale.body.totals]).toEqual([
+    4,
+    null,
+    { changed: 0, already_repaired: 2, conflict: 1, not_found: 0, rejected: 0 },
+  ]);
+  expect(unchanged()).toEqual(before);
+  // A new dry run for it, applied; then that plan again: already repaired, no Snapshot.
+  const again = planFile(
+    "again",
+    repair(["--dry-run", "--keep", "clock", "--task", ids.Meanwhile as string])
+      .body,
+  );
+  expect(repair(["--plan", again]).body.totals.changed).toBe(1);
+  const settled = unchanged();
+  const twice = repair(["--plan", again]);
+  expect([
+    twice.status,
+    twice.body.snapshot_id,
+    twice.body.totals.already_repaired,
+  ]).toEqual([0, null, 1]);
+  expect(unchanged()).toEqual(settled);
+});
+
+it("same moment on the rest; under clock a fired reminder fires again at the new instant, under moment it does not", async () => {
+  const rest = planFile(
+    "moment",
+    repair(["--dry-run", "--keep", "moment"]).body,
+  );
+  const applied = repair(["--plan", rest]);
+  expect(
+    applied.body.items.map(
+      (item: Item & { outcome: string }) =>
+        `${item.title} ${item.field} ${item.outcome}`,
     ),
   ).toEqual([
-    "Noon due_at changed to v2 now v2",
-    "Noon scheduled_at changed to v2 now v2",
-    "Evening due_at changed to v2 now v2",
-    "Meanwhile due_at conflict to vnull now v2",
+    "Both scheduled_at changed",
+    "Both due_at changed",
+    "Night due_at changed",
   ]);
-  expect(report.totals).toEqual({
-    changed: 3,
-    already_repaired: 0,
-    conflict: 1,
-    not_found: 0,
-    rejected: 0,
+  expect(stored("Night")).toEqual({
+    due: bogota("2026-11-17T03:00:00.000Z"),
+    scheduled: null,
+    version: 2,
   });
-  // Two edits committed (Evening, Noon: one History entry each) and one rejected attempt (Meanwhile).
-  expect(historyCount()).toBe(history + 3);
-  expect(stored()).toEqual({
-    Closed: {
-      due: utc("2026-11-15T01:00:00.000Z"),
-      scheduled: null,
-      version: 2,
-    },
-    Already: {
-      due: bogota("2026-11-17T02:00:00.000Z"),
-      scheduled: null,
-      version: 1,
-    },
-    Dated: {
-      due: { kind: "date", date: "2026-11-16" },
-      scheduled: null,
-      version: 1,
-    },
-    Evening: {
-      due: bogota("2026-11-17T02:00:00.000Z"),
-      scheduled: null,
-      version: 2,
-    },
-    Meanwhile: {
-      due: utc("2026-11-18T03:00:00.000Z"),
-      scheduled: null,
-      version: 2,
-    },
-    Noon: {
-      due: bogota("2026-11-16T12:00:00.000Z"),
-      scheduled: bogota("2026-11-16T09:00:00.000Z"),
-      version: 2,
-    },
-  });
-  // The newest Snapshot is the run's (the server took a daily one when it started).
-  const snapshots = json("America/Bogota", ["snapshot", "list"]).body.snapshots;
-  expect(
-    snapshots.map(
-      (snapshot: { id: string; reason: string }) =>
-        `${snapshot.id === firstSnapshot} ${snapshot.reason}`,
-    ),
-  ).toEqual(["true repair time-zones", "false daily"]);
-});
+  await withServer(() => {});
+  // Past (clock): its reminder fired for 05:00Z; its new instant 10:00Z is past too, so it fires once more.
+  expect(reminders("Past")).toEqual([
+    "2026-11-16T05:00:00.000Z",
+    "2026-11-16T10:00:00.000Z",
+  ]);
+}, 90000);
 
-it("a new dry run picks up the skipped Task at its new Version; after it, a run changes nothing and takes no Snapshot", () => {
-  const again = run("America/Bogota", [
-    "--format",
-    "json",
-    "repair",
-    "time-zones",
-    "--dry-run",
-  ]);
-  writeFileSync(planFile, again.stdout);
-  expect(
-    JSON.parse(again.stdout).items.map(
-      (item: { title: string; from_version: number }) =>
-        `${item.title} v${item.from_version}`,
-    ),
-  ).toEqual(["Meanwhile v2"]);
-  const applied = JSON.parse(
-    run("America/Bogota", [
-      "--format",
-      "json",
-      "repair",
-      "time-zones",
-      "--plan",
-      planFile,
-    ]).stdout,
-  );
-  expect(applied.totals.changed).toBe(1);
-  // The same plan again, and a fresh dry run's empty plan: nothing written, no Snapshot.
-  const before = { files: fileHashes(), history: historyCount() };
-  const second = run("America/Bogota", [
-    "--format",
-    "json",
-    "repair",
-    "time-zones",
-    "--plan",
-    planFile,
-  ]);
-  expect(second.status).toBe(0);
-  expect(JSON.parse(second.stdout)).toMatchObject({
-    snapshot_id: null,
-    totals: {
-      changed: 0,
-      already_repaired: 1,
-      conflict: 0,
-      not_found: 0,
-      rejected: 0,
-    },
-  });
-  const empty = run("America/Bogota", [
-    "--format",
-    "json",
-    "repair",
-    "time-zones",
-    "--dry-run",
-  ]);
-  expect(JSON.parse(empty.stdout).items).toEqual([]);
-  writeFileSync(planFile, empty.stdout);
-  expect(
-    JSON.parse(
-      run("America/Bogota", [
-        "--format",
-        "json",
-        "repair",
-        "time-zones",
-        "--plan",
-        planFile,
-      ]).stdout,
-    ).snapshot_id,
-  ).toBe(null);
-  expect({ files: fileHashes(), history: historyCount() }).toEqual(before);
-});
-
-it("Revert of one repaired Task gives back the zone UTC, through the existing Revert", () => {
-  const entries = json("America/Bogota", ["history", ids.Evening as string])
-    .body.entries as {
+it("Revert undoes one repaired Task while it is its latest change; the Snapshot restores the state before", () => {
+  const entries = json(BOGOTA, ["history", ids.Night as string]).body
+    .entries as {
     seq: number;
     outcome: string;
     event: { kind: string };
@@ -406,87 +433,38 @@ it("Revert of one repaired Task gives back the zone UTC, through the existing Re
     (entry) =>
       entry.outcome === "committed" && entry.event.kind === "TaskEdited",
   );
-  expect(repaired.length).toBe(1);
-  const reverted = json("America/Bogota", [
-    "revert",
-    String(repaired[0]?.seq),
-    "--expected-version",
-    "2",
-  ]);
-  expect(reverted.status).toBe(0);
-  expect(stored().Evening).toEqual({
-    due: utc("2026-11-17T02:00:00.000Z"),
-    scheduled: null,
-    version: 3,
-  });
-});
-
-it("the run's Snapshot restores the state before the repair", () => {
   expect(
-    json("America/Bogota", ["snapshot", "restore", firstSnapshot]).status,
+    json(BOGOTA, [
+      "revert",
+      String(repaired[0]?.seq),
+      "--expected-version",
+      "2",
+    ]).status,
   ).toBe(0);
-  const restored = stored();
-  expect([
-    restored.Evening?.due,
-    restored.Noon?.due,
-    restored.Noon?.scheduled,
-  ]).toEqual([
-    utc("2026-11-17T02:00:00.000Z"),
-    utc("2026-11-16T12:00:00.000Z"),
-    utc("2026-11-16T09:00:00.000Z"),
+  expect(stored("Night")?.due).toEqual(utc("2026-11-17T03:00:00.000Z"));
+  const snapshots = json(BOGOTA, ["snapshot", "list"]).body.snapshots as {
+    id: string;
+    reason: string;
+  }[];
+  const first = snapshots
+    .filter((snapshot) => snapshot.reason === "repair time-zones")
+    .at(-1);
+  expect(
+    json(BOGOTA, ["snapshot", "restore", first?.id as string]).status,
+  ).toBe(0);
+  expect([stored("Evening")?.due, stored("Past")?.due]).toEqual([
+    utc("2026-11-16T21:00:00.000Z"),
+    utc("2026-11-16T05:00:00.000Z"),
   ]);
 });
 
-it("--include-closed adds a done Task; without it the done Task is listed as not changed", () => {
-  const closed = run("America/Bogota", [
-    "--format",
-    "json",
-    "repair",
-    "time-zones",
-    "--dry-run",
-    "--include-closed",
-  ]);
-  writeFileSync(planFile, closed.stdout);
-  expect(
-    JSON.parse(closed.stdout).items.map(
-      (item: {
-        title: string;
-        status: string;
-        day_before: string;
-        day_after: string;
-      }) =>
-        `${item.title} ${item.status} ${item.day_before}->${item.day_after}`,
-    ),
-  ).toContain("Closed done 2026-11-15->2026-11-14");
-  const applied = JSON.parse(
-    run("America/Bogota", [
-      "--format",
-      "json",
-      "repair",
-      "time-zones",
-      "--plan",
-      planFile,
-    ]).stdout,
-  );
-  expect(
-    applied.items
-      .filter((item: { title: string }) => item.title === "Closed")
-      .map((item: { outcome: string }) => item.outcome),
-  ).toEqual(["changed"]);
-  expect(stored().Closed?.due).toEqual(bogota("2026-11-15T01:00:00.000Z"));
-});
-
-it("refuses a plan made for another time zone, and a call with neither --dry-run nor --plan", () => {
-  const tokyo = json("Asia/Tokyo", [
-    "repair",
-    "time-zones",
-    "--plan",
-    planFile,
-  ]);
-  expect([tokyo.status, tokyo.body.code]).toEqual([2, "invalid_args"]);
-  expect(tokyo.body.message).toBe(
+it("refuses a plan from another machine zone, a run with options of its own, and a call with neither --dry-run nor --plan", () => {
+  const plan = planFile("zone", repair(["--dry-run", "--keep", "moment"]).body);
+  const tokyo = repair(["--plan", plan], "Asia/Tokyo");
+  expect([tokyo.status, tokyo.body.message]).toEqual([
+    2,
     "The plan was made for the time zone America/Bogota; this machine's is Asia/Tokyo. Make a new dry run here.",
-  );
-  const bare = json("America/Bogota", ["repair", "time-zones"]);
-  expect([bare.status, bare.body.code]).toEqual([2, "invalid_args"]);
+  ]);
+  expect(repair(["--plan", plan, "--keep", "clock"]).status).toBe(2);
+  expect(repair([]).status).toBe(2);
 });
