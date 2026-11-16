@@ -68,6 +68,19 @@ export const planningDay = (
   return { today: dateIn(now, timeZone), timeZone };
 };
 
+/** The calendar date `days` after `day` (YYYY-MM-DD): calendar arithmetic, no clock or zone. */
+export const addDays = (day: string, days: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + days * 86400000)
+    .toISOString()
+    .slice(0, 10);
+
+/**
+ * The last day of the week ahead that the weekly review and `export --scope weekly` cover: today
+ * and the six calendar days after it, in the reader's zone (follow-up 88). A due date before today
+ * is Overdue; one after this day is outside the week.
+ */
+export const lastDayOfWeek = (day: PlanningDay) => addDays(day.today, 6);
+
 /** The calendar day a due or scheduled time falls on. */
 export const taskDay = (time: TaskTime | null) =>
   time === null

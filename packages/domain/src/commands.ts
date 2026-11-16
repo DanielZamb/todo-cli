@@ -26,7 +26,11 @@ import { Event, type TaskMutationKind } from "./events.ts";
 import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
-import { type PlanningClock, processTimeZone } from "./planning-day.ts";
+import {
+  lastDayOfWeek,
+  type PlanningClock,
+  processTimeZone,
+} from "./planning-day.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -1453,15 +1457,18 @@ export function filterTasks(
 export function exportScope(
   tasks: readonly TaskView[],
   scope: string,
-  now: string,
   clock: PlanningClock,
 ) {
   if (scope === "all") return tasks;
   if (scope === "today") return filterTasks(tasks, { today: true }, clock);
-  if (scope === "weekly")
-    return tasks.filter(
-      (t) => t.due_at && Date.parse(t.due_at) < Date.parse(now) + 7 * 86400000,
-    );
+  if (scope === "weekly") {
+    // Due by the end of the week ahead, by calendar day (follow-up 88), past due dates included.
+    const lastDay = lastDayOfWeek(clock.day);
+    return tasks.filter((t) => {
+      const due = clock.days.get(t.id)?.due ?? null;
+      return due !== null && due <= lastDay;
+    });
+  }
   if (scope.startsWith("project:"))
     return filterTasks(tasks, { project: scope.slice(8) }, clock);
   if (scope.startsWith("id:") && scope.slice(3)) {

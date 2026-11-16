@@ -18,7 +18,7 @@ import { OpLogEntry } from "./events.ts";
 import { type ExitCode, ExitStatus, exitStatus } from "./exit-status.ts";
 import { graphMermaid } from "./graph-mermaid.ts";
 import { ProfileId, TaskId } from "./ids.ts";
-import { type PlanningClock, taskDay } from "./planning-day.ts";
+import { lastDayOfWeek, type PlanningClock, taskDay } from "./planning-day.ts";
 import { TaskLookupDetails } from "./task-lookup-error.ts";
 import { DependencyReadFields, type TaskRead } from "./task-read.ts";
 import { SearchMatches } from "./task-search.ts";
@@ -326,21 +326,23 @@ export function renderReview(
   const millis = Date.parse(now);
   const dueDay = (t: TaskView) => clock.days.get(t.id)?.due ?? null;
   const scheduledDay = (t: TaskView) => clock.days.get(t.id)?.scheduled ?? null;
-  const overdue = open.filter((t) => {
+  // Every open Task is in at most one of Overdue and Scheduled, by its due day in its stored zone
+  // and today in the reader's zone (follow-up 88), as the Today view groups it: Overdue is a due
+  // day before today; daily Scheduled is due or scheduled today; weekly Scheduled is due from today
+  // through the sixth day after it. A timed Task due earlier today is due today, not Overdue.
+  const isOverdue = (t: TaskView) => {
     const due = dueDay(t);
-    if (!t.due_at || due === null) return false;
-    // Weekly compares an instant with now; a date is overdue after its day.
-    return period === "daily" || t.due_at.length === 10
-      ? due < today
-      : Date.parse(t.due_at) < millis;
+    return due !== null && due < today;
+  };
+  const lastDay = lastDayOfWeek(clock.day);
+  const overdue = open.filter(isOverdue);
+  const scheduled = open.filter((t) => {
+    if (isOverdue(t)) return false;
+    const due = dueDay(t);
+    return period === "daily"
+      ? scheduledDay(t) === today || due === today
+      : due !== null && due <= lastDay;
   });
-  const scheduled = open.filter((t) =>
-    period === "daily"
-      ? scheduledDay(t) === today || dueDay(t) === today
-      : t.due_at &&
-        Date.parse(t.due_at) >= millis &&
-        Date.parse(t.due_at) < millis + 7 * 86400000,
-  );
   const inbox = open.filter(
     (t) =>
       isInboxTask(t) &&

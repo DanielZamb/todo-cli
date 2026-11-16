@@ -1912,12 +1912,7 @@ const exportCommand = Command.make(
           );
           const tasks = yield* Effect.try({
             try: () =>
-              exportScope(
-                data.views,
-                input.scope,
-                nowInstant(),
-                machineClock(data.tasks),
-              ),
+              exportScope(data.views, input.scope, machineClock(data.tasks)),
             catch: (error) => error,
           });
           const text = renderExport(
