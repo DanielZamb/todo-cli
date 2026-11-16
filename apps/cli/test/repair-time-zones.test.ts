@@ -147,6 +147,11 @@ beforeAll(() => {
   add("UTC", "Meanwhile", ["--due", "2026-11-18 03:00"]); // 22:00 in Bogotá on the 17th
   add("UTC", "Dated", ["--due", "2026-11-16"]);
   add("America/Bogota", "Already", ["--due", "2026-11-16 21:00"]);
+  add("UTC", "Closed", ["--due", "2026-11-15 01:00"]); // 20:00 in Bogotá on the 14th
+  expect(
+    json("UTC", ["done", ids.Closed as string, "--expected-version", "1"])
+      .status,
+  ).toBe(0);
 }, 240000);
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
@@ -174,7 +179,7 @@ it("the dry run lists exactly the UTC-zoned values, and the database file is byt
     "Evening due_at 2026-11-17T02:00:00.000Z UTC->America/Bogota 2026-11-17->2026-11-16 v1",
     "Meanwhile due_at 2026-11-18T03:00:00.000Z UTC->America/Bogota 2026-11-18->2026-11-17 v1",
   ]);
-  expect(plan.totals).toEqual({ tasks: 3, values: 4, not_changed: 0 });
+  expect(plan.totals).toEqual({ tasks: 3, values: 4, not_changed: 1 });
 });
 
 it("with the server running, the dry run also leaves the database file byte-identical", async () => {
@@ -278,6 +283,11 @@ it("the run takes a Snapshot, changes each Task once, and skips a Task changed s
   // Two edits committed (Evening, Noon: one History entry each) and one rejected attempt (Meanwhile).
   expect(historyCount()).toBe(history + 3);
   expect(stored()).toEqual({
+    Closed: {
+      due: utc("2026-11-15T01:00:00.000Z"),
+      scheduled: null,
+      version: 2,
+    },
     Already: {
       due: bogota("2026-11-17T02:00:00.000Z"),
       scheduled: null,
@@ -425,6 +435,45 @@ it("the run's Snapshot restores the state before the repair", () => {
     utc("2026-11-16T12:00:00.000Z"),
     utc("2026-11-16T09:00:00.000Z"),
   ]);
+});
+
+it("--include-closed adds a done Task; without it the done Task is listed as not changed", () => {
+  const closed = run("America/Bogota", [
+    "--format",
+    "json",
+    "repair",
+    "time-zones",
+    "--dry-run",
+    "--include-closed",
+  ]);
+  writeFileSync(planFile, closed.stdout);
+  expect(
+    JSON.parse(closed.stdout).items.map(
+      (item: {
+        title: string;
+        status: string;
+        day_before: string;
+        day_after: string;
+      }) =>
+        `${item.title} ${item.status} ${item.day_before}->${item.day_after}`,
+    ),
+  ).toContain("Closed done 2026-11-15->2026-11-14");
+  const applied = JSON.parse(
+    run("America/Bogota", [
+      "--format",
+      "json",
+      "repair",
+      "time-zones",
+      "--plan",
+      planFile,
+    ]).stdout,
+  );
+  expect(
+    applied.items
+      .filter((item: { title: string }) => item.title === "Closed")
+      .map((item: { outcome: string }) => item.outcome),
+  ).toEqual(["changed"]);
+  expect(stored().Closed?.due).toEqual(bogota("2026-11-15T01:00:00.000Z"));
 });
 
 it("refuses a plan made for another time zone, and a call with neither --dry-run nor --plan", () => {

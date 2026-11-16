@@ -34,3 +34,7 @@ context and the approved recovery paths.
 ## Amendment, 2026-11-13: undated Tasks last
 
 On 2026-11-13 the owner changed the one Task order so that undated Tasks come last within a priority; the `todo list` and export goldens were checked against it and needed no renewal, because none holds two Tasks of one priority.
+
+## Amendment, 2026-11-16: one-time data repairs are maintenance, not capabilities
+
+The owner answered Q14 on 2026-11-16: repair, once, the due and scheduled times the CLI stored with the time zone UTC before follow-up 86. A repair like this is maintenance of stored data, not a capability, and it gets no app primitive. It lives under `todo repair`, is owner-only, offers `--dry-run` with the normal report shape and JSON output, and writes nothing that a capability could not write: each change is an ordinary Task edit through the one write path, with its own History entry. So both apps already show it (History) and undo it (Revert) with their existing primitives. A repair that needed a new kind of change, or that people would use more than once, would be a capability and would follow the rule above.
