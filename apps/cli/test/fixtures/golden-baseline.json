@@ -26,5 +26,19 @@
       "sha256": "47b50a4e0a9d0cd7e87f7ed0576f7e0447c4cae1f648172639cc49a72239f4af",
       "bytes": 193
     }
+  ],
+  "repository": [
+    {
+      "path": "apps/cli/test/golden-order/export_default_md.golden",
+      "sha256": "d91acef25d59fd6319ff4f93fcdb21d80171b88d0ff42af5083a06bb16b3be9d",
+      "bytes": 110,
+      "freezes": "undated Tasks last inside a priority (owner's Q8, ADR-0009)"
+    },
+    {
+      "path": "apps/cli/test/golden-order/list_json.golden",
+      "sha256": "f785fcfce654c35493f4cdc958928564edd4b66c3aab92c0099b618e16163c43",
+      "bytes": 626,
+      "freezes": "undated Tasks last inside a priority (owner's Q8, ADR-0009)"
+    }
   ]
 }

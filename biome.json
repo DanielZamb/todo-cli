@@ -30,5 +30,13 @@
     "rules": {
       "preset": "recommended"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/api/openapi.json"],
+      "files": {
+        "maxSize": 8388608
+      }
+    }
+  ]
 }

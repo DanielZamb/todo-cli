@@ -6,6 +6,7 @@ import {
   consumeTerminalRead,
   readAuthority,
 } from "../auth/authorized-read.ts";
+import { diagnosticSync } from "../diagnostic-context.ts";
 import { OpLogEntry } from "../events.ts";
 import type { ProfileId, TaskId } from "../ids.ts";
 
@@ -53,11 +54,13 @@ const relevant = `CASE json_extract(event,'$.kind') ${Object.entries(predicates)
   .map(([kind, predicate]) => `WHEN '${kind}' THEN (${predicate})`)
   .join(" ")} ELSE 0 END`;
 const decode = (rows: { event: string }[]) =>
-  rows.map((row) =>
-    Schema.decodeUnknownSync(OpLogEntry)({
-      ...row,
-      event: JSON.parse(row.event),
-    }),
+  diagnosticSync("history_decode", () =>
+    rows.map((row) =>
+      Schema.decodeUnknownSync(OpLogEntry)({
+        ...row,
+        event: JSON.parse(row.event),
+      }),
+    ),
   );
 
 export const taskHistory = (

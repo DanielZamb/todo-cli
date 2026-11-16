@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { operationPositionField } from "./committed-operations.ts";
 import {
   DependencyAdvice,
   DependencyError,
@@ -34,6 +35,7 @@ export const DependencyWarning = Schema.Union([
 ]);
 export type DependencyWarning = typeof DependencyWarning.Type;
 export const EdgeReport = Schema.Struct({
+  ...operationPositionField,
   generated_at: Instant,
   outcome: Schema.Literals(["added", "removed", "unchanged"]),
   dependent_id: TaskId,
@@ -83,6 +85,7 @@ export const EdgeFailure = Schema.Union([
 ]);
 export type EdgeFailure = typeof EdgeFailure.Type;
 export const BatchEdgeReport = Schema.Struct({
+  ...operationPositionField,
   generated_at: Instant,
   dry_run: Schema.Boolean,
   results: Schema.Array(

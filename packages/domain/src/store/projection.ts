@@ -5,6 +5,7 @@ import {
   Edge,
   emptyDependencies,
 } from "../dependencies.ts";
+import { diagnosticSync } from "../diagnostic-context.ts";
 import { Project, Series, Tag, Task } from "../entities.ts";
 import type { Event, TaskHistoryRedacted } from "../events.ts";
 import type { ProfileId } from "../ids.ts";
@@ -87,11 +88,19 @@ export function createProjection(db: Database) {
   db.exec(dependencySchemaSql);
 }
 
-export const readTasks = (db: Database): Task[] =>
-  db
-    .query<{ payload: string }, []>("SELECT payload FROM tasks ORDER BY id")
-    .all()
-    .map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload)));
+export const readTasks = (db: Database): Task[] => {
+  const rows = diagnosticSync(
+    "database",
+    () =>
+      db
+        .query<{ payload: string }, []>("SELECT payload FROM tasks ORDER BY id")
+        .all(),
+    { statement: "store.read" },
+  );
+  return diagnosticSync("task_materialization", () =>
+    rows.map((row) => Schema.decodeUnknownSync(Task)(JSON.parse(row.payload))),
+  );
+};
 
 export const readSeries = (db: Database): Series[] =>
   db

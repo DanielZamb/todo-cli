@@ -4,6 +4,7 @@ import { copyAttachments, removeWrittenImage } from "./attachment-store.ts";
 import type { AttachmentInput } from "./attachments.ts";
 import { readRequest } from "./auth/authorized-read.ts";
 import { type AccessRequest, AuthError } from "./auth/model.ts";
+import { compareTasks } from "./catalog-order.ts";
 import { isInboxTask } from "./client-reads.ts";
 import type { DependencyError, Edge, VersionChange } from "./dependencies.ts";
 import { dependencyWarnings } from "./dependency-commands.ts";
@@ -24,6 +25,7 @@ import { Event, type TaskMutationKind } from "./events.ts";
 import { type ExitCode, exitStatus } from "./exit-status.ts";
 import { type ActorId, OccurrenceId, ProfileId, TaskId } from "./ids.ts";
 import { inputLimits } from "./limits.ts";
+import type { PlanningClock } from "./planning-day.ts";
 import {
   type ExternalIdConflictDetails,
   type TaskView,
@@ -40,6 +42,7 @@ import {
 import { StoreError } from "./store/error.ts";
 import { changes as eventChanges } from "./store/projection.ts";
 import type { OperationStore } from "./store/store.ts";
+import { tagKey, tagNames } from "./tag-name.ts";
 import {
   type CreateSeries,
   CreateTask,
@@ -184,24 +187,7 @@ export const readTasks = Effect.fn(function* (
   const checkedFilters = authority.fields.filters;
   const ordered = graph.tasks
     .filter((t) => t.deleted_at === null)
-    .sort(
-      (a, b) =>
-        a.priority.localeCompare(b.priority) ||
-        (a.due_at === null
-          ? ""
-          : a.due_at.kind === "date"
-            ? a.due_at.date
-            : a.due_at.utc
-        ).localeCompare(
-          b.due_at === null
-            ? ""
-            : b.due_at.kind === "date"
-              ? b.due_at.date
-              : b.due_at.utc,
-        ) ||
-        a.created_at.localeCompare(b.created_at) ||
-        a.id.localeCompare(b.id),
-    );
+    .sort(compareTasks);
   const context =
     graph.edges.length ||
     checkedFilters.ready ||
@@ -291,26 +277,17 @@ function metadata(
           (t) =>
             t.profile_id === request.profile && before?.tags.includes(t.id),
         )
-      : [
-          ...new Set(
-            flags.tag
-              .flatMap((t) => t.split(","))
-              .map((t) => t.trim().toLowerCase())
-              .filter(Boolean),
-          ),
-        ]
-          .sort()
-          .map(
-            (name) =>
-              data.tags.find(
-                (t) => t.profile_id === request.profile && t.name === name,
-              ) ??
-              Schema.decodeUnknownSync(Tag)({
-                id: crypto.randomUUID(),
-                profile_id: request.profile,
-                name,
-              }),
-          );
+      : tagNames(flags.tag).map(
+          (name) =>
+            data.tags.find(
+              (t) => t.profile_id === request.profile && t.name === name,
+            ) ??
+            Schema.decodeUnknownSync(Tag)({
+              id: crypto.randomUUID(),
+              profile_id: request.profile,
+              name,
+            }),
+        );
   return { project, tags, now };
 }
 type Definitions = {
@@ -1116,7 +1093,7 @@ const checkSubmittedNames = (flags: TaskFlags) => {
   // Tags are stored lowercased, and lowercasing can lengthen a name.
   if (
     flags.tag?.some((value) =>
-      value.split(",").some((name) => tooLong(name.trim().toLowerCase())),
+      value.split(",").some((name) => tooLong(tagKey(name))),
     )
   )
     throw invalid(`Tag names have at most ${inputLimits.name} characters.`);
@@ -1377,41 +1354,42 @@ export type Filters = {
   readonly overdue?: boolean;
   readonly inbox?: boolean;
 };
+/** Today and Overdue take their day from clock (planning-day.ts). */
 export function filterTasks(
   tasks: readonly TaskView[],
   filters: Filters,
-  now: string,
+  clock: PlanningClock,
 ) {
-  const today = now.slice(0, 10);
-  return tasks.filter(
-    (t) =>
+  const today = clock.day.today;
+  return tasks.filter((t) => {
+    const due = clock.days.get(t.id)?.due ?? null;
+    const scheduled = clock.days.get(t.id)?.scheduled ?? null;
+    return (
       (!filters.status || t.status === filters.status) &&
       (!filters.project || t.project === filters.project) &&
-      (!filters.tag || t.tags?.includes(filters.tag.trim().toLowerCase())) &&
+      (!filters.tag || t.tags?.includes(tagKey(filters.tag))) &&
       (!filters.priority || t.priority === filters.priority) &&
-      (!filters.today ||
-        t.due_at?.slice(0, 10) === today ||
-        t.scheduled_at?.slice(0, 10) === today) &&
+      (!filters.today || due === today || scheduled === today) &&
       (!filters.overdue ||
-        Boolean(
-          t.status === "open" && t.due_at && t.due_at.slice(0, 10) < today,
-        )) &&
-      (!filters.inbox || isInboxTask(t)),
-  );
+        (t.status === "open" && due !== null && due < today)) &&
+      (!filters.inbox || isInboxTask(t))
+    );
+  });
 }
 export function exportScope(
   tasks: readonly TaskView[],
   scope: string,
   now: string,
+  clock: PlanningClock,
 ) {
   if (scope === "all") return tasks;
-  if (scope === "today") return filterTasks(tasks, { today: true }, now);
+  if (scope === "today") return filterTasks(tasks, { today: true }, clock);
   if (scope === "weekly")
     return tasks.filter(
       (t) => t.due_at && Date.parse(t.due_at) < Date.parse(now) + 7 * 86400000,
     );
   if (scope.startsWith("project:"))
-    return filterTasks(tasks, { project: scope.slice(8) }, now);
+    return filterTasks(tasks, { project: scope.slice(8) }, clock);
   if (scope.startsWith("id:") && scope.slice(3)) {
     const task = tasks.find((t) => t.id === scope.slice(3));
     if (!task)

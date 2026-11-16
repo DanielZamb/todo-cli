@@ -133,6 +133,10 @@ export function flagGolden(
   };
 }
 const globalConsumers: Record<string, string> = {
+  "--direct":
+    "database-selection.writeMode: overrides config/default; withStore writes directly and nudges after every writing store attempt; reads and provisioning stay direct",
+  "--require-server":
+    "database-selection.writeMode: overrides config/default, mutually exclusive with direct; withStore refuses writing commands before store open in protocol-1 slice",
   "--db":
     "main.ts withStore: explicit db, TODO_DB, config, default path; global setting used by database commands",
   "--format":
@@ -200,6 +204,37 @@ export function flagConsumer(command: string, flag: string) {
     diagnostics: {
       "--server": "diagnosticsRead URL",
       "--follow": "Effect.forever polling and NDJSON output",
+      "--detail":
+        "diagnosticsRead ?detail=true; refused with --follow before reading credentials",
+    },
+    "diagnostics runs": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--cursor": "recordingCommand runs cursor -> /diagnostics/profiler/runs",
+      "--ndjson": "recordingCommand emit compact JSON",
+    },
+    "diagnostics show": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--run": "recordingCommand runId -> /diagnostics/profiler/runs/:run",
+      "--ndjson": "recordingCommand emit compact JSON",
+    },
+    "diagnostics export": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--run":
+        "recordingCommand runId -> /diagnostics/profiler/runs/:run/export",
+      "--cursor": "recordingCommand export page offset",
+      "--ndjson": "recordingCommand export follows every page as NDJSON",
+    },
+    "diagnostics import": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--file": "recordingCommand reads and validates the local file",
+      "--dry-run": "recordingCommand ingest ?dry_run=true",
+      "--ndjson": "recordingCommand emit compact JSON",
+    },
+    "diagnostics compare": {
+      "--server": "diagnostic-recordings.ts recordingCommand loopback URL",
+      "--before": "recordingCommand runId -> compare before",
+      "--after": "recordingCommand runId -> compare after",
+      "--ndjson": "recordingCommand emit compact JSON",
     },
     top: { "--server": "diagnosticsRead -> runTop or non-TTY snapshot" },
     lookup: { "--prefix": "LookupQuery -> Discovery.lookup" },
@@ -371,6 +406,40 @@ export function flagConsumer(command: string, flag: string) {
       kind: "consumed",
       consumer:
         "main.ts DependRequest/RevertTask validation -> DependencyCommands.change or revertTask; on/from supplies blocker_id, expected-version supplies from_version",
+    };
+  if (
+    command === "catalog" &&
+    [
+      "--view",
+      "--tasks",
+      "--project-id",
+      "--tag-id",
+      "--ready",
+      "--blocked",
+      "--order",
+      "--status",
+      "--project",
+      "--tag",
+      "--priority",
+      "--due",
+      "--scheduled",
+      "--attachment",
+      "--text",
+      "--prefix",
+      "--energy",
+      "--estimate",
+      "--now",
+      "--time-zone",
+      "--known-generation",
+      "--known-seq",
+      "--known-day",
+      "--known-stamp",
+    ].includes(flag)
+  )
+    return {
+      kind: "consumed",
+      consumer:
+        "catalog.ts catalogQuery -> CatalogQuery -> CatalogReads.read (view, scope, ids, filters, day, known position)",
     };
   throw new Error(`No reviewed consumer for ${command} ${flag}`);
 }

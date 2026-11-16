@@ -34,7 +34,8 @@ repeatable draft and leave the durable Task count unchanged at eleven.
 
 ## Gotchas
 
-View day boundaries match the CLI's UTC date comparisons. The optional `now`
+View day boundaries follow ADR-0006: today in the sent `time_zone`, else the
+server's own zone (the drive's server runs with a pinned zone). The optional `now`
 query makes view requests reproducible; omitted now uses Effect Clock. A Task
 can occur in more than one Today group. Scheduled includes past and future
 scheduled Tasks. Inbox uses the binding CONTEXT rule through `isInboxTask`.

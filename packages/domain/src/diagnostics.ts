@@ -1,5 +1,17 @@
 import { Schema } from "effect";
 import { CredentialInfo } from "./auth/model.ts";
+import {
+  diagnosticEncodedBytes,
+  diagnosticsBudgetBytes,
+  diagnosticsDetailBudgetBytes,
+} from "./diagnostic-budget.ts";
+import { DiagnosticProfiler } from "./diagnostic-context.ts";
+
+export {
+  diagnosticEncodedBytes,
+  diagnosticsBudgetBytes,
+  diagnosticsDetailBudgetBytes,
+} from "./diagnostic-budget.ts";
 
 import { TaskMutationKind } from "./events.ts";
 import { ProfileId } from "./ids.ts";
@@ -47,6 +59,7 @@ export const DiagnosticError = Schema.Struct({
   route: Schema.String,
 });
 export const DiagnosticsSnapshot = Schema.Struct({
+  profiler: Schema.optionalKey(DiagnosticProfiler),
   generated_at: Instant,
   poll_interval_ms: Schema.Literal(1000),
   runtime: Schema.Struct({
@@ -116,6 +129,15 @@ export const DiagnosticsSnapshot = Schema.Struct({
     pending_reminders: Metric,
     last_reminder_fired: Schema.NullOr(DiagnosticOperation),
   }),
-});
+}).check(
+  Schema.makeFilter(
+    (value) =>
+      diagnosticEncodedBytes(value) <=
+        (value.profiler?.detail
+          ? diagnosticsDetailBudgetBytes
+          : diagnosticsBudgetBytes) ||
+      "Diagnostics exceeds its encoded byte budget",
+  ),
+);
 export type DiagnosticsSnapshot = typeof DiagnosticsSnapshot.Type;
 export type DiagnosticClient = typeof DiagnosticClient.Type;

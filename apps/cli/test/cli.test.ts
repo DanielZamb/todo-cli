@@ -341,6 +341,104 @@ it.effect("drives every frozen Go golden byte for byte", () =>
       );
   }),
 );
+// The owner's Q8 order (2026-11-13, ADR-0009): inside one priority a dated
+// Task comes before an undated one. The frozen Go goldens hold one Task per
+// priority, so this golden is the one that freezes the placement. The undated
+// Task has the lower id, so an order that ignored or reversed the placement
+// would list it first.
+it.effect(
+  "freezes undated-last inside a priority in todo list JSON and export",
+  () =>
+    Effect.gen(function* () {
+      const home = setup("order-golden", "u-order");
+      const now = Schema.decodeUnknownSync(Instant)(new Date().toISOString());
+      const profile = Schema.decodeUnknownSync(Profile)({
+        id: "u-order",
+        name: "u-order",
+        created_at: now,
+        updated_at: now,
+      });
+      yield* Effect.acquireUseRelease(
+        openStore({ path: join(home, ".todo-cli/todo.db") }),
+        (store) =>
+          Effect.gen(function* () {
+            for (const [id, title, due] of [
+              ["a-undated", "Undated Task", null],
+              ["b-dated", "Dated Task", { kind: "date", date: "2030-01-15" }],
+            ] as const) {
+              const task = Schema.decodeUnknownSync(Task)({
+                id,
+                profile_id: profile.id,
+                entity_version: 1,
+                row_version: 1,
+                title,
+                description: null,
+                project_id: null,
+                priority: "P2",
+                status: "open",
+                scheduled_at: null,
+                due_at: due,
+                energy: null,
+                estimate_min: null,
+                source: "manual",
+                tags: [],
+                occurrence: null,
+                created_at: now,
+                updated_at: now,
+                completed_at: null,
+                deleted_at: null,
+              });
+              const entry = yield* store.append({
+                actor: Schema.decodeUnknownSync(ActorId)("golden-fixture"),
+                profile: profile.id,
+                event: {
+                  kind: "TaskCreated",
+                  entity_version: 1,
+                  occurred_at: now,
+                  task,
+                  series: null,
+                  project: null,
+                  tags: [],
+                },
+              });
+              expect(entry.outcome).toBe("committed");
+            }
+          }),
+        (store) => Effect.orDie(store.close()),
+      );
+      const directory = join(root, "apps/cli/test/golden-order");
+      const manifest = JSON.parse(
+        readFileSync(
+          join(root, "apps/cli/test/fixtures/golden-baseline.json"),
+          "utf8",
+        ),
+      ).repository as { path: string; sha256: string; bytes: number }[];
+      expect(manifest.map((row) => row.path).sort()).toEqual(
+        readdirSync(directory)
+          .map((name) => `apps/cli/test/golden-order/${name}`)
+          .sort(),
+      );
+      for (const [name, args] of [
+        ["list_json.golden", ["--format", "json", "list"]],
+        ["export_default_md.golden", ["export"]],
+      ] as const) {
+        const raw = ok(home, ["--profile", "u-order", ...args]);
+        const actual = name.endsWith("json.golden") ? normalize(raw) : raw;
+        if (evidence) writeFileSync(join(evidence, `order-${name}`), actual);
+        const expected = readFileSync(join(directory, name), "utf8");
+        // The same manifest as the Go goldens pins these bytes, so a code
+        // change and a golden change in one commit cannot pass without it.
+        const pinned = manifest.find(
+          (row) => row.path === `apps/cli/test/golden-order/${name}`,
+        );
+        expect([digest(expected), Buffer.byteLength(expected)], name).toEqual([
+          pinned?.sha256,
+          pinned?.bytes,
+        ]);
+        expect(actual).toBe(expected);
+      }
+    }),
+);
 it.effect(
   "CRUD preserves metadata, rejects stale writes, and deletes then purges",
   () =>

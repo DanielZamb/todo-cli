@@ -38,7 +38,7 @@
         "taskRequest list branch",
         "taskRequest search branch"
       ],
-      "sha256": "35e31f0a344103fd5402659244f68cbf1f74bd659fdf8081bf3eebefdf55d5e6"
+      "sha256": "dff5d1846b7b2b540b6c0a3ce12032f7deca237119640cec8b5bbacdd81d6951"
     },
     {
       "path": "apps/electron/src/protocol.ts",
@@ -141,21 +141,21 @@
         "runTaskRecordSteps",
         "filterTaskRecordsEffect"
       ],
-      "sha256": "aff1e83b4486135946a007018ec2551b145aaefb5d7a51f5bcf213db991e6f55"
+      "sha256": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
     },
     {
       "path": "packages/domain/src/task-read.ts",
       "functions": [
         "TaskRead"
       ],
-      "sha256": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5"
+      "sha256": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
     },
     {
       "path": "packages/domain/src/limits.ts",
       "functions": [
         "inputLimits.searchText"
       ],
-      "sha256": "cd83a481987cf5e0b2edfd657a9ea5a599e8726e55d9b6fa11edcbca7fd17f17"
+      "sha256": "7a3b595b6a3114b028296c0bddc98056b2a16d8669552c7a19f223503234ada7"
     },
     {
       "path": "packages/domain/src/presentation.ts",
@@ -163,7 +163,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded"
+      "sha256": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -171,7 +171,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3"
+      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -278,11 +278,100 @@
   },
   "previousProductCommit": "36f9c56e200048aa2ca16186aaf713bea8d5454e",
   "previousIntegrationCommit": "81cdef8ec257a8ca7e1cbfb1ab2b3ff3afcbbf14",
+  "diagnosticsReview": {
+    "product": "a2dea2d6328298671796cc856738fd0e4e68469d",
+    "changed": [
+      "packages/domain/src/task-filters.ts"
+    ],
+    "scope": "Only filterTaskRecordsEffect gains an outer diagnosticSpan. The original suspended generator driver and its ensuring cleanup stay intact; clauses, preparation, matching, meter, checkpoint positions, result values and client request/publication rules are unchanged. Diagnostic finalization is synchronous, outside the original driver finalizer, and contains recorder failures. No matcher-candidate or model change.",
+    "proof": "The complete pre-renewal model/control run passed all expected outcomes then stopped only on this whole-file hash. Root behavior tests and same-source compiled HTTP/CLI checks pass. Real Effect interruption and throwing-recorder tests pass.",
+    "report": "docs/decisions/ui-speed/diag-core-report.md"
+  },
   "integrationQualification": {
     "product": "5f46e7b3c36afaffe8f2328df6453b8546be27a5",
     "atomicProduct": "4d709efa94840a8cb08960d0ad35138cb96dcb9e",
     "review": "docs/decisions/ui-speed/server-integration.md",
     "scope": "Merged immutable product; all covered-body reviews and actual-source controls precede renewal. Full fresh gates follow. No model, invariant or bound changes."
+  },
+  "catalogReview": {
+    "product": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "6d6b556533587af76b5aebae7a6a993452ea94016de35205f56a3883d9045f27",
+        "to": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467"
+      },
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "0b932af28259dab19ff0145aa07ae166a2a796dec667a616272ce7ca10cc26d5",
+        "to": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6"
+      },
+      {
+        "path": "packages/domain/src/limits.ts",
+        "from": "cd83a481987cf5e0b2edfd657a9ea5a599e8726e55d9b6fa11edcbca7fd17f17",
+        "to": "7a3b595b6a3114b028296c0bddc98056b2a16d8669552c7a19f223503234ada7"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "574f8654daff45e54db0b4c5f1fb642a60d2c7814826d3a0c2cfbcec247197b3",
+        "to": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca"
+      }
+    ],
+    "review": "filterTaskRecordSteps: the Tag predicate calls tagNameMatches (tagKey on the stored name and the query) instead of comparing the lowercased stored name with the trimmed, lowercased query; search, prefix, ordering, yields and finalization are unchanged. readTasks: the inline comparator moves to compareTasks (code units instead of localeCompare; the same sign on all 802,816 pairs of real value shapes). task-read.ts changes only TaskWrite (optional operation_seq); limits.ts only the tag length check through tagKey; TaskRead and inputLimits are byte-identical. Matcher, models, bounds and client sources are unchanged.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatFindingsReview": {
+    "product": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "previous": "f30392745e53c524dffa9915814ec1ec208baea7",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "1b17fdad2474ecfe8144ffa2102da512fd9b13909db90714a4297b598049b467",
+        "to": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b"
+      },
+      {
+        "path": "packages/domain/src/presentation.ts",
+        "from": "2ed2ba8eb25f9c5a83b81ec5af265b8214d6c812646df228e3634fa1ee711ded",
+        "to": "1632ed2888c19e4d1b678d9f50666332a338a725b1ac2caa2cbe1c4fa93b3db5"
+      },
+      {
+        "path": "packages/domain/src/commands.ts",
+        "from": "0ba4c36f60df4139dc20edd166eef90449ea4370581ae8311d79eb11661de7ca",
+        "to": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      }
+    ],
+    "review": "TaskFilters: the project and tag fields refuse a blank value (a schema check, the seat's F4); filterTaskRecords, filterTaskRecordSteps, runTaskRecordSteps and filterTaskRecordsEffect are byte-identical. presentation.ts: TaskViewSchema and taskView are byte-identical; only renderReview takes a PlanningClock (Q9). commands.ts: readTasks and TaskCommands.list are byte-identical; readTasks' order follows compareTasks, now set to undated last inside a priority (Q8); filterTasks and exportScope take a PlanningClock (Q9). The matcher and both clients are byte-identical.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDeltaReview": {
+    "product": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "previous": "de766e3c20e3efbd6967763714fb99e9c1727354",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-filters.ts",
+        "from": "121625e2cd4afaf977daf1157bf8e4a59f47d54d8b8f435cc8342a4a3cf5976b",
+        "to": "b4cc7d4e266a93a89a3f1721eb40a4fbcb640d132911418c87aa9dd58773b737"
+      }
+    ],
+    "review": "TaskFilters: the project field is a plain string again, compared exactly (seat F7); the tag field keeps its blank refusal. filterTaskRecords, filterTaskRecordSteps, runTaskRecordSteps and filterTaskRecordsEffect are byte-identical. The matcher and both clients are byte-identical.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
+  },
+  "seatDelta2Review": {
+    "product": "ec16d45d44146e061aa802bf3f9876cb3a5b03fa",
+    "previous": "5da90607e8c5a19d7007174925c6b6253c0714d3",
+    "status": "candidate for the seats",
+    "changed": [
+      {
+        "path": "packages/domain/src/task-read.ts",
+        "from": "9c9b7dfa5ccf1c7904a55489485a479e3ec88e67e52e19066d0e0cb70c898aa6",
+        "to": "fdc1b000bd8f96c49462fafdd7841ef577928f442c6c87cea9d0ef109d3715f0"
+      }
+    ],
+    "review": "Seat F8: operation_seq becomes operation_position in the write reply schemas (task-read.ts TaskWrite only); TaskRead, the matcher, filters and both clients are byte-identical.",
+    "evidence": "docs/decisions/ui-speed/catalog-contract-report.md"
   },
   "sessionRetirementReview": {
     "product": "475726d3d81c382469375bd8ce51d687bdec4fa2",
@@ -469,6 +558,13 @@
       "review": "The candidate 10 fix head (2d8d2000) changes TodoModel.swift only among the mapped files. leaveDeletedProfile now returns what it did (switched, notNeeded, nowhereToGo, superseded, cancelled) instead of nothing; its reads, guards and the switch itself are unchanged. In followChanges the ProfileDeleted branch returns only on switched, cancelled or a superseding generation, reconnects when the shown Profile changed under the same generation, and otherwise keeps reading (MAC-C1-S1-36); every exit is tagged, and the model records the stream it follows (followingStream) and offers a reminder delivery seam for tests. The offer's announcement wording changed and moved into restoredProfileAnnouncement. No discovery request, publication, Show or Close guard, credential epoch comparison or authorization order changed, and no search refresh path changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
     },
     {
+      "product": "b4b708f5bc4a84f7034ddd0c137e2187ecbc77fd",
+      "status": "candidate for the seats",
+      "controls": "check.ts passes on b4b708f5 without a hash change: docs/evidence/task-search-formal/check-qmyG6M",
+      "changed": [],
+      "review": "INTEG-STEP2: the Catalog line (server rows: task-filters.ts, task-read.ts, commands.ts, limits.ts, presentation.ts, task-client.ts) and main's candidate 10 (Mac rows: TodoModel.swift, AppViews.swift, TaskSnapshot.swift) renewed disjoint rows; the merge takes each row from the side that renewed it, and every row equals the merged product's bytes. The regenerated Swift client is not a mapped file. The matcher, models and bounds are unchanged."
+    },
+    {
       "product": "664c12a7f7fd13e3a2c98980ae7454bcd2a81edb",
       "controls": "check-swift passed on 664c12a7: docs/evidence/discovery-formal/swift-wCss6Q",
       "changed": [
@@ -540,6 +636,13 @@
       "review": "Candidate 12's fix head (39421fbe the room rule, 337db345 Q13). AppViews.swift: the sidebar's state lives in @State as well as scene storage; the room rule adds the sidebar's share (now 456 pt) only while the sidebar item is collapsed; View > Hide/Show Sidebar goes through the split view controller; the inspector's closes call TodoModel.closeEditor, and the room rule asks the draft question before closing; the TaskListView sheet/alert bindings and DraftNavigationActions (target capture, explicit Cancel) are unchanged. TodoModel.swift: EditorNavigation gains close and transition; navigate is unchanged; saveAndNavigate, discardAndNavigate and cancelNavigation each mark the person acting first, saveAndNavigate passes the saved Version to a transition as it does for Move and Copy, and discardAndNavigate requires a write for a transition as for Move and Copy; applyNavigation's new cases clear the editor (close) or run the transition, and its showDiscovery case and every existing case are unchanged; dismissNavigationPrompt is unchanged. transition asks first for the open Task with unsaved changes, then runs performTransition, the previous body. No discovery publication, Show or Close guard, credential epoch comparison, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
     },
     {
+      "product": "c3e9282050758cb20aeae1c5788c0c8f6408b7b5",
+      "status": "candidate for the seats",
+      "changed": [],
+      "controls": "check.ts passes on the merged head without a hash change (under the reference profile).",
+      "review": "INTEG-STEP2 merge of origin/main e6a7b702 (Mac candidates 11 and 12): main's renewed Mac rows (TodoModel.swift, AppViews.swift, TaskSnapshot.swift) and this line's server rows each equal the merged product's bytes. The matcher, models and bounds are unchanged."
+    },
+    {
       "product": "5a5349aa02ff87b665b3b5fa61d298cffbb06b49",
       "controls": "check-swift passed on 5a5349aa: docs/evidence/discovery-formal/swift-EXEfh9",
       "changed": [
@@ -550,6 +653,13 @@
         }
       ],
       "review": "Candidate 13 (84dddaf6 the S1-39 transport fix, ddbd687b MAC-C11-S1-12). Of the mapped files only TodoModel.swift changed since b968f31a. followChanges: before it awaits an operation's refresh it records streamLoopWaitingSince and clears it when the refresh returns; streamFollowsCurrentProfile additionally requires that the loop is not waiting on a refresh for more than streamLoopReadBound (10 s). No event handling, reconnect, cursor, hand-over or exit path changed. replaceCredential: when the credential changes it also ends the editor and the draft question (editor, conflict, writeIntent, recurrenceDraft, series, pendingNavigation); the epoch advance, the Discovery and dependency resets and the message end are unchanged and come first. pendingNavigation records the credential epoch it is asked under (questionEpoch); saveAndNavigate and discardAndNavigate refuse an answer under another epoch, otherwise unchanged. expireSession captures the unsaved draft's title before the reset and appends one sentence to its sessionEnded message; its epoch guard and order are unchanged. No discovery publication, Show or Close guard, authorization order, search refresh path or search generation guard changed. refresh, performRefresh, canPublishSearch, scheduleSearch, retrySearch and every search generation guard are unchanged."
+    },
+    {
+      "product": "7b85a5d0bc8fa308b5f49a58722ce02f3822f572",
+      "status": "candidate for the seats",
+      "changed": [],
+      "controls": "check.ts passes on the merged head without a hash change (under the reference profile).",
+      "review": "INTEG-STEP2 merge of Mac candidate 13 cfe01e85: candidate 13's renewed TodoModel.swift row and this line's server rows each equal the merged product's bytes. The matcher, models and bounds are unchanged."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."

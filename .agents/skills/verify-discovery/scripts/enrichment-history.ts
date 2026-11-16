@@ -86,7 +86,7 @@ try {
       http = await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
         const clock = yield* Clock.Clock;
         return yield* Effect.gen(function* () {
-          const context = yield* Layer.build(serverLayer({ path: httpPath, port: 0 }));
+          const context = yield* Layer.build(serverLayer({ timeZone: "UTC", path: httpPath, port: 0 }));
           yield* Effect.promise(() => sleeping);
           const server = Context.get(context, HttpServer.HttpServer);
           const base = HttpServer.formatAddress(server.address);

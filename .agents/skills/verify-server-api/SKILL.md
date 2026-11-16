@@ -234,6 +234,10 @@ snapshot tests and auth-failure rollback proof. Run its single command after
 changing these reads or their CLI/HTTP contracts. Existing Profile-scoped SSE
 and Task search behavior retain their current recipes.
 
+Set TODO_SEED_BINARY to the matching source-hash cached provisioning executable
+alongside TODO_SERVER_BINARY to reuse both artifacts. The helper links the seed
+inside its owned scratch directory and does not recompile that source hash.
+
 ## Mutation after authorization
 
 `build-read-boundary.ts <scratch-binary>` builds the real server with verification
@@ -261,3 +265,10 @@ The driver stops its owned server and removes its scratch database and HOME.
 port. A valid scoped Task read must return the existing generic storage error
 (HTTP 500), without Task rows. This mode tests runtime refusal; use the two
 mutation modes above for byte parity of valid requests.
+
+## Private recording API
+
+The accepted ADR-0020 profiler group is exercised by
+[verify-ui-profiler](../verify-ui-profiler/SKILL.md). Its direct-loopback owner
+checks precede bounded streaming decode; Access Tokens, expired and revoked
+Sessions receive no recordings. Follow that skill after profiler route changes.

@@ -2,7 +2,8 @@
 
 ## Sub-features
 
-The stream follows CLI writes without an HTTP write notification. Concurrent
+The stream follows explicit --direct CLI writes. A proved server may receive a
+data-free best-effort nudge; the 250 ms poll remains the fallback. Concurrent
 CLI and server commits retain SQLite sequence order.
 
 ## How to get to it (user POV)

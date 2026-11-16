@@ -13,8 +13,15 @@ scratch=$(mktemp -d "${TMPDIR:-/tmp}/todo-s03-verify-XXXXXX")
 trap 'if [ ! -e "$scratch/launchd-active" ]; then rm -rf "$scratch"; else echo "LaunchAgent cleanup failed; retained $scratch" >&2; fi' EXIT HUP INT TERM
 cd "$root"
 {
-  printf 'bun build --compile apps/server/src/main.ts --outfile %s/todo-server\n' "$scratch"
-  (cd "$scratch" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$scratch/todo-server")
+  if [ -n "${TODO_SERVER_BINARY:-}" ]; then
+    printf 'Reuse cached server %s\n' "$TODO_SERVER_BINARY"
+    ln -s "$TODO_SERVER_BINARY" "$scratch/todo-server"
+  else
+    sh "$root/scripts/disk-guard.sh"
+    printf 'bun build --compile apps/server/src/main.ts --outfile %s/todo-server\n' "$scratch"
+    (cd "$scratch" && bun build --compile "$root/apps/server/src/main.ts" --outfile "$scratch/todo-server")
+  fi
+  sh "$root/scripts/disk-guard.sh"
   printf 'bun build --compile apps/server/scripts/scheduler-fixture.ts --outfile %s/fixture\n' "$scratch"
   (cd "$scratch" && bun build --compile "$root/apps/server/scripts/scheduler-fixture.ts" --outfile "$scratch/fixture")
   printf 'python3 .agents/skills/verify-scheduler/scripts/drive.py %s %s\n' "$scratch" "$evidence"

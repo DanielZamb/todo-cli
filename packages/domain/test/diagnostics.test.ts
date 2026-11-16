@@ -14,7 +14,7 @@ import { CreateTask, EditTask } from "../src/task-commands.ts";
 
 describe("bounded diagnostics", () => {
   it.live(
-    "keeps 2048 request samples and 100 errors with literal nearest-rank percentiles",
+    "keeps 2048 request samples and exports a short error list with literal nearest-rank percentiles",
     () =>
       Effect.scoped(
         Effect.gen(function* () {
@@ -47,9 +47,10 @@ describe("bounded diagnostics", () => {
             },
           ]);
           expect(snapshot.latency.samples).toEqual(
-            Array.from({ length: 60 }, (_, i) => 2141 + i),
+            Array.from({ length: 60 }, (_, i) => 2200 - i),
           );
-          expect(snapshot.errors.length).toBe(100);
+          expect(snapshot.errors.length).toBe(12);
+          expect(snapshot.profiler?.omitted.errors).toBe(88);
           expect(snapshot.errors[0]?.code).toBe("conflict");
           expect(snapshot.storage.last_snapshot).toBe(null);
           expect(

@@ -244,3 +244,59 @@ requires an affordable later response and a fair available recovery source. TLC
 does not prove a CPU, heap, health-latency, cancellation or serialization bound.
 The literal budget/cache-equivalence, finalizer, compiled abort and client SSE
 regressions complement the unchanged response-order model.
+
+## Recording API mapping review, 2026-11-12
+
+The recording unit found pre-existing hash drift from 2c147ad9 in task-client.ts:
+`http.diagnostics.snapshot()` became `snapshot({ query: {} })`. This is the
+required typed argument for the optional detail query and emits the same default
+GET /diagnostics. Task list/search branches, publication identity, cancellation,
+ordering and atomicity are byte-identical. The source file is unchanged by U06.
+Only that file hash is renewed against immutable f25fbfc4; models, bounds and
+sensitivity controls are untouched. The recording report retains both command exits.
+
+## Catalog contract review, 2026-11-13
+
+Product f30392745e53c524dffa9915814ec1ec208baea7 (C10-S5). Four covered files
+move: task-filters.ts (filterTaskRecordSteps' Tag predicate calls
+tagNameMatches), commands.ts (readTasks sorts with compareTasks, the same sign
+on every pair of real value shapes), task-read.ts (only TaskWrite) and
+limits.ts (only the tag length check). Search, prefix, order, yields,
+finalization, the matcher and both clients are byte-identical. The pre-renewal
+check stopped only at the mapping; after renewing those hashes the one command
+passed, with every broken variant reaching its counterexample and the restored
+model exiting 0 (378,091 states). Models and bounds are unchanged. Candidate for
+the seats; `coverage.json` carries the record as catalogReview.
+
+## Seat findings and owner answers, 2026-11-14
+
+Product de766e3c20e3efbd6967763714fb99e9c1727354 (C10-S5, after seat CATALOG-S1
+and the owner's Q8 and Q9). Three covered files move: task-filters.ts
+(TaskFilters' project and tag refuse a blank value; every filter body is
+byte-identical), commands.ts (readTasks and TaskCommands.list are
+byte-identical; readTasks' order follows compareTasks, now undated last inside
+a priority) and presentation.ts (TaskViewSchema and taskView byte-identical;
+only renderReview takes a PlanningClock). The matcher and both clients are
+byte-identical. The pre-renewal check passed every model run and stopped only
+at the mapping; after renewing those hashes the one command passed, with every
+broken variant reaching its counterexample and the restored model exiting 0
+(378,091 states). Models and bounds are unchanged. Candidate for the seats;
+`coverage.json` carries the record as seatFindingsReview.
+
+## Seat delta, 2026-11-14
+
+Product 5da90607e8c5a19d7007174925c6b6253c0714d3 (seat F7 and F2b on top of
+de766e3c). Only task-filters.ts moves: TaskFilters' project is a plain string
+again, compared exactly; tag keeps its blank refusal. Every filter body, the
+matcher and both clients are byte-identical. The pre-renewal check passed every
+model run (restored 378,091 states) and stopped only at the mapping. Candidate
+for the seats; `coverage.json` carries the record as seatDeltaReview.
+
+## Seat delta 2, 2026-11-14
+
+Product ec16d45d44146e061aa802bf3f9876cb3a5b03fa (seat F8 on top of 5da90607).
+Only task-read.ts moves: TaskWrite's operation_seq becomes operation_position;
+TaskRead, the matcher, filters and both clients are byte-identical. The
+pre-renewal check stopped only at the mapping; after renewal the one command
+passes. Candidate for the seats; `coverage.json` carries the record as
+seatDelta2Review.

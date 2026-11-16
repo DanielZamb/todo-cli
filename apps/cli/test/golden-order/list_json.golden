@@ -1,0 +1,30 @@
+{
+  "generated_at": "<TS>",
+  "tasks": [
+    {
+      "id": "b-dated",
+      "user_id": "u-order",
+      "entity_version": 1,
+      "row_version": 1,
+      "title": "Dated Task",
+      "status": "open",
+      "priority": "P2",
+      "due_at": "2030-01-15",
+      "source": "manual",
+      "created_at": "<TS>",
+      "updated_at": "<TS>"
+    },
+    {
+      "id": "a-undated",
+      "user_id": "u-order",
+      "entity_version": 1,
+      "row_version": 1,
+      "title": "Undated Task",
+      "status": "open",
+      "priority": "P2",
+      "source": "manual",
+      "created_at": "<TS>",
+      "updated_at": "<TS>"
+    }
+  ]
+}

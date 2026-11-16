@@ -68,7 +68,7 @@ it.effect(
                 token: { name: "scoped", profile: work.id, scope: "read-only" },
               });
               const commands = new TaskCommands(store),
-                reads = new ClientReads(store);
+                reads = new ClientReads(store, "UTC");
               const used = store.diagnostics.credentialUsed.bind(
                   store.diagnostics,
                 ),
@@ -224,7 +224,7 @@ it.effect(
               });
               try {
                 const result = yield* Effect.exit(
-                  new ClientReads(store).profiles(credential),
+                  new ClientReads(store, "UTC").profiles(credential),
                 );
                 expect(Exit.isFailure(result)).toBe(true);
                 if (Exit.isFailure(result)) {
@@ -245,7 +245,7 @@ it.effect(
               }
               yield* store.putProfile(late);
               expect(
-                (yield* new ClientReads(store).profiles(credential)).map(
+                (yield* new ClientReads(store, "UTC").profiles(credential)).map(
                   (p) => [p.id, p.name, p.visible_task_count],
                 ),
               ).toEqual([

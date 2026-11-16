@@ -586,7 +586,7 @@ it.effect(
     fixture((store, credential) =>
       Effect.gen(function* () {
         const commands = new TaskCommands(store),
-          reads = new ClientReads(store),
+          reads = new ClientReads(store, "UTC"),
           discovery = new Discovery(store);
         const request = { credential, profile: work.id, task_id };
         const operations = [
@@ -638,7 +638,7 @@ it.effect(
       Effect.gen(function* () {
         const profile = Schema.decodeUnknownSync(ProfileId)("never-created");
         const request = { credential, profile, task_id };
-        const reads = new ClientReads(store),
+        const reads = new ClientReads(store, "UTC"),
           commands = new TaskCommands(store);
         const db = Reflect.get(store, "db"),
           original = db.query.bind(db);

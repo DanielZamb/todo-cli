@@ -99,6 +99,15 @@ Fresh Claude discovery is recorded separately in docs/evidence/s03.
 
 ## Helpers
 
+Set `TODO_SERVER_BINARY` to an absolute, same-source cached server executable
+to reuse it. The helper links it into its owned scratch directory and preserves
+the source executable during cleanup. The scheduler fixture still compiles.
+
+After recorder changes also run the compiled
+[Diagnostics fault controls](../verify-diagnostics/features/faults.md).
+They throw at scheduler root/start/end and require each real job step once,
+one wake-up and one ReminderFired entry.
+
 `scripts/verify.sh <absolute-new-evidence-directory>` is executable and resolves
 its checkout. It calls executable `scripts/drive.py <scratch> <evidence>`.
 The compiled fixture accepts `<scratch> seed|replay|decode-sse` and refuses paths outside

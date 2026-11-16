@@ -7,6 +7,8 @@ import {
   BatchEdgeRequest,
   BatchEditReport,
   BatchEditRequest,
+  CatalogQuery,
+  CatalogReply,
   CreateSeries,
   CreateTask,
   CredentialInfo,
@@ -16,6 +18,7 @@ import {
   DependencyError,
   DependRequest,
   DetachTask,
+  DiagnosticRunId,
   DiagnosticsSnapshot,
   DirectoryQuery,
   EdgeReport,
@@ -33,6 +36,7 @@ import {
   LookupQuery,
   MoveTask,
   OpLogEntry,
+  operationPositionField,
   PlanningView,
   PlanningViewName,
   PlanningViewQuery,
@@ -42,6 +46,12 @@ import {
   ProjectSummary,
   QuickAddDraft,
   QuickAddInput,
+  RecordingBatch,
+  RecordingCompare,
+  RecordingExport,
+  RecordingReceipt,
+  RecordingRunList,
+  RecordingShow,
   RevertTask,
   SnapshotGeneration,
   SnapshotId,
@@ -61,6 +71,8 @@ import {
   UndependRequest,
   UploadAttachment,
 } from "@todo/domain";
+import { BackendCommand, BackendReply } from "@todo/domain/backend-command";
+import { ProofRequest, ProofResponse } from "@todo/domain/database-route";
 import { ExternalIdConflictDetails } from "@todo/domain/presentation";
 import { Context, Schema } from "effect";
 import {
@@ -427,6 +439,12 @@ const Reads = HttpApiGroup.make("reads")
       success: Schema.Array(TagSummary),
       error: taskErrors,
     }),
+    HttpApiEndpoint.get("catalog", "/profiles/:profile/catalog", {
+      params: profile,
+      query: CatalogQuery,
+      success: CatalogReply,
+      error: [...taskErrors, SearchTooBroadResponse],
+    }),
     HttpApiEndpoint.get("view", "/profiles/:profile/views/:view", {
       params: { ...profile, view: PlanningViewName },
       query: PlanningViewQuery,
@@ -508,6 +526,7 @@ const Passphrase = Schema.Struct({
   ),
 });
 const IssuedCredential = Schema.Struct({
+  ...operationPositionField,
   ...CredentialInfo.fields,
   credential: Schema.String,
 });
@@ -547,6 +566,7 @@ const Credentials = HttpApiGroup.make("credentials")
 const Diagnostics = HttpApiGroup.make("diagnostics")
   .add(
     HttpApiEndpoint.get("snapshot", "/diagnostics", {
+      query: { detail: Schema.optionalKey(Schema.Literal("true")) },
       success: HttpApiSchema.WithHeaders(DiagnosticsSnapshot, {
         "cache-control": Schema.Literal("no-store"),
       }),
@@ -555,6 +575,43 @@ const Diagnostics = HttpApiGroup.make("diagnostics")
       OpenApi.Description,
       "Owner Session only. profiles contains active Profiles; deleted_profiles retains display names for historical operation labels. Poll at most once per second. After failures, wait 2, 4, 8, 16 then 30 seconds; reset to one second after success. No persistent writes. Request latency covers completed responses in the last 300 seconds, capped at 2048 samples. Last credential use is observed by this process only; null means unknown. Operation rates include external writers and use event times over 60 seconds. storage.external_id_tasks counts indexed Tasks without exposing external ID values; storage.attachments counts references and attachment_store_bytes counts managed-store file bytes without exposing names, paths or content. Metadata only; no Task content, bearer credentials or hashes.",
     ),
+  )
+  .middleware(Authorization);
+const recordingCursor = Schema.optionalKey(
+  Schema.NumberFromString.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+  ),
+);
+const Profiler = HttpApiGroup.make("profiler")
+  .add(
+    HttpApiEndpoint.post("ingest", "/diagnostics/profiler/ingest", {
+      payload: RecordingBatch,
+      query: { dry_run: Schema.optionalKey(Schema.Literal("true")) },
+      success: RecordingReceipt,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("runs", "/diagnostics/profiler/runs", {
+      query: { cursor: recordingCursor },
+      success: RecordingRunList,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("show", "/diagnostics/profiler/runs/:run", {
+      params: { run: DiagnosticRunId },
+      success: RecordingShow,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("export", "/diagnostics/profiler/runs/:run/export", {
+      params: { run: DiagnosticRunId },
+      query: { cursor: Schema.optionalKey(DiagnosticRunId) },
+      success: RecordingExport,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
+    HttpApiEndpoint.get("compare", "/diagnostics/profiler/compare", {
+      query: { before: DiagnosticRunId, after: DiagnosticRunId },
+      success: RecordingCompare,
+      error: [BadRequest, Forbidden, InternalError],
+    }),
   )
   .middleware(Authorization);
 const System = HttpApiGroup.make("system").add(
@@ -599,6 +656,31 @@ const Snapshots = HttpApiGroup.make("snapshots")
     }),
   )
   .middleware(Authorization);
+const localHeaders = {
+  "x-todo-incarnation": Schema.String,
+  "x-todo-proof": Schema.String,
+};
+const Local = HttpApiGroup.make("local").add(
+  HttpApiEndpoint.post("databaseProof", "/local/database-proof", {
+    payload: ProofRequest,
+    success: ProofResponse,
+    error: [BadRequest],
+  }),
+  HttpApiEndpoint.post("nudge", "/local/nudge", {
+    headers: localHeaders,
+    success: Schema.Null,
+    error: [BadRequest],
+  }),
+  HttpApiEndpoint.post("runCommand", "/local/commands", {
+    headers: {
+      ...localHeaders,
+      authorization: Schema.optionalKey(Schema.String),
+    },
+    payload: BackendCommand,
+    success: BackendReply,
+    error: [BadRequest],
+  }),
+);
 export class TodoApi extends HttpApi.make("todo-api")
   .add(
     System,
@@ -608,7 +690,9 @@ export class TodoApi extends HttpApi.make("todo-api")
     Changes,
     Reads,
     Diagnostics,
+    Profiler,
     Snapshots,
+    Local,
   )
   .middleware(RequestDecoding)
   .annotateMerge(
