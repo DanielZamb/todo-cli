@@ -8,7 +8,8 @@
 Bogotá, not 16:00) and is saved with your zone; a time typed with an offset
 or `Z` keeps its exact moment. Times already saved are not changed, and a
 local time that a daylight-saving change skips or repeats is refused: add the
-offset you mean.
+offset you mean. The message gives the exact values that exist, with their
+offsets, ready to paste.
 
 ## Follow-up 86: the rule
 
@@ -27,12 +28,21 @@ Stored Tasks are not touched. No migration.
 
 ## Where "the machine where it was typed" is known
 
-- **The CLI process resolves the zone.** `taskInput` (`apps/cli/src/main.ts`),
-  which builds the flags for `add` and `edit`, turns a typed `--due` or
-  `--scheduled` into RFC 9557 text in the machine's zone
-  (`resolveTypedTime(text, processTimeZone())`: `TZ` when set, the system zone
-  otherwise). A date, an empty value or text the parser refuses is passed on
-  unchanged, so it is refused again where it is applied, with the same error.
+- **The CLI process resolves the zone, and refuses there.** `add` and `edit`
+  (`apps/cli/src/main.ts`) resolve a typed `--due` or `--scheduled` in one
+  Effect step (`resolvedTimes`, calling `resolveTaskFlagTimes`) into RFC 9557
+  text in the machine's zone (`resolveTypedTime(text, processTimeZone())`:
+  `TZ` when set, the system zone otherwise). Only a date or an empty value is
+  passed on as typed. Anything the parser refuses (malformed text, an unknown
+  zone, a 60th second, a local time a daylight-saving change skips or
+  repeats) is refused in the CLI process with `invalid_args` (exit 2), before
+  any write or routing.
+- **Correction (server seat F1).** The first version of this report said text
+  the parser refuses "is passed on unchanged, so it is refused again where it
+  is applied, with the same error". That was false: a time that does not
+  exist in the CLI's zone can exist in another, so a routed add from a CLI in
+  New York with `2027-03-14 02:30` was stored by a server in Bogotá at 02:30
+  Bogotá time. Shown on 8434a7e1 and fixed in 98deaaac (below).
 - **Whoever parses keeps that zone.** `prepareFlags` calls
   `parseTime(text, processTimeZone())`. In the direct path that process is the
   CLI. In a routed add (`/local/commands`, the server runs `createTask`) the
@@ -66,21 +76,56 @@ Stored Tasks are not touched. No migration.
 
 ## Daylight saving
 
-Both a local time that does not exist (02:30 on 8 March 2026 in New York)
-and one that exists twice (01:30 on 1 November 2026) are **refused** with
-`invalid_args`, naming the time and zone and showing the offset form, the
-same as quick-add's `disambiguation: "reject"`. A guess would store a moment
-the person may not have meant; the offset form says which, and is accepted
-(`2026-11-01T01:30:00-04:00` and `-05:00` are 05:30Z and 06:30Z).
+A local time that does not exist and one that exists twice are **refused**
+with `invalid_args`, the same as quick-add's `disambiguation: "reject"`: a
+guess would store a moment the person may not have meant. The message names
+the time, the zone and the day, and gives complete values with the zone's own
+offsets at that wall time (server seat F2; the first version always said
+`-05:00`):
+
+- Skipped, New York: `2027-03-14 02:30 does not exist in America/New_York: a
+  daylight-saving change skips it on 2027-03-14. The nearest times that exist
+  are 2027-03-14T01:59:00-05:00 and 2027-03-14T03:00:00-04:00.`
+- Repeated, New York: `2026-11-01 01:30 occurs twice in America/New_York: a
+  daylight-saving change repeats it on 2026-11-01. Type the one you mean:
+  2026-11-01T01:30:00-04:00 (the first) or 2026-11-01T01:30:00-05:00 (the
+  second).`
+- Berlin, the same shape: skipped 2027-03-28 02:30, nearest
+  `2027-03-28T01:59:00+01:00` and `2027-03-28T03:00:00+02:00`; repeated
+  2026-10-25 02:30, `2026-10-25T02:30:00+02:00` or `+01:00`.
+
+Each suggested value, pasted, is accepted at the instant it names (New York
+06:59Z, 07:00Z, 05:30Z, 06:30Z; Berlin 00:59Z, 01:00Z, 00:30Z, 01:30Z),
+stored with the typing machine's zone. Also from the seat: a 60th second is
+refused in the bracketed form as in the offset form, and a refused value is
+echoed in the message to at most 64 characters (then `…`).
 
 ## Proof (logic passes; nothing used for real)
+
+- **Server seat F1**, `apps/cli/test/typed-zone-routed.test.ts`: a compiled
+  CLI, routing companion and server; the server runs in Bogotá, the CLI side
+  resolves in New York and routes only what resolved through the real
+  `/local/commands` path. The seat's skipped and repeated New York times are
+  refused `[2, "invalid_args", <the messages above>]` and the server's Tasks
+  and History counts are unchanged; the direct write in New York refuses them
+  with the same exit and message and writes nothing; control: a valid
+  `2026-11-16 21:00` routed is stored by the Bogotá server as 02:00Z with
+  New York's zone. On 8434a7e1 two of three fail: the routed add is stored
+  by the server, and the direct write's message is the old one (it did
+  refuse).
+- **Server seat F2**, `packages/domain/test/typed-time.test.ts` (now eight
+  tests): the New York and Berlin messages literally, every suggestion
+  accepted, the 60th second in both forms, the echo, `resolveTypedTime`
+  refusing instead of passing text on. On 8434a7e1 three of eight fail (the
+  pasted suggestions were already accepted, and the five earlier tests pass).
 
 - `packages/domain/test/typed-time.test.ts`: local times in Bogotá, New
   York, Tokyo and UTC; offsets and `Z` in three zones; the New York gap and
   overlap, refused, and their offset forms; bracketed text in another
   process's zone, a mismatched offset and an unknown zone; dates, empty and
-  malformed text; `resolveTypedTime` and its round trip. Five of six fail on
-  the parent (the dates and malformed text behave the same by design).
+  malformed text; `resolveTypedTime` and its round trip. Five of the first six
+  failed on 6d0407c6 (the dates and malformed text behave the same by
+  design).
 - `apps/cli/test/typed-zone.test.ts`, compiled CLI, machine zone by `TZ`:
   for each of Bogotá, New York, Tokyo and UTC, the local, offset and `Z`
   forms read back through the Catalog at a fixed `now` (stored `utc` and
@@ -88,7 +133,8 @@ the person may not have meant; the offset form says which, and is accepted
   stored with Bogotá, 02:00Z, 02:00Z and 21:00Z, labelled 2026-11-16, all due
   today at 20:00 local. Tokyo: 12:00Z on the 16th, and 02:00Z and 21:00Z
   labelled the 17th; only the local one due today at 23:00 local. Also
-  `edit`, and the two refusals. Four of five fail on the parent; the UTC
+  `edit`, and the two refusals (their messages now the F2 wording). Four of
+  five failed on 6d0407c6; the UTC
   machine stores the same either way.
 - **S1-16** (same file): Los Angeles, UTC−8, so 18:00 and 23:30 on the 16th
   are already the 17th in UTC. Typed as local times and with their offsets,
@@ -182,38 +228,41 @@ machine genuinely set to UTC, or a client that sent UTC.
 
 ## Gates, mappings
 
-On c31d9ead, under the reference profile after its five controls, each with
-the 1-minute load at start and end: verify-cli 0 (3.3 → 3.4), verify-filters
-0 (3.4 → 5.3), verify-quick-add 0 (5.3 → 5.3), verify-recurrence 0
-(5.3 → 5.3), verify-import 0 (5.3 → 4.6), verify-server-api 0 (4.6 → 4.7),
-the root check 0 (4.7 → 5.2: domain 642, server 203, CLI 108, Electron 168
-plus 1 skipped).
+On 2a29d933 (the product 98deaaac plus its renewals), under the reference
+profile after its five controls, each with the 1-minute load at start and
+end: verify-cli 0 (5.7 → 4.8), verify-filters 0 (4.8 → 4.3),
+verify-quick-add 0 (4.3 → 4.3), verify-recurrence 0 (4.3 → 4.1),
+verify-import 0 (4.1 → 4.0), verify-server-api 0 (4.0 → 4.4), the root check
+0 (4.4 → 5.9: domain 644, server 203, CLI 111, Electron 168 plus 1 skipped).
+The first version's gates passed on c31d9ead.
 
 No function in `verify-occ-atomicity/coverage.json` changes; that mapping
 covers none of the files touched (`commands.ts`, `presentation.ts`,
 `planning-day.ts`, `main.ts`). Every mapped declaration in them is
-byte-identical to 6d0407c6 (declaration text compared); the declarations
-that changed (`parseTime`, `prepareFlags`, `exportScope`, `renderReview`,
-`taskInput`) are in no mapping. Renewals, each a candidate until a seat
-accepts it:
-- Task search formal: `presentation.ts` and `commands.ts` rows; before
-  renewal the check passed every model stage and stopped only at the
-  mapping; after, it passes (check-ylNIcR).
+byte-identical to 6d0407c6 and, for the F1 and F2 fixes, to 8434a7e1
+(declaration text compared). The declarations that changed (`parseTime`,
+`resolveTypedTime`, the new `resolveTaskFlagTimes`, `prepareFlags`,
+`exportScope`, `renderReview`, `taskInput`, the new `resolvedTimes`, `add`,
+and the edit line of `mutation`, its deletion `Prompt.Confirm` untouched) are
+in no mapping. Renewals, each a candidate until a seat accepts it:
+- Task search formal: the `commands.ts` row (and `presentation.ts` in the
+  first round); before renewal the check stopped only at the mapping; after,
+  it passes (check-SUm2e5; first round check-ylNIcR).
 - Task search cache: `commands.ts` and the `main.ts` hygiene row; before,
   `check.mjs` ran its controls and stopped only at `commands.ts`, and the
-  hygiene check passed; after, `check.mjs` (generated-8Dz1Iu),
-  `check-hygiene.mjs` (hygiene-pDitUT), the uncached baseline and the full
-  `verify.mjs` (verify-mEYEoF) pass.
-- Dependency: the public rows of `commands.ts`, `presentation.ts` and
-  `main.ts`, and both pins, at bc50a565 (the product 2b42e3f7 plus the two
-  renewals above); full default CONFORMANCE CHECKPOINT PASS (check-h2GFNF),
-  36 production controls broken 1 and restored 0, byte-identical
-  (conformance-t3ybvT), 53 public mutants exit 1 and restore 0
-  (public-lYjLuY). Renewed in c31d9ead.
+  hygiene check passed; after, `check.mjs` (generated-3vhBei),
+  `check-hygiene.mjs` (hygiene-LHfJCd), the uncached baseline and the full
+  `verify.mjs` (verify-OgGwX3) pass. Committed in 7fb9e005.
+- Dependency: the public rows of `commands.ts` and `main.ts`, and both pins,
+  at 7fb9e005 (98deaaac plus the two renewals above); full default under the
+  reference profile with the ps proxy: CONFORMANCE CHECKPOINT PASS
+  (check-R1huHo), 36 production controls broken 1 and restored 0
+  (conformance-XgVCKC), 53 public mutants exit 1 and restore 0
+  (public-KGUHOa), clean recheck 19,784 states. Committed in 2a29d933.
 
-Premise at c31d9ead: nothing in either pin's scopes differs from bc50a565.
-Pin audit at c31d9ead: **filesScanned 535, occurrences 915, match 138,
-drift 0, unknown 0**.
+Premise at 2a29d933: nothing in either pin's scopes differs from 7fb9e005.
+Pin audit at 2a29d933: **filesScanned 535, occurrences 932, match 138,
+drift 0, unknown 0**, no problems, no unused ledger entries.
 
 | Commit | What |
 | --- | --- |
@@ -222,4 +271,8 @@ drift 0, unknown 0**.
 | 2b42e3f7 | Follow-up 88: one week for the reviews and the weekly export, and its tests. **The product.** |
 | bc50a565 | Task search and cache renewals. **The Dependency pin.** |
 | c31d9ead | Dependency renewal. |
-| (this commit) | This report. |
+| 8434a7e1 | The first report. |
+| 98deaaac | Server seat F1 and F2: refuse in the CLI, the zone's real offsets, the 60th second, the echo, and their tests. **The product now.** |
+| 7fb9e005 | Task search and cache renewals for it. **The Dependency pin now.** |
+| 2a29d933 | Dependency renewal for it. |
+| (this commit) | This report, corrected. |
