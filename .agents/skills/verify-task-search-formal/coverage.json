@@ -163,7 +163,7 @@
         "TaskViewSchema",
         "taskView"
       ],
-      "sha256": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7"
+      "sha256": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
     },
     {
       "path": "packages/domain/src/commands.ts",
@@ -171,7 +171,7 @@
         "readTasks",
         "TaskCommands.list"
       ],
-      "sha256": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc"
+      "sha256": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
     },
     {
       "path": "apps/electron/src/task-search-presentation.tsx",
@@ -673,6 +673,24 @@
       ],
       "controls": "Before renewal check.ts passed every model stage and stopped only at the presentation.ts hash; after renewal the one command passes (under the reference profile).",
       "review": "feat/cli-due-zone (Q10, the owner's answer A): TaskViewSchema is byte-identical; taskView gains one line, a symbol-keyed DueDay = taskDay(due_at) that no JSON output carries; taskLine prints it as the Markdown due: label. No search, matcher, filter, order or publication code changes; both clients are byte-identical."
+    },
+    {
+      "product": "2b42e3f77c6e626e7ba6e751d5eca9722fca3f45",
+      "status": "candidate for the seats",
+      "changed": [
+        {
+          "path": "packages/domain/src/presentation.ts",
+          "from": "6030210a5a5aaeb8776184e4ad866707308ae222faea71a3757ff4613666d1b7",
+          "to": "d2b2375a319ac3380be13f2c683faee81bcc6ea7301fd30f14e81d4bb891c697"
+        },
+        {
+          "path": "packages/domain/src/commands.ts",
+          "from": "dee19561e696cd94f607bae639a9f59515eef0499ece33ee176aca2e0eac49bc",
+          "to": "2f8f1ac4b30d355386450879f936ee24f24f147a0275795da9473ee50f49772d"
+        }
+      ],
+      "controls": "Before renewal check.ts passed every model stage and stopped only at the mapping (commands.ts); after renewal the one command passes (under the reference profile).",
+      "review": "fix/cli-typed-time-zone (follow-ups 86 and 88) on feat/cli-due-zone: TaskViewSchema, taskView, readTasks and TaskCommands are byte-identical to 6d0407c6 (declaration text compared). commands.ts changes parseTime (zone-aware), prepareFlags (passes the process zone) and exportScope (weekly by calendar day); presentation.ts changes renderReview (one week, Overdue first). No search, matcher, filter, order or publication code changes; both clients are byte-identical."
     }
   ],
   "renewalReviewsNote": "Append-only, oldest first (MAC-C1-S1-38, the same class as the DAG mapping's): earlier records before candidate 9's 1f281291 are in git history (f3583bb9, 147056c2)."
