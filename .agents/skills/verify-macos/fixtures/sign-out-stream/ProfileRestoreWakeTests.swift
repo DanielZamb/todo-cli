@@ -31,7 +31,11 @@ import TodoAPI
         let created = try await api.snapshots_period_create(body: .json(.init(reason: reason))).ok.body.json
         return try #require((try JSONSerialization.jsonObject(with: JSONEncoder().encode(created)) as? [String: Any])?["id"] as? String)
     }
-    private func restore(_ api: Client, _ id: String) async throws { _ = try await api.snapshots_period_restore(path: .init(snapshot: id), body: .json(.init(dry_run: false))).ok }
+    /// The restore's own generation, from its reply (`operation_position`); nil if the reply has none.
+    @discardableResult
+    private func restore(_ api: Client, _ id: String) async throws -> String? {
+        try await api.snapshots_period_restore(path: .init(snapshot: id), body: .json(.init(dry_run: false))).ok.body.json.operation_position?.generation
+    }
     private func delete(_ api: Client, _ profile: String) async throws {
         _ = try await api.reads_period_deleteProfile(path: .init(profile: profile), body: .json(.init(with_tasks: true, dry_run: false))).ok
     }
@@ -111,12 +115,18 @@ import TodoAPI
         try await delete(api, restored)
         if gapMS > 0 { try await until("the client left the deleted Profile") { model.profile != restored } }
         let left = model.profile != restored
-        // The client takes the restore's reload exactly once: it sets the new generation, empties its
-        // list and refills it. That reload can reach the client late, after the list already matches
-        // (the never-refreshes red control, c32b9b94: a match at 388 ms, the reconnect at 463), so a
-        // match counts only once the reload has been taken.
-        let generationBefore = model.restoreGeneration
-        try await restore(api, id)
+        // The client takes the restore's reload exactly once: it sets the restore's generation, empties
+        // its list (TodoModel's reload handler) and refills it. That reload can reach the client late,
+        // after the list already matches (the never-refreshes red control, c32b9b94: a match at 388 ms,
+        // the reconnect at 463), so a match counts only once the reload of this restore's own
+        // generation has been taken; `restoreGeneration` is persisted per server, so a reload owed
+        // from an earlier test's restore must not count. Only a restore issues a generation (the
+        // deletion cannot move it). A refill without the reload would mean the client never learned
+        // of the restore, a server or protocol defect, and failing then is right. The handler resets
+        // the list even for a generation it already has, so a second reload would blank after the
+        // match: exactly one is required.
+        let reloadsBefore = model.restoreReloadCount
+        let restoredGeneration = try await restore(api, id)
         let restoredAt = ProcessInfo.processInfo.systemUptime
         // The list is never shown ready and empty on a Profile with Tasks (the correctness seat's
         // property for this case), from the restore until the receipt.
@@ -132,17 +142,20 @@ import TodoAPI
         // test still fails, with the receipt written, if it never does.
         let expected = try await titles(fresh, restored)
         let matched = await eventually(seconds: 15) {
-            model.restoreGeneration != generationBefore && model.profile == restored && model.profileSwitchSettled(restored) && Set(model.tasks.map(\.title)) == expected
+            model.restoreGeneration == restoredGeneration && model.profile == restored && model.profileSwitchSettled(restored) && Set(model.tasks.map(\.title)) == expected
         }
         let matchedAfterMS = (ProcessInfo.processInfo.systemUptime - restoredAt) * 1000
         sampler.running = false; await sampling.value
         var receipt = try await state(model, api); receipt["gap_ms"] = gapMS; receipt["left_before_restore"] = left; receipt["matched_within_15s"] = matched
-        receipt["reload_seen"] = model.restoreGeneration != generationBefore
+        receipt["restore_generation"] = restoredGeneration ?? NSNull()
+        receipt["reload_seen"] = model.restoreGeneration == restoredGeneration
+        receipt["reload_count_delta"] = model.restoreReloadCount - reloadsBefore
         receipt["catalog_ready"] = catalogReady(model) ?? NSNull(); receipt["loading"] = model.loading; receipt["settled"] = model.profileSwitchSettled(restored)
         receipt["ms_restore_to_match"] = matched ? Int(matchedAfterMS) : NSNull()
         receipt["ready_and_empty_ms"] = expected.isEmpty ? [] : sampler.moments.map { Int($0) }
         try write("wake-\(gapMS)ms", receipt)
-        #expect(matched, "the list never matched the server on the restored Profile: \(receipt)")
+        #expect(matched, "the list never matched the server on the restored Profile after its reload: \(receipt)")
+        #expect(model.restoreReloadCount - reloadsBefore == 1, "the restore's reload was taken exactly once: \(receipt)")
         #expect(expected.isEmpty || sampler.moments.isEmpty, "the list was shown ready and empty on a Profile with Tasks (follow-up 116 if it is the reconnect's blank): \(receipt)")
         #expect(model.signedIn && model.profile == restored && model.tasks.contains { $0.title == title }, "\(receipt)")
         #expect(receipt["catalog_matches_server"] as? Bool == true, "\(receipt)")
