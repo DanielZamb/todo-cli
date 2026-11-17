@@ -48,6 +48,16 @@ import TodoAPI
         try await until("live on \(profile)") { model.canWrite && !model.loading && model.profile == profile && (title.map { t in model.tasks.contains { $0.title == t } } ?? true) }
         return model
     }
+    /// Whether `condition` holds within `seconds`, polled every 10 ms. Unlike `until`, a timeout is
+    /// an answer, not a thrown error, so the caller can still write its receipt and assert on it.
+    private func eventually(seconds: Double, _ condition: () -> Bool) async -> Bool {
+        let deadline = ProcessInfo.processInfo.systemUptime + seconds
+        while !condition() {
+            guard ProcessInfo.processInfo.systemUptime < deadline else { return false }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return true
+    }
     private func settled(_ model: TodoModel) async throws {
         try await until("settled") { model.signedIn && model.profileSwitchSettled(model.profile) }
         try await Task.sleep(for: .milliseconds(300))
@@ -83,8 +93,20 @@ import TodoAPI
         try await restore(api, id)
         try await until("back on the restored Profile") { model.profile == restored && model.tasks.contains { $0.title == title } }
         try await settled(model)
-        var receipt = try await state(model, api); receipt["gap_ms"] = gapMS; receipt["left_before_restore"] = left
+        // After a deletion and a restore the client may still reconnect (activateProfile, the stream's
+        // reload): it empties its list and refills it with the new stream's first refresh. A fixed
+        // settle can end between the two under load (candidate 16's cycle, attempt 1, 20:15:05: the
+        // reconnect 321 ms after the restore, the refresh after the receipt). So the receipt waits until
+        // the list matches the server, settled on the restored Profile; the test still fails, with the
+        // receipt written, if it never does.
+        let fresh = todoClient(server: url, credential: try await owner())
+        let expected = try await titles(fresh, restored)
+        let matched = await eventually(seconds: 15) {
+            model.profile == restored && model.profileSwitchSettled(restored) && Set(model.tasks.map(\.title)) == expected
+        }
+        var receipt = try await state(model, api); receipt["gap_ms"] = gapMS; receipt["left_before_restore"] = left; receipt["matched_within_15s"] = matched
         try write("wake-\(gapMS)ms", receipt)
+        #expect(matched, "the list never matched the server on the restored Profile: \(receipt)")
         #expect(model.signedIn && model.profile == restored && model.tasks.contains { $0.title == title }, "\(receipt)")
         #expect(receipt["catalog_matches_server"] as? Bool == true, "\(receipt)")
         if left { #expect(model.deletionNotice == "\u{201C}\(restored)\u{201D} was restored. Switched back to it.", "\(receipt)") }
