@@ -1,5 +1,5 @@
 {
-  "confirmedCommit": "7535dcfd3b9b0fcb77a3ddce4a6f18cd1ce1e311",
+  "confirmedCommit": "06ad957d6fac84e18597a35445c38ffa4d75584e",
   "source": "Three changed whole files at the accepted SERVER-READS renewal; this integration changes store wiring outside the listed DAG bodies, which remain byte-identical. See the per-function table and exact constructor diff.",
   "scope": "Merged immutable graph/storage source, reviewed covered functions and full fresh model/production/public controls.",
   "modelBaselineCommit": "a91dcf8917e242bce6c0f3521a1b2727114d0ef7",

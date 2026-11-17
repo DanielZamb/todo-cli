@@ -25,7 +25,8 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
     private typealias Response = (HTTPResponse, HTTPBody?)
     private enum State { case active, retiring, invalidated }
     private struct Pending {
-        let task: Task<Void, Never>
+        /// Set right after the admission, outside the lock; nil until then.
+        var task: Task<Void, Never>?
         let continuation: CheckedContinuation<Response, Error>
     }
     /// Sends released before their inner send ended, those of them still not ended, and the replies
@@ -45,6 +46,10 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
     private let stuckGrace: TimeInterval
     /// Tests only: runs at the start of each inner send, before its cancellation check.
     var innerStartHook: (@Sendable () -> Void)?
+    /// Tests only: runs inside the admission, with the lock held (the deadlock order of candidate 15).
+    var admissionHook: (@Sendable () -> Void)?
+    /// Tests only: runs at the start of a caller's release, in its cancellation handler.
+    var releaseHook: (@Sendable () -> Void)?
 
     /// The Diagnostics recorder's scope token, read at each admission (nil without Diagnostics).
     private let scopeToken: (@Sendable () -> Int)?
@@ -66,25 +71,41 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
         do {
             let response = try await withTaskCancellationHandler {
                 try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Response, Error>) in
+                    // Nothing under the lock may take a task's status record lock: a canceller holds
+                    // the caller's while its handler (`release`) waits for this lock. A task-local
+                    // push did (candidate 15's deadlock); the inner Task is created, and the scope
+                    // bound, after the lock is released. `Task.isCancelled` is an atomic read of the
+                    // status, no lock, and must stay inside: a cancellation between it and the
+                    // admission would find nothing to release.
                     let started: Bool = lock.withLock {
                         guard case .active = state, !Task.isCancelled else { return false }
-                        let transport = base, hook = innerStartHook
-                        let task = ClientDiagnosticContext.$admittedScope.withValue(admittedScope) {
-                            Task {
-                                do {
-                                    hook?()
-                                    try Task.checkCancellation()
-                                    self.ended(id, .success(try await transport.send(request, body: body, baseURL: baseURL, operationID: operationID)))
-                                } catch {
-                                    self.ended(id, .failure(error))
-                                }
-                            }
-                        }
-                        sends[id] = Pending(task: task, continuation: continuation)
+                        admissionHook?()
+                        sends[id] = Pending(task: nil, continuation: continuation)
                         running.insert(id)
                         return true
                     }
-                    if !started { continuation.resume(throwing: CancellationError()) }
+                    guard started else { continuation.resume(throwing: CancellationError()); return }
+                    let transport = base, hook = innerStartHook
+                    let task = Task {
+                        await ClientDiagnosticContext.$admittedScope.withValue(admittedScope) {
+                            do {
+                                hook?()
+                                try Task.checkCancellation()
+                                self.ended(id, .success(try await transport.send(request, body: body, baseURL: baseURL, operationID: operationID)))
+                            } catch {
+                                self.ended(id, .failure(error))
+                            }
+                        }
+                    }
+                    // Released (the caller cancelled, or the transport retired) before the task
+                    // existed: cancel it now, as the release would have. It is running already, so
+                    // it ends, and the session waits for it.
+                    let kept: Bool = lock.withLock {
+                        guard sends[id] != nil else { return false }
+                        sends[id]?.task = task
+                        return true
+                    }
+                    if !kept { task.cancel() }
                 }
             } onCancel: { self.release(id) }
             try Task.checkCancellation()
@@ -98,20 +119,20 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
     }
 
     func retire() {
-        let released: [Pending] = lock.withLock {
-            guard case .active = state else { return [] }
+        let (released, drained): ([Pending], Bool) = lock.withLock {
+            guard case .active = state else { return ([], false) }
             state = .retiring
             let pending = Array(sends.values)
             for id in sends.keys { abandoned.insert(id) }
             counts.releasedEarly += pending.count
             counts.notEnded += pending.count
             sends.removeAll()
-            invalidateIfDrainedLocked()
-            return pending
+            return (pending, drainedLocked())
         }
+        if drained { session.invalidateAndCancel() }
         for pending in released {
             pending.continuation.resume(throwing: CancellationError())
-            pending.task.cancel()
+            pending.task?.cancel()
         }
         // Inner sends may still be running: the session waits for them; after stuckGrace their
         // tasks are cancelled so a stuck one does not keep its connection.
@@ -136,38 +157,41 @@ final class ScopedTransport: ClientTransport, @unchecked Sendable {
     /// The caller was cancelled: its awaiter returns now; the inner send is cancelled and may end
     /// later, or never.
     private func release(_ id: UUID) {
-        let pending: Pending? = lock.withLock {
-            guard let pending = sends.removeValue(forKey: id) else { return nil }
+        releaseHook?()
+        let (pending, drained): (Pending?, Bool) = lock.withLock {
+            guard let pending = sends.removeValue(forKey: id) else { return (nil, false) }
             abandoned.insert(id)
             counts.releasedEarly += 1
             counts.notEnded += 1
-            invalidateIfDrainedLocked()
-            return pending
+            return (pending, drainedLocked())
         }
+        if drained { session.invalidateAndCancel() }
         guard let pending else { return }
         pending.continuation.resume(throwing: CancellationError())
-        pending.task.cancel()
+        pending.task?.cancel()
     }
 
     /// The inner send ended: its awaiter gets the result, unless it was released already, in which
     /// case the result is dropped here.
     private func ended(_ id: UUID, _ result: Result<Response, Error>) {
-        let continuation: CheckedContinuation<Response, Error>? = lock.withLock {
+        let (continuation, drained): (CheckedContinuation<Response, Error>?, Bool) = lock.withLock {
             running.remove(id)
-            defer { invalidateIfDrainedLocked() }
-            if let pending = sends.removeValue(forKey: id) { return pending.continuation }
-            if abandoned.remove(id) != nil {
+            let continuation = sends.removeValue(forKey: id)?.continuation
+            if continuation == nil, abandoned.remove(id) != nil {
                 counts.notEnded -= 1
                 counts.lateEnded += 1
             }
-            return nil
+            return (continuation, drainedLocked())
         }
+        if drained { session.invalidateAndCancel() }
         continuation?.resume(with: result)
     }
 
-    private func invalidateIfDrainedLocked() {
-        guard case .retiring = state, sends.isEmpty, running.isEmpty else { return }
+    /// The retired transport has drained: marks it invalidated and returns true once, and the caller
+    /// invalidates the session after releasing the lock (nothing outside this type runs under it).
+    private func drainedLocked() -> Bool {
+        guard case .retiring = state, sends.isEmpty, running.isEmpty else { return false }
         state = .invalidated
-        session.invalidateAndCancel()
+        return true
     }
 }

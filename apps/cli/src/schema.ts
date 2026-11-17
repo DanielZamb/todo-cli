@@ -15,6 +15,10 @@ import {
   TaskResponse,
   TasksResponse,
 } from "@todo/domain/presentation";
+import {
+  TimeZoneRepairPlan,
+  TimeZoneRepairReport,
+} from "@todo/domain/repair-time-zones";
 import { Schema } from "effect";
 import { credentialSelectionDescription } from "./credential-profile.ts";
 import { routingDescription, WriteMode } from "./database-selection.ts";
@@ -154,6 +158,10 @@ registerCommandSchema("snapshot show", SnapshotResponse);
 registerCommandSchema("snapshot list", SnapshotListResponse);
 registerCommandSchema("snapshot restore", SnapshotRestoreResponse);
 registerCommandSchema("snapshot prune", SnapshotPruneResponse);
+registerCommandSchema(
+  "repair time-zones",
+  Schema.Union([TimeZoneRepairPlan, TimeZoneRepairReport]),
+);
 registerCommandSchema("help", TextResponse);
 
 for (const name of ["init", "logout", "config set"])
@@ -163,7 +171,7 @@ for (const name of ["login", "whoami"])
   registerCommandSchema(name, IdentityResponse);
 for (const name of ["config get", "config show"])
   registerCommandSchema(name, ConfigResponse);
-for (const name of ["man", "review", "sync", "config", "snapshot"])
+for (const name of ["man", "review", "sync", "config", "snapshot", "repair"])
   registerCommandSchema(name, TextResponse);
 registerCommandSchema("sync obsidian", PathResponse);
 registerCommandSchema(
