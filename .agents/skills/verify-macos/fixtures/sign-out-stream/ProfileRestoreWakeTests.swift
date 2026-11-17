@@ -111,6 +111,11 @@ import TodoAPI
         try await delete(api, restored)
         if gapMS > 0 { try await until("the client left the deleted Profile") { model.profile != restored } }
         let left = model.profile != restored
+        // The client takes the restore's reload exactly once: it sets the new generation, empties its
+        // list and refills it. That reload can reach the client late, after the list already matches
+        // (the never-refreshes red control, c32b9b94: a match at 388 ms, the reconnect at 463), so a
+        // match counts only once the reload has been taken.
+        let generationBefore = model.restoreGeneration
         try await restore(api, id)
         let restoredAt = ProcessInfo.processInfo.systemUptime
         // The list is never shown ready and empty on a Profile with Tasks (the correctness seat's
@@ -123,15 +128,16 @@ import TodoAPI
         // reload): it empties its list and refills it with the new stream's first refresh. A fixed
         // settle can end between the two under load (candidate 16's cycle, attempt 1, 20:15:05: the
         // reconnect 321 ms after the restore, the refresh after the receipt). So the receipt waits until
-        // the list matches the server, settled on the restored Profile; the test still fails, with the
-        // receipt written, if it never does.
+        // the list matches the server, settled on the restored Profile, after the restore's reload; the
+        // test still fails, with the receipt written, if it never does.
         let expected = try await titles(fresh, restored)
         let matched = await eventually(seconds: 15) {
-            model.profile == restored && model.profileSwitchSettled(restored) && Set(model.tasks.map(\.title)) == expected
+            model.restoreGeneration != generationBefore && model.profile == restored && model.profileSwitchSettled(restored) && Set(model.tasks.map(\.title)) == expected
         }
         let matchedAfterMS = (ProcessInfo.processInfo.systemUptime - restoredAt) * 1000
         sampler.running = false; await sampling.value
         var receipt = try await state(model, api); receipt["gap_ms"] = gapMS; receipt["left_before_restore"] = left; receipt["matched_within_15s"] = matched
+        receipt["reload_seen"] = model.restoreGeneration != generationBefore
         receipt["catalog_ready"] = catalogReady(model) ?? NSNull(); receipt["loading"] = model.loading; receipt["settled"] = model.profileSwitchSettled(restored)
         receipt["ms_restore_to_match"] = matched ? Int(matchedAfterMS) : NSNull()
         receipt["ready_and_empty_ms"] = expected.isEmpty ? [] : sampler.moments.map { Int($0) }
